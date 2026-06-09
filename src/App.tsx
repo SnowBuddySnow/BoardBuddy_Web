@@ -21,6 +21,7 @@ import DashboardParties from './pages/DashboardParties';
 import DashboardPartyNew from './pages/DashboardPartyNew';
 import DashboardPartyDetail from './pages/DashboardPartyDetail';
 import DashboardPartyEdit from './pages/DashboardPartyEdit';
+import DevPanel from './components/DevPanel';
 
 function App() {
   const [activeTab, setActiveTab] = useState<'home' | 'calendar' | 'edit' | 'heart' | 'user'>('home');
@@ -209,6 +210,7 @@ function App() {
           />
         )}
       </div>
+      {import.meta.env.DEV && <DevPanel />}
     </div>
   );
 }

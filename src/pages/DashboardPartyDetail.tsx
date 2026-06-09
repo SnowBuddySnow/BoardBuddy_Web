@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Button } from '../components/Button';
 import { getPartyDashboard, updateParty, listParticipants, updateParticipantStatus } from '../services/party';
 import { Party, PartyParticipant } from '../types/api';
-import { ChevronLeft, Play, Power, Users, Clock, ShieldAlert, Check, X, ShieldClose, Trash2 } from 'lucide-react';
+import { ChevronLeft, Play, Power, Clock, Check, X } from 'lucide-react';
 
 interface DashboardPartyDetailProps {
     partyId: number;
@@ -107,7 +107,6 @@ export default function DashboardPartyDetail({ partyId, onBack, onEditClick }: D
 
     const isDraft = party.status === 'DRAFT';
     const isOpen = party.status === 'OPEN';
-    const isClosed = party.status === 'CLOSED';
 
     return (
         <div className="flex-1 flex flex-col h-full bg-[#FAF8F3] overflow-hidden">

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Button } from '../components/Button';
 import { listDashboardParties, updateParty, deleteParty } from '../services/party';
 import { Party } from '../types/api';
-import { Plus, Edit2, Play, Power, Trash2, Users, Calendar, MapPin, ShieldAlert, Check } from 'lucide-react';
+import { Plus, Edit2, Play, Power, Trash2, Users, ShieldAlert } from 'lucide-react';
 
 interface DashboardPartiesProps {
     onCreatePartyClick: () => void;

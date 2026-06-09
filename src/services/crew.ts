@@ -71,7 +71,18 @@ export const getCrewUsageStatistics = async (
 };
 
 export const getMyApplications = async (): Promise<MyApplication[]> => {
-    const response = await apiClient.get<ApiResponse<MyApplication[]>>(`/crews/my-applications`);
+    const crewOverride = localStorage.getItem('dev_crew_override');
+    if (crewOverride === 'pending') {
+        return [{
+            application_id: 999,
+            crew_id: 1,
+            crew_name: 'Mock Pending Crew (SnowFly)',
+            status: 'PENDING',
+            created_at: new Date().toISOString(),
+            processed_at: null
+        }];
+    }
+    const response = await apiClient.get<ApiResponse<MyApplication[]>>('/crews/my-applications');
     return response.data.data;
 };
 

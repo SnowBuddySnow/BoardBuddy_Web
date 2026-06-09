@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Button } from '../components/Button';
 import { getParty, joinParty, cancelParty } from '../services/party';
 import { Party } from '../types/api';
-import { ChevronLeft, Calendar, MapPin, Users, Info, Shield, Heart, Sparkles, CheckCircle } from 'lucide-react';
+import { ChevronLeft, Calendar, MapPin, Users, Info, CheckCircle } from 'lucide-react';
 
 interface PartyDetailProps {
     partyId: number;

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Button } from '../components/Button';
 import { listParties } from '../services/party';
 import { Party } from '../types/api';
-import { ChevronLeft, Calendar, MapPin, Users, Heart, AlertCircle } from 'lucide-react';
+import { ChevronLeft, Calendar, MapPin, Users, Heart } from 'lucide-react';
 
 interface MyPartiesProps {
     onBack: () => void;

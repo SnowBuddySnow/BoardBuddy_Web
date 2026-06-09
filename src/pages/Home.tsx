@@ -1,12 +1,10 @@
 import { useState, useEffect } from 'react';
-import { Calendar } from '../components/Calendar';
-import { getUserInfo, getMyReservations } from '../services/user';
+import { getUserInfo } from '../services/user';
 import { getCrewInfo, getMyApplications } from '../services/crew';
 import { listParties, listOrganizerGroups } from '../services/party';
-import { UserDetail, CrewDetail, MyReservation, MyApplication, Party, OrganizerGroup } from '../types/api';
-import { Bus, Mountain, UserPlus, Sun, Cloud, CloudRain, CloudSnow, CloudLightning, Wind, Sparkles, MapPin, Users, Calendar as CalendarIcon, ChevronRight } from 'lucide-react';
+import { UserDetail, CrewDetail, MyApplication, Party } from '../types/api';
+import { Bus, Mountain, UserPlus, Sparkles, MapPin, Users, Calendar as CalendarIcon, ChevronRight } from 'lucide-react';
 import { getWeather, WeatherData } from '../services/weather';
-import { Button } from '../components/Button';
 
 const SnowflakeDecorIcon = ({ className }: { className?: string }) => (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
@@ -45,7 +43,6 @@ export default function Home({
 }: HomeProps) {
     const [userInfo, setUserInfo] = useState<UserDetail | null>(null);
     const [crewDetail, setCrewDetail] = useState<CrewDetail | null>(null);
-    const [myReservations, setMyReservations] = useState<MyReservation[]>([]);
     const [myApplications, setMyApplications] = useState<MyApplication[]>([]);
     const [hasCrew, setHasCrew] = useState(initialHasCrew);
     const [weather, setWeather] = useState<WeatherData | null>(null);
@@ -79,12 +76,7 @@ export default function Home({
                 }
 
                 // Fetch Reservations
-                try {
-                    const reservations = await getMyReservations();
-                    setMyReservations(reservations);
-                } catch (e) {
-                    console.error("Failed to fetch reservations", e);
-                }
+                // (Removed unused myReservations fetch)
 
             } catch (err) {
                 console.error("Failed to fetch user info", err);

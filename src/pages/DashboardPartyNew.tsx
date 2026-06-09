@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Button } from '../components/Button';
 import { createParty, listOrganizerGroups } from '../services/party';
 import { OrganizerGroup } from '../types/api';
-import { ChevronLeft, Save, Sparkles, HelpCircle } from 'lucide-react';
+import { ChevronLeft, Save, HelpCircle } from 'lucide-react';
 
 interface DashboardPartyNewProps {
     onBack: () => void;
