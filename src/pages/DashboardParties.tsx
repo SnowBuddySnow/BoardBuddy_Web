@@ -1,0 +1,282 @@
+import { useState, useEffect } from 'react';
+import { Button } from '../components/Button';
+import { listDashboardParties, updateParty, deleteParty } from '../services/party';
+import { Party } from '../types/api';
+import { Plus, Edit2, Play, Power, Trash2, Users, Calendar, MapPin, ShieldAlert, Check } from 'lucide-react';
+
+interface DashboardPartiesProps {
+    onCreatePartyClick: () => void;
+    onEditPartyClick: (partyId: number) => void;
+    onViewDetailClick: (partyId: number) => void;
+    onBackToHomeClick: () => void;
+}
+
+export default function DashboardParties({
+    onCreatePartyClick,
+    onEditPartyClick,
+    onViewDetailClick,
+    onBackToHomeClick
+}: DashboardPartiesProps) {
+    const [parties, setParties] = useState<Party[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [actionLoadingId, setActionLoadingId] = useState<number | null>(null);
+
+    const fetchManagedParties = async () => {
+        try {
+            setLoading(true);
+            const data = await listDashboardParties();
+            setParties(data);
+        } catch (error) {
+            console.error('Failed to fetch dashboard parties:', error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchManagedParties();
+    }, []);
+
+    const handleOpenRegistration = async (partyId: number) => {
+        try {
+            setActionLoadingId(partyId);
+            await updateParty(partyId, { status: 'OPEN' });
+            alert('파티가 오픈되었습니다! 일반 멤버들의 참여 신청을 받습니다.');
+            fetchManagedParties();
+        } catch (error) {
+            console.error('Failed to open registration:', error);
+            alert('파티 오픈 처리에 실패했습니다.');
+        } finally {
+            setActionLoadingId(null);
+        }
+    };
+
+    const handleCloseRegistration = async (partyId: number) => {
+        try {
+            setActionLoadingId(partyId);
+            await updateParty(partyId, { status: 'CLOSED' });
+            alert('파티 모집이 마감되었습니다.');
+            fetchManagedParties();
+        } catch (error) {
+            console.error('Failed to close registration:', error);
+            alert('파티 마감 처리에 실패했습니다.');
+        } finally {
+            setActionLoadingId(null);
+        }
+    };
+
+    const handleDelete = async (partyId: number) => {
+        const confirmDelete = window.confirm('정말 이 파티를 삭제하시겠습니까? 삭제된 정보는 복구할 수 없습니다.');
+        if (!confirmDelete) return;
+
+        try {
+            setActionLoadingId(partyId);
+            await deleteParty(partyId);
+            alert('파티가 성공적으로 삭제되었습니다.');
+            fetchManagedParties();
+        } catch (error: any) {
+            console.error('Failed to delete party:', error);
+            if (error.response?.status === 403) {
+                alert('You do not have permission to manage this party.');
+            } else {
+                alert('파티 삭제에 실패했습니다.');
+            }
+        } finally {
+            setActionLoadingId(null);
+        }
+    };
+
+    const formatDate = (dateStr: string) => {
+        const d = new Date(dateStr);
+        return d.toLocaleDateString('ko-KR', {
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: false
+        });
+    };
+
+    const getStatusStyle = (status: string) => {
+        switch (status) {
+            case 'DRAFT':
+                return 'bg-amber-50 text-amber-700 border-amber-200 font-bold';
+            case 'OPEN':
+                return 'bg-emerald-50 text-emerald-700 border-emerald-200 font-bold';
+            case 'CLOSED':
+                return 'bg-zinc-50 text-zinc-500 border-zinc-200 font-medium';
+            case 'CANCELLED':
+                return 'bg-red-50 text-red-600 border-red-200 font-medium';
+            default:
+                return 'bg-zinc-100 text-zinc-800 border-zinc-200';
+        }
+    };
+
+    return (
+        <div className="flex-1 flex flex-col h-full bg-[#FAF8F3] overflow-hidden">
+            {/* Top Desktop Navigation */}
+            <header className="bg-white border-b border-zinc-100 px-6 py-4 flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                    <h1 className="text-xl font-black italic text-[#162660] font-['Joti_One']">BoardBuddy Manager</h1>
+                    <span className="h-4 w-px bg-zinc-200"></span>
+                    <span className="text-sm font-semibold text-zinc-500">Party Dashboard</span>
+                </div>
+                <div className="flex items-center gap-3">
+                    <Button
+                        variant="outline"
+                        onClick={onBackToHomeClick}
+                        className="rounded-full border-zinc-200 text-zinc-600 hover:bg-zinc-50 font-medium h-10 py-0"
+                    >
+                        모바일 홈으로
+                    </Button>
+                    <Button
+                        variant="primary"
+                        onClick={onCreatePartyClick}
+                        className="bg-[#162660] hover:bg-[#1e3a8a] text-white border-none rounded-full h-10 py-0 font-bold flex items-center gap-1.5 shadow-sm"
+                    >
+                        <Plus className="w-4 h-4" />
+                        새 파티 만들기
+                    </Button>
+                </div>
+            </header>
+
+            {/* Main Content Area */}
+            <main className="flex-1 overflow-y-auto p-6 max-w-7xl w-full mx-auto">
+                {loading ? (
+                    <div className="flex flex-col items-center justify-center py-40 text-zinc-500">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#162660] mb-3"></div>
+                        <p className="text-sm">파티 관리 데이터를 가져오는 중...</p>
+                    </div>
+                ) : parties.length === 0 ? (
+                    <div className="bg-white border border-zinc-100 rounded-3xl p-16 text-center text-zinc-400 shadow-sm flex flex-col items-center justify-center max-w-2xl mx-auto mt-12">
+                        <ShieldAlert className="w-16 h-16 stroke-[1.2] mb-3 text-zinc-300" />
+                        <h2 className="text-xl font-bold text-zinc-900 mb-1">관리 중인 파티가 없습니다</h2>
+                        <p className="text-sm max-w-md mt-1 mb-6">
+                            귀하의 파티 주최자 그룹(PartyOrganizerGroup)에서 등록된 모임이 존재하지 않습니다. 새로운 파티 모임을 직접 개설해보세요.
+                        </p>
+                        <Button
+                            variant="primary"
+                            onClick={onCreatePartyClick}
+                            className="bg-[#162660] rounded-full font-bold px-6"
+                        >
+                            첫 번째 파티 개설하기
+                        </Button>
+                    </div>
+                ) : (
+                    <div className="bg-white border border-zinc-100 rounded-3xl shadow-sm overflow-hidden">
+                        {/* Table layout for Desktop */}
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-left border-collapse">
+                                <thead>
+                                    <tr className="bg-zinc-50 border-b border-zinc-100 text-xs text-zinc-400 font-bold uppercase tracking-wider">
+                                        <th className="px-6 py-4">Title / Group</th>
+                                        <th className="px-6 py-4">Status</th>
+                                        <th className="px-6 py-4">Start Time</th>
+                                        <th className="px-6 py-4">Visibility / Policy</th>
+                                        <th className="px-6 py-4">Joined / Capacity</th>
+                                        <th className="px-6 py-4 text-right">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-zinc-50 text-sm text-zinc-700">
+                                    {parties.map(party => {
+                                        const isDraft = party.status === 'DRAFT';
+                                        const isOpen = party.status === 'OPEN';
+                                        const isDisabled = actionLoadingId === party.id;
+
+                                        return (
+                                            <tr key={party.id} className="hover:bg-zinc-50/50 transition-colors">
+                                                <td className="px-6 py-4.5">
+                                                    <div className="font-bold text-zinc-900 hover:text-[#162660] cursor-pointer" onClick={() => onViewDetailClick(party.id)}>
+                                                        {party.title}
+                                                    </div>
+                                                    <div className="text-xs text-zinc-400 font-medium mt-1">
+                                                        Group: {party.organizerGroupName || `ID ${party.organizerGroupId}`}
+                                                    </div>
+                                                </td>
+                                                <td className="px-6 py-4.5">
+                                                    <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs border ${getStatusStyle(party.status)}`}>
+                                                        {party.status}
+                                                    </span>
+                                                </td>
+                                                <td className="px-6 py-4.5 font-medium text-zinc-500">
+                                                    {formatDate(party.startsAt)}
+                                                </td>
+                                                <td className="px-6 py-4.5">
+                                                    <div className="font-semibold text-zinc-800">{party.visibilityType}</div>
+                                                    <div className="text-xs text-zinc-400 font-medium mt-0.5">{party.joinPolicy}</div>
+                                                </td>
+                                                <td className="px-6 py-4.5">
+                                                    <div className="flex items-center gap-2 font-bold text-zinc-800">
+                                                        <Users className="w-4 h-4 text-zinc-400" />
+                                                        <span>{party.joinedCount || 0} / {party.capacity} 명</span>
+                                                    </div>
+                                                </td>
+                                                <td className="px-6 py-4.5 text-right">
+                                                    <div className="flex items-center justify-end gap-2">
+                                                        {/* Quick status transitions */}
+                                                        {isDraft && (
+                                                            <Button
+                                                                variant="outline"
+                                                                size="small"
+                                                                onClick={() => handleOpenRegistration(party.id)}
+                                                                disabled={isDisabled}
+                                                                className="border-emerald-200 text-emerald-600 hover:bg-emerald-50 rounded-full font-bold text-xs"
+                                                            >
+                                                                <Play className="w-3.5 h-3.5 inline mr-1" /> Open
+                                                            </Button>
+                                                        )}
+                                                        {isOpen && (
+                                                            <Button
+                                                                variant="outline"
+                                                                size="small"
+                                                                onClick={() => handleCloseRegistration(party.id)}
+                                                                disabled={isDisabled}
+                                                                className="border-zinc-200 text-zinc-500 hover:bg-zinc-100 rounded-full font-semibold text-xs"
+                                                            >
+                                                                <Power className="w-3.5 h-3.5 inline mr-1" /> Close
+                                                            </Button>
+                                                        )}
+
+                                                        <Button
+                                                            variant="outline"
+                                                            size="small"
+                                                            onClick={() => onViewDetailClick(party.id)}
+                                                            className="border-zinc-200 text-zinc-700 hover:bg-zinc-100 rounded-full font-semibold text-xs"
+                                                        >
+                                                            Inspect
+                                                        </Button>
+
+                                                        <Button
+                                                            variant="outline"
+                                                            size="small"
+                                                            onClick={() => onEditPartyClick(party.id)}
+                                                            disabled={isDisabled}
+                                                            className="border-zinc-200 text-zinc-700 hover:bg-zinc-100 rounded-full font-semibold text-xs"
+                                                        >
+                                                            <Edit2 className="w-3.5 h-3.5" />
+                                                        </Button>
+
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="small"
+                                                            onClick={() => handleDelete(party.id)}
+                                                            disabled={isDisabled}
+                                                            className="text-red-500 hover:bg-red-50 hover:text-red-700 rounded-full p-2"
+                                                        >
+                                                            <Trash2 className="w-4 h-4" />
+                                                        </Button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                )}
+            </main>
+        </div>
+    );
+}

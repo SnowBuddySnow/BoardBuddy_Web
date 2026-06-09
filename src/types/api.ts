@@ -217,3 +217,52 @@ export interface ReservationInfo {
     can_delete: boolean;
     waiting_position: number | null;
 }
+
+// --- Party DTOs ---
+
+export type PartyStatus = 'DRAFT' | 'OPEN' | 'CLOSED' | 'CANCELLED';
+export type VisibilityType = 'PUBLIC' | 'CREW_LIMITED' | 'INVITE_ONLY' | 'LINK_ONLY';
+export type JoinPolicy = 'INSTANT' | 'APPROVAL_REQUIRED' | 'INVITE_ONLY';
+export type ParticipantStatus = 'JOINED' | 'PENDING' | 'CANCELLED' | 'REMOVED';
+
+export interface Party {
+    id: number;
+    title: string;
+    description: string;
+    activityType: string;
+    startsAt: string; // ISO LocalDateTime
+    endsAt?: string; // ISO LocalDateTime
+    locationName: string;
+    locationAddress: string;
+    capacity: number;
+    status: PartyStatus;
+    visibilityType: VisibilityType;
+    joinPolicy: JoinPolicy;
+    createdByUserId: number;
+    organizerGroupId: number;
+    organizerGroupName?: string;
+    joinedCount?: number;
+    currentUserStatus?: ParticipantStatus | null;
+}
+
+export interface PartyParticipant {
+    id: number;
+    partyEventId: number;
+    userId: number;
+    status: ParticipantStatus;
+    joinedAt: string;
+    cancelledAt?: string | null;
+}
+
+export interface OrganizerGroup {
+    id: number;
+    name: string;
+}
+
+export interface OrganizerGroupMembership {
+    id: number;
+    groupId: number;
+    userId: number;
+    role: 'OWNER' | 'EDITOR' | 'VIEWER';
+}
+

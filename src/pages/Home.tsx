@@ -1,29 +1,12 @@
-
-import { Calendar } from '../components/Calendar';
 import { useState, useEffect } from 'react';
+import { Calendar } from '../components/Calendar';
 import { getUserInfo, getMyReservations } from '../services/user';
 import { getCrewInfo, getMyApplications } from '../services/crew';
-import { UserDetail, CrewDetail, MyReservation, MyApplication } from '../types/api';
-import { Bus, Mountain, UserPlus, Sun, Cloud, CloudRain, CloudSnow, CloudLightning, Wind } from 'lucide-react';
+import { listParties, listOrganizerGroups } from '../services/party';
+import { UserDetail, CrewDetail, MyReservation, MyApplication, Party, OrganizerGroup } from '../types/api';
+import { Bus, Mountain, UserPlus, Sun, Cloud, CloudRain, CloudSnow, CloudLightning, Wind, Sparkles, MapPin, Users, Calendar as CalendarIcon, ChevronRight } from 'lucide-react';
 import { getWeather, WeatherData } from '../services/weather';
-
-// Icons
-
-
-
-const CircleArrowRightIcon = ({ className }: { className?: string }) => (
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
-        <circle cx="12" cy="12" r="10" className="opacity-20" />
-        <path d="m10 8 4 4-4 4" />
-    </svg>
-);
-
-const CheckSquareIcon = ({ className }: { className?: string }) => (
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
-        <polyline points="9 11 12 14 22 4" />
-        <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
-    </svg>
-);
+import { Button } from '../components/Button';
 
 const SnowflakeDecorIcon = ({ className }: { className?: string }) => (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
@@ -37,33 +20,40 @@ const SnowflakeDecorIcon = ({ className }: { className?: string }) => (
 interface HomeProps {
     onMakeReservationClick: () => void;
     onGuestReservationClick: () => void;
-    onCheckScheduleClick: () => void;
     onCalendarClick: () => void;
     onTeamClick: () => void;
     onSearchClick: () => void;
     hasCrew?: boolean;
     onJoinCrew?: () => void;
+    onPartyClick: (partyId: number) => void;
+    onSeeAllPartiesClick: () => void;
+    onMyPlansClick: () => void;
+    onDashboardClick: () => void;
 }
 
 export default function Home({
     onMakeReservationClick,
     onGuestReservationClick,
-    // onCheckScheduleClick, // Commented out to fix lint "never read"
     onCalendarClick,
     onTeamClick,
     onSearchClick,
     hasCrew: initialHasCrew = true,
-    // onJoinCrew // Commented out to fix lint "never read"
+    onPartyClick,
+    onSeeAllPartiesClick,
+    onMyPlansClick,
+    onDashboardClick
 }: HomeProps) {
     const [userInfo, setUserInfo] = useState<UserDetail | null>(null);
     const [crewDetail, setCrewDetail] = useState<CrewDetail | null>(null);
     const [myReservations, setMyReservations] = useState<MyReservation[]>([]);
     const [myApplications, setMyApplications] = useState<MyApplication[]>([]);
-    // Use prop as initial, but can be updated by data
     const [hasCrew, setHasCrew] = useState(initialHasCrew);
-    const [isDebugNoCrew] = useState(false);
     const [weather, setWeather] = useState<WeatherData | null>(null);
     const [currentDate, setCurrentDate] = useState<string>('');
+
+    // Party-related states
+    const [parties, setParties] = useState<Party[]>([]);
+    const [hasOrganizerPermission, setHasOrganizerPermission] = useState(false);
 
     useEffect(() => {
         const fetchData = async () => {
@@ -80,7 +70,6 @@ export default function Home({
                     }
                 } else {
                     setHasCrew(false);
-                    // Only fetch applications if no crew
                     try {
                         const apps = await getMyApplications();
                         setMyApplications(apps);
@@ -101,7 +90,25 @@ export default function Home({
                 console.error("Failed to fetch user info", err);
             }
         };
+
+        const fetchPartyData = async () => {
+            try {
+                // Fetch public parties
+                const partiesList = await listParties();
+                // Show only OPEN parties in recommended lists
+                const openParties = partiesList.filter(p => p.status === 'OPEN');
+                setParties(openParties);
+
+                // Fetch organizer groups to verify create permissions
+                const groups = await listOrganizerGroups();
+                setHasOrganizerPermission(groups.length > 0);
+            } catch (err) {
+                console.error("Failed to fetch party data for home screen", err);
+            }
+        };
+
         fetchData();
+        fetchPartyData();
 
         // Fetch Weather
         getWeather().then(data => {
@@ -119,284 +126,290 @@ export default function Home({
 
     }, []);
 
+    // Helper to format party date
+    const formatPartyDate = (dateStr: string) => {
+        const d = new Date(dateStr);
+        const month = d.getMonth() + 1;
+        const date = d.getDate();
+        const hour = String(d.getHours()).padStart(2, '0');
+        const min = String(d.getMinutes()).padStart(2, '0');
+        return `${month}/${date} ${hour}:${min}`;
+    };
+
+    // Filter logic for sections
+    const nowTime = new Date();
+    const oneWeekLater = new Date(nowTime.getTime() + 7 * 24 * 60 * 60 * 1000);
+
+    const thisWeekParties = parties.filter(p => {
+        const start = new Date(p.startsAt);
+        return start >= nowTime && start <= oneWeekLater;
+    });
+
+    const upcomingParties = parties.filter(p => {
+        const start = new Date(p.startsAt);
+        return start > nowTime;
+    }).sort((a, b) => new Date(a.startsAt).getTime() - new Date(b.startsAt).getTime());
+
+    // Nearest upcoming open party serves as the "Featured Party"
+    const featuredParty = upcomingParties[0];
+
+    // Plans user has joined or has pending
+    const myPlansCount = parties.filter(p => p.currentUserStatus === 'JOINED' || p.currentUserStatus === 'PENDING').length;
+
     return (
-        <div className="flex-1 flex flex-col h-full overflow-hidden bg-[#F8F9FA] dark:bg-zinc-950 relative">
+        <div className="flex-1 flex flex-col h-full overflow-hidden bg-[#FAF8F3] relative">
             {/* Header */}
-            <header className="px-4 pt-4 pb-4 flex items-center justify-between z-10">
+            <header className="px-4 pt-4 pb-3 flex items-center justify-between z-10 bg-[#FAF8F3]">
                 <div className="flex items-center gap-2">
-                    <h1 className="text-[20px] font-black italic text-zinc-900 dark:text-zinc-100 font-['Joti_One']">BoardBuddy</h1>
-                    {/* Shark Image removed due to missing file */}
+                    <h1 className="text-[20px] font-black italic text-zinc-900 font-['Joti_One']">BoardBuddy</h1>
                 </div>
-                <div className="flex items-center gap-2">
-                    {/* 
-                        <button
-                            onClick={() => {
-                                console.log('Toggling debug mode. Current:', isDebugNoCrew, 'HasCrew:', hasCrew);
-                                setIsDebugNoCrew(prev => !prev);
-                            }}
-                            className={`text-[10px] px-2 py-1 rounded border mr-2 transition-colors ${isDebugNoCrew
-                                ? 'bg-blue-100 text-blue-600 border-blue-200 hover:bg-blue-200'
-                                : 'bg-red-100 text-red-600 border-red-200 hover:bg-red-200'
-                                }`}
-                        >
-                            {isDebugNoCrew ? 'Show My Crew' : 'Simulate No Crew'}
-                        </button>
-                        */}
-                    {/* <Button variant="ghost" size="icon" onClick={onSearchClick} className="text-zinc-900 dark:text-zinc-100 cursor-pointer">
-                        <BellIcon className="w-[24px] h-[24px]" />
-                    </Button>
-                    <Button variant="ghost" size="icon" className="text-zinc-900 dark:text-zinc-100 cursor-pointer">
-                        <SettingsIcon className="w-[24px] h-[24px]" />
-                    </Button> */}
-                </div>
+                {hasOrganizerPermission && (
+                    <button
+                        onClick={onDashboardClick}
+                        className="text-xs font-black bg-[#162660] text-white px-3 py-1.5 rounded-full hover:bg-blue-900 transition-colors shadow-sm flex items-center gap-1"
+                    >
+                        <Sparkles className="w-3 h-3" /> 파티 관리자
+                    </button>
+                )}
             </header>
 
-            {/* Content Area with bottom padding for menu */}
-            <main className="flex-1 overflow-y-auto pb-[110px]">
+            {/* Content Area */}
+            <main className="flex-1 overflow-y-auto pb-[110px] space-y-6">
 
-                {/* Team Info */}
-                <div className="px-4 mb-8">
-                    {!isDebugNoCrew && hasCrew && userInfo?.crew ? (
-                        <div className="flex items-end justify-between">
-                            <div>
-                                <div className="text-sm text-zinc-500 dark:text-zinc-400 font-medium mb-1">{crewDetail?.univ || userInfo.school}</div>
-                                <div
-                                    onClick={onTeamClick}
-                                    className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity"
-                                >
-                                    <h2 className="text-2xl font-bold truncate max-w-[200px] text-zinc-900 dark:text-zinc-100">{userInfo.crew.crewName}</h2>
-                                    <CircleArrowRightIcon className="w-5 h-5 text-[#FCD34D] shrink-0" />
-                                </div>
+                {/* Team Info / Host Metadata (De-emphasized compact row) */}
+                <div className="px-4">
+                    {hasCrew && userInfo?.crew ? (
+                        <div className="bg-white/80 border border-zinc-100 rounded-2xl px-4 py-2.5 flex items-center justify-between text-xs shadow-sm">
+                            <div className="flex items-center gap-2">
+                                <span className="font-bold text-zinc-400">{crewDetail?.univ || userInfo.school}</span>
+                                <span className="h-3 w-px bg-zinc-200"></span>
+                                <span onClick={onTeamClick} className="font-black text-zinc-700 hover:text-[#162660] cursor-pointer flex items-center gap-0.5">
+                                    {userInfo.crew.crewName} <ChevronRight className="w-3.5 h-3.5 text-zinc-400" />
+                                </span>
                             </div>
-
-                            {/* External Link Buttons */}
-                            <div className="flex items-center gap-3 mb-1">
-                                <a
-                                    href="https://skibus.purplebus.co.kr/Pp/"
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="p-2 rounded-full border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors text-zinc-600 dark:text-zinc-400 shadow-sm"
-                                    aria-label="Bus Reservation"
-                                >
-                                    <Bus className="w-5 h-5" />
+                            <div className="flex items-center gap-2 shrink-0">
+                                <a href="https://skibus.purplebus.co.kr/Pp/" target="_blank" rel="noopener noreferrer" className="p-1 text-zinc-500 hover:text-[#162660]" aria-label="Bus">
+                                    <Bus className="w-4 h-4" />
                                 </a>
-                                <a
-                                    href="https://phoenixhnr.co.kr/m/static/pyeongchang/snowpark/slope-lift"
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="p-2 rounded-full border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors text-zinc-600 dark:text-zinc-400 shadow-sm"
-                                    aria-label="Slope Status"
-                                >
-                                    <Mountain className="w-5 h-5" />
+                                <a href="https://phoenixhnr.co.kr/m/static/pyeongchang/snowpark/slope-lift" target="_blank" rel="noopener noreferrer" className="p-1 text-zinc-500 hover:text-[#162660]" aria-label="Slope">
+                                    <Mountain className="w-4 h-4" />
                                 </a>
                             </div>
                         </div>
                     ) : myApplications.some(app => app.status === 'PENDING') ? (
-                        <div className="flex items-center justify-between">
-                            <div className="flex flex-col gap-1 py-2">
-                                <h2 className="text-xl font-bold text-zinc-900 dark:text-zinc-100">
-                                    {myApplications.find(app => app.status === 'PENDING')?.crew_name}에 가입 신청 성공
-                                </h2>
-                                <p className="text-sm text-zinc-500 dark:text-zinc-400">
-                                    크루 운영진 승인 대기중
-                                </p>
-                            </div>
+                        <div className="bg-white/80 border border-zinc-100 rounded-2xl px-4 py-2.5 text-xs font-semibold text-zinc-500 shadow-sm text-center">
+                            {myApplications.find(app => app.status === 'PENDING')?.crew_name} 가입 대기 중 (승인 대기)
                         </div>
                     ) : (
-                        <div className="flex items-center justify-between">
-                            <div
-                                onClick={onSearchClick}
-                                className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity py-2"
-                            >
-                                <h2 className="text-2xl font-bold text-zinc-400 dark:text-zinc-500">탭해서 크루에 가입하세요</h2>
-                                <CircleArrowRightIcon className="w-5 h-5 text-zinc-300 dark:text-zinc-600" />
-                            </div>
-                            {/* 
-                                <Button
-                                    size="small"
-                                    variant="outline"
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        onJoinCrew?.();
-                                    }}
-                                    className="text-xs h-8 px-3"
-                                >
-                                    가입 (Debug)
-                                </Button>
-                                */}
+                        <div
+                            onClick={onSearchClick}
+                            className="bg-white/80 border border-zinc-100 rounded-2xl px-4 py-2.5 text-xs font-bold text-zinc-400 shadow-sm text-center cursor-pointer hover:bg-white"
+                        >
+                            크루 가입하러 가기
                         </div>
                     )}
                 </div>
 
+                {/* 1. My Plans Shortcut Card */}
+                {myPlansCount > 0 && (
+                    <div className="px-4">
+                        <button
+                            onClick={onMyPlansClick}
+                            className="w-full bg-[#162660] text-white rounded-3xl p-4.5 flex items-center justify-between shadow-md hover:bg-blue-900 transition-all active:scale-[0.99] border-none"
+                        >
+                            <div className="flex items-center gap-3">
+                                <div className="p-2 bg-white/10 rounded-2xl">
+                                    <CalendarIcon className="w-5 h-5 text-blue-200" />
+                                </div>
+                                <div className="text-left">
+                                    <h4 className="text-sm font-bold">내가 참가한 모임</h4>
+                                    <p className="text-xs text-blue-200 mt-0.5">{myPlansCount}개의 참여 예정인 파티 일정이 있습니다.</p>
+                                </div>
+                            </div>
+                            <ChevronRight className="w-5 h-5 text-blue-300" />
+                        </button>
+                    </div>
+                )}
+
+                {/* 2. Featured Party (Hero Card) */}
+                {featuredParty ? (
+                    <section className="px-4 space-y-2.5">
+                        <h2 className="text-base font-black text-zinc-900 flex items-center gap-1.5">
+                            <Sparkles className="w-4 h-4 text-amber-500 fill-amber-500" /> 지금 당장 참가할 파티!
+                        </h2>
+                        <div
+                            onClick={() => onPartyClick(featuredParty.id)}
+                            className="bg-white border border-zinc-100 rounded-3xl p-5 shadow-sm hover:shadow-md transition-all active:scale-[0.99] cursor-pointer flex flex-col justify-between min-h-[180px]"
+                        >
+                            <div>
+                                <div className="flex items-center justify-between mb-2">
+                                    <span className="text-[10px] tracking-wider uppercase font-black px-2.5 py-0.5 bg-amber-50 border border-amber-100 text-amber-800 rounded-full">
+                                        {featuredParty.activityType}
+                                    </span>
+                                    {featuredParty.organizerGroupName && (
+                                        <span className="text-xs text-zinc-400 font-semibold">
+                                            organized by {featuredParty.organizerGroupName}
+                                        </span>
+                                    )}
+                                </div>
+
+                                <h3 className="text-lg font-bold text-zinc-900 mb-3 leading-snug">
+                                    {featuredParty.title}
+                                </h3>
+
+                                <div className="space-y-1.5 text-xs text-zinc-500 mb-3 font-semibold">
+                                    <div className="flex items-center gap-1.5">
+                                        <CalendarIcon className="w-4 h-4 text-zinc-400 shrink-0" />
+                                        <span>{formatPartyDate(featuredParty.startsAt)}</span>
+                                    </div>
+                                    <div className="flex items-center gap-1.5">
+                                        <MapPin className="w-4 h-4 text-zinc-400 shrink-0" />
+                                        <span className="truncate">{featuredParty.locationName}</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="flex items-center justify-between border-t border-zinc-50 pt-3.5 mt-1">
+                                <div className="flex items-center gap-1.5 text-xs font-bold text-zinc-600">
+                                    <Users className="w-4 h-4 text-zinc-400" />
+                                    <span>
+                                        {featuredParty.joinedCount || 0}/{featuredParty.capacity} joined
+                                    </span>
+                                </div>
+                                <span className="bg-[#162660] text-white text-xs font-bold px-4 py-1.5 rounded-full shadow-sm hover:bg-blue-900 transition-colors">
+                                    자세히 보기
+                                </span>
+                            </div>
+                        </div>
+                    </section>
+                ) : (
+                    <section className="px-4">
+                        <div className="bg-white border border-zinc-100 rounded-3xl p-8 text-center text-zinc-400 text-sm">
+                            현재 대기 중인 열린 파티 모임이 없습니다.
+                        </div>
+                    </section>
+                )}
+
+                {/* 3. This Week Timeline */}
+                {thisWeekParties.length > 0 && (
+                    <section className="px-4 space-y-2.5">
+                        <div className="flex items-center justify-between">
+                            <h2 className="text-base font-black text-zinc-900">이번 주 모임</h2>
+                        </div>
+                        <div className="space-y-3">
+                            {thisWeekParties.slice(0, 3).map(party => (
+                                <div
+                                    key={party.id}
+                                    onClick={() => onPartyClick(party.id)}
+                                    className="bg-white border border-zinc-50 rounded-2xl p-4 flex items-center justify-between hover:shadow-sm transition-all active:scale-[0.99] cursor-pointer"
+                                >
+                                    <div className="space-y-1 pr-4">
+                                        <h3 className="text-sm font-bold text-zinc-900 truncate max-w-[200px]">{party.title}</h3>
+                                        <div className="flex items-center gap-2 text-xs text-zinc-400 font-semibold">
+                                            <span>{formatPartyDate(party.startsAt)}</span>
+                                            <span>•</span>
+                                            <span className="truncate max-w-[100px]">{party.locationName}</span>
+                                        </div>
+                                    </div>
+                                    <ChevronRight className="w-4 h-4 text-zinc-300 shrink-0" />
+                                </div>
+                            ))}
+                        </div>
+                    </section>
+                )}
+
+                {/* 4. Upcoming / All joinable parties */}
+                {upcomingParties.length > 0 && (
+                    <section className="px-4 space-y-2.5">
+                        <div className="flex items-center justify-between">
+                            <h2 className="text-base font-black text-zinc-900">다가오는 액티비티</h2>
+                            <button
+                                onClick={onSeeAllPartiesClick}
+                                className="text-xs font-bold text-[#162660] hover:underline flex items-center gap-0.5 bg-transparent border-none"
+                            >
+                                전체 보기 <ChevronRight className="w-3.5 h-3.5" />
+                            </button>
+                        </div>
+                        <div className="space-y-3">
+                            {upcomingParties.slice(0, 5).map(party => (
+                                <div
+                                    key={party.id}
+                                    onClick={() => onPartyClick(party.id)}
+                                    className="bg-white border border-zinc-100 rounded-2xl p-4.5 hover:shadow-sm transition-all active:scale-[0.99] cursor-pointer flex flex-col justify-between"
+                                >
+                                    <div className="flex items-start justify-between gap-4">
+                                        <div className="space-y-1">
+                                            <h3 className="text-sm font-bold text-zinc-900 leading-tight">
+                                                {party.title}
+                                            </h3>
+                                            <div className="text-xs text-zinc-400 font-bold uppercase tracking-wider">
+                                                {party.activityType} • Host: {party.organizerGroupName}
+                                            </div>
+                                        </div>
+                                        <span className="text-xs text-zinc-500 font-bold shrink-0">
+                                            {party.joinedCount || 0}/{party.capacity} joined
+                                        </span>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </section>
+                )}
+
+                {/* Legacy Actions / Reservations (Kept at the bottom as optional helper entry points) */}
                 {hasCrew && (
-                    <>
-                        {/* Action Cards */}
-                        <div className="px-4 mb-4 grid grid-cols-2 gap-4">
-                            {/* Reservation Card */}
+                    <section className="px-4 space-y-3 pt-4 border-t border-zinc-100">
+                        <h2 className="text-xs font-bold text-zinc-400 uppercase tracking-widest">시즌방/일반 예약 (겨울)</h2>
+                        <div className="grid grid-cols-2 gap-4">
                             <button
                                 onClick={onMakeReservationClick}
-                                className="bg-[#FCD34D] dark:bg-[#FCD34D] aspect-square rounded-[20px] p-5 flex flex-col items-center justify-center text-zinc-900 dark:text-zinc-900 hover:brightness-110 transition-all shadow-sm gap-2"
+                                className="bg-[#FAF0D7]/65 hover:bg-[#FAF0D7] aspect-square rounded-[20px] p-4.5 flex flex-col items-center justify-center text-zinc-900 transition-all shadow-sm border-none gap-2"
                             >
-                                <div className="w-12 h-12 rounded-full bg-white dark:bg-white flex items-center justify-center shadow-sm">
-                                    <CheckSquareIcon className="w-6 h-6 text-zinc-900 dark:text-zinc-900" />
+                                <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center shadow-sm">
+                                    <CalendarIcon className="w-5 h-5 text-amber-800" />
                                 </div>
-                                <span className="font-bold text-lg">예약하기</span>
+                                <span className="font-bold text-sm">크루 예약하기</span>
                             </button>
 
-                            {/* Upcoming Schedule Card - Commented out as requested
-                            <button
-                                onClick={onCheckScheduleClick}
-                                className="bg-[#D6E6F5] aspect-square rounded-[20px] p-5 flex flex-col hover:brightness-95 transition-all shadow-sm overflow-hidden relative text-left"
-                            >
-                                <div className="text-zinc-500 font-bold text-sm mb-3 w-full">다가오는 일정</div>
-
-                                <div className="bg-white/80 backdrop-blur-sm rounded-xl p-4 w-full flex-1 flex flex-col justify-center gap-1 border-l-4 border-[#1E3A8A]">
-                                    <div className="text-lg font-bold text-zinc-900">12월 30일</div>
-                                    <div className="text-sm text-zinc-500 font-medium">예약 확정</div>
-                                </div>
-                            </button>
-                            */}
-                            {/* Guest Reservation Card */}
                             <button
                                 onClick={onGuestReservationClick}
-                                className="bg-[#D6E6F5] dark:bg-[#D6E6F5]/30 aspect-square rounded-[20px] p-5 flex flex-col items-center justify-center text-zinc-900 dark:text-zinc-100 hover:brightness-110 dark:hover:bg-[#D6E6F5]/40 transition-all shadow-sm gap-2"
+                                className="bg-[#D6E6F5]/50 hover:bg-[#D6E6F5]/70 aspect-square rounded-[20px] p-4.5 flex flex-col items-center justify-center text-zinc-900 transition-all shadow-sm border-none gap-2"
                             >
-                                <div className="w-12 h-12 rounded-full bg-white dark:bg-white/20 flex items-center justify-center shadow-sm">
-                                    <UserPlus className="w-6 h-6 text-zinc-900 dark:text-zinc-100" />
+                                <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center shadow-sm">
+                                    <UserPlus className="w-5 h-5 text-blue-800" />
                                 </div>
-                                <span className="font-bold text-lg">게스트 예약하기</span>
+                                <span className="font-bold text-sm">게스트 예약</span>
                             </button>
                         </div>
 
-                        {/* Calendar Section */}
-                        <div className="px-4 mb-8">
-                            <div
-                                onClick={onCalendarClick}
-                                className="bg-[#F1E4D1] dark:bg-zinc-800 rounded-[20px] p-4 shadow-sm cursor-pointer hover:brightness-95 dark:hover:bg-zinc-700 transition-all"
-                            >
-                                <span className="font-bold text-zinc-500 dark:text-zinc-400 ml-2 text-sm block mb-2">나의 달력</span>
-                                <Calendar
-                                    month={(() => {
-                                        const today = new Date();
-                                        const monthNames = [
-                                            "January", "February", "March", "April", "May", "June",
-                                            "July", "August", "September", "October", "November", "December"
-                                        ];
-                                        return monthNames[today.getMonth()];
-                                    })()}
-                                    year={new Date().getFullYear()}
-                                    startDayOfWeek={(() => {
-                                        const today = new Date();
-                                        const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1).getDay();
-                                        return firstDayOfMonth;
-                                    })()}
-                                    totalDays={(() => {
-                                        const today = new Date();
-                                        const daysInMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
-                                        // Extend by 14 days to show next month's data if near end of month
-                                        return daysInMonth + 14;
-                                    })()}
-                                    expandable={false}
-                                    hideHeader={true}
-                                    maxWeeks={2}
-                                    compact={true}
-                                    className="rounded-[20px] bg-transparent"
-                                    startWeekIndex={(() => {
-                                        const today = new Date();
-                                        const todayDay = today.getDate();
-                                        const firstDayOfWeek = new Date(today.getFullYear(), today.getMonth(), 1).getDay();
-                                        return Math.floor((todayDay + firstDayOfWeek - 1) / 7);
-                                    })()}
-                                    renderDay={(day) => {
-                                        const today = new Date();
-                                        const currentYear = today.getFullYear();
-                                        const currentMonth = today.getMonth();
-                                        const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
-
-                                        let targetYear = currentYear;
-                                        let targetMonth = currentMonth;
-                                        let displayDay = day;
-
-                                        // Handle overflow to next month
-                                        if (day > daysInMonth) {
-                                            displayDay = day - daysInMonth;
-                                            targetMonth = currentMonth + 1;
-                                            if (targetMonth > 11) {
-                                                targetMonth = 0;
-                                                targetYear = currentYear + 1;
-                                            }
-                                        }
-
-                                        const dateStr = `${targetYear}-${String(targetMonth + 1).padStart(2, '0')}-${String(displayDay).padStart(2, '0')}`;
-                                        const reservation = myReservations.find(r => r.date === dateStr);
-                                        const isConfirmed = reservation?.status === 'confirmed';
-                                        const isPending = reservation && reservation.status !== 'confirmed';
-
-                                        // Base Container Classes
-                                        const containerClasses = "w-full h-full flex flex-col items-center justify-start pt-1.5 transition-all duration-200 text-sm font-bold rounded-[10px]";
-
-                                        // Content (Number or Circle)
-                                        let numberElement = <span className="text-sm font-medium text-zinc-500 dark:text-zinc-300">{displayDay}</span>;
-
-                                        if (isConfirmed || isPending) {
-                                            const bg = isConfirmed ? 'bg-[#1E3A8A]' : 'bg-[#93C5FD]'; // 확정: 남색, 대기: 연한 남색
-                                            const textColor = 'text-white';
-                                            numberElement = (
-                                                <div className={`w-8 h-8 -mt-1 rounded-full ${bg} ${textColor} flex items-center justify-center text-sm font-medium shadow-sm`}>
-                                                    {displayDay}
-                                                </div>
-                                            );
-                                        }
-                                        return (
-                                            <div className={containerClasses}>
-                                                {numberElement}
-                                            </div>
-                                        );
-                                    }}
-                                />
-                            </div>
+                        {/* Calendar */}
+                        <div
+                            onClick={onCalendarClick}
+                            className="bg-[#FAF8F3] border border-zinc-200/50 rounded-[20px] p-4 shadow-sm cursor-pointer hover:bg-white transition-all text-left"
+                        >
+                            <span className="font-bold text-zinc-500 ml-2 text-xs block mb-1">나의 예약 달력</span>
+                            <div className="text-sm font-bold text-zinc-800 ml-2">확인하러 가기 &gt;</div>
                         </div>
 
                         {/* Weather Banner */}
-                        <div className="w-full bg-gradient-to-r from-[#F8CACC] to-[#A0C4FF] min-h-[120px] flex items-center justify-between relative overflow-hidden">
-                            {/* Background decoration */}
-                            <div className="absolute left-2 bottom-[-1px] opacity-60">
-                                <SnowflakeDecorIcon className="w-24 h-24 text-white" />
+                        <div className="w-full bg-gradient-to-r from-[#F8CACC] to-[#A0C4FF] min-h-[100px] rounded-[20px] flex items-center justify-between relative overflow-hidden mt-4 shadow-sm">
+                            <div className="absolute left-2 bottom-[-1px] opacity-40">
+                                <SnowflakeDecorIcon className="w-20 h-20 text-white" />
                             </div>
-                            <div className="absolute left-22 top-2 opacity-40">
-                                <SnowflakeDecorIcon className="w-12 h-12 text-white" />
+                            <div className="z-10 pl-24 py-4 text-left">
+                                <div className="font-bold text-sm text-white">휘닉스파크 날씨</div>
+                                <div className="text-[10px] text-white/90">{currentDate}</div>
+                                <div className="text-[10px] text-white/80 mt-0.5">{weather?.weatherLabel}</div>
                             </div>
-
-                            <div className="z-10 pl-40 py-6">
-                                <div className="font-bold text-lg text-white">휘닉스파크</div>
-                                <div className="text-sm text-white/90">{currentDate}</div>
-                                <div className="text-xs text-white/80 mt-1">{weather?.weatherLabel}</div>
-                            </div>
-                            <div className="z-10 pr-8 flex flex-col items-end">
-                                <div className="text-5xl font-light text-white flex items-start">
-                                    {weather ? Math.round(weather.temperature) : '--'}<span className="text-2xl align-top">°</span>
-                                </div>
-                                <div className="text-white mt-1">
-                                    {/* Dynamic Icon based on weather code */}
-                                    {(() => {
-                                        if (!weather) return <Sun className="w-8 h-8" />;
-                                        const code = weather.weatherCode;
-                                        if (code === 0 || code === 1) return <Sun className="w-8 h-8" />;
-                                        if (code === 2 || code === 3) return <Cloud className="w-8 h-8" />;
-                                        if ([45, 48].includes(code)) return <Wind className="w-8 h-8" />;
-                                        if ([51, 53, 55, 56, 57, 61, 63, 65, 66, 67, 80, 81, 82].includes(code)) return <CloudRain className="w-8 h-8" />;
-                                        if ([71, 73, 75, 77, 85, 86].includes(code)) return <CloudSnow className="w-8 h-8" />;
-                                        if ([95, 96, 99].includes(code)) return <CloudLightning className="w-8 h-8" />;
-                                        return <Sun className="w-8 h-8" />;
-                                    })()}
+                            <div className="z-10 pr-6 flex flex-col items-end">
+                                <div className="text-3xl font-light text-white flex items-start">
+                                    {weather ? Math.round(weather.temperature) : '--'}<span className="text-lg">°</span>
                                 </div>
                             </div>
                         </div>
-                    </>
+                    </section>
                 )}
-
-
-            </main >
-        </div >
+            </main>
+        </div>
     );
 }
