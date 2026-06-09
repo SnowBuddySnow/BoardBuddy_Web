@@ -78,22 +78,22 @@ export const updateParticipantStatus = async (partyId: number, userId: number, s
 
 // --- Organizer Group Management APIs ---
 export const listOrganizerGroups = async (): Promise<OrganizerGroup[]> => {
+    const crewOverride = localStorage.getItem('dev_crew_override');
     const roleOverride = localStorage.getItem('dev_role_override');
+    const hasOverride = (crewOverride && crewOverride !== 'server') || (roleOverride && roleOverride !== 'server');
+
     if (roleOverride === 'organizer' || roleOverride === 'admin') {
         return [{ id: 1, name: 'Mock Dev Organizer Group' }];
     } else if (roleOverride === 'member') {
         return [];
     }
 
-    try {
-        const response = await apiClient.get<ApiResponse<OrganizerGroup[]>>('/api/dashboard/organizer-groups');
-        return response.data.data;
-    } catch (error) {
-        if (roleOverride === 'admin' || roleOverride === 'organizer') {
-            return [{ id: 1, name: 'Mock Dev Organizer Group' }];
-        }
-        throw error;
+    if (hasOverride) {
+        return [];
     }
+
+    const response = await apiClient.get<ApiResponse<OrganizerGroup[]>>('/api/dashboard/organizer-groups');
+    return response.data.data;
 };
 
 export const getOrganizerGroup = async (groupId: number): Promise<OrganizerGroup> => {

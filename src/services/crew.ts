@@ -72,6 +72,9 @@ export const getCrewUsageStatistics = async (
 
 export const getMyApplications = async (): Promise<MyApplication[]> => {
     const crewOverride = localStorage.getItem('dev_crew_override');
+    const roleOverride = localStorage.getItem('dev_role_override');
+    const hasOverride = (crewOverride && crewOverride !== 'server') || (roleOverride && roleOverride !== 'server');
+
     if (crewOverride === 'pending') {
         return [{
             application_id: 999,
@@ -82,6 +85,11 @@ export const getMyApplications = async (): Promise<MyApplication[]> => {
             processed_at: null
         }];
     }
+
+    if (hasOverride) {
+        return [];
+    }
+
     const response = await apiClient.get<ApiResponse<MyApplication[]>>('/crews/my-applications');
     return response.data.data;
 };

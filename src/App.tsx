@@ -36,8 +36,13 @@ function App() {
   useEffect(() => {
     const accessToken = localStorage.getItem('accessToken');
     const autoLogin = localStorage.getItem('autoLogin') === 'true';
+    const crewOverride = localStorage.getItem('dev_crew_override');
+    const roleOverride = localStorage.getItem('dev_role_override');
+    const hasOverride = (crewOverride && crewOverride !== 'server') || (roleOverride && roleOverride !== 'server');
 
-    if (accessToken && autoLogin) {
+    if (hasOverride) {
+      setCurrentView('home');
+    } else if (accessToken && autoLogin) {
       setCurrentView('home');
     } else if (!accessToken) {
       setCurrentView('login');
