@@ -103,6 +103,7 @@ export default function DevPanel() {
                                 { id: 'server', label: 'Use Real Server State' },
                                 { id: 'admin', label: 'Simulate: Platform Admin' },
                                 { id: 'organizer', label: 'Simulate: Party Organizer' },
+                                { id: 'viewer', label: 'Simulate: Group Viewer (Read-Only)' },
                                 { id: 'member', label: 'Simulate: Standard Member' },
                             ].map(opt => (
                                 <label

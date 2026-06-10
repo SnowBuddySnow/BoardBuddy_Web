@@ -9,13 +9,15 @@ interface DashboardPartiesProps {
     onEditPartyClick: (partyId: number) => void;
     onViewDetailClick: (partyId: number) => void;
     onBackToHomeClick: () => void;
+    onGroupsClick: () => void;
 }
 
 export default function DashboardParties({
     onCreatePartyClick,
     onEditPartyClick,
     onViewDetailClick,
-    onBackToHomeClick
+    onBackToHomeClick,
+    onGroupsClick
 }: DashboardPartiesProps) {
     const [parties, setParties] = useState<Party[]>([]);
     const [loading, setLoading] = useState(true);
@@ -117,10 +119,22 @@ export default function DashboardParties({
         <div className="flex-1 flex flex-col h-full bg-[#FAF8F3] overflow-hidden">
             {/* Top Desktop Navigation */}
             <header className="bg-white border-b border-zinc-100 px-6 py-4 flex items-center justify-between">
-                <div className="flex items-center gap-4">
+                <div className="flex items-center gap-6">
                     <h1 className="text-xl font-black italic text-[#162660] font-['Joti_One']">BoardBuddy Manager</h1>
                     <span className="h-4 w-px bg-zinc-200"></span>
-                    <span className="text-sm font-semibold text-zinc-500">Party Dashboard</span>
+                    <div className="flex gap-1 bg-zinc-100 p-1 rounded-full text-xs font-bold shrink-0">
+                        <button
+                            className="px-4 py-1.5 rounded-full bg-[#162660] text-white border-none shadow-sm cursor-default"
+                        >
+                            🎉 파티 관리
+                        </button>
+                        <button
+                            onClick={onGroupsClick}
+                            className="px-4 py-1.5 rounded-full text-zinc-500 hover:text-zinc-800 bg-transparent border-none cursor-pointer font-bold"
+                        >
+                            👥 그룹 관리
+                        </button>
+                    </div>
                 </div>
                 <div className="flex items-center gap-3">
                     <Button

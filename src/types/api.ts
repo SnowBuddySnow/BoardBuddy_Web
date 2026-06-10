@@ -264,5 +264,6 @@ export interface OrganizerGroupMembership {
     groupId: number;
     userId: number;
     role: 'OWNER' | 'EDITOR' | 'VIEWER';
+    userName?: string;
 }
 

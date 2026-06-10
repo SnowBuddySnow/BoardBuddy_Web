@@ -19,6 +19,22 @@ import {
 
 // --- Missing / TBD Crew Endpoints ---
 export const getCrewInfo = async (crewId: number): Promise<CrewDetail> => {
+    const crewOverride = localStorage.getItem('dev_crew_override');
+    const roleOverride = localStorage.getItem('dev_role_override');
+    const hasOverride = (crewOverride && crewOverride !== 'server') || (roleOverride && roleOverride !== 'server');
+
+    if (hasOverride) {
+        return {
+            crewId: crewId,
+            crewName: 'Mock Crew 401',
+            univ: 'Mock University',
+            status: 'ACTIVE',
+            role: 'MANAGER',
+            pinCode: '1234',
+            crewPin: '1234'
+        };
+    }
+
     const response = await apiClient.get<ApiResponse<CrewDetail>>(`/crews/${crewId}`);
     return response.data.data;
 };

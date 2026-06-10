@@ -21,16 +21,19 @@ import DashboardParties from './pages/DashboardParties';
 import DashboardPartyNew from './pages/DashboardPartyNew';
 import DashboardPartyDetail from './pages/DashboardPartyDetail';
 import DashboardPartyEdit from './pages/DashboardPartyEdit';
+import DashboardGroups from './pages/DashboardGroups';
+import DashboardGroupDetail from './pages/DashboardGroupDetail';
 import DevPanel from './components/DevPanel';
 
 function App() {
   const [activeTab, setActiveTab] = useState<'home' | 'calendar' | 'edit' | 'heart' | 'user'>('home');
   const [currentView, setCurrentView] = useState<
     'login' | 'home' | 'reservation' | 'stats' | 'my_reservations' | 'crew_detail' | 'search_crew' | 'user_info' | 'crew_member' | 'create_crew' | 'access_pending' | 'crew_settings' | 'guest_reservation' | 'my_page' | 'account_info' |
-    'parties' | 'party_detail' | 'my_parties' | 'dashboard_parties' | 'dashboard_party_new' | 'dashboard_party_detail' | 'dashboard_party_edit'
+    'parties' | 'party_detail' | 'my_parties' | 'dashboard_parties' | 'dashboard_party_new' | 'dashboard_party_detail' | 'dashboard_party_edit' | 'dashboard_groups' | 'dashboard_group_detail'
   >('login');
   const [hasCrew, setHasCrew] = useState(false);
   const [selectedPartyId, setSelectedPartyId] = useState<number | null>(null);
+  const [selectedGroupId, setSelectedGroupId] = useState<number | null>(null);
 
   // Check for auto-login on app start
   useEffect(() => {
@@ -156,6 +159,7 @@ function App() {
               setCurrentView('dashboard_party_detail');
             }}
             onBackToHomeClick={() => setCurrentView('home')}
+            onGroupsClick={() => setCurrentView('dashboard_groups')}
           />
         ) : currentView === 'dashboard_party_new' ? (
           <DashboardPartyNew
@@ -179,6 +183,20 @@ function App() {
             partyId={selectedPartyId || 0}
             onBack={() => setCurrentView('dashboard_parties')}
             onSuccess={() => setCurrentView('dashboard_parties')}
+          />
+        ) : currentView === 'dashboard_groups' ? (
+          <DashboardGroups
+            onBackToHomeClick={() => setCurrentView('home')}
+            onPartiesClick={() => setCurrentView('dashboard_parties')}
+            onViewGroupDetailClick={(id) => {
+              setSelectedGroupId(id);
+              setCurrentView('dashboard_group_detail');
+            }}
+          />
+        ) : currentView === 'dashboard_group_detail' ? (
+          <DashboardGroupDetail
+            groupId={selectedGroupId || 0}
+            onBack={() => setCurrentView('dashboard_groups')}
           />
         ) : (
           <Home

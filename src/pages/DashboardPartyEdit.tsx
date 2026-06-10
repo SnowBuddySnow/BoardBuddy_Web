@@ -63,6 +63,9 @@ export default function DashboardPartyEdit({ partyId, onBack, onSuccess }: Dashb
                 setJoinPolicy(partyData.joinPolicy);
                 setOrganizerGroupId(partyData.organizerGroupId);
                 setStatus(partyData.status);
+                if ((partyData as any).allowedCrewIds) {
+                    setAllowedCrewIdsInput((partyData as any).allowedCrewIds.join(', '));
+                }
             } catch (error) {
                 console.error('Failed to load party edit data:', error);
                 alert('파티 정보를 불러오는 도중 오류가 발생했습니다.');
