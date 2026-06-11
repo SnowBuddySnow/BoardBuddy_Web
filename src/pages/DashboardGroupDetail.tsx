@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Button } from '../components/Button';
 import { getOrganizerGroup, listGroupMembers, addGroupMember, deleteGroupMember } from '../services/party';
 import { OrganizerGroup, OrganizerGroupMembership } from '../types/api';
-import { ChevronLeft, Plus, Trash2, Shield, UserPlus, Info, Check, X } from 'lucide-react';
+import { ChevronLeft, Trash2, UserPlus, Info, X } from 'lucide-react';
 
 interface DashboardGroupDetailProps {
     groupId: number;

@@ -3,6 +3,13 @@ import { useEffect, useState } from 'react';
 import { CheckIcon } from 'lucide-react';
 import { APP_VERSION, COPYRIGHT_TEXT } from '../version';
 import kakaoLogin from '../assets/login/kakao.png';
+import apiClient from '../lib/axios';
+import {
+    isAutoLoginEnabled,
+    saveAuthTokens,
+    saveTempAccessToken,
+    setAutoLoginPreference,
+} from '../lib/session';
 // import naver1 from '../assets/login/naver1.png';
 // import naver2 from '../assets/login/naver2.png';
 // import naverFrame from '../assets/login/naverframe.png';
@@ -14,7 +21,7 @@ interface LoginLandingProps {
 }
 
 export default function LoginLanding({ onLogin, onSignupNeeded, /* onDebugUserInfo */ }: LoginLandingProps) {
-    const [autoLogin, setAutoLogin] = useState(localStorage.getItem('autoLogin') === 'true');
+    const [autoLogin, setAutoLogin] = useState(isAutoLoginEnabled());
     useEffect(() => {
         if (window.Kakao && !window.Kakao.isInitialized()) {
             const kakaoKey = import.meta.env.VITE_KAKAO_JAVASCRIPT_KEY;
@@ -36,50 +43,37 @@ export default function LoginLanding({ onLogin, onSignupNeeded, /* onDebugUserIn
         }
 
         window.Kakao.Auth.login({
-            success: async (authObj: any) => {
+            success: async (authObj) => {
                 try {
-                    const response = await fetch('/api/auth/social/kakao', {
-                        method: 'POST',
+                    const response = await apiClient.post('/auth/social/kakao', undefined, {
                         headers: {
                             'Authorization': `Bearer ${authObj.access_token}`,
                         },
                     });
 
-                    const data = await response.json();
+                    const data = response.data;
 
-                    if (response.ok) {
+                    if (response.status >= 200 && response.status < 300) {
                         if (data.message && data.message.includes("추가 정보를 입력해주세요")) {
                             // New User: Temporary token for signup
-                            localStorage.setItem('tempAccessToken', data.data.tempAccessToken);
+                            saveTempAccessToken(data.data.tempAccessToken);
                             // Save auto-login preference
-                            if (autoLogin) {
-                                localStorage.setItem('autoLogin', 'true');
-                            } else {
-                                localStorage.removeItem('autoLogin');
-                            }
+                            setAutoLoginPreference(autoLogin);
                             onSignupNeeded();
                         } else {
                             // Existing User: Login success
-                            localStorage.setItem('accessToken', data.data.accessToken);
-                            localStorage.setItem('refreshToken', data.data.refreshToken);
+                            saveAuthTokens(data.data.accessToken, data.data.refreshToken);
                             // Save auto-login preference
-                            if (autoLogin) {
-                                localStorage.setItem('autoLogin', 'true');
-                            } else {
-                                localStorage.removeItem('autoLogin');
-                            }
+                            setAutoLoginPreference(autoLogin);
                             onLogin();
                         }
-                    } else {
-                        console.error('Server Login Failed:', data);
-                        alert(`Login failed: ${data.message || 'Unknown error'}`);
                     }
                 } catch (error) {
                     console.error('Network Error:', error);
                     alert('An network error occurred during login.');
                 }
             },
-            fail: (err: any) => {
+            fail: (err) => {
                 console.error('Kakao Login Failed:', err);
                 alert('Kakao Login Failed');
             },

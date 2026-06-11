@@ -3,6 +3,7 @@ import { Button } from '../components/Button';
 import { getParty, joinParty, cancelParty } from '../services/party';
 import { Party } from '../types/api';
 import { ChevronLeft, Calendar, MapPin, Users, Info, CheckCircle } from 'lucide-react';
+import { getApiErrorMessage, getApiErrorStatus } from '../lib/apiError';
 
 interface PartyDetailProps {
     partyId: number;
@@ -21,11 +22,11 @@ export default function PartyDetail({ partyId, onBack }: PartyDetailProps) {
             setErrorMsg(null);
             const data = await getParty(partyId);
             setParty(data);
-        } catch (error: any) {
+        } catch (error: unknown) {
             console.error('Failed to fetch party detail:', error);
-            if (error.response?.status === 403) {
+            if (getApiErrorStatus(error) === 403) {
                 setErrorMsg('You do not have permission to view this party.');
-            } else if (error.response?.status === 404) {
+            } else if (getApiErrorStatus(error) === 404) {
                 setErrorMsg('Party not found or not available.');
             } else {
                 setErrorMsg('이벤트를 불러오는 도중 오류가 발생했습니다.');
@@ -46,12 +47,13 @@ export default function PartyDetail({ partyId, onBack }: PartyDetailProps) {
             await joinParty(party.id);
             alert(party.joinPolicy === 'APPROVAL_REQUIRED' ? '참여 신청이 대기 상태로 접수되었습니다.' : '성공적으로 참가했습니다!');
             await fetchPartyDetail(); // Refresh
-        } catch (error: any) {
+        } catch (error: unknown) {
             console.error('Failed to join:', error);
-            if (error.response?.status === 403) {
+            const apiMessage = getApiErrorMessage(error);
+            if (getApiErrorStatus(error) === 403) {
                 alert('You do not have permission to join this party.');
-            } else if (error.response?.data?.message) {
-                alert(error.response.data.message);
+            } else if (apiMessage) {
+                alert(apiMessage);
             } else {
                 alert('참가 신청에 실패했습니다.');
             }
@@ -70,10 +72,11 @@ export default function PartyDetail({ partyId, onBack }: PartyDetailProps) {
             await cancelParty(party.id);
             alert('참여 신청이 취소되었습니다.');
             await fetchPartyDetail(); // Refresh
-        } catch (error: any) {
+        } catch (error: unknown) {
             console.error('Failed to cancel:', error);
-            if (error.response?.data?.message) {
-                alert(error.response.data.message);
+            const apiMessage = getApiErrorMessage(error);
+            if (apiMessage) {
+                alert(apiMessage);
             } else {
                 alert('참여 취소에 실패했습니다.');
             }

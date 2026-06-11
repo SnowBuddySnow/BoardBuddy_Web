@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Button } from '../components/Button';
 import { listOrganizerGroups } from '../services/party';
 import { OrganizerGroup } from '../types/api';
-import { Shield, Users, ArrowRight, ShieldAlert, Award } from 'lucide-react';
+import { Users, ArrowRight, ShieldAlert, Award } from 'lucide-react';
 
 interface DashboardGroupsProps {
     onBackToHomeClick: () => void;

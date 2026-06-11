@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import { Button } from '../components/Button';
 import { getPartyDashboard, updateParty, listOrganizerGroups } from '../services/party';
-import { OrganizerGroup } from '../types/api';
+import { JoinPolicy, OrganizerGroup, PartyStatus, VisibilityType } from '../types/api';
 import { ChevronLeft, Save } from 'lucide-react';
+import { getApiErrorMessage, getApiErrorStatus } from '../lib/apiError';
 
 interface DashboardPartyEditProps {
     partyId: number;
@@ -24,10 +25,10 @@ export default function DashboardPartyEdit({ partyId, onBack, onSuccess }: Dashb
     const [locationName, setLocationName] = useState('');
     const [locationAddress, setLocationAddress] = useState('');
     const [capacity, setCapacity] = useState<number>(15);
-    const [visibilityType, setVisibilityType] = useState('PUBLIC');
-    const [joinPolicy, setJoinPolicy] = useState('INSTANT');
+    const [visibilityType, setVisibilityType] = useState<VisibilityType>('PUBLIC');
+    const [joinPolicy, setJoinPolicy] = useState<JoinPolicy>('INSTANT');
     const [organizerGroupId, setOrganizerGroupId] = useState<number | ''>('');
-    const [status, setStatus] = useState('DRAFT');
+    const [status, setStatus] = useState<PartyStatus>('DRAFT');
 
     // Allowed crews input
     const [allowedCrewIdsInput, setAllowedCrewIdsInput] = useState('');
@@ -63,8 +64,8 @@ export default function DashboardPartyEdit({ partyId, onBack, onSuccess }: Dashb
                 setJoinPolicy(partyData.joinPolicy);
                 setOrganizerGroupId(partyData.organizerGroupId);
                 setStatus(partyData.status);
-                if ((partyData as any).allowedCrewIds) {
-                    setAllowedCrewIdsInput((partyData as any).allowedCrewIds.join(', '));
+                if (partyData.allowedCrewIds) {
+                    setAllowedCrewIdsInput(partyData.allowedCrewIds.join(', '));
                 }
             } catch (error) {
                 console.error('Failed to load party edit data:', error);
@@ -115,12 +116,13 @@ export default function DashboardPartyEdit({ partyId, onBack, onSuccess }: Dashb
             await updateParty(partyId, payload);
             alert('파티 정보가 성공적으로 수정되었습니다.');
             onSuccess();
-        } catch (error: any) {
+        } catch (error: unknown) {
             console.error('Failed to update party:', error);
-            if (error.response?.status === 403) {
+            const apiMessage = getApiErrorMessage(error);
+            if (getApiErrorStatus(error) === 403) {
                 alert('You do not have permission to manage this party.');
-            } else if (error.response?.data?.message) {
-                alert(error.response.data.message);
+            } else if (apiMessage) {
+                alert(apiMessage);
             } else {
                 alert('파티 정보 수정에 실패했습니다.');
             }
@@ -214,7 +216,7 @@ export default function DashboardPartyEdit({ partyId, onBack, onSuccess }: Dashb
                                 <label className="text-xs font-bold text-zinc-400 uppercase tracking-wider">모집 상태</label>
                                 <select
                                     value={status}
-                                    onChange={e => setStatus(e.target.value)}
+                                    onChange={e => setStatus(e.target.value as PartyStatus)}
                                     className="w-full px-4 py-2.5 bg-white border border-zinc-200 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-[#162660]/20 text-zinc-800"
                                 >
                                     <option value="DRAFT">Draft (초안)</option>
@@ -293,7 +295,7 @@ export default function DashboardPartyEdit({ partyId, onBack, onSuccess }: Dashb
                                 <label className="text-xs font-bold text-zinc-400 uppercase tracking-wider">공개 설정</label>
                                 <select
                                     value={visibilityType}
-                                    onChange={e => setVisibilityType(e.target.value)}
+                                    onChange={e => setVisibilityType(e.target.value as VisibilityType)}
                                     className="w-full px-4 py-2.5 bg-white border border-zinc-200 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-[#162660]/20 text-zinc-800"
                                 >
                                     <option value="PUBLIC">전체 공개 (PUBLIC)</option>
@@ -307,7 +309,7 @@ export default function DashboardPartyEdit({ partyId, onBack, onSuccess }: Dashb
                                 <label className="text-xs font-bold text-zinc-400 uppercase tracking-wider">참가 신청 정책</label>
                                 <select
                                     value={joinPolicy}
-                                    onChange={e => setJoinPolicy(e.target.value)}
+                                    onChange={e => setJoinPolicy(e.target.value as JoinPolicy)}
                                     className="w-full px-4 py-2.5 bg-white border border-zinc-200 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-[#162660]/20 text-zinc-800"
                                 >
                                     <option value="INSTANT">즉시 가입 승인 (INSTANT)</option>

@@ -3,6 +3,7 @@ import { Button } from '../components/Button';
 import { listDashboardParties, updateParty, deleteParty } from '../services/party';
 import { Party } from '../types/api';
 import { Plus, Edit2, Play, Power, Trash2, Users, ShieldAlert } from 'lucide-react';
+import { getApiErrorStatus } from '../lib/apiError';
 
 interface DashboardPartiesProps {
     onCreatePartyClick: () => void;
@@ -76,9 +77,9 @@ export default function DashboardParties({
             await deleteParty(partyId);
             alert('파티가 성공적으로 삭제되었습니다.');
             fetchManagedParties();
-        } catch (error: any) {
+        } catch (error: unknown) {
             console.error('Failed to delete party:', error);
-            if (error.response?.status === 403) {
+            if (getApiErrorStatus(error) === 403) {
                 alert('You do not have permission to manage this party.');
             } else {
                 alert('파티 삭제에 실패했습니다.');

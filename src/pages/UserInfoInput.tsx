@@ -2,6 +2,8 @@ import { Button } from '../components/Button';
 import { ChevronLeftIcon, CheckIcon } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
 import { TermsModal } from '../components/TermsModal';
+import apiClient from '../lib/axios';
+import { clearTempAccessToken, getSignupToken, saveAuthTokens } from '../lib/session';
 
 interface UserInfoInputProps {
     onBack: () => void;
@@ -147,7 +149,7 @@ export default function UserInfoInput({ onBack }: UserInfoInputProps) {
         setIsLoading(true);
 
         try {
-            const token = localStorage.getItem('accessToken') || localStorage.getItem('tempAccessToken');
+            const token = getSignupToken();
 
             if (!token) {
                 alert('로그인 정보가 없습니다. 다시 로그인해주세요.');
@@ -155,35 +157,29 @@ export default function UserInfoInput({ onBack }: UserInfoInputProps) {
                 return;
             }
 
-            const response = await fetch('/api/auth/signup/complete', {
-                method: 'POST',
+            const response = await apiClient.post('/auth/signup/complete', {
+                name,
+                birthDate: birthDate, // YYYY-MM-DD
+                school,
+                studentId,
+                gender: gender === 'male' ? 'MALE' : 'FEMALE',
+                phoneNumber
+            }, {
                 headers: {
-                    'Content-Type': 'application/json',
                     'Authorization': `Bearer ${token}`
                 },
-                body: JSON.stringify({
-                    name,
-                    birthDate: birthDate, // YYYY-MM-DD
-                    school,
-                    studentId,
-                    gender: gender === 'male' ? 'MALE' : 'FEMALE',
-                    phoneNumber
-                })
             });
 
-            const data = await response.json();
+            const data = response.data;
 
-            if (response.ok) {
+            if (response.status >= 200 && response.status < 300) {
                 alert('회원가입이 완료되었습니다.');
                 // Update token if response contains new token (usually it does)
                 if (data.data && data.data.accessToken) {
-                    localStorage.setItem('accessToken', data.data.accessToken);
-                    localStorage.setItem('refreshToken', data.data.refreshToken);
-                    localStorage.removeItem('tempAccessToken');
+                    saveAuthTokens(data.data.accessToken, data.data.refreshToken);
+                    clearTempAccessToken();
                 }
                 onBack(); // Navigate back (usually to login or directly to home if guarded)
-            } else {
-                alert(data.message || '회원가입 중 오류가 발생했습니다.');
             }
         } catch (error) {
             console.error('Signup error:', error);

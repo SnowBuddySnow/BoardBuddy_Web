@@ -3,6 +3,7 @@ import { ChevronLeftIcon, Trash2Icon, CheckIcon, XIcon, UserIcon } from 'lucide-
 import { useState, useEffect } from 'react';
 import { getUserInfo } from '../services/user';
 import { getCrewInfo, getCrewManagers, getCrewMembers, getApplicants, manageApplicant } from '../services/crew';
+import { CrewApplicant } from '../types/api';
 
 interface CrewMemberProps {
     onBack: () => void;
@@ -82,7 +83,7 @@ export default function CrewMember({ onBack }: CrewMemberProps) {
                 setCurrentUserRole(isAdmin ? 'ADMIN' : 'MEMBER');
 
                 // Conditionally fetch applicants if Admin
-                let apiApplicants: any[] = [];
+                let apiApplicants: CrewApplicant[] = [];
                 if (isAdmin) {
                     try {
                         apiApplicants = await getApplicants(cId);

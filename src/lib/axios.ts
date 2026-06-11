@@ -1,4 +1,5 @@
 import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios';
+import { clearAuthSession, getAccessToken, getRefreshToken, saveAuthTokens } from './session';
 
 const apiClient = axios.create({
     baseURL: import.meta.env.VITE_API_BASE_URL,
@@ -28,7 +29,7 @@ const processQueue = (error: AxiosError | null, token: string | null = null) => 
 
 apiClient.interceptors.request.use(
     (config) => {
-        const token = localStorage.getItem('accessToken');
+        const token = getAccessToken();
         if (token) {
             config.headers.Authorization = `Bearer ${token}`;
         }
@@ -70,15 +71,13 @@ apiClient.interceptors.response.use(
             originalRequest._retry = true;
             isRefreshing = true;
 
-            const refreshToken = localStorage.getItem('refreshToken');
+            const refreshToken = getRefreshToken();
 
             if (!refreshToken) {
                 // No refresh token, redirect to login
                 processQueue(error, null);
                 isRefreshing = false;
-                localStorage.removeItem('accessToken');
-                localStorage.removeItem('refreshToken');
-                localStorage.removeItem('autoLogin');
+                clearAuthSession();
                 // Redirect to login page
                 if (window.location.pathname !== '/') {
                     window.location.href = '/';
@@ -104,13 +103,10 @@ apiClient.interceptors.response.use(
                 const responseData = response.data;
                 
                 if (responseData.code === 200 && responseData.data) {
-                    const { accessToken, refreshToken: newRefreshToken } = responseData.data;
+                        const { accessToken, refreshToken: newRefreshToken } = responseData.data;
 
-                    if (accessToken) {
-                        localStorage.setItem('accessToken', accessToken);
-                        if (newRefreshToken) {
-                            localStorage.setItem('refreshToken', newRefreshToken);
-                        }
+                        if (accessToken) {
+                        saveAuthTokens(accessToken, newRefreshToken);
 
                         // Update the original request with new token
                         if (originalRequest.headers) {
@@ -142,9 +138,7 @@ apiClient.interceptors.response.use(
                         // Clear tokens and redirect to login
                         processQueue(axiosError, null);
                         isRefreshing = false;
-                        localStorage.removeItem('accessToken');
-                        localStorage.removeItem('refreshToken');
-                        localStorage.removeItem('autoLogin');
+                        clearAuthSession();
                         // Redirect to login page
                         if (window.location.pathname !== '/') {
                             window.location.href = '/';
@@ -157,9 +151,7 @@ apiClient.interceptors.response.use(
                 // 네트워크 에러의 경우에도 토큰을 지우고 로그인 페이지로 리다이렉트
                 processQueue(axiosError, null);
                 isRefreshing = false;
-                localStorage.removeItem('accessToken');
-                localStorage.removeItem('refreshToken');
-                localStorage.removeItem('autoLogin');
+                clearAuthSession();
                 // Redirect to login page
                 if (window.location.pathname !== '/') {
                     window.location.href = '/';

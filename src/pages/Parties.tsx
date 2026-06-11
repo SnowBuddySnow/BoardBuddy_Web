@@ -3,6 +3,7 @@ import { Button } from '../components/Button';
 import { listParties, joinParty } from '../services/party';
 import { Party } from '../types/api';
 import { ChevronLeft, Calendar, MapPin, Users, Search, Sparkles, AlertCircle } from 'lucide-react';
+import { getApiErrorMessage, getApiErrorStatus } from '../lib/apiError';
 
 interface PartiesProps {
     onBack: () => void;
@@ -46,12 +47,13 @@ export default function Parties({ onBack, onPartyClick, onCreateClick, canCreate
             await joinParty(partyId);
             alert('파티 신청이 완료되었습니다!');
             fetchAllParties(); // Refresh details
-        } catch (error: any) {
+        } catch (error: unknown) {
             console.error('Failed to join party:', error);
-            if (error.response?.status === 403) {
+            const apiMessage = getApiErrorMessage(error);
+            if (getApiErrorStatus(error) === 403) {
                 alert('이 파티에 참여할 권한이 없습니다.');
-            } else if (error.response?.data?.message) {
-                alert(error.response.data.message);
+            } else if (apiMessage) {
+                alert(apiMessage);
             } else {
                 alert('파티 참여 신청에 실패했습니다.');
             }

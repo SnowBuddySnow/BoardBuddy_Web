@@ -4,6 +4,7 @@ import { Button } from '../components/Button';
 import { Calendar } from '../components/Calendar';
 import { getUserInfo, getMyReservations } from '../services/user';
 import { UserDetail, MyReservation } from '../types/api';
+import { clearAuthSession } from '../lib/session';
 
 interface MyPageProps {
     onBack: () => void;
@@ -228,8 +229,7 @@ export default function MyPage({ onBack, onAccountInfoClick }: MyPageProps) {
                         variant="outline"
                         onClick={() => {
                             if (confirm('로그아웃 하시겠습니까?')) {
-                                localStorage.removeItem('accessToken');
-                                localStorage.removeItem('refreshToken');
+                                clearAuthSession();
                                 window.location.href = '/';
                             }
                         }}

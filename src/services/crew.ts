@@ -16,22 +16,35 @@ import {
     ReservationResultResponse,
     ReservationDaysPrepareRequest
 } from '../types/api';
+import { getDevCrewOverride, hasDevOverride } from '../lib/session';
 
 // --- Missing / TBD Crew Endpoints ---
 export const getCrewInfo = async (crewId: number): Promise<CrewDetail> => {
-    const crewOverride = localStorage.getItem('dev_crew_override');
-    const roleOverride = localStorage.getItem('dev_role_override');
-    const hasOverride = (crewOverride && crewOverride !== 'server') || (roleOverride && roleOverride !== 'server');
-
-    if (hasOverride) {
+    if (hasDevOverride()) {
         return {
-            crewId: crewId,
+            crewId,
+            crew_id: crewId,
             crewName: 'Mock Crew 401',
+            name: 'Mock Crew 401',
             univ: 'Mock University',
             status: 'ACTIVE',
             role: 'MANAGER',
             pinCode: '1234',
-            crewPin: '1234'
+            crewPin: '1234',
+            reservation_day: 'FRIDAY',
+            reservation_time: '18:00',
+            reservation_offset: 3,
+            reservationOpenDay: 'FRIDAY',
+            reservationOpenTime: '18:00',
+            reservationOpenOffsetDays: 3,
+            reservationPeriodLimitDays: 7,
+            dailyCapacity: 8,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+            president_name: 'Mock User (Dev Mode)',
+            member_count: 12,
+            profile_image_url: null,
+            isCapacityLimited: true,
         };
     }
 
@@ -62,7 +75,7 @@ export const applyToCrew = async (crewId: number, crewPIN: string): Promise<void
     await apiClient.post(`/crews/${crewId}/applications`, { crewPIN });
 };
 
-export const updateCrew = async (crewId: number, data: CrewInfoUpdateRequest): Promise<void> => {
+export const updateCrew = async (crewId: number, data: Partial<CrewInfoUpdateRequest> & { id?: number; name?: string }): Promise<void> => {
     await apiClient.patch(`/crews/${crewId}/info`, data);
 };
 
@@ -87,9 +100,7 @@ export const getCrewUsageStatistics = async (
 };
 
 export const getMyApplications = async (): Promise<MyApplication[]> => {
-    const crewOverride = localStorage.getItem('dev_crew_override');
-    const roleOverride = localStorage.getItem('dev_role_override');
-    const hasOverride = (crewOverride && crewOverride !== 'server') || (roleOverride && roleOverride !== 'server');
+    const crewOverride = getDevCrewOverride();
 
     if (crewOverride === 'pending') {
         return [{
@@ -102,7 +113,7 @@ export const getMyApplications = async (): Promise<MyApplication[]> => {
         }];
     }
 
-    if (hasOverride) {
+    if (hasDevOverride()) {
         return [];
     }
 

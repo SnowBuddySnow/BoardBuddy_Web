@@ -47,7 +47,7 @@ export default function CrewDetail({ onBack, onCalendarClick, onMemberClick, onS
                 } else {
                     console.warn('User does not belong to a crew.');
                 }
-            } catch (err: any) {
+            } catch (err: unknown) {
                 console.error('Failed to fetch data:', err);
             } finally {
                 setLoading(false);

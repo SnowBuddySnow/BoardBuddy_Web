@@ -6,7 +6,7 @@ BoardBuddy Web is the frontend client for the BoardBuddy application. It is buil
 
 1. Install dependencies:
    ```bash
-   npm install
+   pnpm install
    ```
 
 2. Set up environment variables:
@@ -17,12 +17,13 @@ BoardBuddy Web is the frontend client for the BoardBuddy application. It is buil
 
 3. Start the development server:
    ```bash
-   npm run dev
+   pnpm run dev
    ```
 
 ## Scripts
 
-- `npm run dev`: Starts the Vite development server.
-- `npm run build`: Builds the app for production.
-- `npm run lint`: Lints the codebase using ESLint.
-- `npm run preview`: Locally previews the production build.
+- `pnpm run dev`: Starts the Vite development server.
+- `pnpm run typecheck`: Type-checks the app.
+- `pnpm run build`: Builds the app for production.
+- `pnpm run lint`: Lints the source code using ESLint.
+- `pnpm run preview`: Locally previews the production build.

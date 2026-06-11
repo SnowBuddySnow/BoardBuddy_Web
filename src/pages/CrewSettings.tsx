@@ -88,7 +88,7 @@ export default function CrewSettings({ onBack }: CrewSettingsProps) {
         fetchData();
     }, []);
 
-    const handleChange = (field: keyof CrewInfoUpdateRequest, value: any) => {
+    const handleChange = (field: keyof CrewInfoUpdateRequest, value: CrewInfoUpdateRequest[keyof CrewInfoUpdateRequest]) => {
         setFormData(prev => ({ ...prev, [field]: value }));
     };
 
@@ -108,7 +108,7 @@ export default function CrewSettings({ onBack }: CrewSettingsProps) {
 
         // Construct payload with possible aliases to handle API strictness
         // Exclude crewName if not PRESIDENT to avoid AccessDeniedException
-        const payload: any = {
+        const payload: Partial<CrewInfoUpdateRequest> & { id: number; name?: string } = {
             ...formData,
             id: crewId,
         };
@@ -124,7 +124,7 @@ export default function CrewSettings({ onBack }: CrewSettingsProps) {
 
         try {
             console.log("Saving Crew Settings:", { crewId, payload });
-            await updateCrew(crewId, payload as any);
+            await updateCrew(crewId, payload);
             alert("설정이 저장되었습니다.");
             onBack();
         } catch (error) {
@@ -350,8 +350,8 @@ const SimulatedCalendar = ({ targetDay, daysBefore, targetTime }: { targetDay: s
     const minTargetDate = new Date(today);
     minTargetDate.setDate(today.getDate() + daysBefore);
 
-    let diff = (targetDayIndex - minTargetDate.getDay() + 7) % 7;
-    let targetStart = new Date(minTargetDate);
+    const diff = (targetDayIndex - minTargetDate.getDay() + 7) % 7;
+    const targetStart = new Date(minTargetDate);
     targetStart.setDate(minTargetDate.getDate() + diff);
 
     // Derived Real Open Date

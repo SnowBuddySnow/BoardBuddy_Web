@@ -5,7 +5,7 @@ import { Calendar } from '../components/Calendar';
 import { createReservation, cancelReservation, getCrewInfo } from '../services/crew';
 import { getMyReservations, getUserInfo } from '../services/user';
 import { registerGuest, GuestDetail } from '../services/guest';
-import { MyReservation } from '../types/api';
+import { CrewDetail, MyReservation } from '../types/api';
 
 
 interface ReservationProps {
@@ -79,7 +79,7 @@ export default function Reservation({ onBack, isGuest = false }: ReservationProp
     };
 
     // Crew Details for Reservation Settings
-    const [crew, setCrew] = useState<any>(null); // Use CrewDetail type if imported, but using any for quick integration with existing imports
+    const [crew, setCrew] = useState<CrewDetail | null>(null);
 
     // Fetch User Info -> Crew ID -> Crew Detail
     const fetchAllData = async () => {
@@ -140,7 +140,8 @@ export default function Reservation({ onBack, isGuest = false }: ReservationProp
         const dayMap: { [key: string]: number } = {
             "SUNDAY": 0, "MONDAY": 1, "TUESDAY": 2, "WEDNESDAY": 3, "THURSDAY": 4, "FRIDAY": 5, "SATURDAY": 6
         };
-        const desiredDayIndex = dayMap[crew.reservation_day.toUpperCase()] ?? 6; // Default Sat
+        const reservationDay = crew.reservation_day || crew.reservationOpenDay || 'SATURDAY';
+        const desiredDayIndex = dayMap[reservationDay.toUpperCase()] ?? 6; // Default Sat
         const targetDayIndex = targetDate.getDay();
 
         // Calculate difference to rewind to the most recent desired day
@@ -155,12 +156,12 @@ export default function Reservation({ onBack, isGuest = false }: ReservationProp
         batchStartDate.setHours(0, 0, 0, 0);
 
         // 3. Apply Offset to get Open DateTime
-        const offset = crew.reservation_offset !== undefined ? crew.reservation_offset : 0;
+        const offset = crew.reservation_offset ?? crew.reservationOpenOffsetDays ?? 0;
         const openDate = new Date(batchStartDate);
         openDate.setDate(batchStartDate.getDate() - offset);
 
         // Set Open Time
-        const [openHour, openMinute] = (crew.reservation_time || "00:00").split(':').map(Number);
+        const [openHour, openMinute] = (crew.reservation_time || crew.reservationOpenTime || "00:00").split(':').map(Number);
         openDate.setHours(openHour, openMinute, 0, 0);
 
         // 4. Compare with Now

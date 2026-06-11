@@ -24,167 +24,186 @@ import DashboardPartyEdit from './pages/DashboardPartyEdit';
 import DashboardGroups from './pages/DashboardGroups';
 import DashboardGroupDetail from './pages/DashboardGroupDetail';
 import DevPanel from './components/DevPanel';
+import { getAccessToken, hasDevOverride, isAutoLoginEnabled } from './lib/session';
+
+type Tab = 'home' | 'calendar' | 'edit' | 'heart' | 'user';
+type View =
+  | 'login'
+  | 'home'
+  | 'reservation'
+  | 'stats'
+  | 'my_reservations'
+  | 'crew_detail'
+  | 'search_crew'
+  | 'user_info'
+  | 'crew_member'
+  | 'crew_settings'
+  | 'guest_reservation'
+  | 'my_page'
+  | 'account_info'
+  | 'parties'
+  | 'party_detail'
+  | 'my_parties'
+  | 'dashboard_parties'
+  | 'dashboard_party_new'
+  | 'dashboard_party_detail'
+  | 'dashboard_party_edit'
+  | 'dashboard_groups'
+  | 'dashboard_group_detail';
+
+const viewTabs: Partial<Record<View, Tab>> = {
+  home: 'home',
+  parties: 'home',
+  party_detail: 'home',
+  my_parties: 'home',
+  my_reservations: 'calendar',
+  reservation: 'edit',
+  guest_reservation: 'edit',
+  crew_detail: 'heart',
+  crew_settings: 'heart',
+  crew_member: 'heart',
+  stats: 'heart',
+  my_page: 'user',
+  account_info: 'user',
+};
+
+const tabViews: Record<Tab, View> = {
+  home: 'home',
+  calendar: 'my_reservations',
+  edit: 'reservation',
+  heart: 'crew_detail',
+  user: 'my_page',
+};
+
+const viewsWithoutBottomNav: View[] = [
+  'login',
+  'user_info',
+  'my_page',
+  'account_info',
+  'reservation',
+  'guest_reservation',
+];
+
+const getInitialView = (): View => {
+  if (hasDevOverride()) {
+    return 'home';
+  }
+  return getAccessToken() && isAutoLoginEnabled() ? 'home' : 'login';
+};
 
 function App() {
-  const [activeTab, setActiveTab] = useState<'home' | 'calendar' | 'edit' | 'heart' | 'user'>('home');
-  const [currentView, setCurrentView] = useState<
-    'login' | 'home' | 'reservation' | 'stats' | 'my_reservations' | 'crew_detail' | 'search_crew' | 'user_info' | 'crew_member' | 'create_crew' | 'access_pending' | 'crew_settings' | 'guest_reservation' | 'my_page' | 'account_info' |
-    'parties' | 'party_detail' | 'my_parties' | 'dashboard_parties' | 'dashboard_party_new' | 'dashboard_party_detail' | 'dashboard_party_edit' | 'dashboard_groups' | 'dashboard_group_detail'
-  >('login');
+  const [currentView, setCurrentView] = useState<View>('login');
   const [hasCrew, setHasCrew] = useState(false);
   const [selectedPartyId, setSelectedPartyId] = useState<number | null>(null);
   const [selectedGroupId, setSelectedGroupId] = useState<number | null>(null);
 
   // Check for auto-login on app start
   useEffect(() => {
-    const accessToken = localStorage.getItem('accessToken');
-    const autoLogin = localStorage.getItem('autoLogin') === 'true';
-    const crewOverride = localStorage.getItem('dev_crew_override');
-    const roleOverride = localStorage.getItem('dev_role_override');
-    const hasOverride = (crewOverride && crewOverride !== 'server') || (roleOverride && roleOverride !== 'server');
-
-    if (hasOverride) {
-      setCurrentView('home');
-    } else if (accessToken && autoLogin) {
-      setCurrentView('home');
-    } else if (!accessToken) {
-      setCurrentView('login');
-    } else {
-      setCurrentView('login');
-    }
+    setCurrentView(getInitialView());
   }, []);
 
-  // Sync activeTab with currentView
-  useEffect(() => {
-    if (currentView === 'home' || currentView === 'parties' || currentView === 'party_detail' || currentView === 'my_parties') {
-      setActiveTab('home');
-    } else if (currentView === 'my_reservations') {
-      setActiveTab('calendar');
-    } else if (currentView === 'reservation' || currentView === 'guest_reservation') {
-      setActiveTab('edit');
-    } else if (currentView === 'crew_detail' || currentView === 'crew_settings' || currentView === 'crew_member' || currentView === 'stats') {
-      setActiveTab('heart');
-    } else if (currentView === 'my_page' || currentView === 'account_info') {
-      setActiveTab('user');
-    }
-  }, [currentView]);
-
   const isDashboardView = currentView.startsWith('dashboard_');
+  const activeTab = viewTabs[currentView] || 'home';
+  const showBottomNav = !viewsWithoutBottomNav.includes(currentView) && !isDashboardView;
 
-  return (
-    <div className="w-full h-screen bg-zinc-100 dark:bg-zinc-900 flex items-center justify-center overflow-hidden">
-      <div className={isDashboardView 
-        ? "w-full h-full bg-white dark:bg-zinc-950 relative overflow-hidden flex flex-col" 
-        : "w-full h-full max-w-md bg-[#FAF8F3] relative shadow-2xl overflow-hidden flex flex-col"
-      }>
-        {currentView === 'login' ? (
+  const openPartyDetail = (id: number, destination: View = 'party_detail') => {
+    setSelectedPartyId(id);
+    setCurrentView(destination);
+  };
+
+  const renderCurrentView = () => {
+    switch (currentView) {
+      case 'login':
+        return (
           <LoginLanding
             onLogin={() => setCurrentView('home')}
             onSignupNeeded={() => setCurrentView('user_info')}
             onDebugUserInfo={() => setCurrentView('user_info')}
           />
-        ) : currentView === 'reservation' ? (
-          <Reservation onBack={() => setCurrentView('home')} />
-        ) : currentView === 'guest_reservation' ? (
-          <Reservation onBack={() => setCurrentView('home')} isGuest={true} />
-        ) : currentView === 'stats' ? (
+        );
+      case 'reservation':
+        return <Reservation onBack={() => setCurrentView('home')} />;
+      case 'guest_reservation':
+        return <Reservation onBack={() => setCurrentView('home')} isGuest={true} />;
+      case 'stats':
+        return (
           <ReservationStats
             onBack={() => setCurrentView('home')}
             onMyCalendarClick={() => setCurrentView('my_reservations')}
             onReservationClick={() => setCurrentView('reservation')}
           />
-        ) : currentView === 'my_reservations' ? (
-          <MyReservations
-            onBack={() => setCurrentView('home')}
-            onCrewClick={() => {
-              setCurrentView('stats');
-            }}
-          />
-        ) : currentView === 'crew_detail' ? (
+        );
+      case 'my_reservations':
+        return <MyReservations onBack={() => setCurrentView('home')} onCrewClick={() => setCurrentView('stats')} />;
+      case 'crew_detail':
+        return (
           <CrewDetail
             onBack={() => setCurrentView('home')}
-            onCalendarClick={() => {
-              setCurrentView('stats');
-            }}
+            onCalendarClick={() => setCurrentView('stats')}
             onMemberClick={() => setCurrentView('crew_member')}
             onSettingsClick={() => setCurrentView('crew_settings')}
           />
-        ) : currentView === 'crew_settings' ? (
-          <CrewSettings onBack={() => setCurrentView('crew_detail')} />
-        ) : currentView === 'crew_member' ? (
-          <CrewMember onBack={() => setCurrentView('crew_detail')} />
-        ) : currentView === 'search_crew' ? (
-          <SearchCrew onBack={() => setCurrentView('home')} />
-        ) : currentView === 'user_info' ? (
-          <UserInfoInput onBack={() => setCurrentView('login')} />
-        ) : currentView === 'my_page' ? (
-          <MyPage
-            onBack={() => setCurrentView('home')}
-            onAccountInfoClick={() => setCurrentView('account_info')}
-          />
-        ) : currentView === 'account_info' ? (
-          <AccountInfo onBack={() => setCurrentView('my_page')} />
-        ) : currentView === 'parties' ? (
+        );
+      case 'crew_settings':
+        return <CrewSettings onBack={() => setCurrentView('crew_detail')} />;
+      case 'crew_member':
+        return <CrewMember onBack={() => setCurrentView('crew_detail')} />;
+      case 'search_crew':
+        return <SearchCrew onBack={() => setCurrentView('home')} />;
+      case 'user_info':
+        return <UserInfoInput onBack={() => setCurrentView('login')} />;
+      case 'my_page':
+        return <MyPage onBack={() => setCurrentView('home')} onAccountInfoClick={() => setCurrentView('account_info')} />;
+      case 'account_info':
+        return <AccountInfo onBack={() => setCurrentView('my_page')} />;
+      case 'parties':
+        return (
           <Parties
             onBack={() => setCurrentView('home')}
-            onPartyClick={(id) => {
-              setSelectedPartyId(id);
-              setCurrentView('party_detail');
-            }}
+            onPartyClick={(id) => openPartyDetail(id)}
             onCreateClick={() => setCurrentView('dashboard_party_new')}
             canCreate={true}
           />
-        ) : currentView === 'party_detail' ? (
-          <PartyDetail
-            partyId={selectedPartyId || 0}
-            onBack={() => setCurrentView('parties')}
-          />
-        ) : currentView === 'my_parties' ? (
-          <MyParties
-            onBack={() => setCurrentView('home')}
-            onPartyClick={(id) => {
-              setSelectedPartyId(id);
-              setCurrentView('party_detail');
-            }}
-          />
-        ) : currentView === 'dashboard_parties' ? (
+        );
+      case 'party_detail':
+        return <PartyDetail partyId={selectedPartyId || 0} onBack={() => setCurrentView('parties')} />;
+      case 'my_parties':
+        return <MyParties onBack={() => setCurrentView('home')} onPartyClick={(id) => openPartyDetail(id)} />;
+      case 'dashboard_parties':
+        return (
           <DashboardParties
             onCreatePartyClick={() => setCurrentView('dashboard_party_new')}
-            onEditPartyClick={(id) => {
-              setSelectedPartyId(id);
-              setCurrentView('dashboard_party_edit');
-            }}
-            onViewDetailClick={(id) => {
-              setSelectedPartyId(id);
-              setCurrentView('dashboard_party_detail');
-            }}
+            onEditPartyClick={(id) => openPartyDetail(id, 'dashboard_party_edit')}
+            onViewDetailClick={(id) => openPartyDetail(id, 'dashboard_party_detail')}
             onBackToHomeClick={() => setCurrentView('home')}
             onGroupsClick={() => setCurrentView('dashboard_groups')}
           />
-        ) : currentView === 'dashboard_party_new' ? (
+        );
+      case 'dashboard_party_new':
+        return (
           <DashboardPartyNew
             onBack={() => setCurrentView('dashboard_parties')}
-            onSuccess={(id) => {
-              setSelectedPartyId(id);
-              setCurrentView('dashboard_party_detail');
-            }}
+            onSuccess={(id) => openPartyDetail(id, 'dashboard_party_detail')}
           />
-        ) : currentView === 'dashboard_party_detail' ? (
+        );
+      case 'dashboard_party_detail':
+        return (
           <DashboardPartyDetail
             partyId={selectedPartyId || 0}
             onBack={() => setCurrentView('dashboard_parties')}
-            onEditClick={(id) => {
-              setSelectedPartyId(id);
-              setCurrentView('dashboard_party_edit');
-            }}
+            onEditClick={(id) => openPartyDetail(id, 'dashboard_party_edit')}
           />
-        ) : currentView === 'dashboard_party_edit' ? (
+        );
+      case 'dashboard_party_edit':
+        return (
           <DashboardPartyEdit
             partyId={selectedPartyId || 0}
             onBack={() => setCurrentView('dashboard_parties')}
             onSuccess={() => setCurrentView('dashboard_parties')}
           />
-        ) : currentView === 'dashboard_groups' ? (
+        );
+      case 'dashboard_groups':
+        return (
           <DashboardGroups
             onBackToHomeClick={() => setCurrentView('home')}
             onPartiesClick={() => setCurrentView('dashboard_parties')}
@@ -193,42 +212,42 @@ function App() {
               setCurrentView('dashboard_group_detail');
             }}
           />
-        ) : currentView === 'dashboard_group_detail' ? (
-          <DashboardGroupDetail
-            groupId={selectedGroupId || 0}
-            onBack={() => setCurrentView('dashboard_groups')}
-          />
-        ) : (
+        );
+      case 'dashboard_group_detail':
+        return <DashboardGroupDetail groupId={selectedGroupId || 0} onBack={() => setCurrentView('dashboard_groups')} />;
+      case 'home':
+      default:
+        return (
           <Home
             onMakeReservationClick={() => setCurrentView('reservation')}
             onGuestReservationClick={() => setCurrentView('guest_reservation')}
-            onCalendarClick={() => {
-              setCurrentView('my_reservations');
-            }}
+            onCalendarClick={() => setCurrentView('my_reservations')}
             onTeamClick={() => setCurrentView('crew_detail')}
             onSearchClick={() => setCurrentView('search_crew')}
             hasCrew={hasCrew}
             onJoinCrew={() => setHasCrew(true)}
-            onPartyClick={(id) => {
-              setSelectedPartyId(id);
-              setCurrentView('party_detail');
-            }}
+            onPartyClick={(id) => openPartyDetail(id)}
             onSeeAllPartiesClick={() => setCurrentView('parties')}
             onMyPlansClick={() => setCurrentView('my_parties')}
             onDashboardClick={() => setCurrentView('dashboard_parties')}
           />
-        )}
+        );
+    }
+  };
 
-        {(currentView !== 'login' && currentView !== 'user_info' && currentView !== 'my_page' && currentView !== 'account_info' && currentView !== 'reservation' && currentView !== 'guest_reservation' && !isDashboardView) && (
+  return (
+    <div className="w-full h-screen bg-zinc-100 dark:bg-zinc-900 flex items-center justify-center overflow-hidden">
+      <div className={isDashboardView 
+        ? "w-full h-full bg-white dark:bg-zinc-950 relative overflow-hidden flex flex-col" 
+        : "w-full h-full max-w-md bg-[#FAF8F3] relative shadow-2xl overflow-hidden flex flex-col"
+      }>
+        {renderCurrentView()}
+
+        {showBottomNav && (
           <LowerMenuBar
             activeTab={activeTab}
             onTabChange={(tab) => {
-              setActiveTab(tab);
-              if (tab === 'home') setCurrentView('home');
-              if (tab === 'calendar') setCurrentView('my_reservations');
-              if (tab === 'edit') setCurrentView('reservation');
-              if (tab === 'heart') setCurrentView('crew_detail');
-              if (tab === 'user') setCurrentView('my_page');
+              setCurrentView(tabViews[tab]);
             }}
           />
         )}

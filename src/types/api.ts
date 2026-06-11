@@ -5,9 +5,17 @@ export interface ApiResponse<T> {
 }
 
 export interface CrewDetail {
+    crewId?: number;
+    crewName?: string;
     crew_id: number;
     name: string;
     univ: string;
+    role?: string;
+    pinCode?: string;
+    crewPin?: string;
+    reservation_day?: string;
+    reservation_time?: string;
+    reservation_offset?: number;
     reservationOpenDay: string; // e.g., "FRIDAY"
     reservationOpenTime: string; // e.g., "18:00"
     reservationOpenOffsetDays: number; // e.g., 3
@@ -43,7 +51,7 @@ export interface UserDetail {
     isRegistered: boolean;
     createdAt: string;
     updatedAt: string;
-    crew: CrewSimple;
+    crew: CrewSimple | null;
 }
 
 export interface CrewMember {
@@ -157,8 +165,8 @@ export interface ReservationDetail {
         registered_by_name?: string;
         reservation_time?: string;
     }[];
-    waiting_member_list: any[];
-    my_reservation: any | null;
+    waiting_member_list: unknown[];
+    my_reservation: unknown | null;
 }
 
 /** @deprecated */
@@ -222,8 +230,8 @@ export interface ReservationInfo {
 
 export type PartyStatus = 'DRAFT' | 'OPEN' | 'CLOSED' | 'CANCELLED';
 export type VisibilityType = 'PUBLIC' | 'CREW_LIMITED' | 'INVITE_ONLY' | 'LINK_ONLY';
-export type JoinPolicy = 'INSTANT' | 'APPROVAL_REQUIRED' | 'INVITE_ONLY';
-export type ParticipantStatus = 'JOINED' | 'PENDING' | 'CANCELLED' | 'REMOVED';
+export type JoinPolicy = 'INSTANT' | 'APPROVAL_REQUIRED' | 'INVITE_ONLY' | 'PUBLIC';
+export type ParticipantStatus = 'JOINED' | 'PENDING' | 'CANCELLED' | 'REMOVED' | 'NONE';
 
 export interface Party {
     id: number;
@@ -238,19 +246,25 @@ export interface Party {
     status: PartyStatus;
     visibilityType: VisibilityType;
     joinPolicy: JoinPolicy;
-    createdByUserId: number;
+    createdByUserId?: number;
     organizerGroupId: number;
     organizerGroupName?: string;
+    allowedCrewIds?: number[];
     joinedCount?: number;
     currentUserStatus?: ParticipantStatus | null;
+    createdAt?: string;
+    updatedAt?: string;
 }
 
 export interface PartyParticipant {
     id: number;
-    partyEventId: number;
+    partyEventId?: number;
+    partyId?: number;
     userId: number;
+    userName?: string;
     status: ParticipantStatus;
-    joinedAt: string;
+    joinedAt?: string;
+    createdAt?: string;
     cancelledAt?: string | null;
 }
 
@@ -266,4 +280,3 @@ export interface OrganizerGroupMembership {
     role: 'OWNER' | 'EDITOR' | 'VIEWER';
     userName?: string;
 }
-

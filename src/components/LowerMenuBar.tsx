@@ -3,7 +3,7 @@ import { cn } from '../lib/utils';
 import { Button } from './Button'; // Import Button
 import { Menu, X } from 'lucide-react'; // Import Lucide icons
 
-interface IconProps extends React.SVGProps<SVGSVGElement> { }
+type IconProps = React.SVGProps<SVGSVGElement>;
 
 const HomeIcon = ({ className, ...props }: IconProps) => (
   <svg
@@ -190,4 +190,3 @@ export const LowerMenuBar = ({
 };
 
 export default LowerMenuBar;
-

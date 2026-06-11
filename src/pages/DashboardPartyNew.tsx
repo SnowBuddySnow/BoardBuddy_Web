@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import { Button } from '../components/Button';
 import { createParty, listOrganizerGroups } from '../services/party';
-import { OrganizerGroup } from '../types/api';
+import { JoinPolicy, OrganizerGroup, VisibilityType } from '../types/api';
 import { ChevronLeft, Save, HelpCircle } from 'lucide-react';
+import { getApiErrorMessage, getApiErrorStatus } from '../lib/apiError';
 
 interface DashboardPartyNewProps {
     onBack: () => void;
@@ -23,8 +24,8 @@ export default function DashboardPartyNew({ onBack, onSuccess }: DashboardPartyN
     const [locationName, setLocationName] = useState('');
     const [locationAddress, setLocationAddress] = useState('');
     const [capacity, setCapacity] = useState<number>(15);
-    const [visibilityType, setVisibilityType] = useState('PUBLIC');
-    const [joinPolicy, setJoinPolicy] = useState('INSTANT');
+    const [visibilityType, setVisibilityType] = useState<VisibilityType>('PUBLIC');
+    const [joinPolicy, setJoinPolicy] = useState<JoinPolicy>('INSTANT');
     const [organizerGroupId, setOrganizerGroupId] = useState<number | ''>('');
 
     // Additional allowed crews (optional)
@@ -87,12 +88,13 @@ export default function DashboardPartyNew({ onBack, onSuccess }: DashboardPartyN
             const newParty = await createParty(payload);
             alert('파티가 DRAFT 상태로 정상 개설되었습니다! 등록을 진행하려면 목록이나 상세조회에서 "Open"을 클릭하세요.');
             onSuccess(newParty.id);
-        } catch (error: any) {
+        } catch (error: unknown) {
             console.error('Failed to create party:', error);
-            if (error.response?.status === 403) {
+            const apiMessage = getApiErrorMessage(error);
+            if (getApiErrorStatus(error) === 403) {
                 alert('You do not have permission to manage this party.');
-            } else if (error.response?.data?.message) {
-                alert(error.response.data.message);
+            } else if (apiMessage) {
+                alert(apiMessage);
             } else {
                 alert('파티 등록에 실패했습니다.');
             }
@@ -262,7 +264,7 @@ export default function DashboardPartyNew({ onBack, onSuccess }: DashboardPartyN
                                 <label className="text-xs font-bold text-zinc-400 uppercase tracking-wider">공개 설정</label>
                                 <select
                                     value={visibilityType}
-                                    onChange={e => setVisibilityType(e.target.value)}
+                                    onChange={e => setVisibilityType(e.target.value as VisibilityType)}
                                     className="w-full px-4 py-2.5 bg-white border border-zinc-200 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-[#162660]/20 text-zinc-800"
                                 >
                                     <option value="PUBLIC">전체 공개 (PUBLIC)</option>
@@ -276,7 +278,7 @@ export default function DashboardPartyNew({ onBack, onSuccess }: DashboardPartyN
                                 <label className="text-xs font-bold text-zinc-400 uppercase tracking-wider">참가 신청 정책</label>
                                 <select
                                     value={joinPolicy}
-                                    onChange={e => setJoinPolicy(e.target.value)}
+                                    onChange={e => setJoinPolicy(e.target.value as JoinPolicy)}
                                     className="w-full px-4 py-2.5 bg-white border border-zinc-200 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-[#162660]/20 text-zinc-800"
                                 >
                                     <option value="INSTANT">즉시 가입 승인 (INSTANT)</option>

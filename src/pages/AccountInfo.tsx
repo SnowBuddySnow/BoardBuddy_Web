@@ -4,6 +4,7 @@ import { Button } from '../components/Button';
 import { getUserInfo, deleteAccount } from '../services/user';
 import { UserDetail } from '../types/api';
 import { APP_VERSION, COPYRIGHT_TEXT } from '../version';
+import { clearAuthSession } from '../lib/session';
 
 interface AccountInfoProps {
     onBack: () => void;
@@ -119,8 +120,7 @@ export default function AccountInfo({ onBack }: AccountInfoProps) {
                                 try {
                                     await deleteAccount();
                                     // 성공 시 토큰 삭제 및 로그인 페이지로 리다이렉트
-                                    localStorage.removeItem('accessToken');
-                                    localStorage.removeItem('refreshToken');
+                                    clearAuthSession();
                                     alert('회원 탈퇴가 완료되었습니다.');
                                     window.location.href = '/';
                                 } catch (error) {
@@ -144,4 +144,3 @@ export default function AccountInfo({ onBack }: AccountInfoProps) {
         </div>
     );
 }
-
