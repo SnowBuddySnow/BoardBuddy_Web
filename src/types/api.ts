@@ -106,6 +106,8 @@ export interface ReservationBookingResponse {
     requestedByAccountId?: number;
     status: string;
     waitlistPosition?: number;
+    paymentStatus?: PaymentStatus | null;
+    managerMemo?: string | null;
 }
 
 export interface ReservationDayResponse {
@@ -116,6 +118,7 @@ export interface ReservationDayResponse {
     capacity: number;
     confirmedCount: number;
     waitingCount: number;
+    canManageReservations: boolean;
     reservations: ReservationBookingResponse[];
 }
 
@@ -238,6 +241,7 @@ export type PartyStatus = 'DRAFT' | 'OPEN' | 'CLOSED' | 'CANCELLED';
 export type VisibilityType = 'PUBLIC' | 'CREW_LIMITED' | 'INVITE_ONLY' | 'LINK_ONLY';
 export type JoinPolicy = 'INSTANT' | 'APPROVAL_REQUIRED' | 'INVITE_ONLY' | 'PUBLIC';
 export type ParticipantStatus = 'JOINED' | 'PENDING' | 'CANCELLED' | 'REMOVED' | 'NONE';
+export type PaymentStatus = 'UNPAID' | 'PAID';
 
 export interface Party {
     id: number;
@@ -249,6 +253,7 @@ export interface Party {
     locationName: string;
     locationAddress: string;
     capacity: number;
+    crewMemberLimit?: number | null;
     status: PartyStatus;
     visibilityType: VisibilityType;
     joinPolicy: JoinPolicy;
@@ -270,6 +275,8 @@ export interface PartyParticipant {
     userId: number;
     userName?: string;
     status: ParticipantStatus;
+    paymentStatus?: PaymentStatus | null;
+    managerMemo?: string | null;
     joinedAt?: string;
     createdAt?: string;
     cancelledAt?: string | null;
@@ -284,6 +291,27 @@ export interface OrganizerGroupMembership {
     id: number;
     groupId: number;
     userId: number;
+    crewId?: number | null;
+    crewName?: string | null;
     role: 'OWNER' | 'EDITOR' | 'VIEWER';
     userName?: string;
+}
+
+export interface OrganizerGroupCrew {
+    id: number;
+    crewId: number;
+    crewName: string;
+}
+
+export interface OrganizerGroupInvitation {
+    id: number;
+    groupId: number;
+    groupName: string;
+    invitedAccountId: number;
+    invitedCrewId: number;
+    invitedCrewName: string;
+    invitedByAccountId: number;
+    proposedRole: 'EDITOR' | 'VIEWER';
+    status: 'PENDING' | 'ACCEPTED' | 'DECLINED' | 'REVOKED';
+    createdAt: string;
 }

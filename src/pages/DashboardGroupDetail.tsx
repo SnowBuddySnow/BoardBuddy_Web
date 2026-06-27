@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { Button } from '../components/Button';
-import { getOrganizerGroup, listGroupMembers, addGroupMember, deleteGroupMember } from '../services/party';
-import { OrganizerGroup, OrganizerGroupMembership } from '../types/api';
-import { ChevronLeft, Trash2, UserPlus, Info, X } from 'lucide-react';
+import { getOrganizerGroup, listGroupMembers, deleteGroupMember, inviteCrewManager, listGroupInvitations, listOrganizerGroupCrews, revokeOrganizerGroupInvitation } from '../services/party';
+import { OrganizerGroup, OrganizerGroupCrew, OrganizerGroupInvitation, OrganizerGroupMembership } from '../types/api';
+import { ChevronLeft, Trash2, UserPlus, Info, Mail, Users, X } from 'lucide-react';
 
 interface DashboardGroupDetailProps {
     groupId: number;
@@ -12,13 +12,15 @@ interface DashboardGroupDetailProps {
 export default function DashboardGroupDetail({ groupId, onBack }: DashboardGroupDetailProps) {
     const [group, setGroup] = useState<OrganizerGroup | null>(null);
     const [members, setMembers] = useState<OrganizerGroupMembership[]>([]);
+    const [crews, setCrews] = useState<OrganizerGroupCrew[]>([]);
+    const [invitations, setInvitations] = useState<OrganizerGroupInvitation[]>([]);
     const [loading, setLoading] = useState(true);
     const [actionLoading, setActionLoading] = useState(false);
 
     // Form States
     const [isAddOpen, setIsAddOpen] = useState(false);
     const [newUserId, setNewUserId] = useState('');
-    const [newRole, setNewRole] = useState<'OWNER' | 'EDITOR' | 'VIEWER'>('VIEWER');
+    const [newRole, setNewRole] = useState<'EDITOR' | 'VIEWER'>('EDITOR');
 
     // Get Simulated Role
     const roleOverride = localStorage.getItem('dev_role_override') || 'server';
@@ -29,8 +31,14 @@ export default function DashboardGroupDetail({ groupId, onBack }: DashboardGroup
             setLoading(true);
             const groupData = await getOrganizerGroup(groupId);
             setGroup(groupData);
-            const membersList = await listGroupMembers(groupId);
+            const [membersList, crewList, invitationList] = await Promise.all([
+                listGroupMembers(groupId),
+                listOrganizerGroupCrews(groupId),
+                listGroupInvitations(groupId),
+            ]);
             setMembers(membersList);
+            setCrews(crewList);
+            setInvitations(invitationList);
         } catch (error) {
             console.error('Failed to fetch group details:', error);
         } finally {
@@ -57,16 +65,15 @@ export default function DashboardGroupDetail({ groupId, onBack }: DashboardGroup
 
         try {
             setActionLoading(true);
-            await addGroupMember(groupId, userIdNum, newRole);
-            alert('멤버가 성공적으로 추가되었습니다.');
+            await inviteCrewManager(groupId, userIdNum, newRole);
+            alert('크루 운영진에게 초대를 보냈습니다.');
             setNewUserId('');
             setIsAddOpen(false);
             // Reload member list
-            const updatedList = await listGroupMembers(groupId);
-            setMembers(updatedList);
+            await fetchData();
         } catch (error) {
             console.error('Failed to add member:', error);
-            alert('멤버 추가에 실패했습니다.');
+            alert('초대에 실패했습니다. 대상 사용자가 활성 크루 운영진인지 확인해 주세요.');
         } finally {
             setActionLoading(false);
         }
@@ -91,6 +98,19 @@ export default function DashboardGroupDetail({ groupId, onBack }: DashboardGroup
         } catch (error) {
             console.error('Failed to delete member:', error);
             alert('멤버 삭제에 실패했습니다.');
+        } finally {
+            setActionLoading(false);
+        }
+    };
+
+    const handleRevokeInvitation = async (invitationId: number) => {
+        try {
+            setActionLoading(true);
+            await revokeOrganizerGroupInvitation(groupId, invitationId);
+            await fetchData();
+        } catch (error) {
+            console.error('Failed to revoke invitation:', error);
+            alert('초대 취소에 실패했습니다.');
         } finally {
             setActionLoading(false);
         }
@@ -133,7 +153,7 @@ export default function DashboardGroupDetail({ groupId, onBack }: DashboardGroup
                     </Button>
                     <div>
                         <h1 className="text-lg font-black text-zinc-900 leading-snug">{group.name}</h1>
-                        <p className="text-xs text-zinc-400">그룹 관리자 및 멤버 권한 설정</p>
+                        <p className="text-xs text-zinc-400">연합 크루 및 인증 운영진 관리</p>
                     </div>
                 </div>
 
@@ -144,7 +164,7 @@ export default function DashboardGroupDetail({ groupId, onBack }: DashboardGroup
                         className="bg-[#162660] hover:bg-[#1e3a8a] text-white border-none rounded-full h-10 py-0 font-bold flex items-center gap-1.5 shadow-sm"
                     >
                         <UserPlus className="w-4 h-4" />
-                        운영진 추가
+                        운영진 초대
                     </Button>
                 )}
             </header>
@@ -158,6 +178,47 @@ export default function DashboardGroupDetail({ groupId, onBack }: DashboardGroup
                     </div>
                 )}
 
+                <section className="border-y border-zinc-200 bg-white px-5 py-4 space-y-3">
+                    <div className="flex items-center gap-2">
+                        <Users className="w-4 h-4 text-[#162660]" />
+                        <h2 className="text-sm font-bold text-zinc-900">참여 크루</h2>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                        {crews.map(crew => (
+                            <span key={crew.id} className="px-3 py-1.5 bg-blue-50 border border-blue-100 rounded-full text-xs font-bold text-blue-800">
+                                {crew.crewName}
+                            </span>
+                        ))}
+                    </div>
+                </section>
+
+                {invitations.some(invitation => invitation.status === 'PENDING') && (
+                    <section className="border-y border-zinc-200 bg-white px-5 py-4 space-y-3">
+                        <div className="flex items-center gap-2">
+                            <Mail className="w-4 h-4 text-zinc-500" />
+                            <h2 className="text-sm font-bold text-zinc-900">응답 대기 초대</h2>
+                        </div>
+                        {invitations.filter(invitation => invitation.status === 'PENDING').map(invitation => (
+                            <div key={invitation.id} className="flex items-center justify-between text-sm">
+                                <span className="font-semibold text-zinc-700">User {invitation.invitedAccountId} · {invitation.invitedCrewName}</span>
+                                <div className="flex items-center gap-2">
+                                    <span className="text-xs font-bold text-amber-700">{invitation.proposedRole} · 대기 중</span>
+                                    {!isViewer && (
+                                        <button
+                                            onClick={() => handleRevokeInvitation(invitation.id)}
+                                            disabled={actionLoading}
+                                            className="w-7 h-7 border border-zinc-200 rounded-full flex items-center justify-center text-zinc-400 hover:text-red-600 hover:bg-red-50"
+                                            title="초대 취소"
+                                        >
+                                            <X className="w-3.5 h-3.5" />
+                                        </button>
+                                    )}
+                                </div>
+                            </div>
+                        ))}
+                    </section>
+                )}
+
                 <div className="bg-white border border-zinc-100 rounded-3xl shadow-sm overflow-hidden">
                     <div className="overflow-x-auto">
                         <table className="w-full text-left border-collapse">
@@ -165,6 +226,7 @@ export default function DashboardGroupDetail({ groupId, onBack }: DashboardGroup
                                 <tr className="bg-zinc-50 border-b border-zinc-100 text-xs text-zinc-400 font-bold uppercase tracking-wider">
                                     <th className="px-6 py-4">User ID</th>
                                     <th className="px-6 py-4">Name</th>
+                                    <th className="px-6 py-4">Crew</th>
                                     <th className="px-6 py-4">Group Role</th>
                                     {!isViewer && <th className="px-6 py-4 text-right">Actions</th>}
                                 </tr>
@@ -174,6 +236,7 @@ export default function DashboardGroupDetail({ groupId, onBack }: DashboardGroup
                                     <tr key={member.id} className="border-b border-zinc-50 text-sm hover:bg-zinc-50/50 transition-colors">
                                         <td className="px-6 py-4 font-mono text-zinc-500 text-xs">#{member.userId}</td>
                                         <td className="px-6 py-4 font-bold text-zinc-800">{member.userName || `User ${member.userId}`}</td>
+                                        <td className="px-6 py-4 text-xs font-semibold text-zinc-600">{member.crewName || '-'}</td>
                                         <td className="px-6 py-4">
                                             <span className={`text-[10px] uppercase font-black px-2.5 py-1 rounded-full tracking-wider ${getRoleBadgeStyle(member.role)}`}>
                                                 {member.role}
@@ -205,7 +268,7 @@ export default function DashboardGroupDetail({ groupId, onBack }: DashboardGroup
                 <div className="fixed inset-0 bg-black/30 backdrop-blur-sm z-[9999] flex items-center justify-center p-4">
                     <div className="bg-white border border-zinc-100 rounded-3xl w-full max-w-md p-6 shadow-2xl animate-in zoom-in-95 duration-150">
                         <div className="flex items-center justify-between border-b border-zinc-100 pb-3 mb-4">
-                            <h3 className="text-base font-bold text-zinc-900">운영진 추가</h3>
+                            <h3 className="text-base font-bold text-zinc-900">크루 운영진 초대</h3>
                             <button
                                 onClick={() => setIsAddOpen(false)}
                                 className="p-1 rounded-full text-zinc-400 hover:bg-zinc-100 cursor-pointer border-none bg-transparent"
@@ -216,7 +279,7 @@ export default function DashboardGroupDetail({ groupId, onBack }: DashboardGroup
 
                         <form onSubmit={handleAddMember} className="space-y-4">
                             <div className="space-y-1.5">
-                                <label className="text-xs font-bold text-zinc-500 uppercase tracking-wider">유저 ID (User ID)</label>
+                                <label className="text-xs font-bold text-zinc-500 uppercase tracking-wider">운영진 유저 ID</label>
                                 <input
                                     type="text"
                                     required
@@ -228,9 +291,9 @@ export default function DashboardGroupDetail({ groupId, onBack }: DashboardGroup
                             </div>
 
                             <div className="space-y-1.5">
-                                <label className="text-xs font-bold text-zinc-500 uppercase tracking-wider">부여할 역할 (Group Role)</label>
-                                <div className="grid grid-cols-3 gap-2">
-                                    {(['OWNER', 'EDITOR', 'VIEWER'] as const).map((role) => (
+                                <label className="text-xs font-bold text-zinc-500 uppercase tracking-wider">수락 후 역할</label>
+                                <div className="grid grid-cols-2 gap-2">
+                                    {(['EDITOR', 'VIEWER'] as const).map((role) => (
                                         <button
                                             key={role}
                                             type="button"
@@ -241,7 +304,7 @@ export default function DashboardGroupDetail({ groupId, onBack }: DashboardGroup
                                                     : 'bg-zinc-50 text-zinc-600 border-zinc-200/60 hover:bg-zinc-100'
                                             }`}
                                         >
-                                            {role === 'OWNER' ? 'Owner' : role === 'EDITOR' ? 'Editor' : 'Viewer'}
+                                            {role === 'EDITOR' ? 'Editor' : 'Viewer'}
                                         </button>
                                     ))}
                                 </div>
@@ -262,7 +325,7 @@ export default function DashboardGroupDetail({ groupId, onBack }: DashboardGroup
                                     disabled={actionLoading}
                                     className="flex-1 bg-[#162660] hover:bg-blue-900 border-none text-white font-bold rounded-full h-11"
                                 >
-                                    추가하기
+                                    초대 보내기
                                 </Button>
                             </div>
                         </form>

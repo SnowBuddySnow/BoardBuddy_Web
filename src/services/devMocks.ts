@@ -1,7 +1,10 @@
 import {
     OrganizerGroup,
+    OrganizerGroupCrew,
+    OrganizerGroupInvitation,
     OrganizerGroupMembership,
     ParticipantStatus,
+    PaymentStatus,
     Party,
     PartyParticipant,
     UserDetail,
@@ -12,6 +15,8 @@ import type { CreatePartyPayload, UpdatePartyPayload } from './party';
 const now = () => new Date().toISOString();
 
 const DEV_PARTIES_KEY = 'dev_parties_list';
+const DEV_GROUPS_KEY = 'dev_organizer_groups';
+const DEV_GROUP_INVITATIONS_KEY = 'dev_group_invitations';
 
 export const isDevMode = hasDevOverride;
 
@@ -58,6 +63,7 @@ export const getDevParties = (): Party[] => {
             locationName: '용평리조트 핑크슬로프 하단',
             locationAddress: '강원특별자치도 평창군 대관령면 올림픽로 715',
             capacity: 8,
+            crewMemberLimit: 3,
             kusbfAssociated: true,
             joinedCount: 3,
             status: 'OPEN',
@@ -98,6 +104,7 @@ export const createDevParty = (payload: CreatePartyPayload): Party => {
         locationName: payload.locationName || '',
         locationAddress: payload.locationAddress || '',
         capacity: payload.capacity,
+        crewMemberLimit: payload.crewMemberLimit,
         kusbfAssociated: payload.kusbfAssociated ?? true,
         joinedCount: 1,
         status: 'DRAFT',
@@ -159,8 +166,8 @@ export const setDevPartyParticipation = (partyId: number, status: ParticipantSta
 };
 
 export const getDevParticipants = (partyId: number): PartyParticipant[] => [
-    { id: 201, partyId, userId: 10, userName: 'Jake Kim (Simulated Owner)', status: 'JOINED', createdAt: now() },
-    { id: 202, partyId, userId: 11, userName: 'Jane Doe (Simulated Editor)', status: 'JOINED', createdAt: now() },
+    { id: 201, partyId, userId: 10, userName: 'Jake Kim (Simulated Owner)', status: 'JOINED', paymentStatus: 'PAID', managerMemo: '입금자명 확인 완료', createdAt: now() },
+    { id: 202, partyId, userId: 11, userName: 'Jane Doe (Simulated Editor)', status: 'JOINED', paymentStatus: 'UNPAID', managerMemo: null, createdAt: now() },
 ];
 
 export const updateDevParticipantStatus = (partyId: number, userId: number, status: ParticipantStatus): PartyParticipant => ({
@@ -172,18 +179,42 @@ export const updateDevParticipantStatus = (partyId: number, userId: number, stat
     createdAt: now(),
 });
 
+export const updateDevParticipantManagement = (
+    partyId: number,
+    userId: number,
+    paymentStatus: PaymentStatus | null,
+    managerMemo: string | null,
+): PartyParticipant => {
+    const participant = getDevParticipants(partyId).find(item => item.userId === userId);
+    if (!participant) {
+        throw new Error('Participant not found');
+    }
+    return { ...participant, paymentStatus, managerMemo };
+};
+
 export const getDevOrganizerGroups = (): OrganizerGroup[] => {
     const roleOverride = getDevRoleOverride();
     if (roleOverride === 'organizer' || roleOverride === 'admin' || roleOverride === 'viewer') {
-        return [{ id: 1, name: '소모임 운영 샘플 그룹' }];
+        const stored = localStorage.getItem(DEV_GROUPS_KEY);
+        if (stored) return JSON.parse(stored);
+        const groups = [{ id: 1, name: '소모임 운영 샘플 그룹' }];
+        localStorage.setItem(DEV_GROUPS_KEY, JSON.stringify(groups));
+        return groups;
     }
     return [];
 };
 
-export const getDevOrganizerGroup = (groupId: number): OrganizerGroup => ({
-    id: groupId,
-    name: '소모임 운영 샘플 그룹',
-});
+export const createDevOrganizerGroup = (name: string): OrganizerGroup => {
+    const groups = getDevOrganizerGroups();
+    const group = { id: Math.floor(Math.random() * 1000) + 10, name };
+    groups.push(group);
+    localStorage.setItem(DEV_GROUPS_KEY, JSON.stringify(groups));
+    return group;
+};
+
+export const getDevOrganizerGroup = (groupId: number): OrganizerGroup => (
+    getDevOrganizerGroups().find(group => group.id === groupId) || { id: groupId, name: '소모임 운영 샘플 그룹' }
+);
 
 export const getDevGroupMembers = (groupId: number): OrganizerGroupMembership[] => {
     const key = `dev_group_members_${groupId}`;
@@ -193,9 +224,9 @@ export const getDevGroupMembers = (groupId: number): OrganizerGroupMembership[] 
     }
 
     const defaultList: OrganizerGroupMembership[] = [
-        { id: 101, groupId, userId: 10, role: 'OWNER', userName: 'Jake Kim (Simulated Owner)' },
-        { id: 102, groupId, userId: 11, role: 'EDITOR', userName: 'Jane Doe (Simulated Editor)' },
-        { id: 103, groupId, userId: 12, role: 'VIEWER', userName: 'Bob Smith (Simulated Viewer)' },
+        { id: 101, groupId, userId: 10, crewId: 401, crewName: 'Mock Crew 401', role: 'OWNER', userName: 'Jake Kim (Simulated Owner)' },
+        { id: 102, groupId, userId: 11, crewId: 402, crewName: 'Mock Crew 402', role: 'EDITOR', userName: 'Jane Doe (Simulated Editor)' },
+        { id: 103, groupId, userId: 12, crewId: 402, crewName: 'Mock Crew 402', role: 'VIEWER', userName: 'Bob Smith (Simulated Viewer)' },
     ];
     localStorage.setItem(key, JSON.stringify(defaultList));
     return defaultList;
@@ -212,6 +243,8 @@ export const addDevGroupMember = (
         id: Math.floor(Math.random() * 1000) + 200,
         groupId,
         userId,
+        crewId: userId + 1000,
+        crewName: `Mock Crew ${userId + 1000}`,
         role,
         userName: `User ${userId} (Simulated ${role})`,
     };
@@ -226,4 +259,74 @@ export const addDevGroupMember = (
 export const deleteDevGroupMember = (groupId: number, userId: number) => {
     const key = `dev_group_members_${groupId}`;
     localStorage.setItem(key, JSON.stringify(getDevGroupMembers(groupId).filter((member) => member.userId !== userId)));
+};
+
+const getAllDevInvitations = (): OrganizerGroupInvitation[] => {
+    const stored = localStorage.getItem(DEV_GROUP_INVITATIONS_KEY);
+    return stored ? JSON.parse(stored) : [];
+};
+
+const saveDevInvitations = (invitations: OrganizerGroupInvitation[]) => {
+    localStorage.setItem(DEV_GROUP_INVITATIONS_KEY, JSON.stringify(invitations));
+};
+
+export const getDevGroupCrews = (groupId: number): OrganizerGroupCrew[] => {
+    const seen = new Set<number>();
+    return getDevGroupMembers(groupId)
+        .filter(member => member.crewId != null && !seen.has(member.crewId) && seen.add(member.crewId))
+        .map(member => ({ id: member.crewId!, crewId: member.crewId!, crewName: member.crewName || `Crew ${member.crewId}` }));
+};
+
+export const inviteDevCrewManager = (
+    groupId: number,
+    userId: number,
+    role: 'EDITOR' | 'VIEWER',
+): OrganizerGroupInvitation => {
+    const invitation: OrganizerGroupInvitation = {
+        id: Math.floor(Math.random() * 1000) + 500,
+        groupId,
+        groupName: getDevOrganizerGroup(groupId).name,
+        invitedAccountId: userId,
+        invitedCrewId: userId + 1000,
+        invitedCrewName: `Mock Crew ${userId + 1000}`,
+        invitedByAccountId: 999,
+        proposedRole: role,
+        status: 'PENDING',
+        createdAt: now(),
+    };
+    const invitations = getAllDevInvitations();
+    invitations.push(invitation);
+    saveDevInvitations(invitations);
+    return invitation;
+};
+
+export const getDevGroupInvitations = (groupId: number): OrganizerGroupInvitation[] => (
+    getAllDevInvitations().filter(invitation => invitation.groupId === groupId)
+);
+
+export const getDevMyInvitations = (): OrganizerGroupInvitation[] => (
+    getAllDevInvitations().filter(invitation => invitation.invitedAccountId === 999 && invitation.status === 'PENDING')
+);
+
+export const acceptDevGroupInvitation = (invitationId: number): OrganizerGroupMembership => {
+    const invitations = getAllDevInvitations();
+    const invitation = invitations.find(item => item.id === invitationId);
+    if (!invitation) throw new Error('Invitation not found');
+    invitation.status = 'ACCEPTED';
+    saveDevInvitations(invitations);
+    return addDevGroupMember(invitation.groupId, invitation.invitedAccountId, invitation.proposedRole);
+};
+
+export const declineDevGroupInvitation = (invitationId: number) => {
+    const invitations = getAllDevInvitations();
+    const invitation = invitations.find(item => item.id === invitationId);
+    if (invitation) invitation.status = 'DECLINED';
+    saveDevInvitations(invitations);
+};
+
+export const revokeDevGroupInvitation = (invitationId: number) => {
+    const invitations = getAllDevInvitations();
+    const invitation = invitations.find(item => item.id === invitationId);
+    if (invitation) invitation.status = 'REVOKED';
+    saveDevInvitations(invitations);
 };

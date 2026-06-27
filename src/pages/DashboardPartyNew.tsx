@@ -24,13 +24,12 @@ export default function DashboardPartyNew({ onBack, onSuccess }: DashboardPartyN
     const [locationName, setLocationName] = useState('');
     const [locationAddress, setLocationAddress] = useState('');
     const [capacity, setCapacity] = useState<number>(15);
+    const [crewMemberLimitEnabled, setCrewMemberLimitEnabled] = useState(false);
+    const [crewMemberLimit, setCrewMemberLimit] = useState<number>(3);
     const [kusbfAssociated, setKusbfAssociated] = useState(true);
     const [visibilityType, setVisibilityType] = useState<VisibilityType>('PUBLIC');
     const [joinPolicy, setJoinPolicy] = useState<JoinPolicy>('INSTANT');
     const [organizerGroupId, setOrganizerGroupId] = useState<number | ''>('');
-
-    // Additional allowed crews (optional)
-    const [allowedCrewIdsInput, setAllowedCrewIdsInput] = useState('');
 
     useEffect(() => {
         const fetchGroups = async () => {
@@ -56,18 +55,17 @@ export default function DashboardPartyNew({ onBack, onSuccess }: DashboardPartyN
         if (!title.trim()) return alert('제목을 입력하세요.');
         if (!startsAt) return alert('시작 일시를 설정하세요.');
         if (capacity < 1) return alert('모집인원은 최소 1명 이상이어야 합니다.');
+        if ((visibilityType === 'PUBLIC' || visibilityType === 'CREW_LIMITED')
+            && crewMemberLimitEnabled
+            && (crewMemberLimit < 1 || crewMemberLimit > capacity)) {
+            return alert('크루별 참가 인원은 1명 이상, 전체 정원 이하여야 합니다.');
+        }
         if (!organizerGroupId) return alert('주최 그룹을 선택해 주세요.');
 
         // Format dates correctly (backend requires LocalDateTime format like YYYY-MM-DDTHH:MM:SS)
         // input datetime-local returns YYYY-MM-DDTHH:MM. We need to add :00 seconds
         const formattedStartsAt = startsAt.includes(':') && startsAt.split(':').length === 2 ? `${startsAt}:00` : startsAt;
         const formattedEndsAt = endsAt && endsAt.includes(':') && endsAt.split(':').length === 2 ? `${endsAt}:00` : endsAt;
-
-        // Parse allowed crew ids
-        const allowedCrewIds = allowedCrewIdsInput
-            .split(',')
-            .map(id => parseInt(id.trim()))
-            .filter(id => !isNaN(id));
 
         try {
             setSubmitLoading(true);
@@ -80,11 +78,13 @@ export default function DashboardPartyNew({ onBack, onSuccess }: DashboardPartyN
                 locationName,
                 locationAddress,
                 capacity,
+                crewMemberLimit: (visibilityType === 'PUBLIC' || visibilityType === 'CREW_LIMITED') && crewMemberLimitEnabled
+                    ? crewMemberLimit
+                    : null,
                 kusbfAssociated,
                 visibilityType,
                 joinPolicy,
-                organizerGroupId: Number(organizerGroupId),
-                allowedCrewIds: allowedCrewIds.length > 0 ? allowedCrewIds : undefined
+                organizerGroupId: Number(organizerGroupId)
             };
 
             const newParty = await createParty(payload);
@@ -198,6 +198,37 @@ export default function DashboardPartyNew({ onBack, onSuccess }: DashboardPartyN
                             </div>
                         </div>
 
+                        {(visibilityType === 'PUBLIC' || visibilityType === 'CREW_LIMITED') && (
+                            <div className="border border-zinc-200 rounded-2xl p-4 space-y-3">
+                                <label className="flex items-center justify-between gap-4 cursor-pointer">
+                                    <span>
+                                        <span className="block text-sm font-bold text-zinc-800">크루별 참가 인원 제한</span>
+                                        <span className="block text-xs text-zinc-500 mt-1">설정하지 않으면 전체 정원만 적용됩니다.</span>
+                                    </span>
+                                    <input
+                                        type="checkbox"
+                                        checked={crewMemberLimitEnabled}
+                                        onChange={e => setCrewMemberLimitEnabled(e.target.checked)}
+                                        className="h-5 w-5 accent-[#162660]"
+                                    />
+                                </label>
+                                {crewMemberLimitEnabled && (
+                                    <div className="space-y-1.5">
+                                        <label className="text-xs font-bold text-zinc-400 uppercase tracking-wider">크루당 최대 인원</label>
+                                        <input
+                                            type="number"
+                                            min="1"
+                                            max={capacity}
+                                            value={crewMemberLimit}
+                                            onChange={e => setCrewMemberLimit(Number(e.target.value))}
+                                            className="w-full px-4 py-2.5 bg-white border border-zinc-200 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-[#162660]/20 text-zinc-800"
+                                            required
+                                        />
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
                         {/* Description */}
                         <div className="space-y-1.5">
                             <label className="text-xs font-bold text-zinc-400 uppercase tracking-wider">상세 설명</label>
@@ -302,19 +333,10 @@ export default function DashboardPartyNew({ onBack, onSuccess }: DashboardPartyN
                             </div>
                         </div>
 
-                        {/* Optional Allowed Crew IDs */}
+                        {/* Crew access is inherited from the organizer group. */}
                         {visibilityType === 'CREW_LIMITED' && (
-                            <div className="space-y-1.5">
-                                <label className="text-xs font-bold text-zinc-400 uppercase tracking-wider">
-                                    허용 크루 ID 목록 (쉼표로 구분)
-                                </label>
-                                <input
-                                    type="text"
-                                    placeholder="예: 1, 2, 5"
-                                    value={allowedCrewIdsInput}
-                                    onChange={e => setAllowedCrewIdsInput(e.target.value)}
-                                    className="w-full px-4 py-2.5 bg-white border border-zinc-200 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-[#162660]/20 text-zinc-800"
-                                />
+                            <div className="bg-blue-50 border border-blue-100 rounded-2xl px-4 py-3 text-sm text-blue-800">
+                                선택한 주최자 그룹에 참여 중인 크루만 자동으로 참가할 수 있습니다.
                             </div>
                         )}
 

@@ -221,6 +221,13 @@ export default function PartyDetail({ partyId, onBack }: PartyDetailProps) {
                                 {party.visibilityType === 'PUBLIC' ? '전체 공개' : '제한 공개'}
                             </span>
                         </div>
+
+                        {party.crewMemberLimit != null && (
+                            <div className="flex items-center justify-between text-sm">
+                                <span className="text-zinc-500 font-medium">크루별 참가 제한</span>
+                                <span className="font-bold text-zinc-800">크루당 최대 {party.crewMemberLimit}명</span>
+                            </div>
+                        )}
                     </div>
 
                     {/* Description */}

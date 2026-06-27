@@ -150,6 +150,19 @@ export const cancelReservation = async (crewId: number, reservationId: number): 
     return response.data.data;
 };
 
+export const updateReservationManagement = async (
+    crewId: number,
+    reservationId: number,
+    paymentStatus: 'UNPAID' | 'PAID' | null,
+    managerMemo: string | null,
+): Promise<{ reservationId: number; paymentStatus: 'UNPAID' | 'PAID' | null; managerMemo: string | null }> => {
+    const response = await apiClient.patch<ApiResponse<{ reservationId: number; paymentStatus: 'UNPAID' | 'PAID' | null; managerMemo: string | null }>>(
+        `/crews/${crewId}/reservations/${reservationId}/management`,
+        { paymentStatus, managerMemo },
+    );
+    return response.data.data;
+};
+
 // @deprecated: Replaced by cancelReservation
 export const deleteReservation = async (crewId: number, reservationId: number): Promise<void> => {
     await apiClient.delete(`/crews/${crewId}/reservations/${reservationId}`);

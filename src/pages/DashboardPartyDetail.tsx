@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { Button } from '../components/Button';
-import { getPartyDashboard, updateParty, listParticipants, updateParticipantStatus } from '../services/party';
-import { Party, PartyParticipant } from '../types/api';
-import { ChevronLeft, Play, Power, Clock, Check, X } from 'lucide-react';
+import { getPartyDashboard, updateParty, listParticipants, updateParticipantManagement, updateParticipantStatus } from '../services/party';
+import { Party, PartyParticipant, PaymentStatus } from '../types/api';
+import { ChevronLeft, Play, Power, Clock, Check, Save, X } from 'lucide-react';
 
 interface DashboardPartyDetailProps {
     partyId: number;
@@ -16,6 +16,7 @@ export default function DashboardPartyDetail({ partyId, onBack, onEditClick }: D
     const [loading, setLoading] = useState(true);
     const [actionLoading, setActionLoading] = useState(false);
     const [participantActionId, setParticipantActionId] = useState<number | null>(null);
+    const [participantManagementId, setParticipantManagementId] = useState<number | null>(null);
 
     const fetchDetailData = async () => {
         try {
@@ -82,6 +83,31 @@ export default function DashboardPartyDetail({ partyId, onBack, onEditClick }: D
         }
     };
 
+    const updateParticipantDraft = (participantId: number, updates: Partial<PartyParticipant>) => {
+        setParticipants(current => current.map(participant => (
+            participant.id === participantId ? { ...participant, ...updates } : participant
+        )));
+    };
+
+    const handleParticipantManagementSave = async (participant: PartyParticipant) => {
+        try {
+            setParticipantManagementId(participant.id);
+            const updated = await updateParticipantManagement(
+                partyId,
+                participant.userId,
+                participant.paymentStatus ?? null,
+                participant.managerMemo?.trim() || null,
+            );
+            setParticipants(current => current.map(item => item.id === participant.id ? updated : item));
+            alert('참가자 관리 정보가 저장되었습니다.');
+        } catch (error) {
+            console.error('Failed to update participant management details:', error);
+            alert('참가자 관리 정보 저장에 실패했습니다.');
+        } finally {
+            setParticipantManagementId(null);
+        }
+    };
+
     const formatDate = (dateStr: string) => {
         const d = new Date(dateStr);
         return d.toLocaleDateString('ko-KR', {
@@ -92,6 +118,12 @@ export default function DashboardPartyDetail({ partyId, onBack, onEditClick }: D
             minute: '2-digit',
             hour12: false
         });
+    };
+
+    const formatCompactDate = (dateStr: string) => {
+        const date = new Date(dateStr);
+        const pad = (value: number) => String(value).padStart(2, '0');
+        return `${pad(date.getMonth() + 1)}.${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
     };
 
     if (loading) {
@@ -195,13 +227,15 @@ export default function DashboardPartyDetail({ partyId, onBack, onEditClick }: D
                             </div>
                         ) : (
                             <div className="overflow-x-auto">
-                                <table className="w-full text-left border-collapse text-sm">
+                                <table className="w-full min-w-[680px] text-left border-collapse text-sm">
                                     <thead>
                                         <tr className="bg-zinc-50 text-zinc-400 font-bold text-xs uppercase border-b border-zinc-100">
-                                            <th className="px-4 py-3">Account ID</th>
-                                            <th className="px-4 py-3">Status</th>
-                                            <th className="px-4 py-3">신청 일시</th>
-                                            <th className="px-4 py-3 text-right">Actions</th>
+                                            <th className="px-2 py-3">참가자</th>
+                                            <th className="px-2 py-3">Status</th>
+                                            <th className="px-2 py-3">신청 일시</th>
+                                            <th className="px-2 py-3">입금 상태</th>
+                                            <th className="px-2 py-3">관리자 메모</th>
+                                            <th className="px-2 py-3 text-right">관리</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-zinc-50">
@@ -212,10 +246,10 @@ export default function DashboardPartyDetail({ partyId, onBack, onEditClick }: D
 
                                             return (
                                                 <tr key={part.id} className="hover:bg-zinc-50/50 transition-colors">
-                                                    <td className="px-4 py-3.5 font-bold text-zinc-800">
+                                                    <td className="px-2 py-3.5 font-bold text-zinc-800 whitespace-nowrap">
                                                         User {part.userId}
                                                     </td>
-                                                    <td className="px-4 py-3.5">
+                                                    <td className="px-2 py-3.5">
                                                         <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-bold ${
                                                             part.status === 'JOINED' ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' :
                                                             part.status === 'PENDING' ? 'bg-amber-50 text-amber-700 border border-amber-100 animate-pulse' :
@@ -225,11 +259,45 @@ export default function DashboardPartyDetail({ partyId, onBack, onEditClick }: D
                                                             {part.status}
                                                         </span>
                                                     </td>
-                                                    <td className="px-4 py-3.5 text-zinc-400 text-xs font-semibold">
-                                                        {formatDate(part.joinedAt || part.createdAt || '')}
+                                                    <td className="px-2 py-3.5 text-zinc-400 text-xs font-semibold whitespace-nowrap">
+                                                        {formatCompactDate(part.joinedAt || part.createdAt || '')}
                                                     </td>
-                                                    <td className="px-4 py-3.5 text-right">
+                                                    <td className="px-2 py-3.5">
+                                                        <select
+                                                            value={part.paymentStatus ?? ''}
+                                                            onChange={event => updateParticipantDraft(part.id, {
+                                                                paymentStatus: (event.target.value || null) as PaymentStatus | null,
+                                                            })}
+                                                            className="w-24 px-2 py-2 bg-white border border-zinc-200 rounded-lg text-xs font-semibold text-zinc-700 focus:outline-none focus:ring-2 focus:ring-[#162660]/20"
+                                                            aria-label={`User ${part.userId} 입금 상태`}
+                                                        >
+                                                            <option value="">미설정</option>
+                                                            <option value="UNPAID">미입금</option>
+                                                            <option value="PAID">입금 완료</option>
+                                                        </select>
+                                                    </td>
+                                                    <td className="px-2 py-3.5">
+                                                        <input
+                                                            type="text"
+                                                            value={part.managerMemo ?? ''}
+                                                            onChange={event => updateParticipantDraft(part.id, { managerMemo: event.target.value })}
+                                                            placeholder="운영진만 보는 메모"
+                                                            maxLength={1000}
+                                                            className="w-36 px-2.5 py-2 bg-white border border-zinc-200 rounded-lg text-xs text-zinc-700 focus:outline-none focus:ring-2 focus:ring-[#162660]/20"
+                                                            aria-label={`User ${part.userId} 관리자 메모`}
+                                                        />
+                                                    </td>
+                                                    <td className="px-2 py-3.5 text-right">
                                                         <div className="flex items-center justify-end gap-1.5">
+                                                            <button
+                                                                onClick={() => handleParticipantManagementSave(part)}
+                                                                disabled={participantManagementId === part.id}
+                                                                className="p-1 text-[#162660] hover:bg-blue-50 rounded-full border border-zinc-200 transition-colors disabled:opacity-50"
+                                                                title="입금 상태와 메모 저장"
+                                                                aria-label={`User ${part.userId} 관리 정보 저장`}
+                                                            >
+                                                                <Save className="w-4 h-4" />
+                                                            </button>
                                                             {isPending && (
                                                                 <button
                                                                     onClick={() => handleParticipantStatusChange(part.userId, 'JOINED')}
@@ -293,6 +361,9 @@ export default function DashboardPartyDetail({ partyId, onBack, onEditClick }: D
                                 <span>정원: {party.capacity}명</span>
                                 <span>확정: {party.joinedCount || 0}명</span>
                             </div>
+                            {party.crewMemberLimit != null && (
+                                <p className="text-xs font-semibold text-zinc-600 pt-1">크루당 최대 {party.crewMemberLimit}명</p>
+                            )}
                         </div>
                     </div>
 
