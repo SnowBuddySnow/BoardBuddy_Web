@@ -45,17 +45,17 @@ export default function Parties({ onBack, onPartyClick, onCreateClick, canCreate
         try {
             setJoiningIds(prev => [...prev, partyId]);
             await joinParty(partyId);
-            alert('파티 신청이 완료되었습니다!');
+            alert('소모임 신청이 완료되었습니다!');
             fetchAllParties(); // Refresh details
         } catch (error: unknown) {
             console.error('Failed to join party:', error);
             const apiMessage = getApiErrorMessage(error);
             if (getApiErrorStatus(error) === 403) {
-                alert('이 파티에 참여할 권한이 없습니다.');
+                alert('이 소모임에 참여할 권한이 없습니다.');
             } else if (apiMessage) {
                 alert(apiMessage);
             } else {
-                alert('파티 참여 신청에 실패했습니다.');
+                alert('소모임 참여 신청에 실패했습니다.');
             }
         } finally {
             setJoiningIds(prev => prev.filter(id => id !== partyId));
@@ -93,7 +93,7 @@ export default function Parties({ onBack, onPartyClick, onCreateClick, canCreate
                 <Button variant="ghost" onClick={onBack} className="-ml-2 gap-1 text-zinc-800 hover:bg-transparent">
                     <ChevronLeft className="w-6 h-6" />
                 </Button>
-                <h1 className="text-lg font-bold text-zinc-900">파티 둘러보기</h1>
+                <h1 className="text-lg font-bold text-zinc-900">소모임 둘러보기</h1>
                 <div className="w-10">
                     {canCreate && onCreateClick && (
                         <button
@@ -112,7 +112,7 @@ export default function Parties({ onBack, onPartyClick, onCreateClick, canCreate
                     <Search className="absolute left-3 w-5 h-5 text-zinc-400" />
                     <input
                         type="text"
-                        placeholder="이벤트, 활동, 장소 검색..."
+                        placeholder="소모임, 활동, 장소 검색..."
                         value={searchQuery}
                         onChange={e => setSearchQuery(e.target.value)}
                         className="w-full pl-10 pr-4 py-2.5 bg-white border border-zinc-200 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-[#162660]/20 transition-all text-zinc-800 placeholder-zinc-400"
@@ -142,12 +142,12 @@ export default function Parties({ onBack, onPartyClick, onCreateClick, canCreate
                 {loading ? (
                     <div className="flex flex-col items-center justify-center py-20 text-zinc-400">
                         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#162660] mb-3"></div>
-                        <p className="text-sm">파티 정보를 불러오는 중...</p>
+                        <p className="text-sm">소모임 정보를 불러오는 중...</p>
                     </div>
                 ) : filteredParties.length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-20 text-center text-zinc-400">
                         <AlertCircle className="w-12 h-12 stroke-[1.5] mb-2 text-zinc-300" />
-                        <p className="text-base font-bold">등록된 파티가 없습니다</p>
+                        <p className="text-base font-bold">등록된 소모임이 없습니다</p>
                         <p className="text-xs mt-1">새로운 액티비티 모임을 제안하거나 필터를 변경해보세요.</p>
                     </div>
                 ) : (
@@ -174,7 +174,7 @@ export default function Parties({ onBack, onPartyClick, onCreateClick, canCreate
                                             </span>
                                             {party.organizerGroupName && (
                                                 <span className="text-xs text-zinc-400 font-medium">
-                                                    Host: {party.organizerGroupName}
+                                                    주최 {party.organizerGroupName}
                                                 </span>
                                             )}
                                         </div>
@@ -202,26 +202,26 @@ export default function Parties({ onBack, onPartyClick, onCreateClick, canCreate
                                         <div className="flex items-center gap-1.5 text-xs font-bold text-zinc-700">
                                             <Users className="w-4 h-4 text-zinc-400" />
                                             <span>
-                                                {party.joinedCount || 0}/{party.capacity} joined
+                                                {party.joinedCount || 0}/{party.capacity}명 참여
                                             </span>
                                         </div>
 
                                         {/* CTA logic */}
                                         {isClosed ? (
                                             <span className="text-xs font-bold text-zinc-400 px-3 py-1.5 bg-zinc-50 rounded-full border border-zinc-200/50">
-                                                {party.status === 'CANCELLED' ? 'Cancelled' : 'Closed'}
+                                                {party.status === 'CANCELLED' ? '취소됨' : '마감됨'}
                                             </span>
                                         ) : hasJoined ? (
                                             <span className="text-xs font-bold text-emerald-600 px-3 py-1.5 bg-emerald-50 rounded-full border border-emerald-100">
-                                                Joined
+                                                참여 중
                                             </span>
                                         ) : isPending ? (
                                             <span className="text-xs font-bold text-amber-600 px-3 py-1.5 bg-amber-50 rounded-full border border-amber-100 animate-pulse">
-                                                Pending approval
+                                                승인 대기
                                             </span>
                                         ) : isFull ? (
                                             <span className="text-xs font-bold text-zinc-400 px-3 py-1.5 bg-zinc-50 rounded-full border border-zinc-200/50">
-                                                Full
+                                                정원 마감
                                             </span>
                                         ) : (
                                             <button
@@ -229,7 +229,7 @@ export default function Parties({ onBack, onPartyClick, onCreateClick, canCreate
                                                 disabled={joiningIds.includes(party.id)}
                                                 className="bg-[#162660] hover:bg-[#1e3a8a] text-white text-xs font-bold px-4.5 py-2 rounded-2xl shadow-sm transition-all hover:scale-[1.02] disabled:opacity-50"
                                             >
-                                                {joiningIds.includes(party.id) ? 'Joining...' : 'Join'}
+                                                {joiningIds.includes(party.id) ? '신청 중...' : '신청'}
                                             </button>
                                         )}
                                     </div>

@@ -49,7 +49,7 @@ export default function MyParties({ onBack, onPartyClick }: MyPartiesProps) {
                 <Button variant="ghost" onClick={onBack} className="-ml-2 gap-1 text-zinc-800 hover:bg-transparent">
                     <ChevronLeft className="w-6 h-6" />
                 </Button>
-                <h1 className="text-lg font-bold text-zinc-900">나의 파티 계획</h1>
+                <h1 className="text-lg font-bold text-zinc-900">나의 소모임</h1>
                 <div className="w-10"></div>
             </header>
 
@@ -64,7 +64,7 @@ export default function MyParties({ onBack, onPartyClick }: MyPartiesProps) {
                     <div className="flex flex-col items-center justify-center py-20 text-center text-zinc-400">
                         <Heart className="w-12 h-12 stroke-[1.5] mb-2 text-zinc-300" />
                         <p className="text-base font-bold">참여 예정인 모임이 없습니다</p>
-                        <p className="text-xs mt-1">새로운 파티에 가입하거나 직접 일정을 추가해보세요!</p>
+                        <p className="text-xs mt-1">새로운 소모임에 참여하거나 직접 일정을 추가해보세요.</p>
                     </div>
                 ) : (
                     <div className="space-y-4">
@@ -84,11 +84,11 @@ export default function MyParties({ onBack, onPartyClick }: MyPartiesProps) {
                                             </span>
                                             {isPending ? (
                                                 <span className="text-xs font-bold text-amber-600 px-2.5 py-1 bg-amber-50 rounded-full border border-amber-100">
-                                                    Pending approval
+                                                    승인 대기
                                                 </span>
                                             ) : (
                                                 <span className="text-xs font-bold text-emerald-600 px-2.5 py-1 bg-emerald-50 rounded-full border border-emerald-100">
-                                                    Joined
+                                                    참여 중
                                                 </span>
                                             )}
                                         </div>
@@ -110,7 +110,7 @@ export default function MyParties({ onBack, onPartyClick }: MyPartiesProps) {
                                     </div>
 
                                     <div className="flex items-center justify-between border-t border-zinc-50 pt-3 mt-2 text-xs text-zinc-400 font-medium">
-                                        <span>Host: {party.organizerGroupName}</span>
+                                        <span>주최 {party.organizerGroupName}</span>
                                         <div className="flex items-center gap-1 font-bold text-zinc-700">
                                             <Users className="w-4 h-4 text-zinc-400" />
                                             <span>

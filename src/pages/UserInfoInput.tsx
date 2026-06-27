@@ -55,6 +55,7 @@ export default function UserInfoInput({ onBack }: UserInfoInputProps) {
     const [name, setName] = useState('');
     const [school, setSchool] = useState('');
     const [studentId, setStudentId] = useState('');
+    const [userType, setUserType] = useState<'GENERAL' | 'KUSBF'>('GENERAL');
     const [phoneNumber, setPhoneNumber] = useState('');
     const [birthDate, setBirthDate] = useState('');
     const [gender, setGender] = useState<'female' | 'male' | null>(null);
@@ -131,8 +132,8 @@ export default function UserInfoInput({ onBack }: UserInfoInputProps) {
         // Granular Validation
         if (!name) { alert('이름을 입력해주세요.'); return; }
         if (!birthDate) { alert('생년월일을 입력해주세요.'); return; }
-        if (!school) { alert('학교를 입력해주세요.'); return; }
-        if (!studentId) { alert('학번을 입력해주세요.'); return; }
+        if (userType === 'KUSBF' && !school) { alert('KUSBF 회원은 학교를 입력해주세요.'); return; }
+        if (userType === 'KUSBF' && !studentId) { alert('KUSBF 회원은 학번을 입력해주세요.'); return; }
         if (!phoneNumber) { alert('전화번호를 입력해주세요.'); return; }
         if (!gender) { alert('성별을 선택해주세요.'); return; }
 
@@ -158,10 +159,11 @@ export default function UserInfoInput({ onBack }: UserInfoInputProps) {
             }
 
             const response = await apiClient.post('/auth/signup/complete', {
+                userType,
                 name,
                 birthDate: birthDate, // YYYY-MM-DD
-                school,
-                studentId,
+                school: school || undefined,
+                studentId: studentId || undefined,
                 gender: gender === 'male' ? 'MALE' : 'FEMALE',
                 phoneNumber
             }, {
@@ -207,6 +209,18 @@ export default function UserInfoInput({ onBack }: UserInfoInputProps) {
 
                     {/* Form Fields */}
                     <div className="space-y-6">
+                        <div className="space-y-2">
+                            <label className="text-sm font-bold text-zinc-800 ml-1">회원 유형</label>
+                            <select
+                                value={userType}
+                                onChange={(e) => setUserType(e.target.value as 'GENERAL' | 'KUSBF')}
+                                className="w-full h-12 rounded-[16px] border-none px-4 text-zinc-900 focus:ring-2 focus:ring-blue-400 outline-none shadow-sm bg-white"
+                            >
+                                <option value="GENERAL">일반 회원</option>
+                                <option value="KUSBF">KUSBF 회원</option>
+                            </select>
+                        </div>
+
                         {/* Name */}
                         <div className="space-y-2">
                             <label className="text-sm font-bold text-zinc-800 ml-1">이름</label>
@@ -233,7 +247,7 @@ export default function UserInfoInput({ onBack }: UserInfoInputProps) {
 
                         {/* School (Dropdown) */}
                         <div className="space-y-2 relative" ref={schoolInputRef}>
-                            <label className="text-sm font-bold text-zinc-800 ml-1">학교</label>
+                            <label className="text-sm font-bold text-zinc-800 ml-1">학교{userType === 'KUSBF' ? ' *' : ''}</label>
                             <input
                                 type="text"
                                 value={school}
@@ -244,7 +258,7 @@ export default function UserInfoInput({ onBack }: UserInfoInputProps) {
                                     }
                                 }}
                                 className="w-full h-12 rounded-[16px] border-none px-4 text-zinc-900 focus:ring-2 focus:ring-blue-400 outline-none shadow-sm bg-white"
-                                placeholder="학교명을 검색하세요 (예: 홍익대학교, 홍대)"
+                                placeholder={userType === 'KUSBF' ? '학교명을 검색하세요 (예: 홍익대학교, 홍대)' : '선택 사항'}
                             />
                             {showSchoolDropdown && (
                                 <div className="absolute top-[80px] left-0 right-0 bg-white rounded-xl shadow-lg border border-zinc-100 max-h-48 overflow-y-auto z-50">
@@ -266,7 +280,7 @@ export default function UserInfoInput({ onBack }: UserInfoInputProps) {
 
                         {/* Student ID */}
                         <div className="space-y-2">
-                            <label className="text-sm font-bold text-zinc-800 ml-1">학번</label>
+                            <label className="text-sm font-bold text-zinc-800 ml-1">학번{userType === 'KUSBF' ? ' *' : ''}</label>
                             <input
                                 type="text"
                                 value={studentId}

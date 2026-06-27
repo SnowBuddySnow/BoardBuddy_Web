@@ -25,6 +25,7 @@ export default function DashboardPartyEdit({ partyId, onBack, onSuccess }: Dashb
     const [locationName, setLocationName] = useState('');
     const [locationAddress, setLocationAddress] = useState('');
     const [capacity, setCapacity] = useState<number>(15);
+    const [kusbfAssociated, setKusbfAssociated] = useState(true);
     const [visibilityType, setVisibilityType] = useState<VisibilityType>('PUBLIC');
     const [joinPolicy, setJoinPolicy] = useState<JoinPolicy>('INSTANT');
     const [organizerGroupId, setOrganizerGroupId] = useState<number | ''>('');
@@ -60,6 +61,7 @@ export default function DashboardPartyEdit({ partyId, onBack, onSuccess }: Dashb
                 setLocationName(partyData.locationName || '');
                 setLocationAddress(partyData.locationAddress || '');
                 setCapacity(partyData.capacity);
+                setKusbfAssociated(partyData.kusbfAssociated ?? true);
                 setVisibilityType(partyData.visibilityType);
                 setJoinPolicy(partyData.joinPolicy);
                 setOrganizerGroupId(partyData.organizerGroupId);
@@ -69,7 +71,7 @@ export default function DashboardPartyEdit({ partyId, onBack, onSuccess }: Dashb
                 }
             } catch (error) {
                 console.error('Failed to load party edit data:', error);
-                alert('파티 정보를 불러오는 도중 오류가 발생했습니다.');
+                alert('소모임 정보를 불러오는 도중 오류가 발생했습니다.');
                 onBack();
             } finally {
                 setLoading(false);
@@ -84,7 +86,7 @@ export default function DashboardPartyEdit({ partyId, onBack, onSuccess }: Dashb
         if (!title.trim()) return alert('제목을 입력하세요.');
         if (!startsAt) return alert('시작 일시를 설정하세요.');
         if (capacity < 1) return alert('모집인원은 최소 1명 이상이어야 합니다.');
-        if (!organizerGroupId) return alert('주최할 Organizer Group을 선택해 주세요.');
+        if (!organizerGroupId) return alert('주최 그룹을 선택해 주세요.');
 
         // Format dates correctly (LocalDateTime format like YYYY-MM-DDTHH:MM:SS)
         const formattedStartsAt = startsAt.includes(':') && startsAt.split(':').length === 2 ? `${startsAt}:00` : startsAt;
@@ -106,6 +108,7 @@ export default function DashboardPartyEdit({ partyId, onBack, onSuccess }: Dashb
                 locationName,
                 locationAddress,
                 capacity,
+                kusbfAssociated,
                 visibilityType,
                 joinPolicy,
                 organizerGroupId: Number(organizerGroupId),
@@ -114,17 +117,17 @@ export default function DashboardPartyEdit({ partyId, onBack, onSuccess }: Dashb
             };
 
             await updateParty(partyId, payload);
-            alert('파티 정보가 성공적으로 수정되었습니다.');
+            alert('소모임 정보가 성공적으로 수정되었습니다.');
             onSuccess();
         } catch (error: unknown) {
             console.error('Failed to update party:', error);
             const apiMessage = getApiErrorMessage(error);
             if (getApiErrorStatus(error) === 403) {
-                alert('You do not have permission to manage this party.');
+                alert('이 소모임을 관리할 권한이 없습니다.');
             } else if (apiMessage) {
                 alert(apiMessage);
             } else {
-                alert('파티 정보 수정에 실패했습니다.');
+                alert('소모임 정보 수정에 실패했습니다.');
             }
         } finally {
             setSubmitLoading(false);
@@ -139,7 +142,7 @@ export default function DashboardPartyEdit({ partyId, onBack, onSuccess }: Dashb
                     <Button variant="ghost" onClick={onBack} className="-ml-2 gap-1 text-zinc-600 hover:bg-transparent">
                         <ChevronLeft className="w-5 h-5" />
                     </Button>
-                    <h1 className="text-lg font-bold text-zinc-900">파티 정보 수정</h1>
+                    <h1 className="text-lg font-bold text-zinc-900">소모임 정보 수정</h1>
                 </div>
                 <div></div>
             </header>
@@ -171,7 +174,7 @@ export default function DashboardPartyEdit({ partyId, onBack, onSuccess }: Dashb
 
                         {/* Title */}
                         <div className="space-y-1.5">
-                            <label className="text-xs font-bold text-zinc-400 uppercase tracking-wider">파티 제목 *</label>
+                            <label className="text-xs font-bold text-zinc-400 uppercase tracking-wider">소모임 제목 *</label>
                             <input
                                 type="text"
                                 placeholder="예: Summer Beach Skate & Surf"
@@ -292,6 +295,18 @@ export default function DashboardPartyEdit({ partyId, onBack, onSuccess }: Dashb
                         {/* Visibility and Policy */}
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-1.5">
+                                <label className="text-xs font-bold text-zinc-400 uppercase tracking-wider">대상 유형</label>
+                                <select
+                                    value={kusbfAssociated ? 'KUSBF' : 'GENERAL'}
+                                    onChange={e => setKusbfAssociated(e.target.value === 'KUSBF')}
+                                    className="w-full px-4 py-2.5 bg-white border border-zinc-200 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-[#162660]/20 text-zinc-800"
+                                >
+                                    <option value="KUSBF">KUSBF 연계 소모임</option>
+                                    <option value="GENERAL">일반 소모임</option>
+                                </select>
+                            </div>
+
+                            <div className="space-y-1.5">
                                 <label className="text-xs font-bold text-zinc-400 uppercase tracking-wider">공개 설정</label>
                                 <select
                                     value={visibilityType}
@@ -305,7 +320,7 @@ export default function DashboardPartyEdit({ partyId, onBack, onSuccess }: Dashb
                                 </select>
                             </div>
 
-                            <div className="space-y-1.5">
+                            <div className="space-y-1.5 col-span-2">
                                 <label className="text-xs font-bold text-zinc-400 uppercase tracking-wider">참가 신청 정책</label>
                                 <select
                                     value={joinPolicy}

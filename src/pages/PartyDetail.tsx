@@ -25,9 +25,9 @@ export default function PartyDetail({ partyId, onBack }: PartyDetailProps) {
         } catch (error: unknown) {
             console.error('Failed to fetch party detail:', error);
             if (getApiErrorStatus(error) === 403) {
-                setErrorMsg('You do not have permission to view this party.');
+                setErrorMsg('이 소모임을 볼 권한이 없습니다.');
             } else if (getApiErrorStatus(error) === 404) {
-                setErrorMsg('Party not found or not available.');
+                setErrorMsg('소모임을 찾을 수 없거나 현재 이용할 수 없습니다.');
             } else {
                 setErrorMsg('이벤트를 불러오는 도중 오류가 발생했습니다.');
             }
@@ -51,7 +51,7 @@ export default function PartyDetail({ partyId, onBack }: PartyDetailProps) {
             console.error('Failed to join:', error);
             const apiMessage = getApiErrorMessage(error);
             if (getApiErrorStatus(error) === 403) {
-                alert('You do not have permission to join this party.');
+                alert('이 소모임에 참여할 권한이 없습니다.');
             } else if (apiMessage) {
                 alert(apiMessage);
             } else {
@@ -245,7 +245,7 @@ export default function PartyDetail({ partyId, onBack }: PartyDetailProps) {
                     <div className="flex flex-col gap-2">
                         <div className="flex items-center justify-center gap-1.5 text-xs text-emerald-600 font-bold bg-emerald-50 py-2 border border-emerald-100 rounded-2xl">
                             <CheckCircle className="w-4 h-4 shrink-0" />
-                            <span>이 파티에 참여 중입니다.</span>
+                            <span>이 소모임에 참여 중입니다.</span>
                         </div>
                         <Button
                             variant="danger"

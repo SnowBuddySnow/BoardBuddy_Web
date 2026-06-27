@@ -68,6 +68,7 @@ export interface CreatePartyPayload {
     locationName?: string;
     locationAddress?: string;
     capacity: number;
+    kusbfAssociated?: boolean;
     visibilityType: VisibilityType;
     joinPolicy: JoinPolicy;
     organizerGroupId: number;

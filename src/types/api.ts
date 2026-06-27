@@ -4,6 +4,9 @@ export interface ApiResponse<T> {
     data: T;
 }
 
+export type UserType = 'GENERAL' | 'KUSBF';
+export type UniversityVerificationStatus = 'NOT_VERIFIED' | 'PENDING' | 'VERIFIED' | 'REJECTED';
+
 export interface CrewDetail {
     crewId?: number;
     crewName?: string;
@@ -28,6 +31,7 @@ export interface CrewDetail {
     member_count: number;
     profile_image_url: string | null;
     isCapacityLimited: boolean;
+    kusbfAssociated?: boolean;
 }
 
 export interface CrewSimple {
@@ -40,6 +44,8 @@ export interface UserDetail {
     name: string;
     email: string;
     role: string;
+    userType?: UserType;
+    universityVerificationStatus?: UniversityVerificationStatus;
     birthDate: string;
     school: string;
     studentId: string;
@@ -249,6 +255,7 @@ export interface Party {
     createdByUserId?: number;
     organizerGroupId: number;
     organizerGroupName?: string;
+    kusbfAssociated?: boolean;
     allowedCrewIds?: number[];
     joinedCount?: number;
     currentUserStatus?: ParticipantStatus | null;

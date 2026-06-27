@@ -40,11 +40,11 @@ export default function DashboardPartyDetail({ partyId, onBack, onEditClick }: D
         try {
             setActionLoading(true);
             await updateParty(partyId, { status: 'OPEN' });
-            alert('파티가 오픈되었습니다!');
+            alert('소모임이 오픈되었습니다.');
             fetchDetailData();
         } catch (error) {
             console.error('Failed to open registration:', error);
-            alert('파티 오픈에 실패했습니다.');
+            alert('소모임 오픈에 실패했습니다.');
         } finally {
             setActionLoading(false);
         }
@@ -54,11 +54,11 @@ export default function DashboardPartyDetail({ partyId, onBack, onEditClick }: D
         try {
             setActionLoading(true);
             await updateParty(partyId, { status: 'CLOSED' });
-            alert('파티가 마감되었습니다.');
+            alert('소모임이 마감되었습니다.');
             fetchDetailData();
         } catch (error) {
             console.error('Failed to close registration:', error);
-            alert('파티 마감에 실패했습니다.');
+            alert('소모임 마감에 실패했습니다.');
         } finally {
             setActionLoading(false);
         }
@@ -150,7 +150,7 @@ export default function DashboardPartyDetail({ partyId, onBack, onEditClick }: D
             </header>
 
             <main className="flex-1 overflow-y-auto p-6 max-w-6xl w-full mx-auto grid grid-cols-3 gap-6">
-                {/* Column 1 & 2: Party Details & Participants */}
+                {/* Column 1 & 2: Small gathering details & participants */}
                 <div className="col-span-2 space-y-6">
                     {/* Basic Info panel */}
                     <div className="bg-white rounded-3xl p-6 border border-zinc-100 shadow-sm space-y-4">
@@ -200,7 +200,7 @@ export default function DashboardPartyDetail({ partyId, onBack, onEditClick }: D
                                         <tr className="bg-zinc-50 text-zinc-400 font-bold text-xs uppercase border-b border-zinc-100">
                                             <th className="px-4 py-3">Account ID</th>
                                             <th className="px-4 py-3">Status</th>
-                                            <th className="px-4 py-3">Joined At</th>
+                                            <th className="px-4 py-3">신청 일시</th>
                                             <th className="px-4 py-3 text-right">Actions</th>
                                         </tr>
                                     </thead>
@@ -235,7 +235,7 @@ export default function DashboardPartyDetail({ partyId, onBack, onEditClick }: D
                                                                     onClick={() => handleParticipantStatusChange(part.userId, 'JOINED')}
                                                                     disabled={isDisabled}
                                                                     className="p-1 text-emerald-600 hover:bg-emerald-50 rounded-full border border-zinc-200 transition-colors"
-                                                                    title="Approve Member"
+                                                                    title="멤버 승인"
                                                                 >
                                                                     <Check className="w-4 h-4" />
                                                                 </button>
@@ -245,7 +245,7 @@ export default function DashboardPartyDetail({ partyId, onBack, onEditClick }: D
                                                                     onClick={() => handleParticipantStatusChange(part.userId, 'REMOVED')}
                                                                     disabled={isDisabled}
                                                                     className="p-1 text-red-500 hover:bg-red-50 rounded-full border border-zinc-200 transition-colors"
-                                                                    title="Remove Member"
+                                                                    title="멤버 제외"
                                                                 >
                                                                     <X className="w-4 h-4" />
                                                                 </button>
@@ -255,7 +255,7 @@ export default function DashboardPartyDetail({ partyId, onBack, onEditClick }: D
                                                                     onClick={() => handleParticipantStatusChange(part.userId, 'PENDING')}
                                                                     disabled={isDisabled}
                                                                     className="p-1 text-zinc-400 hover:bg-zinc-100 rounded-full border border-zinc-200 transition-colors"
-                                                                    title="Restore to Pending"
+                                                                    title="승인 대기로 되돌리기"
                                                                 >
                                                                     <Clock className="w-4 h-4" />
                                                                 </button>

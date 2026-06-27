@@ -3,7 +3,7 @@ import { getUserInfo } from '../services/user';
 import { getCrewInfo, getMyApplications } from '../services/crew';
 import { listParties, listOrganizerGroups } from '../services/party';
 import { UserDetail, CrewDetail, MyApplication, Party } from '../types/api';
-import { Bus, Mountain, UserPlus, Sparkles, MapPin, Users, Calendar as CalendarIcon, ChevronRight } from 'lucide-react';
+import { Bus, Mountain, UserPlus, Sparkles, MapPin, Users, Calendar as CalendarIcon, ChevronRight, LayoutTemplate } from 'lucide-react';
 import { getWeather, WeatherData } from '../services/weather';
 
 const SnowflakeDecorIcon = ({ className }: { className?: string }) => (
@@ -27,6 +27,7 @@ interface HomeProps {
     onSeeAllPartiesClick: () => void;
     onMyPlansClick: () => void;
     onDashboardClick: () => void;
+    onConceptsClick: () => void;
 }
 
 export default function Home({
@@ -39,7 +40,8 @@ export default function Home({
     onPartyClick,
     onSeeAllPartiesClick,
     onMyPlansClick,
-    onDashboardClick
+    onDashboardClick,
+    onConceptsClick
 }: HomeProps) {
     const [userInfo, setUserInfo] = useState<UserDetail | null>(null);
     const [crewDetail, setCrewDetail] = useState<CrewDetail | null>(null);
@@ -48,7 +50,7 @@ export default function Home({
     const [weather, setWeather] = useState<WeatherData | null>(null);
     const [currentDate, setCurrentDate] = useState<string>('');
 
-    // Party-related states
+    // Small gathering related states
     const [parties, setParties] = useState<Party[]>([]);
     const [hasOrganizerPermission, setHasOrganizerPermission] = useState(false);
 
@@ -85,7 +87,7 @@ export default function Home({
 
         const fetchPartyData = async () => {
             try {
-                // Fetch public parties
+                // Fetch public small gatherings
                 const partiesList = await listParties();
                 // Show only OPEN parties in recommended lists
                 const openParties = partiesList.filter(p => p.status === 'OPEN');
@@ -95,7 +97,7 @@ export default function Home({
                 const groups = await listOrganizerGroups();
                 setHasOrganizerPermission(groups.length > 0);
             } catch (err) {
-                console.error("Failed to fetch party data for home screen", err);
+                console.error("Failed to fetch small gathering data for home screen", err);
             }
         };
 
@@ -118,7 +120,7 @@ export default function Home({
 
     }, []);
 
-    // Helper to format party date
+    // Helper to format small gathering date
     const formatPartyDate = (dateStr: string) => {
         const d = new Date(dateStr);
         const month = d.getMonth() + 1;
@@ -142,7 +144,7 @@ export default function Home({
         return start > nowTime;
     }).sort((a, b) => new Date(a.startsAt).getTime() - new Date(b.startsAt).getTime());
 
-    // Nearest upcoming open party serves as the "Featured Party"
+    // Nearest upcoming open small gathering serves as the featured item.
     const featuredParty = upcomingParties[0];
 
     // Plans user has joined or has pending
@@ -160,7 +162,7 @@ export default function Home({
                         onClick={onDashboardClick}
                         className="text-xs font-black bg-[#162660] text-white px-3 py-1.5 rounded-full hover:bg-blue-900 transition-colors shadow-sm flex items-center gap-1"
                     >
-                        <Sparkles className="w-3 h-3" /> 파티 관리자
+                        <Sparkles className="w-3 h-3" /> 소모임 관리자
                     </button>
                 )}
             </header>
@@ -215,7 +217,7 @@ export default function Home({
                                 </div>
                                 <div className="text-left">
                                     <h4 className="text-sm font-bold">내가 참가한 모임</h4>
-                                    <p className="text-xs text-blue-200 mt-0.5">{myPlansCount}개의 참여 예정인 파티 일정이 있습니다.</p>
+                                    <p className="text-xs text-blue-200 mt-0.5">{myPlansCount}개의 참여 예정인 소모임 일정이 있습니다.</p>
                                 </div>
                             </div>
                             <ChevronRight className="w-5 h-5 text-blue-300" />
@@ -223,11 +225,29 @@ export default function Home({
                     </div>
                 )}
 
-                {/* 2. Featured Party (Hero Card) */}
+                <section className="px-4">
+                    <button
+                        onClick={onConceptsClick}
+                        className="w-full bg-white border border-zinc-100 rounded-2xl p-4 flex items-center justify-between shadow-sm hover:shadow-md transition-all active:scale-[0.99] text-left"
+                    >
+                        <div className="flex items-center gap-3">
+                            <div className="p-2 bg-amber-50 border border-amber-100 rounded-xl text-amber-700">
+                                <LayoutTemplate className="w-4 h-4" />
+                            </div>
+                            <div>
+                                <h4 className="text-sm font-black text-zinc-900">소모임 옵션 샘플 보기</h4>
+                                <p className="text-xs text-zinc-500 mt-0.5">테스터 리뷰용 3가지 더미 화면</p>
+                            </div>
+                        </div>
+                        <ChevronRight className="w-5 h-5 text-zinc-300" />
+                    </button>
+                </section>
+
+                {/* 2. Featured Small Gathering (Hero Card) */}
                 {featuredParty ? (
                     <section className="px-4 space-y-2.5">
                         <h2 className="text-base font-black text-zinc-900 flex items-center gap-1.5">
-                            <Sparkles className="w-4 h-4 text-amber-500 fill-amber-500" /> 지금 당장 참가할 파티!
+                            <Sparkles className="w-4 h-4 text-amber-500 fill-amber-500" /> 지금 참가할 소모임
                         </h2>
                         <div
                             onClick={() => onPartyClick(featuredParty.id)}
@@ -240,7 +260,7 @@ export default function Home({
                                     </span>
                                     {featuredParty.organizerGroupName && (
                                         <span className="text-xs text-zinc-400 font-semibold">
-                                            organized by {featuredParty.organizerGroupName}
+                                            주최 {featuredParty.organizerGroupName}
                                         </span>
                                     )}
                                 </div>
@@ -265,7 +285,7 @@ export default function Home({
                                 <div className="flex items-center gap-1.5 text-xs font-bold text-zinc-600">
                                     <Users className="w-4 h-4 text-zinc-400" />
                                     <span>
-                                        {featuredParty.joinedCount || 0}/{featuredParty.capacity} joined
+                                        {featuredParty.joinedCount || 0}/{featuredParty.capacity}명 참여
                                     </span>
                                 </div>
                                 <span className="bg-[#162660] text-white text-xs font-bold px-4 py-1.5 rounded-full shadow-sm hover:bg-blue-900 transition-colors">
@@ -277,7 +297,7 @@ export default function Home({
                 ) : (
                     <section className="px-4">
                         <div className="bg-white border border-zinc-100 rounded-3xl p-8 text-center text-zinc-400 text-sm">
-                            현재 대기 중인 열린 파티 모임이 없습니다.
+                            현재 열려 있는 소모임이 없습니다.
                         </div>
                     </section>
                 )}
@@ -335,11 +355,11 @@ export default function Home({
                                                 {party.title}
                                             </h3>
                                             <div className="text-xs text-zinc-400 font-bold uppercase tracking-wider">
-                                                {party.activityType} • Host: {party.organizerGroupName}
+                                                {party.activityType} · 주최 {party.organizerGroupName}
                                             </div>
                                         </div>
                                         <span className="text-xs text-zinc-500 font-bold shrink-0">
-                                            {party.joinedCount || 0}/{party.capacity} joined
+                                            {party.joinedCount || 0}/{party.capacity}명
                                         </span>
                                     </div>
                                 </div>

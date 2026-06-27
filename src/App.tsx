@@ -23,6 +23,7 @@ import DashboardPartyDetail from './pages/DashboardPartyDetail';
 import DashboardPartyEdit from './pages/DashboardPartyEdit';
 import DashboardGroups from './pages/DashboardGroups';
 import DashboardGroupDetail from './pages/DashboardGroupDetail';
+import PartyConceptOptions from './pages/PartyConceptOptions';
 import DevPanel from './components/DevPanel';
 import { getAccessToken, hasDevOverride, isAutoLoginEnabled } from './lib/session';
 
@@ -49,13 +50,15 @@ type View =
   | 'dashboard_party_detail'
   | 'dashboard_party_edit'
   | 'dashboard_groups'
-  | 'dashboard_group_detail';
+  | 'dashboard_group_detail'
+  | 'party_concepts';
 
 const viewTabs: Partial<Record<View, Tab>> = {
   home: 'home',
   parties: 'home',
   party_detail: 'home',
   my_parties: 'home',
+  party_concepts: 'home',
   my_reservations: 'calendar',
   reservation: 'edit',
   guest_reservation: 'edit',
@@ -169,6 +172,8 @@ function App() {
         return <PartyDetail partyId={selectedPartyId || 0} onBack={() => setCurrentView('parties')} />;
       case 'my_parties':
         return <MyParties onBack={() => setCurrentView('home')} onPartyClick={(id) => openPartyDetail(id)} />;
+      case 'party_concepts':
+        return <PartyConceptOptions onBack={() => setCurrentView('home')} onOpenParties={() => setCurrentView('parties')} />;
       case 'dashboard_parties':
         return (
           <DashboardParties
@@ -177,6 +182,7 @@ function App() {
             onViewDetailClick={(id) => openPartyDetail(id, 'dashboard_party_detail')}
             onBackToHomeClick={() => setCurrentView('home')}
             onGroupsClick={() => setCurrentView('dashboard_groups')}
+            onConceptsClick={() => setCurrentView('party_concepts')}
           />
         );
       case 'dashboard_party_new':
@@ -230,6 +236,7 @@ function App() {
             onSeeAllPartiesClick={() => setCurrentView('parties')}
             onMyPlansClick={() => setCurrentView('my_parties')}
             onDashboardClick={() => setCurrentView('dashboard_parties')}
+            onConceptsClick={() => setCurrentView('party_concepts')}
           />
         );
     }

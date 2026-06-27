@@ -24,6 +24,7 @@ export default function DashboardPartyNew({ onBack, onSuccess }: DashboardPartyN
     const [locationName, setLocationName] = useState('');
     const [locationAddress, setLocationAddress] = useState('');
     const [capacity, setCapacity] = useState<number>(15);
+    const [kusbfAssociated, setKusbfAssociated] = useState(true);
     const [visibilityType, setVisibilityType] = useState<VisibilityType>('PUBLIC');
     const [joinPolicy, setJoinPolicy] = useState<JoinPolicy>('INSTANT');
     const [organizerGroupId, setOrganizerGroupId] = useState<number | ''>('');
@@ -55,7 +56,7 @@ export default function DashboardPartyNew({ onBack, onSuccess }: DashboardPartyN
         if (!title.trim()) return alert('제목을 입력하세요.');
         if (!startsAt) return alert('시작 일시를 설정하세요.');
         if (capacity < 1) return alert('모집인원은 최소 1명 이상이어야 합니다.');
-        if (!organizerGroupId) return alert('주최할 Organizer Group을 선택해 주세요.');
+        if (!organizerGroupId) return alert('주최 그룹을 선택해 주세요.');
 
         // Format dates correctly (backend requires LocalDateTime format like YYYY-MM-DDTHH:MM:SS)
         // input datetime-local returns YYYY-MM-DDTHH:MM. We need to add :00 seconds
@@ -79,6 +80,7 @@ export default function DashboardPartyNew({ onBack, onSuccess }: DashboardPartyN
                 locationName,
                 locationAddress,
                 capacity,
+                kusbfAssociated,
                 visibilityType,
                 joinPolicy,
                 organizerGroupId: Number(organizerGroupId),
@@ -86,17 +88,17 @@ export default function DashboardPartyNew({ onBack, onSuccess }: DashboardPartyN
             };
 
             const newParty = await createParty(payload);
-            alert('파티가 DRAFT 상태로 정상 개설되었습니다! 등록을 진행하려면 목록이나 상세조회에서 "Open"을 클릭하세요.');
+            alert('소모임이 DRAFT 상태로 정상 개설되었습니다. 등록을 진행하려면 목록이나 상세조회에서 "오픈"을 클릭하세요.');
             onSuccess(newParty.id);
         } catch (error: unknown) {
             console.error('Failed to create party:', error);
             const apiMessage = getApiErrorMessage(error);
             if (getApiErrorStatus(error) === 403) {
-                alert('You do not have permission to manage this party.');
+                alert('이 소모임을 관리할 권한이 없습니다.');
             } else if (apiMessage) {
                 alert(apiMessage);
             } else {
-                alert('파티 등록에 실패했습니다.');
+                alert('소모임 등록에 실패했습니다.');
             }
         } finally {
             setSubmitLoading(false);
@@ -111,7 +113,7 @@ export default function DashboardPartyNew({ onBack, onSuccess }: DashboardPartyN
                     <Button variant="ghost" onClick={onBack} className="-ml-2 gap-1 text-zinc-600 hover:bg-transparent">
                         <ChevronLeft className="w-5 h-5" />
                     </Button>
-                    <h1 className="text-lg font-bold text-zinc-900">새로운 파티 만들기</h1>
+                    <h1 className="text-lg font-bold text-zinc-900">새 소모임 만들기</h1>
                 </div>
                 <div></div>
             </header>
@@ -128,7 +130,7 @@ export default function DashboardPartyNew({ onBack, onSuccess }: DashboardPartyN
                         <HelpCircle className="w-12 h-12 stroke-[1.5] text-zinc-300 mx-auto mb-2" />
                         <h3 className="text-base font-bold text-zinc-900">주최 권한이 없습니다</h3>
                         <p className="text-xs mt-1 leading-relaxed">
-                            파티 이벤트를 생성하기 위해서는 하나 이상의 <strong>PartyOrganizerGroup</strong>에 OWNER 혹은 EDITOR 역할로 속해있어야 합니다.
+                            소모임을 생성하려면 하나 이상의 주최 그룹에 OWNER 혹은 EDITOR 역할로 속해있어야 합니다.
                         </p>
                         <Button variant="primary" onClick={onBack} className="rounded-full mt-4">
                             돌아가기
@@ -154,7 +156,7 @@ export default function DashboardPartyNew({ onBack, onSuccess }: DashboardPartyN
 
                         {/* Title */}
                         <div className="space-y-1.5">
-                            <label className="text-xs font-bold text-zinc-400 uppercase tracking-wider">파티 제목 *</label>
+                            <label className="text-xs font-bold text-zinc-400 uppercase tracking-wider">소모임 제목 *</label>
                             <input
                                 type="text"
                                 placeholder="예: Summer Beach Skate & Surf"
@@ -261,6 +263,18 @@ export default function DashboardPartyNew({ onBack, onSuccess }: DashboardPartyN
                         {/* Visibility and Policy */}
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-1.5">
+                                <label className="text-xs font-bold text-zinc-400 uppercase tracking-wider">대상 유형</label>
+                                <select
+                                    value={kusbfAssociated ? 'KUSBF' : 'GENERAL'}
+                                    onChange={e => setKusbfAssociated(e.target.value === 'KUSBF')}
+                                    className="w-full px-4 py-2.5 bg-white border border-zinc-200 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-[#162660]/20 text-zinc-800"
+                                >
+                                    <option value="KUSBF">KUSBF 연계 소모임</option>
+                                    <option value="GENERAL">일반 소모임</option>
+                                </select>
+                            </div>
+
+                            <div className="space-y-1.5">
                                 <label className="text-xs font-bold text-zinc-400 uppercase tracking-wider">공개 설정</label>
                                 <select
                                     value={visibilityType}
@@ -274,7 +288,7 @@ export default function DashboardPartyNew({ onBack, onSuccess }: DashboardPartyN
                                 </select>
                             </div>
 
-                            <div className="space-y-1.5">
+                            <div className="space-y-1.5 col-span-2">
                                 <label className="text-xs font-bold text-zinc-400 uppercase tracking-wider">참가 신청 정책</label>
                                 <select
                                     value={joinPolicy}

@@ -11,6 +11,7 @@ interface DashboardPartiesProps {
     onViewDetailClick: (partyId: number) => void;
     onBackToHomeClick: () => void;
     onGroupsClick: () => void;
+    onConceptsClick: () => void;
 }
 
 export default function DashboardParties({
@@ -18,7 +19,8 @@ export default function DashboardParties({
     onEditPartyClick,
     onViewDetailClick,
     onBackToHomeClick,
-    onGroupsClick
+    onGroupsClick,
+    onConceptsClick
 }: DashboardPartiesProps) {
     const [parties, setParties] = useState<Party[]>([]);
     const [loading, setLoading] = useState(true);
@@ -44,11 +46,11 @@ export default function DashboardParties({
         try {
             setActionLoadingId(partyId);
             await updateParty(partyId, { status: 'OPEN' });
-            alert('파티가 오픈되었습니다! 일반 멤버들의 참여 신청을 받습니다.');
+            alert('소모임이 오픈되었습니다! 일반 멤버들의 참여 신청을 받습니다.');
             fetchManagedParties();
         } catch (error) {
             console.error('Failed to open registration:', error);
-            alert('파티 오픈 처리에 실패했습니다.');
+            alert('소모임 오픈 처리에 실패했습니다.');
         } finally {
             setActionLoadingId(null);
         }
@@ -58,31 +60,31 @@ export default function DashboardParties({
         try {
             setActionLoadingId(partyId);
             await updateParty(partyId, { status: 'CLOSED' });
-            alert('파티 모집이 마감되었습니다.');
+            alert('소모임 모집이 마감되었습니다.');
             fetchManagedParties();
         } catch (error) {
             console.error('Failed to close registration:', error);
-            alert('파티 마감 처리에 실패했습니다.');
+            alert('소모임 마감 처리에 실패했습니다.');
         } finally {
             setActionLoadingId(null);
         }
     };
 
     const handleDelete = async (partyId: number) => {
-        const confirmDelete = window.confirm('정말 이 파티를 삭제하시겠습니까? 삭제된 정보는 복구할 수 없습니다.');
+        const confirmDelete = window.confirm('정말 이 소모임을 삭제하시겠습니까? 삭제된 정보는 복구할 수 없습니다.');
         if (!confirmDelete) return;
 
         try {
             setActionLoadingId(partyId);
             await deleteParty(partyId);
-            alert('파티가 성공적으로 삭제되었습니다.');
+            alert('소모임이 성공적으로 삭제되었습니다.');
             fetchManagedParties();
         } catch (error: unknown) {
             console.error('Failed to delete party:', error);
             if (getApiErrorStatus(error) === 403) {
-                alert('You do not have permission to manage this party.');
+                alert('이 소모임을 관리할 권한이 없습니다.');
             } else {
-                alert('파티 삭제에 실패했습니다.');
+                alert('소모임 삭제에 실패했습니다.');
             }
         } finally {
             setActionLoadingId(null);
@@ -127,13 +129,19 @@ export default function DashboardParties({
                         <button
                             className="px-4 py-1.5 rounded-full bg-[#162660] text-white border-none shadow-sm cursor-default"
                         >
-                            🎉 파티 관리
+                            소모임 관리
                         </button>
                         <button
                             onClick={onGroupsClick}
                             className="px-4 py-1.5 rounded-full text-zinc-500 hover:text-zinc-800 bg-transparent border-none cursor-pointer font-bold"
                         >
-                            👥 그룹 관리
+                            그룹 관리
+                        </button>
+                        <button
+                            onClick={onConceptsClick}
+                            className="px-4 py-1.5 rounded-full text-zinc-500 hover:text-zinc-800 bg-transparent border-none cursor-pointer font-bold"
+                        >
+                            옵션 샘플
                         </button>
                     </div>
                 </div>
@@ -151,7 +159,7 @@ export default function DashboardParties({
                         className="bg-[#162660] hover:bg-[#1e3a8a] text-white border-none rounded-full h-10 py-0 font-bold flex items-center gap-1.5 shadow-sm"
                     >
                         <Plus className="w-4 h-4" />
-                        새 파티 만들기
+                        새 소모임 만들기
                     </Button>
                 </div>
             </header>
@@ -161,21 +169,21 @@ export default function DashboardParties({
                 {loading ? (
                     <div className="flex flex-col items-center justify-center py-40 text-zinc-500">
                         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#162660] mb-3"></div>
-                        <p className="text-sm">파티 관리 데이터를 가져오는 중...</p>
+                        <p className="text-sm">소모임 관리 데이터를 가져오는 중...</p>
                     </div>
                 ) : parties.length === 0 ? (
                     <div className="bg-white border border-zinc-100 rounded-3xl p-16 text-center text-zinc-400 shadow-sm flex flex-col items-center justify-center max-w-2xl mx-auto mt-12">
                         <ShieldAlert className="w-16 h-16 stroke-[1.2] mb-3 text-zinc-300" />
-                        <h2 className="text-xl font-bold text-zinc-900 mb-1">관리 중인 파티가 없습니다</h2>
+                        <h2 className="text-xl font-bold text-zinc-900 mb-1">관리 중인 소모임이 없습니다</h2>
                         <p className="text-sm max-w-md mt-1 mb-6">
-                            귀하의 파티 주최자 그룹(PartyOrganizerGroup)에서 등록된 모임이 존재하지 않습니다. 새로운 파티 모임을 직접 개설해보세요.
+                            주최자 그룹에서 등록한 소모임이 아직 없습니다. 새로운 소모임을 직접 개설해보세요.
                         </p>
                         <Button
                             variant="primary"
                             onClick={onCreatePartyClick}
                             className="bg-[#162660] rounded-full font-bold px-6"
                         >
-                            첫 번째 파티 개설하기
+                            첫 번째 소모임 개설하기
                         </Button>
                     </div>
                 ) : (
@@ -185,12 +193,12 @@ export default function DashboardParties({
                             <table className="w-full text-left border-collapse">
                                 <thead>
                                     <tr className="bg-zinc-50 border-b border-zinc-100 text-xs text-zinc-400 font-bold uppercase tracking-wider">
-                                        <th className="px-6 py-4">Title / Group</th>
+                                        <th className="px-6 py-4">소모임 / 그룹</th>
                                         <th className="px-6 py-4">Status</th>
-                                        <th className="px-6 py-4">Start Time</th>
-                                        <th className="px-6 py-4">Visibility / Policy</th>
-                                        <th className="px-6 py-4">Joined / Capacity</th>
-                                        <th className="px-6 py-4 text-right">Actions</th>
+                                        <th className="px-6 py-4">시작 일시</th>
+                                        <th className="px-6 py-4">공개 / 신청 정책</th>
+                                        <th className="px-6 py-4">참여 / 정원</th>
+                                        <th className="px-6 py-4 text-right">관리</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-zinc-50 text-sm text-zinc-700">
@@ -206,7 +214,7 @@ export default function DashboardParties({
                                                         {party.title}
                                                     </div>
                                                     <div className="text-xs text-zinc-400 font-medium mt-1">
-                                                        Group: {party.organizerGroupName || `ID ${party.organizerGroupId}`}
+                                                        그룹: {party.organizerGroupName || `ID ${party.organizerGroupId}`}
                                                     </div>
                                                 </td>
                                                 <td className="px-6 py-4.5">
@@ -238,7 +246,7 @@ export default function DashboardParties({
                                                                 disabled={isDisabled}
                                                                 className="border-emerald-200 text-emerald-600 hover:bg-emerald-50 rounded-full font-bold text-xs"
                                                             >
-                                                                <Play className="w-3.5 h-3.5 inline mr-1" /> Open
+                                                                <Play className="w-3.5 h-3.5 inline mr-1" /> 오픈
                                                             </Button>
                                                         )}
                                                         {isOpen && (
@@ -249,7 +257,7 @@ export default function DashboardParties({
                                                                 disabled={isDisabled}
                                                                 className="border-zinc-200 text-zinc-500 hover:bg-zinc-100 rounded-full font-semibold text-xs"
                                                             >
-                                                                <Power className="w-3.5 h-3.5 inline mr-1" /> Close
+                                                                <Power className="w-3.5 h-3.5 inline mr-1" /> 마감
                                                             </Button>
                                                         )}
 
@@ -259,7 +267,7 @@ export default function DashboardParties({
                                                             onClick={() => onViewDetailClick(party.id)}
                                                             className="border-zinc-200 text-zinc-700 hover:bg-zinc-100 rounded-full font-semibold text-xs"
                                                         >
-                                                            Inspect
+                                                            상세
                                                         </Button>
 
                                                         <Button

@@ -24,6 +24,8 @@ export const getDevUser = (): UserDetail => {
         name: 'Mock User (Dev Mode)',
         email: 'dev@boardbuddy.com',
         role: roleOverride === 'admin' ? 'ADMIN' : 'MEMBER',
+        userType: crewOverride === 'has_crew' ? 'KUSBF' : 'GENERAL',
+        universityVerificationStatus: crewOverride === 'has_crew' ? 'VERIFIED' : 'NOT_VERIFIED',
         birthDate: '2000-01-01',
         school: crewOverride === 'has_crew' ? 'Mock University' : 'No University',
         studentId: '202012345',
@@ -48,20 +50,21 @@ export const getDevParties = (): Party[] => {
     const defaultParties: Party[] = [
         {
             id: 1,
-            title: '용평 리조트 주말 카풀 & 보딩 모임',
-            description: '주말 동안 함께 용평에서 카풀하고 보드 타실 분들 모집합니다!',
+            title: '용평 리조트 주말 카풀 & 보딩 소모임',
+            description: '주말 동안 함께 용평에서 카풀하고 보드 타실 분들을 모집합니다.',
             activityType: 'SNOWBOARDING',
             startsAt: '2026-07-01T09:00:00',
             endsAt: '2026-07-01T18:00:00',
             locationName: '용평리조트 핑크슬로프 하단',
             locationAddress: '강원특별자치도 평창군 대관령면 올림픽로 715',
             capacity: 8,
+            kusbfAssociated: true,
             joinedCount: 3,
             status: 'OPEN',
             visibilityType: 'PUBLIC',
             joinPolicy: 'INSTANT',
             organizerGroupId: 1,
-            organizerGroupName: 'Mock Dev Organizer Group',
+            organizerGroupName: '소모임 운영 샘플 그룹',
             currentUserStatus: 'NONE',
             createdAt: now(),
             updatedAt: now(),
@@ -78,7 +81,7 @@ export const saveDevParties = (parties: Party[]) => {
 export const getDevParty = (partyId: number): Party => {
     const found = getDevParties().find((party) => party.id === partyId);
     if (!found) {
-        throw new Error('Party not found');
+        throw new Error('Small gathering not found');
     }
     return found;
 };
@@ -95,12 +98,13 @@ export const createDevParty = (payload: CreatePartyPayload): Party => {
         locationName: payload.locationName || '',
         locationAddress: payload.locationAddress || '',
         capacity: payload.capacity,
+        kusbfAssociated: payload.kusbfAssociated ?? true,
         joinedCount: 1,
         status: 'DRAFT',
         visibilityType: payload.visibilityType,
         joinPolicy: payload.joinPolicy,
         organizerGroupId: payload.organizerGroupId,
-        organizerGroupName: 'Mock Dev Organizer Group',
+        organizerGroupName: '소모임 운영 샘플 그룹',
         currentUserStatus: 'JOINED',
         createdAt: now(),
         updatedAt: now(),
@@ -115,7 +119,7 @@ export const updateDevParty = (partyId: number, payload: UpdatePartyPayload): Pa
     const list = getDevParties();
     const index = list.findIndex((party) => party.id === partyId);
     if (index === -1) {
-        throw new Error('Party not found');
+        throw new Error('Small gathering not found');
     }
 
     const updated = {
@@ -171,14 +175,14 @@ export const updateDevParticipantStatus = (partyId: number, userId: number, stat
 export const getDevOrganizerGroups = (): OrganizerGroup[] => {
     const roleOverride = getDevRoleOverride();
     if (roleOverride === 'organizer' || roleOverride === 'admin' || roleOverride === 'viewer') {
-        return [{ id: 1, name: 'Mock Dev Organizer Group' }];
+        return [{ id: 1, name: '소모임 운영 샘플 그룹' }];
     }
     return [];
 };
 
 export const getDevOrganizerGroup = (groupId: number): OrganizerGroup => ({
     id: groupId,
-    name: 'Mock Dev Organizer Group',
+    name: '소모임 운영 샘플 그룹',
 });
 
 export const getDevGroupMembers = (groupId: number): OrganizerGroupMembership[] => {
