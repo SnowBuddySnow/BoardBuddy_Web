@@ -4,6 +4,7 @@ import { listParties, joinParty } from '../services/party';
 import { Party } from '../types/api';
 import { ChevronLeft, Calendar, MapPin, Users, Search, Sparkles, AlertCircle } from 'lucide-react';
 import { getApiErrorMessage, getApiErrorStatus } from '../lib/apiError';
+import { PlanningModeBadge } from '../components/party/PlanningModeBadge';
 
 interface PartiesProps {
     onBack: () => void;
@@ -169,9 +170,12 @@ export default function Parties({ onBack, onPartyClick, onCreateClick, canCreate
                                     <div>
                                         {/* Activity Tag & Host Info */}
                                         <div className="flex items-center justify-between mb-2">
-                                            <span className="text-[10px] uppercase tracking-wider font-extrabold px-2.5 py-1 bg-zinc-100 text-zinc-700 rounded-full">
-                                                {party.activityType}
-                                            </span>
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-[10px] uppercase font-extrabold px-2.5 py-1 bg-zinc-100 text-zinc-700 rounded">
+                                                    {party.activityType}
+                                                </span>
+                                                <PlanningModeBadge mode={party.planningMode} />
+                                            </div>
                                             {party.organizerGroupName && (
                                                 <span className="text-xs text-zinc-400 font-medium">
                                                     주최 {party.organizerGroupName}
@@ -192,7 +196,7 @@ export default function Parties({ onBack, onPartyClick, onCreateClick, canCreate
                                             </div>
                                             <div className="flex items-center text-xs text-zinc-500 font-medium gap-1.5">
                                                 <MapPin className="w-4 h-4 text-zinc-400 shrink-0" />
-                                                <span className="truncate">{party.locationName}</span>
+                                                <span className="truncate">{party.locationName || '참가 멤버와 추후 협의'}</span>
                                             </div>
                                         </div>
                                     </div>

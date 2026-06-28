@@ -49,7 +49,10 @@ export const getDevUser = (): UserDetail => {
 export const getDevParties = (): Party[] => {
     const stored = localStorage.getItem(DEV_PARTIES_KEY);
     if (stored) {
-        return JSON.parse(stored);
+        return (JSON.parse(stored) as Party[]).map(party => ({
+            ...party,
+            planningMode: party.planningMode || 'MANAGER_PLANNED',
+        }));
     }
 
     const defaultParties: Party[] = [
@@ -58,6 +61,7 @@ export const getDevParties = (): Party[] => {
             title: '용평 리조트 주말 카풀 & 보딩 소모임',
             description: '주말 동안 함께 용평에서 카풀하고 보드 타실 분들을 모집합니다.',
             activityType: 'SNOWBOARDING',
+            planningMode: 'MANAGER_PLANNED',
             startsAt: '2026-07-01T09:00:00',
             endsAt: '2026-07-01T18:00:00',
             locationName: '용평리조트 핑크슬로프 하단',
@@ -99,6 +103,7 @@ export const createDevParty = (payload: CreatePartyPayload): Party => {
         title: payload.title,
         description: payload.description || '',
         activityType: payload.activityType || 'SNOWBOARDING',
+        planningMode: payload.planningMode,
         startsAt: payload.startsAt,
         endsAt: payload.endsAt,
         locationName: payload.locationName || '',
@@ -232,7 +237,7 @@ export const getDevGroupMembers = (groupId: number): OrganizerGroupMembership[] 
     return defaultList;
 };
 
-export const addDevGroupMember = (
+const addDevGroupMember = (
     groupId: number,
     userId: number,
     role: OrganizerGroupMembership['role'],

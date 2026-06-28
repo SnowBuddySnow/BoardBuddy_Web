@@ -4,6 +4,7 @@ import { listDashboardParties, updateParty, deleteParty } from '../services/part
 import { Party } from '../types/api';
 import { Plus, Edit2, Play, Power, Trash2, Users, ShieldAlert } from 'lucide-react';
 import { getApiErrorStatus } from '../lib/apiError';
+import { PlanningModeBadge } from '../components/party/PlanningModeBadge';
 
 interface DashboardPartiesProps {
     onCreatePartyClick: () => void;
@@ -216,6 +217,7 @@ export default function DashboardParties({
                                                     <div className="text-xs text-zinc-400 font-medium mt-1">
                                                         그룹: {party.organizerGroupName || `ID ${party.organizerGroupId}`}
                                                     </div>
+                                                    <div className="mt-2"><PlanningModeBadge mode={party.planningMode} /></div>
                                                 </td>
                                                 <td className="px-6 py-4.5">
                                                     <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs border ${getStatusStyle(party.status)}`}>

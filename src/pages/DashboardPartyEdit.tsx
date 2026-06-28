@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
 import { Button } from '../components/Button';
-import { getPartyDashboard, updateParty, listOrganizerGroups } from '../services/party';
-import { JoinPolicy, OrganizerGroup, PartyStatus, VisibilityType } from '../types/api';
+import { getPartyDashboard, updateParty } from '../services/party';
+import { listOrganizerGroups } from '../services/organizerGroup';
+import { JoinPolicy, OrganizerGroup, PartyPlanningMode, PartyStatus, VisibilityType } from '../types/api';
+import { PlanningModeSelector } from '../components/party/PlanningModeSelector';
 import { ChevronLeft, Save } from 'lucide-react';
 import { getApiErrorMessage, getApiErrorStatus } from '../lib/apiError';
 
@@ -20,6 +22,7 @@ export default function DashboardPartyEdit({ partyId, onBack, onSuccess }: Dashb
     const [title, setTitle] = useState('');
     const [description, setDescription] = useState('');
     const [activityType, setActivityType] = useState('SURFING');
+    const [planningMode, setPlanningMode] = useState<PartyPlanningMode>('MANAGER_PLANNED');
     const [startsAt, setStartsAt] = useState('');
     const [endsAt, setEndsAt] = useState('');
     const [locationName, setLocationName] = useState('');
@@ -46,6 +49,7 @@ export default function DashboardPartyEdit({ partyId, onBack, onSuccess }: Dashb
                 setTitle(partyData.title);
                 setDescription(partyData.description || '');
                 setActivityType(partyData.activityType || 'SURFING');
+                setPlanningMode(partyData.planningMode || 'MANAGER_PLANNED');
 
                 // Convert ISO startsAt / endsAt to input datetime-local format (YYYY-MM-DDTHH:MM)
                 const formatForInput = (isoStr?: string) => {
@@ -101,6 +105,7 @@ export default function DashboardPartyEdit({ partyId, onBack, onSuccess }: Dashb
                 title,
                 description: description || undefined,
                 activityType,
+                planningMode,
                 startsAt: formattedStartsAt,
                 endsAt: formattedEndsAt || undefined,
                 locationName,
@@ -156,6 +161,7 @@ export default function DashboardPartyEdit({ partyId, onBack, onSuccess }: Dashb
                     </div>
                 ) : (
                     <form onSubmit={handleSubmit} className="bg-white border border-zinc-100 rounded-3xl p-6 shadow-sm space-y-6">
+                        <PlanningModeSelector value={planningMode} onChange={setPlanningMode} />
                         {/* Organizer Group Selection */}
                         <div className="space-y-1.5">
                             <label className="text-xs font-bold text-zinc-400 uppercase tracking-wider">주최 그룹 *</label>

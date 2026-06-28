@@ -238,6 +238,7 @@ export interface ReservationInfo {
 // --- Party DTOs ---
 
 export type PartyStatus = 'DRAFT' | 'OPEN' | 'CLOSED' | 'CANCELLED';
+export type PartyPlanningMode = 'MANAGER_PLANNED' | 'MEMBER_PLANNED';
 export type VisibilityType = 'PUBLIC' | 'CREW_LIMITED' | 'INVITE_ONLY' | 'LINK_ONLY';
 export type JoinPolicy = 'INSTANT' | 'APPROVAL_REQUIRED' | 'INVITE_ONLY' | 'PUBLIC';
 export type ParticipantStatus = 'JOINED' | 'PENDING' | 'CANCELLED' | 'REMOVED' | 'NONE';
@@ -248,6 +249,7 @@ export interface Party {
     title: string;
     description: string;
     activityType: string;
+    planningMode: PartyPlanningMode;
     startsAt: string; // ISO LocalDateTime
     endsAt?: string; // ISO LocalDateTime
     locationName: string;
@@ -261,7 +263,6 @@ export interface Party {
     organizerGroupId: number;
     organizerGroupName?: string;
     kusbfAssociated?: boolean;
-    allowedCrewIds?: number[];
     joinedCount?: number;
     currentUserStatus?: ParticipantStatus | null;
     createdAt?: string;

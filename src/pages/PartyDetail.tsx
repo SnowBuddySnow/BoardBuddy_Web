@@ -4,6 +4,7 @@ import { getParty, joinParty, cancelParty } from '../services/party';
 import { Party } from '../types/api';
 import { ChevronLeft, Calendar, MapPin, Users, Info, CheckCircle } from 'lucide-react';
 import { getApiErrorMessage, getApiErrorStatus } from '../lib/apiError';
+import { PlanningModeBadge } from '../components/party/PlanningModeBadge';
 
 interface PartyDetailProps {
     partyId: number;
@@ -147,6 +148,7 @@ export default function PartyDetail({ partyId, onBack }: PartyDetailProps) {
                 <div className="w-full h-44 bg-gradient-to-br from-[#162660] via-[#1e3a8a] to-[#2563eb] relative flex items-end p-5">
                     <div className="absolute inset-0 bg-black/10"></div>
                     <div className="z-10 flex flex-col gap-1.5">
+                        <PlanningModeBadge mode={party.planningMode} />
                         <span className="text-[10px] uppercase font-black text-blue-200 tracking-widest px-3 py-1 bg-white/10 backdrop-blur-md rounded-full w-max">
                             {party.activityType}
                         </span>
@@ -175,7 +177,7 @@ export default function PartyDetail({ partyId, onBack }: PartyDetailProps) {
                             <MapPin className="w-5 h-5 text-[#162660] shrink-0 mt-0.5" />
                             <div>
                                 <h3 className="text-xs text-zinc-400 font-bold uppercase tracking-wider">어디서 만나나요</h3>
-                                <p className="text-sm font-bold text-zinc-800 mt-1">{party.locationName}</p>
+                                <p className="text-sm font-bold text-zinc-800 mt-1">{party.locationName || '참가 멤버와 추후 협의'}</p>
                                 <p className="text-xs text-zinc-500 mt-0.5">{party.locationAddress}</p>
                             </div>
                         </div>

@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
 import { getUserInfo } from '../services/user';
 import { getCrewInfo, getMyApplications } from '../services/crew';
-import { listParties, listOrganizerGroups } from '../services/party';
+import { listParties } from '../services/party';
+import { listOrganizerGroups } from '../services/organizerGroup';
 import { UserDetail, CrewDetail, MyApplication, Party } from '../types/api';
 import { Bus, Mountain, UserPlus, Sparkles, MapPin, Users, Calendar as CalendarIcon, ChevronRight, LayoutTemplate } from 'lucide-react';
 import { getWeather, WeatherData } from '../services/weather';
+import { PlanningModeBadge } from '../components/party/PlanningModeBadge';
 
 const SnowflakeDecorIcon = ({ className }: { className?: string }) => (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
@@ -255,9 +257,12 @@ export default function Home({
                         >
                             <div>
                                 <div className="flex items-center justify-between mb-2">
-                                    <span className="text-[10px] tracking-wider uppercase font-black px-2.5 py-0.5 bg-amber-50 border border-amber-100 text-amber-800 rounded-full">
-                                        {featuredParty.activityType}
-                                    </span>
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-[10px] uppercase font-black px-2.5 py-0.5 bg-amber-50 border border-amber-100 text-amber-800 rounded">
+                                            {featuredParty.activityType}
+                                        </span>
+                                        <PlanningModeBadge mode={featuredParty.planningMode} />
+                                    </div>
                                     {featuredParty.organizerGroupName && (
                                         <span className="text-xs text-zinc-400 font-semibold">
                                             주최 {featuredParty.organizerGroupName}
@@ -276,7 +281,7 @@ export default function Home({
                                     </div>
                                     <div className="flex items-center gap-1.5">
                                         <MapPin className="w-4 h-4 text-zinc-400 shrink-0" />
-                                        <span className="truncate">{featuredParty.locationName}</span>
+                                        <span className="truncate">{featuredParty.locationName || '참가 멤버와 추후 협의'}</span>
                                     </div>
                                 </div>
                             </div>
@@ -316,11 +321,12 @@ export default function Home({
                                     className="bg-white border border-zinc-50 rounded-2xl p-4 flex items-center justify-between hover:shadow-sm transition-all active:scale-[0.99] cursor-pointer"
                                 >
                                     <div className="space-y-1 pr-4">
+                                        <PlanningModeBadge mode={party.planningMode} />
                                         <h3 className="text-sm font-bold text-zinc-900 truncate max-w-[200px]">{party.title}</h3>
                                         <div className="flex items-center gap-2 text-xs text-zinc-400 font-semibold">
                                             <span>{formatPartyDate(party.startsAt)}</span>
                                             <span>•</span>
-                                            <span className="truncate max-w-[100px]">{party.locationName}</span>
+                                            <span className="truncate max-w-[100px]">{party.locationName || '추후 협의'}</span>
                                         </div>
                                     </div>
                                     <ChevronRight className="w-4 h-4 text-zinc-300 shrink-0" />

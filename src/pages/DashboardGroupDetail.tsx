@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Button } from '../components/Button';
-import { getOrganizerGroup, listGroupMembers, deleteGroupMember, inviteCrewManager, listGroupInvitations, listOrganizerGroupCrews, revokeOrganizerGroupInvitation } from '../services/party';
+import { getOrganizerGroup, listGroupMembers, deleteGroupMember, inviteCrewManager, listGroupInvitations, listOrganizerGroupCrews, revokeOrganizerGroupInvitation } from '../services/organizerGroup';
 import { OrganizerGroup, OrganizerGroupCrew, OrganizerGroupInvitation, OrganizerGroupMembership } from '../types/api';
 import { ChevronLeft, Trash2, UserPlus, Info, Mail, Users, X } from 'lucide-react';
 

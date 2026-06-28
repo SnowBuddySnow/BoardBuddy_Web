@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
 import { Button } from '../components/Button';
-import { createParty, listOrganizerGroups } from '../services/party';
-import { JoinPolicy, OrganizerGroup, VisibilityType } from '../types/api';
+import { createParty } from '../services/party';
+import { listOrganizerGroups } from '../services/organizerGroup';
+import { JoinPolicy, OrganizerGroup, PartyPlanningMode, VisibilityType } from '../types/api';
+import { PlanningModeSelector } from '../components/party/PlanningModeSelector';
 import { ChevronLeft, Save, HelpCircle } from 'lucide-react';
 import { getApiErrorMessage, getApiErrorStatus } from '../lib/apiError';
 
@@ -19,6 +21,7 @@ export default function DashboardPartyNew({ onBack, onSuccess }: DashboardPartyN
     const [title, setTitle] = useState('');
     const [description, setDescription] = useState('');
     const [activityType, setActivityType] = useState('SURFING');
+    const [planningMode, setPlanningMode] = useState<PartyPlanningMode>('MANAGER_PLANNED');
     const [startsAt, setStartsAt] = useState('');
     const [endsAt, setEndsAt] = useState('');
     const [locationName, setLocationName] = useState('');
@@ -73,6 +76,7 @@ export default function DashboardPartyNew({ onBack, onSuccess }: DashboardPartyN
                 title,
                 description: description || undefined,
                 activityType,
+                planningMode,
                 startsAt: formattedStartsAt,
                 endsAt: formattedEndsAt || undefined,
                 locationName,
@@ -138,6 +142,7 @@ export default function DashboardPartyNew({ onBack, onSuccess }: DashboardPartyN
                     </div>
                 ) : (
                     <form onSubmit={handleSubmit} className="bg-white border border-zinc-100 rounded-3xl p-6 shadow-sm space-y-6">
+                        <PlanningModeSelector value={planningMode} onChange={setPlanningMode} />
                         {/* Organizer Group Selection */}
                         <div className="space-y-1.5">
                             <label className="text-xs font-bold text-zinc-400 uppercase tracking-wider">주최 그룹 *</label>

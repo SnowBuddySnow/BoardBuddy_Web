@@ -3,6 +3,7 @@ import { Button } from '../components/Button';
 import { getPartyDashboard, updateParty, listParticipants, updateParticipantManagement, updateParticipantStatus } from '../services/party';
 import { Party, PartyParticipant, PaymentStatus } from '../types/api';
 import { ChevronLeft, Play, Power, Clock, Check, Save, X } from 'lucide-react';
+import { PlanningModeBadge } from '../components/party/PlanningModeBadge';
 
 interface DashboardPartyDetailProps {
     partyId: number;
@@ -187,6 +188,7 @@ export default function DashboardPartyDetail({ partyId, onBack, onEditClick }: D
                     {/* Basic Info panel */}
                     <div className="bg-white rounded-3xl p-6 border border-zinc-100 shadow-sm space-y-4">
                         <h2 className="text-base font-bold text-zinc-900">모임 요약</h2>
+                        <PlanningModeBadge mode={party.planningMode} />
                         <div className="grid grid-cols-2 gap-4 text-sm">
                             <div>
                                 <span className="text-zinc-400 font-bold block text-xs uppercase">일시</span>
@@ -194,7 +196,7 @@ export default function DashboardPartyDetail({ partyId, onBack, onEditClick }: D
                             </div>
                             <div>
                                 <span className="text-zinc-400 font-bold block text-xs uppercase">모임 장소</span>
-                                <span className="font-bold text-zinc-800 mt-1 block">{party.locationName}</span>
+                                <span className="font-bold text-zinc-800 mt-1 block">{party.locationName || '참가 멤버와 추후 협의'}</span>
                             </div>
                             <div>
                                 <span className="text-zinc-400 font-bold block text-xs uppercase">상태</span>

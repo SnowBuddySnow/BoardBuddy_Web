@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Button } from '../components/Button';
-import { acceptOrganizerGroupInvitation, createOrganizerGroup, declineOrganizerGroupInvitation, listMyOrganizerGroupInvitations, listOrganizerGroups } from '../services/party';
+import { acceptOrganizerGroupInvitation, createOrganizerGroup, declineOrganizerGroupInvitation, listMyOrganizerGroupInvitations, listOrganizerGroups } from '../services/organizerGroup';
 import { OrganizerGroup, OrganizerGroupInvitation } from '../types/api';
 import { Users, ArrowRight, ShieldAlert, Award, Check, Mail, Plus, X } from 'lucide-react';
 
