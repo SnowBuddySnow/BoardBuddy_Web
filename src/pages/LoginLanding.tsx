@@ -9,6 +9,7 @@ import {
     saveAuthTokens,
     saveTempAccessToken,
     setAutoLoginPreference,
+    saveAccountId,
 } from '../lib/session';
 // import naver1 from '../assets/login/naver1.png';
 // import naver2 from '../assets/login/naver2.png';
@@ -53,16 +54,23 @@ export default function LoginLanding({ onLogin, onSignupNeeded, /* onDebugUserIn
 
                     const data = response.data;
 
-                    if (response.status >= 200 && response.status < 300) {
-                        if (data.message && data.message.includes("추가 정보를 입력해주세요")) {
+                    if (response.status >= 200 && response.status < 300 && data.data) {
+                        const { status, accountId, accessToken, refreshToken } = data.data;
+
+                        // Save the account ID
+                        if (accountId) {
+                            saveAccountId(accountId);
+                        }
+
+                        if (status === 'PENDING_PROFILE') {
                             // New User: Temporary token for signup
-                            saveTempAccessToken(data.data.tempAccessToken);
+                            saveTempAccessToken(accessToken);
                             // Save auto-login preference
                             setAutoLoginPreference(autoLogin);
                             onSignupNeeded();
                         } else {
                             // Existing User: Login success
-                            saveAuthTokens(data.data.accessToken, data.data.refreshToken);
+                            saveAuthTokens(accessToken, refreshToken);
                             // Save auto-login preference
                             setAutoLoginPreference(autoLogin);
                             onLogin();

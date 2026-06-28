@@ -3,6 +3,7 @@ export const SESSION_KEYS = {
     refreshToken: 'refreshToken',
     tempAccessToken: 'tempAccessToken',
     autoLogin: 'autoLogin',
+    accountId: 'accountId',
     devCrewOverride: 'dev_crew_override',
     devRoleOverride: 'dev_role_override',
 } as const;
@@ -21,6 +22,16 @@ export const setAutoLoginPreference = (enabled: boolean) => {
     } else {
         localStorage.removeItem(SESSION_KEYS.autoLogin);
     }
+};
+
+export const getAccountId = () => localStorage.getItem(SESSION_KEYS.accountId);
+
+export const saveAccountId = (accountId: number | string) => {
+    localStorage.setItem(SESSION_KEYS.accountId, String(accountId));
+};
+
+export const clearAccountId = () => {
+    localStorage.removeItem(SESSION_KEYS.accountId);
 };
 
 export const saveAuthTokens = (accessToken?: string, refreshToken?: string) => {
@@ -47,6 +58,7 @@ export const clearAuthSession = () => {
     localStorage.removeItem(SESSION_KEYS.refreshToken);
     localStorage.removeItem(SESSION_KEYS.tempAccessToken);
     localStorage.removeItem(SESSION_KEYS.autoLogin);
+    localStorage.removeItem(SESSION_KEYS.accountId);
 };
 
 export const getDevCrewOverride = () => localStorage.getItem(SESSION_KEYS.devCrewOverride);

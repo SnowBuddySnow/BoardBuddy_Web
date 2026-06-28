@@ -154,7 +154,12 @@ function App() {
       case 'search_crew':
         return <SearchCrew onBack={() => setCurrentView('home')} />;
       case 'user_info':
-        return <UserInfoInput onBack={() => setCurrentView('login')} />;
+        return (
+          <UserInfoInput
+            onBack={() => setCurrentView('login')}
+            onSuccess={() => setCurrentView('home')}
+          />
+        );
       case 'my_page':
         return <MyPage onBack={() => setCurrentView('home')} onAccountInfoClick={() => setCurrentView('account_info')} />;
       case 'account_info':

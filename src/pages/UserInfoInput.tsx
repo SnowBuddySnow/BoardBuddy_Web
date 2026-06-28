@@ -3,11 +3,11 @@ import { ChevronLeftIcon, CheckIcon } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
 import { TermsModal } from '../components/TermsModal';
 import apiClient from '../lib/axios';
-import { clearTempAccessToken, getSignupToken, saveAuthTokens } from '../lib/session';
+import { clearTempAccessToken, getSignupToken, saveAuthTokens, getAccountId } from '../lib/session';
 
 interface UserInfoInputProps {
     onBack: () => void;
-
+    onSuccess?: () => void;
 }
 
 const SCHOOL_DATA = [
@@ -51,7 +51,7 @@ const TERMS_CONTENT = {
     }
 };
 
-export default function UserInfoInput({ onBack }: UserInfoInputProps) {
+export default function UserInfoInput({ onBack, onSuccess }: UserInfoInputProps) {
     const [name, setName] = useState('');
     const [school, setSchool] = useState('');
     const [studentId, setStudentId] = useState('');
@@ -149,21 +149,33 @@ export default function UserInfoInput({ onBack }: UserInfoInputProps) {
 
         setIsLoading(true);
 
+        const SCHOOL_ID_MAP: Record<string, number> = {
+            '홍익대학교': 1,
+            '충남대학교': 2,
+            '카이스트': 3,
+            '세종대학교': 4,
+            '이화여자대학교': 5,
+            '숙명여자대학교': 6,
+        };
+
         try {
             const token = getSignupToken();
+            const accountId = getAccountId();
 
-            if (!token) {
+            if (!token || !accountId) {
                 alert('로그인 정보가 없습니다. 다시 로그인해주세요.');
                 onBack();
                 return;
             }
 
-            const response = await apiClient.post('/auth/signup/complete', {
+            const schoolId = school ? SCHOOL_ID_MAP[school] : undefined;
+
+            const response = await apiClient.put(`/accounts/${accountId}/profile`, {
                 userType,
-                name,
+                displayName: name,
                 birthDate: birthDate, // YYYY-MM-DD
-                school: school || undefined,
-                studentId: studentId || undefined,
+                schoolId: schoolId || undefined,
+                studentNumber: studentId || undefined,
                 gender: gender === 'male' ? 'MALE' : 'FEMALE',
                 phoneNumber
             }, {
@@ -172,16 +184,21 @@ export default function UserInfoInput({ onBack }: UserInfoInputProps) {
                 },
             });
 
-            const data = response.data;
-
             if (response.status >= 200 && response.status < 300) {
                 alert('회원가입이 완료되었습니다.');
-                // Update token if response contains new token (usually it does)
-                if (data.data && data.data.accessToken) {
-                    saveAuthTokens(data.data.accessToken, data.data.refreshToken);
+                
+                // Promote temp token to final token
+                const tempToken = localStorage.getItem('tempAccessToken');
+                if (tempToken) {
+                    saveAuthTokens(tempToken);
                     clearTempAccessToken();
                 }
-                onBack(); // Navigate back (usually to login or directly to home if guarded)
+
+                if (onSuccess) {
+                    onSuccess();
+                } else {
+                    onBack();
+                }
             }
         } catch (error) {
             console.error('Signup error:', error);
