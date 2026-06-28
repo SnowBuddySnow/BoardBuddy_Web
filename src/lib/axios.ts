@@ -30,7 +30,10 @@ const processQueue = (error: AxiosError | null, token: string | null = null) => 
 apiClient.interceptors.request.use(
     (config) => {
         const token = getAccessToken();
-        if (token) {
+        // Some public auth endpoints provide their own bearer token (for example,
+        // the Kakao access token used by /auth/social/kakao). Do not replace it
+        // with a previously stored BoardBuddy access token.
+        if (token && !config.headers.has('Authorization')) {
             config.headers.Authorization = `Bearer ${token}`;
         }
         return config;
