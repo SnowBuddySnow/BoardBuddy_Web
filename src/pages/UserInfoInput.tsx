@@ -3,7 +3,15 @@ import { ChevronLeftIcon, CheckIcon } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
 import { TermsModal } from '../components/TermsModal';
 import apiClient from '../lib/axios';
-import { clearTempAccessToken, getSignupToken, saveAuthTokens, getAccountId } from '../lib/session';
+import {
+    clearTempAccessToken,
+    getAccountId,
+    getSignupToken,
+    saveAccountId,
+    saveAuthTokens,
+    saveTempAccessToken,
+} from '../lib/session';
+import { confirmPhoneVerification, requestPhoneVerification } from '../services/phoneVerification';
 import type { SignupUserType } from './UserTypeSelection';
 
 interface UserInfoInputProps {
@@ -59,6 +67,11 @@ export default function UserInfoInput({ userType, onBack, onSuccess }: UserInfoI
     const [school, setSchool] = useState('');
     const [studentId, setStudentId] = useState('');
     const [phoneNumber, setPhoneNumber] = useState('');
+    const [phoneChallengeId, setPhoneChallengeId] = useState<string | null>(null);
+    const [phoneCode, setPhoneCode] = useState('');
+    const [phoneVerified, setPhoneVerified] = useState(false);
+    const [isSendingCode, setIsSendingCode] = useState(false);
+    const [isVerifyingCode, setIsVerifyingCode] = useState(false);
     const [email, setEmail] = useState('');
     const [schoolEmail, setSchoolEmail] = useState('');
     const [gender, setGender] = useState<'female' | 'male' | null>(null);
@@ -103,6 +116,61 @@ export default function UserInfoInput({ userType, onBack, onSuccess }: UserInfoI
         if (formattedValue.length > 13) return;
 
         setPhoneNumber(formattedValue);
+        setPhoneChallengeId(null);
+        setPhoneCode('');
+        setPhoneVerified(false);
+    };
+
+    const handleSendPhoneCode = async () => {
+        if (!/^010-\d{4}-\d{4}$/.test(phoneNumber)) {
+            alert('전화번호 형식이 올바르지 않습니다. (예: 010-1234-5678)');
+            return;
+        }
+        setIsSendingCode(true);
+        try {
+            const challenge = await requestPhoneVerification(phoneNumber);
+            setPhoneChallengeId(challenge.challengeId);
+            setPhoneCode('');
+            setPhoneVerified(false);
+            alert('인증번호를 전송했습니다.');
+        } catch (error) {
+            console.error('Phone verification request failed:', error);
+            alert('인증번호 전송에 실패했습니다. 잠시 후 다시 시도해주세요.');
+        } finally {
+            setIsSendingCode(false);
+        }
+    };
+
+    const handleConfirmPhoneCode = async () => {
+        if (!phoneChallengeId || !/^\d{6}$/.test(phoneCode)) {
+            alert('6자리 인증번호를 입력해주세요.');
+            return;
+        }
+        setIsVerifyingCode(true);
+        try {
+            const result = await confirmPhoneVerification(phoneChallengeId, phoneCode);
+            saveAccountId(result.accountId);
+            saveTempAccessToken(result.accessToken);
+            setPhoneVerified(true);
+
+            if (result.resolution === 'LINKED_EXISTING_ACCOUNT' && result.status === 'ACTIVE') {
+                saveAuthTokens(result.accessToken);
+                clearTempAccessToken();
+                alert('기존 계정을 확인했습니다. 새 로그인 수단이 기존 계정에 연결되었습니다.');
+                onSuccess?.();
+                return;
+            }
+            if (result.resolution === 'LINKED_EXISTING_ACCOUNT') {
+                alert('기존 가입 정보를 확인했습니다. 이 계정으로 가입을 계속합니다.');
+            } else {
+                alert('전화번호 인증이 완료되었습니다.');
+            }
+        } catch (error) {
+            console.error('Phone verification confirmation failed:', error);
+            alert('인증번호가 올바르지 않거나 만료되었습니다.');
+        } finally {
+            setIsVerifyingCode(false);
+        }
     };
 
     const handleSchoolChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -137,6 +205,7 @@ export default function UserInfoInput({ userType, onBack, onSuccess }: UserInfoI
         if (userType === 'KUSBF' && !school) { alert('KUSBF 회원은 학교를 입력해주세요.'); return; }
         if (userType === 'KUSBF' && !studentId) { alert('KUSBF 회원은 학번을 입력해주세요.'); return; }
         if (!phoneNumber) { alert('전화번호를 입력해주세요.'); return; }
+        if (!phoneVerified) { alert('전화번호 인증을 완료해주세요.'); return; }
         if (!gender) { alert('성별을 선택해주세요.'); return; }
 
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -325,14 +394,46 @@ export default function UserInfoInput({ userType, onBack, onSuccess }: UserInfoI
                         {/* Phone */}
                         <div className="space-y-2">
                             <label className="text-sm font-bold text-zinc-800 ml-1">전화번호</label>
-                            <input
-                                type="tel"
-                                value={phoneNumber}
-                                onChange={handlePhoneChange}
-                                maxLength={13}
-                                className="w-full h-12 rounded-[16px] border-none px-4 text-zinc-900 focus:ring-2 focus:ring-blue-400 outline-none shadow-sm bg-white"
-                                placeholder="010-0000-0000"
-                            />
+                            <div className="flex gap-2">
+                                <input
+                                    type="tel"
+                                    value={phoneNumber}
+                                    onChange={handlePhoneChange}
+                                    disabled={phoneVerified}
+                                    maxLength={13}
+                                    className="min-w-0 flex-1 h-12 rounded-[16px] border-none px-4 text-zinc-900 focus:ring-2 focus:ring-blue-400 outline-none shadow-sm bg-white disabled:bg-zinc-100"
+                                    placeholder="010-0000-0000"
+                                />
+                                <button
+                                    type="button"
+                                    onClick={handleSendPhoneCode}
+                                    disabled={isSendingCode || phoneVerified}
+                                    className="shrink-0 rounded-[16px] bg-blue-600 px-4 text-sm font-semibold text-white disabled:bg-zinc-400"
+                                >
+                                    {phoneVerified ? '인증완료' : isSendingCode ? '전송중' : phoneChallengeId ? '재전송' : '인증요청'}
+                                </button>
+                            </div>
+                            {phoneChallengeId && !phoneVerified && (
+                                <div className="flex gap-2">
+                                    <input
+                                        type="text"
+                                        inputMode="numeric"
+                                        value={phoneCode}
+                                        onChange={(event) => setPhoneCode(event.target.value.replace(/\D/g, '').slice(0, 6))}
+                                        maxLength={6}
+                                        className="min-w-0 flex-1 h-12 rounded-[16px] border-none px-4 text-zinc-900 focus:ring-2 focus:ring-blue-400 outline-none shadow-sm bg-white"
+                                        placeholder="6자리 인증번호"
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={handleConfirmPhoneCode}
+                                        disabled={isVerifyingCode || phoneCode.length !== 6}
+                                        className="shrink-0 rounded-[16px] bg-zinc-900 px-4 text-sm font-semibold text-white disabled:bg-zinc-400"
+                                    >
+                                        {isVerifyingCode ? '확인중' : '확인'}
+                                    </button>
+                                </div>
+                            )}
                         </div>
 
                         {/* Gender */}
