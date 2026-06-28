@@ -7,6 +7,7 @@ import MyReservations from './pages/MyReservations';
 import LoginLanding from './pages/LoginLanding';
 import CrewDetail from './pages/CrewDetail';
 import UserInfoInput from './pages/UserInfoInput';
+import UserTypeSelection, { type SignupUserType } from './pages/UserTypeSelection';
 import CrewMember from './pages/CrewMember';
 import SearchCrew from './pages/SearchCrew';
 import CrewSettings from './pages/CrewSettings';
@@ -37,6 +38,7 @@ type View =
   | 'crew_detail'
   | 'search_crew'
   | 'user_info'
+  | 'user_type'
   | 'crew_member'
   | 'crew_settings'
   | 'guest_reservation'
@@ -81,6 +83,7 @@ const tabViews: Record<Tab, View> = {
 const viewsWithoutBottomNav: View[] = [
   'login',
   'user_info',
+  'user_type',
   'my_page',
   'account_info',
   'reservation',
@@ -99,6 +102,7 @@ function App() {
   const [hasCrew, setHasCrew] = useState(false);
   const [selectedPartyId, setSelectedPartyId] = useState<number | null>(null);
   const [selectedGroupId, setSelectedGroupId] = useState<number | null>(null);
+  const [signupUserType, setSignupUserType] = useState<SignupUserType>('GENERAL');
 
   // Check for auto-login on app start
   useEffect(() => {
@@ -120,8 +124,18 @@ function App() {
         return (
           <LoginLanding
             onLogin={() => setCurrentView('home')}
-            onSignupNeeded={() => setCurrentView('user_info')}
-            onDebugUserInfo={() => setCurrentView('user_info')}
+            onSignupNeeded={() => setCurrentView('user_type')}
+            onDebugUserInfo={() => setCurrentView('user_type')}
+          />
+        );
+      case 'user_type':
+        return (
+          <UserTypeSelection
+            onBack={() => setCurrentView('login')}
+            onSelect={(userType) => {
+              setSignupUserType(userType);
+              setCurrentView('user_info');
+            }}
           />
         );
       case 'reservation':
@@ -156,7 +170,8 @@ function App() {
       case 'user_info':
         return (
           <UserInfoInput
-            onBack={() => setCurrentView('login')}
+            userType={signupUserType}
+            onBack={() => setCurrentView('user_type')}
             onSuccess={() => setCurrentView('home')}
           />
         );

@@ -4,8 +4,10 @@ import { useState, useRef, useEffect } from 'react';
 import { TermsModal } from '../components/TermsModal';
 import apiClient from '../lib/axios';
 import { clearTempAccessToken, getSignupToken, saveAuthTokens, getAccountId } from '../lib/session';
+import type { SignupUserType } from './UserTypeSelection';
 
 interface UserInfoInputProps {
+    userType: SignupUserType;
     onBack: () => void;
     onSuccess?: () => void;
 }
@@ -40,7 +42,8 @@ const TERMS_CONTENT = {
 - 서비스 관련 공지 및 피드백 수집
 
 2. 수집 항목
-- 성명, 휴대전화번호, 소속(대학교/동아리명), 학번, 생년월일
+- 닉네임 또는 성명, 성별, 휴대전화번호, 이메일(선택)
+- KUSBF 회원의 경우 학교, 학번, 학교 이메일(선택)
 
 3. 보유 및 이용 기간
 - 베타 테스트 종료 시까지
@@ -51,13 +54,13 @@ const TERMS_CONTENT = {
     }
 };
 
-export default function UserInfoInput({ onBack, onSuccess }: UserInfoInputProps) {
+export default function UserInfoInput({ userType, onBack, onSuccess }: UserInfoInputProps) {
     const [name, setName] = useState('');
     const [school, setSchool] = useState('');
     const [studentId, setStudentId] = useState('');
-    const [userType, setUserType] = useState<'GENERAL' | 'KUSBF'>('GENERAL');
     const [phoneNumber, setPhoneNumber] = useState('');
-    const [birthDate, setBirthDate] = useState('');
+    const [email, setEmail] = useState('');
+    const [schoolEmail, setSchoolEmail] = useState('');
     const [gender, setGender] = useState<'female' | 'male' | null>(null);
     const [terms, setTerms] = useState({
         term1: false,
@@ -130,12 +133,15 @@ export default function UserInfoInput({ onBack, onSuccess }: UserInfoInputProps)
 
     const handleSubmit = async () => {
         // Granular Validation
-        if (!name) { alert('이름을 입력해주세요.'); return; }
-        if (!birthDate) { alert('생년월일을 입력해주세요.'); return; }
+        if (!name.trim()) { alert(userType === 'KUSBF' ? '이름을 입력해주세요.' : '닉네임을 입력해주세요.'); return; }
         if (userType === 'KUSBF' && !school) { alert('KUSBF 회원은 학교를 입력해주세요.'); return; }
         if (userType === 'KUSBF' && !studentId) { alert('KUSBF 회원은 학번을 입력해주세요.'); return; }
         if (!phoneNumber) { alert('전화번호를 입력해주세요.'); return; }
         if (!gender) { alert('성별을 선택해주세요.'); return; }
+
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (email && !emailRegex.test(email)) { alert('이메일 형식이 올바르지 않습니다.'); return; }
+        if (schoolEmail && !emailRegex.test(schoolEmail)) { alert('학교 이메일 형식이 올바르지 않습니다.'); return; }
 
         if (!terms.term1) { alert('첫 번째 필수 약관에 동의해주세요.'); return; }
         if (!terms.term2) { alert('두 번째 필수 약관에 동의해주세요.'); return; }
@@ -147,8 +153,6 @@ export default function UserInfoInput({ onBack, onSuccess }: UserInfoInputProps)
             return;
         }
 
-        setIsLoading(true);
-
         const SCHOOL_ID_MAP: Record<string, number> = {
             '홍익대학교': 1,
             '충남대학교': 2,
@@ -157,6 +161,13 @@ export default function UserInfoInput({ onBack, onSuccess }: UserInfoInputProps)
             '이화여자대학교': 5,
             '숙명여자대학교': 6,
         };
+
+        if (userType === 'KUSBF' && !SCHOOL_ID_MAP[school]) {
+            alert('검색 결과에서 학교를 선택해주세요.');
+            return;
+        }
+
+        setIsLoading(true);
 
         try {
             const token = getSignupToken();
@@ -172,10 +183,11 @@ export default function UserInfoInput({ onBack, onSuccess }: UserInfoInputProps)
 
             const response = await apiClient.put(`/accounts/${accountId}/profile`, {
                 userType,
-                displayName: name,
-                birthDate: birthDate, // YYYY-MM-DD
-                schoolId: schoolId || undefined,
-                studentNumber: studentId || undefined,
+                displayName: name.trim(),
+                email: email.trim() || undefined,
+                schoolId: userType === 'KUSBF' ? schoolId : undefined,
+                studentNumber: userType === 'KUSBF' ? studentId.trim() : undefined,
+                schoolEmail: userType === 'KUSBF' ? schoolEmail.trim() || undefined : undefined,
                 gender: gender === 'male' ? 'MALE' : 'FEMALE',
                 phoneNumber
             }, {
@@ -226,45 +238,35 @@ export default function UserInfoInput({ onBack, onSuccess }: UserInfoInputProps)
 
                     {/* Form Fields */}
                     <div className="space-y-6">
-                        <div className="space-y-2">
-                            <label className="text-sm font-bold text-zinc-800 ml-1">회원 유형</label>
-                            <select
-                                value={userType}
-                                onChange={(e) => setUserType(e.target.value as 'GENERAL' | 'KUSBF')}
-                                className="w-full h-12 rounded-[16px] border-none px-4 text-zinc-900 focus:ring-2 focus:ring-blue-400 outline-none shadow-sm bg-white"
-                            >
-                                <option value="GENERAL">일반 회원</option>
-                                <option value="KUSBF">KUSBF 회원</option>
-                            </select>
-                        </div>
-
                         {/* Name */}
                         <div className="space-y-2">
-                            <label className="text-sm font-bold text-zinc-800 ml-1">이름</label>
+                            <label className="text-sm font-bold text-zinc-800 ml-1">{userType === 'KUSBF' ? '이름' : '닉네임'}</label>
                             <input
                                 type="text"
                                 value={name}
                                 onChange={(e) => setName(e.target.value)}
                                 className="w-full h-12 rounded-[16px] border-none px-4 text-zinc-900 focus:ring-2 focus:ring-blue-400 outline-none shadow-sm bg-white"
-                                placeholder="홍길동"
+                                placeholder={userType === 'KUSBF' ? '홍길동' : '보드버디'}
                             />
-                            <p className="text-xs text-zinc-600 ml-1">동아리 운영진이 식별 가능하도록 실명으로 작성해주세요.</p>
+                            {userType === 'KUSBF' && <p className="text-xs text-zinc-600 ml-1">KUSBF 회원 확인에 사용할 이름을 입력해주세요.</p>}
                         </div>
 
-                        {/* BirthDate */}
+                        {/* Email */}
                         <div className="space-y-2">
-                            <label className="text-sm font-bold text-zinc-800 ml-1">생년월일</label>
+                            <label className="text-sm font-bold text-zinc-800 ml-1">이메일 <span className="font-normal text-zinc-500">(선택)</span></label>
                             <input
-                                type="date"
-                                value={birthDate}
-                                onChange={(e) => setBirthDate(e.target.value)}
+                                type="email"
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
                                 className="w-full h-12 rounded-[16px] border-none px-4 text-zinc-900 focus:ring-2 focus:ring-blue-400 outline-none shadow-sm bg-white"
+                                placeholder="name@example.com"
                             />
                         </div>
 
+                        {userType === 'KUSBF' && <>
                         {/* School (Dropdown) */}
                         <div className="space-y-2 relative" ref={schoolInputRef}>
-                            <label className="text-sm font-bold text-zinc-800 ml-1">학교{userType === 'KUSBF' ? ' *' : ''}</label>
+                            <label className="text-sm font-bold text-zinc-800 ml-1">학교 *</label>
                             <input
                                 type="text"
                                 value={school}
@@ -275,7 +277,7 @@ export default function UserInfoInput({ onBack, onSuccess }: UserInfoInputProps)
                                     }
                                 }}
                                 className="w-full h-12 rounded-[16px] border-none px-4 text-zinc-900 focus:ring-2 focus:ring-blue-400 outline-none shadow-sm bg-white"
-                                placeholder={userType === 'KUSBF' ? '학교명을 검색하세요 (예: 홍익대학교, 홍대)' : '선택 사항'}
+                                placeholder="학교명을 검색하세요 (예: 홍익대학교, 홍대)"
                             />
                             {showSchoolDropdown && (
                                 <div className="absolute top-[80px] left-0 right-0 bg-white rounded-xl shadow-lg border border-zinc-100 max-h-48 overflow-y-auto z-50">
@@ -297,7 +299,7 @@ export default function UserInfoInput({ onBack, onSuccess }: UserInfoInputProps)
 
                         {/* Student ID */}
                         <div className="space-y-2">
-                            <label className="text-sm font-bold text-zinc-800 ml-1">학번{userType === 'KUSBF' ? ' *' : ''}</label>
+                            <label className="text-sm font-bold text-zinc-800 ml-1">학번 *</label>
                             <input
                                 type="text"
                                 value={studentId}
@@ -306,6 +308,19 @@ export default function UserInfoInput({ onBack, onSuccess }: UserInfoInputProps)
                                 placeholder="20230001"
                             />
                         </div>
+
+                        <div className="space-y-2">
+                            <label className="text-sm font-bold text-zinc-800 ml-1">학교 이메일 인증 <span className="font-normal text-zinc-500">(선택)</span></label>
+                            <input
+                                type="email"
+                                value={schoolEmail}
+                                onChange={(e) => setSchoolEmail(e.target.value)}
+                                className="w-full h-12 rounded-[16px] border-none px-4 text-zinc-900 focus:ring-2 focus:ring-blue-400 outline-none shadow-sm bg-white"
+                                placeholder="student@university.ac.kr"
+                            />
+                            <p className="text-xs text-zinc-600 ml-1">학교별 인증 도메인이 등록되면 이 주소로 인증을 진행합니다.</p>
+                        </div>
+                        </>}
 
                         {/* Phone */}
                         <div className="space-y-2">
