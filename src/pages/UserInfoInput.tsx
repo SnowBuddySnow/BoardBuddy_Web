@@ -51,7 +51,7 @@ const TERMS_CONTENT = {
 
 2. 수집 항목
 - 닉네임 또는 성명, 성별, 휴대전화번호, 이메일(선택)
-- KUSBF 회원의 경우 학교, 학번, 학교 이메일(선택)
+- KUSBF 회원의 경우 학교, 학번
 
 3. 보유 및 이용 기간
 - 베타 테스트 종료 시까지
@@ -73,7 +73,6 @@ export default function UserInfoInput({ userType, onBack, onSuccess }: UserInfoI
     const [isSendingCode, setIsSendingCode] = useState(false);
     const [isVerifyingCode, setIsVerifyingCode] = useState(false);
     const [email, setEmail] = useState('');
-    const [schoolEmail, setSchoolEmail] = useState('');
     const [gender, setGender] = useState<'female' | 'male' | null>(null);
     const [terms, setTerms] = useState({
         term1: false,
@@ -210,7 +209,6 @@ export default function UserInfoInput({ userType, onBack, onSuccess }: UserInfoI
 
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         if (email && !emailRegex.test(email)) { alert('이메일 형식이 올바르지 않습니다.'); return; }
-        if (schoolEmail && !emailRegex.test(schoolEmail)) { alert('학교 이메일 형식이 올바르지 않습니다.'); return; }
 
         if (!terms.term1) { alert('첫 번째 필수 약관에 동의해주세요.'); return; }
         if (!terms.term2) { alert('두 번째 필수 약관에 동의해주세요.'); return; }
@@ -256,7 +254,6 @@ export default function UserInfoInput({ userType, onBack, onSuccess }: UserInfoI
                 email: email.trim() || undefined,
                 schoolId: userType === 'KUSBF' ? schoolId : undefined,
                 studentNumber: userType === 'KUSBF' ? studentId.trim() : undefined,
-                schoolEmail: userType === 'KUSBF' ? schoolEmail.trim() || undefined : undefined,
                 gender: gender === 'male' ? 'MALE' : 'FEMALE',
                 phoneNumber
             }, {
@@ -322,14 +319,17 @@ export default function UserInfoInput({ userType, onBack, onSuccess }: UserInfoI
 
                         {/* Email */}
                         <div className="space-y-2">
-                            <label className="text-sm font-bold text-zinc-800 ml-1">이메일 <span className="font-normal text-zinc-500">(선택)</span></label>
+                            <label className="text-sm font-bold text-zinc-800 ml-1">
+                                {userType === 'KUSBF' ? '학교 이메일 인증' : '이메일'} <span className="font-normal text-zinc-500">(선택)</span>
+                            </label>
                             <input
                                 type="email"
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
                                 className="w-full h-12 rounded-[16px] border-none px-4 text-zinc-900 focus:ring-2 focus:ring-blue-400 outline-none shadow-sm bg-white"
-                                placeholder="name@example.com"
+                                placeholder={userType === 'KUSBF' ? 'student@university.ac.kr' : 'name@example.com'}
                             />
+                            {userType === 'KUSBF' && <p className="text-xs text-zinc-600 ml-1">학교별 인증 도메인이 등록되면 이 주소로 인증을 진행합니다.</p>}
                         </div>
 
                         {userType === 'KUSBF' && <>
@@ -378,17 +378,6 @@ export default function UserInfoInput({ userType, onBack, onSuccess }: UserInfoI
                             />
                         </div>
 
-                        <div className="space-y-2">
-                            <label className="text-sm font-bold text-zinc-800 ml-1">학교 이메일 인증 <span className="font-normal text-zinc-500">(선택)</span></label>
-                            <input
-                                type="email"
-                                value={schoolEmail}
-                                onChange={(e) => setSchoolEmail(e.target.value)}
-                                className="w-full h-12 rounded-[16px] border-none px-4 text-zinc-900 focus:ring-2 focus:ring-blue-400 outline-none shadow-sm bg-white"
-                                placeholder="student@university.ac.kr"
-                            />
-                            <p className="text-xs text-zinc-600 ml-1">학교별 인증 도메인이 등록되면 이 주소로 인증을 진행합니다.</p>
-                        </div>
                         </>}
 
                         {/* Phone */}
