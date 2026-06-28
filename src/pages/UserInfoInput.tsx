@@ -29,6 +29,10 @@ const SCHOOL_DATA = [
     { name: '숙명여자대학교', aliases: ['숙대', 'sookmyung womens university', 'sookmyung'] },
 ];
 
+// DEV PHONE BYPASS: Vite removes this path from production builds because import.meta.env.DEV is false.
+// Delete this constant, the skip handler, and the development-only button to restore verification-only UI.
+const CAN_SKIP_PHONE_VERIFICATION = import.meta.env.DEV;
+
 const TERMS_CONTENT = {
     service: {
         title: '베타 테스트 서비스 이용약관',
@@ -70,6 +74,7 @@ export default function UserInfoInput({ userType, onBack, onSuccess }: UserInfoI
     const [phoneChallengeId, setPhoneChallengeId] = useState<string | null>(null);
     const [phoneCode, setPhoneCode] = useState('');
     const [phoneVerified, setPhoneVerified] = useState(false);
+    const [phoneVerificationSkipped, setPhoneVerificationSkipped] = useState(false);
     const [isSendingCode, setIsSendingCode] = useState(false);
     const [isVerifyingCode, setIsVerifyingCode] = useState(false);
     const [email, setEmail] = useState('');
@@ -118,6 +123,7 @@ export default function UserInfoInput({ userType, onBack, onSuccess }: UserInfoI
         setPhoneChallengeId(null);
         setPhoneCode('');
         setPhoneVerified(false);
+        setPhoneVerificationSkipped(false);
     };
 
     const handleSendPhoneCode = async () => {
@@ -131,6 +137,7 @@ export default function UserInfoInput({ userType, onBack, onSuccess }: UserInfoI
             setPhoneChallengeId(challenge.challengeId);
             setPhoneCode('');
             setPhoneVerified(false);
+            setPhoneVerificationSkipped(false);
             alert('인증번호를 전송했습니다.');
         } catch (error) {
             console.error('Phone verification request failed:', error);
@@ -151,6 +158,7 @@ export default function UserInfoInput({ userType, onBack, onSuccess }: UserInfoI
             saveAccountId(result.accountId);
             saveTempAccessToken(result.accessToken);
             setPhoneVerified(true);
+            setPhoneVerificationSkipped(false);
 
             if (result.resolution === 'LINKED_EXISTING_ACCOUNT' && result.status === 'ACTIVE') {
                 saveAuthTokens(result.accessToken);
@@ -170,6 +178,18 @@ export default function UserInfoInput({ userType, onBack, onSuccess }: UserInfoI
         } finally {
             setIsVerifyingCode(false);
         }
+    };
+
+    // Development-only escape hatch. The backend has a matching non-production policy switch.
+    const handleSkipPhoneVerification = () => {
+        if (!/^010-\d{4}-\d{4}$/.test(phoneNumber)) {
+            alert('전화번호 형식이 올바르지 않습니다. (예: 010-1234-5678)');
+            return;
+        }
+        setPhoneChallengeId(null);
+        setPhoneCode('');
+        setPhoneVerified(true);
+        setPhoneVerificationSkipped(true);
     };
 
     const handleSchoolChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -399,7 +419,7 @@ export default function UserInfoInput({ userType, onBack, onSuccess }: UserInfoI
                                     disabled={isSendingCode || phoneVerified}
                                     className="shrink-0 rounded-[16px] bg-blue-600 px-4 text-sm font-semibold text-white disabled:bg-zinc-400"
                                 >
-                                    {phoneVerified ? '인증완료' : isSendingCode ? '전송중' : phoneChallengeId ? '재전송' : '인증요청'}
+                                    {phoneVerificationSkipped ? '개발용 건너뜀' : phoneVerified ? '인증완료' : isSendingCode ? '전송중' : phoneChallengeId ? '재전송' : '인증요청'}
                                 </button>
                             </div>
                             {phoneChallengeId && !phoneVerified && (
@@ -422,6 +442,15 @@ export default function UserInfoInput({ userType, onBack, onSuccess }: UserInfoI
                                         {isVerifyingCode ? '확인중' : '확인'}
                                     </button>
                                 </div>
+                            )}
+                            {CAN_SKIP_PHONE_VERIFICATION && !phoneVerified && (
+                                <button
+                                    type="button"
+                                    onClick={handleSkipPhoneVerification}
+                                    className="w-full rounded-[14px] border border-dashed border-amber-500 bg-amber-50 py-2.5 text-xs font-semibold text-amber-800"
+                                >
+                                    개발용: 전화번호 인증 건너뛰기
+                                </button>
                             )}
                         </div>
 
