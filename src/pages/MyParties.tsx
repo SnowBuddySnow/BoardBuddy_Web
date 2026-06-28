@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Button } from '../components/Button';
 import { listParties } from '../services/party';
 import { Party } from '../types/api';
+import { getPartyActivityLabel } from '../constants/partyActivity';
 import { ChevronLeft, Calendar, MapPin, Users, Heart } from 'lucide-react';
 
 interface MyPartiesProps {
@@ -80,7 +81,7 @@ export default function MyParties({ onBack, onPartyClick }: MyPartiesProps) {
                                     <div>
                                         <div className="flex items-center justify-between mb-2">
                                             <span className="text-[10px] uppercase font-black text-blue-800 px-2 py-0.5 bg-blue-50 border border-blue-100 rounded-full">
-                                                {party.activityType}
+                                                {getPartyActivityLabel(party.activityType)}
                                             </span>
                                             {isPending ? (
                                                 <span className="text-xs font-bold text-amber-600 px-2.5 py-1 bg-amber-50 rounded-full border border-amber-100">

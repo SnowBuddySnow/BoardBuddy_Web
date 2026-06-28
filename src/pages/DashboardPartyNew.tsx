@@ -4,6 +4,8 @@ import { createParty } from '../services/party';
 import { listOrganizerGroups } from '../services/organizerGroup';
 import { JoinPolicy, OrganizerGroup, PartyPlanningMode, VisibilityType } from '../types/api';
 import { PlanningModeSelector } from '../components/party/PlanningModeSelector';
+import { PartyActivityType } from '../constants/partyActivity';
+import { ActivityTypeSelector } from '../components/party/ActivityTypeSelector';
 import { ChevronLeft, Save, HelpCircle } from 'lucide-react';
 import { getApiErrorMessage, getApiErrorStatus } from '../lib/apiError';
 
@@ -20,7 +22,7 @@ export default function DashboardPartyNew({ onBack, onSuccess }: DashboardPartyN
     // Form states
     const [title, setTitle] = useState('');
     const [description, setDescription] = useState('');
-    const [activityType, setActivityType] = useState('SURFING');
+    const [activityType, setActivityType] = useState<PartyActivityType>('OTHER');
     const [planningMode, setPlanningMode] = useState<PartyPlanningMode>('MANAGER_PLANNED');
     const [startsAt, setStartsAt] = useState('');
     const [endsAt, setEndsAt] = useState('');
@@ -174,21 +176,7 @@ export default function DashboardPartyNew({ onBack, onSuccess }: DashboardPartyN
 
                         {/* Activity Type */}
                         <div className="grid grid-cols-2 gap-4">
-                            <div className="space-y-1.5">
-                                <label className="text-xs font-bold text-zinc-400 uppercase tracking-wider">활동 분류</label>
-                                <select
-                                    value={activityType}
-                                    onChange={e => setActivityType(e.target.value)}
-                                    className="w-full px-4 py-2.5 bg-white border border-zinc-200 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-[#162660]/20 text-zinc-800"
-                                >
-                                    <option value="SURFING">SURFING</option>
-                                    <option value="SKATE">SKATE</option>
-                                    <option value="SNOWBOARDING">SNOWBOARDING</option>
-                                    <option value="WAKEBOARDING">WAKEBOARDING</option>
-                                    <option value="BEACH_PARTY">BEACH_PARTY</option>
-                                    <option value="CAMPING">CAMPING</option>
-                                </select>
-                            </div>
+                            <ActivityTypeSelector value={activityType} onChange={setActivityType} />
 
                             <div className="space-y-1.5">
                                 <label className="text-xs font-bold text-zinc-400 uppercase tracking-wider">모집 인원 (정원) *</label>

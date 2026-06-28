@@ -7,6 +7,7 @@ import { UserDetail, CrewDetail, MyApplication, Party } from '../types/api';
 import { Bus, Mountain, UserPlus, Sparkles, MapPin, Users, Calendar as CalendarIcon, ChevronRight, LayoutTemplate } from 'lucide-react';
 import { getWeather, WeatherData } from '../services/weather';
 import { PlanningModeBadge } from '../components/party/PlanningModeBadge';
+import { getPartyActivityLabel } from '../constants/partyActivity';
 
 const SnowflakeDecorIcon = ({ className }: { className?: string }) => (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
@@ -259,7 +260,7 @@ export default function Home({
                                 <div className="flex items-center justify-between mb-2">
                                     <div className="flex items-center gap-2">
                                         <span className="text-[10px] uppercase font-black px-2.5 py-0.5 bg-amber-50 border border-amber-100 text-amber-800 rounded">
-                                            {featuredParty.activityType}
+                                            {getPartyActivityLabel(featuredParty.activityType)}
                                         </span>
                                         <PlanningModeBadge mode={featuredParty.planningMode} />
                                     </div>
@@ -361,7 +362,7 @@ export default function Home({
                                                 {party.title}
                                             </h3>
                                             <div className="text-xs text-zinc-400 font-bold uppercase tracking-wider">
-                                                {party.activityType} · 주최 {party.organizerGroupName}
+                                                {getPartyActivityLabel(party.activityType)} · 주최 {party.organizerGroupName}
                                             </div>
                                         </div>
                                         <span className="text-xs text-zinc-500 font-bold shrink-0">

@@ -5,6 +5,7 @@ import { Party } from '../types/api';
 import { ChevronLeft, Calendar, MapPin, Users, Search, Sparkles, AlertCircle } from 'lucide-react';
 import { getApiErrorMessage, getApiErrorStatus } from '../lib/apiError';
 import { PlanningModeBadge } from '../components/party/PlanningModeBadge';
+import { getPartyActivityLabel, PARTY_ACTIVITY_OPTIONS } from '../constants/partyActivity';
 
 interface PartiesProps {
     onBack: () => void;
@@ -74,15 +75,16 @@ export default function Parties({ onBack, onPartyClick, onCreateClick, canCreate
         return `${month}월 ${date}일 (${day}) ${hour}:${min}`;
     };
 
-    // Extract unique activity types for filter tags
-    const activityTags = ['ALL', ...Array.from(new Set(parties.map(p => p.activityType).filter(Boolean)))];
+    const activityTags = ['ALL', ...PARTY_ACTIVITY_OPTIONS.map(option => option.value)];
 
     const filteredParties = parties.filter(party => {
         const matchesSearch = party.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            getPartyActivityLabel(party.activityType).toLowerCase().includes(searchQuery.toLowerCase()) ||
             (party.description && party.description.toLowerCase().includes(searchQuery.toLowerCase())) ||
             (party.locationName && party.locationName.toLowerCase().includes(searchQuery.toLowerCase()));
 
-        const matchesTag = selectedTag === 'ALL' || party.activityType === selectedTag;
+        const matchesTag = selectedTag === 'ALL'
+            || getPartyActivityLabel(party.activityType) === getPartyActivityLabel(selectedTag);
 
         return matchesSearch && matchesTag;
     });
@@ -132,7 +134,7 @@ export default function Parties({ onBack, onPartyClick, onCreateClick, canCreate
                                     : 'bg-white text-zinc-600 border-zinc-200 hover:bg-zinc-50'
                             }`}
                         >
-                            {tag === 'ALL' ? '전체' : tag}
+                                                {tag === 'ALL' ? '전체' : getPartyActivityLabel(tag)}
                         </button>
                     ))}
                 </div>
@@ -172,7 +174,7 @@ export default function Parties({ onBack, onPartyClick, onCreateClick, canCreate
                                         <div className="flex items-center justify-between mb-2">
                                             <div className="flex items-center gap-2">
                                                 <span className="text-[10px] uppercase font-extrabold px-2.5 py-1 bg-zinc-100 text-zinc-700 rounded">
-                                                    {party.activityType}
+                                                    {getPartyActivityLabel(party.activityType)}
                                                 </span>
                                                 <PlanningModeBadge mode={party.planningMode} />
                                             </div>

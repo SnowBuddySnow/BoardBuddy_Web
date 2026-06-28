@@ -5,6 +5,7 @@ import { Party } from '../types/api';
 import { ChevronLeft, Calendar, MapPin, Users, Info, CheckCircle } from 'lucide-react';
 import { getApiErrorMessage, getApiErrorStatus } from '../lib/apiError';
 import { PlanningModeBadge } from '../components/party/PlanningModeBadge';
+import { getPartyActivityLabel } from '../constants/partyActivity';
 
 interface PartyDetailProps {
     partyId: number;
@@ -150,7 +151,7 @@ export default function PartyDetail({ partyId, onBack }: PartyDetailProps) {
                     <div className="z-10 flex flex-col gap-1.5">
                         <PlanningModeBadge mode={party.planningMode} />
                         <span className="text-[10px] uppercase font-black text-blue-200 tracking-widest px-3 py-1 bg-white/10 backdrop-blur-md rounded-full w-max">
-                            {party.activityType}
+                            {getPartyActivityLabel(party.activityType)}
                         </span>
                         <h1 className="text-xl font-bold text-white leading-tight">
                             {party.title}
