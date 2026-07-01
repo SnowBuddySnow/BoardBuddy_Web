@@ -13,6 +13,8 @@ import SearchCrew from './pages/SearchCrew';
 import CrewSettings from './pages/CrewSettings';
 import MyPage from './pages/MyPage';
 import AccountInfo from './pages/AccountInfo';
+import Notifications from './pages/Notifications';
+import NotificationBell from './components/NotificationBell';
 
 // New Party Pages
 import Parties from './pages/Parties';
@@ -44,6 +46,7 @@ type View =
   | 'guest_reservation'
   | 'my_page'
   | 'account_info'
+  | 'notifications'
   | 'parties'
   | 'party_detail'
   | 'my_parties'
@@ -88,6 +91,7 @@ const viewsWithoutBottomNav: View[] = [
   'account_info',
   'reservation',
   'guest_reservation',
+  'notifications',
 ];
 
 const getInitialView = (): View => {
@@ -103,6 +107,8 @@ function App() {
   const [selectedPartyId, setSelectedPartyId] = useState<number | null>(null);
   const [selectedGroupId, setSelectedGroupId] = useState<number | null>(null);
   const [signupUserType, setSignupUserType] = useState<SignupUserType>('GENERAL');
+  const [notificationRefreshKey, setNotificationRefreshKey] = useState(0);
+  const [notificationReturnView, setNotificationReturnView] = useState<View>('home');
 
   // Check for auto-login on app start
   useEffect(() => {
@@ -179,6 +185,8 @@ function App() {
         return <MyPage onBack={() => setCurrentView('home')} onAccountInfoClick={() => setCurrentView('account_info')} />;
       case 'account_info':
         return <AccountInfo onBack={() => setCurrentView('my_page')} />;
+      case 'notifications':
+        return <Notifications onBack={() => setCurrentView(notificationReturnView)} onChanged={() => setNotificationRefreshKey(key => key + 1)} />;
       case 'parties':
         return (
           <Parties
@@ -269,6 +277,13 @@ function App() {
         : "w-full h-full max-w-md bg-[#FAF8F3] relative shadow-2xl overflow-hidden flex flex-col"
       }>
         {renderCurrentView()}
+
+        {currentView !== 'login' && currentView !== 'user_info' && currentView !== 'user_type' && currentView !== 'notifications' && !isDashboardView && (
+          <NotificationBell refreshKey={notificationRefreshKey} onClick={() => {
+            setNotificationReturnView(currentView);
+            setCurrentView('notifications');
+          }} />
+        )}
 
         {showBottomNav && (
           <LowerMenuBar
