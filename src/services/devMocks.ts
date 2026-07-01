@@ -6,6 +6,7 @@ import {
     ParticipantStatus,
     PaymentStatus,
     Party,
+    PartyChatAccess,
     PartyParticipant,
     UserDetail,
 } from '../types/api';
@@ -17,6 +18,7 @@ const now = () => new Date().toISOString();
 const DEV_PARTIES_KEY = 'dev_parties_list';
 const DEV_GROUPS_KEY = 'dev_organizer_groups';
 const DEV_GROUP_INVITATIONS_KEY = 'dev_group_invitations';
+const devChatAccessKey = (partyId: number) => `dev_party_chat_access_${partyId}`;
 
 export const isDevMode = hasDevOverride;
 
@@ -94,6 +96,30 @@ export const getDevParty = (partyId: number): Party => {
         throw new Error('Small gathering not found');
     }
     return found;
+};
+
+export const getDevPartyChatAccess = (partyId: number): PartyChatAccess => {
+    const stored = localStorage.getItem(devChatAccessKey(partyId));
+    if (stored) return JSON.parse(stored);
+    return partyId === 1
+        ? {
+            chatUrl: 'https://open.kakao.com/o/example',
+            chatPasscode: '2468',
+            chatInstructions: '프로필 이름을 실명으로 설정해 주세요.',
+        }
+        : { chatUrl: null, chatPasscode: null, chatInstructions: null };
+};
+
+export const updateDevPartyChatAccess = (partyId: number, access: PartyChatAccess): PartyChatAccess => {
+    const normalized = access.chatUrl?.trim()
+        ? {
+            chatUrl: access.chatUrl.trim(),
+            chatPasscode: access.chatPasscode?.trim() || null,
+            chatInstructions: access.chatInstructions?.trim() || null,
+        }
+        : { chatUrl: null, chatPasscode: null, chatInstructions: null };
+    localStorage.setItem(devChatAccessKey(partyId), JSON.stringify(normalized));
+    return normalized;
 };
 
 export const createDevParty = (payload: CreatePartyPayload): Party => {

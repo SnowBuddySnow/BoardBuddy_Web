@@ -283,6 +283,12 @@ export interface PartyParticipant {
     cancelledAt?: string | null;
 }
 
+export interface PartyChatAccess {
+    chatUrl: string | null;
+    chatPasscode: string | null;
+    chatInstructions: string | null;
+}
+
 export interface OrganizerGroup {
     id: number;
     name: string;

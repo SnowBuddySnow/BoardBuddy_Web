@@ -1,16 +1,18 @@
 import apiClient from '../lib/axios';
-import { ApiResponse, JoinPolicy, ParticipantStatus, Party, PartyParticipant, PartyPlanningMode, PartyStatus, PaymentStatus, VisibilityType } from '../types/api';
+import { ApiResponse, JoinPolicy, ParticipantStatus, Party, PartyChatAccess, PartyParticipant, PartyPlanningMode, PartyStatus, PaymentStatus, VisibilityType } from '../types/api';
 import {
     createDevParty,
     deleteDevParty,
     getDevParticipants,
     getDevParties,
     getDevParty,
+    getDevPartyChatAccess,
     isDevMode,
     setDevPartyParticipation,
     updateDevParticipantStatus,
     updateDevParticipantManagement,
     updateDevParty,
+    updateDevPartyChatAccess,
 } from './devMocks';
 
 // --- User-facing APIs ---
@@ -43,6 +45,12 @@ export const cancelParty = async (partyId: number): Promise<PartyParticipant> =>
         return setDevPartyParticipation(partyId, 'NONE');
     }
     const response = await apiClient.post<ApiResponse<PartyParticipant>>(`/parties/${partyId}/cancel`);
+    return response.data.data;
+};
+
+export const getPartyChatAccess = async (partyId: number): Promise<PartyChatAccess> => {
+    if (isDevMode()) return getDevPartyChatAccess(partyId);
+    const response = await apiClient.get<ApiResponse<PartyChatAccess>>(`/parties/${partyId}/chat-access`);
     return response.data.data;
 };
 
@@ -136,6 +144,18 @@ export const updateParticipantManagement = async (
     const response = await apiClient.patch<ApiResponse<PartyParticipant>>(
         `/dashboard/parties/${partyId}/participants/${userId}/management`,
         { paymentStatus, managerMemo },
+    );
+    return response.data.data;
+};
+
+export const updatePartyChatAccess = async (
+    partyId: number,
+    access: PartyChatAccess,
+): Promise<PartyChatAccess> => {
+    if (isDevMode()) return updateDevPartyChatAccess(partyId, access);
+    const response = await apiClient.patch<ApiResponse<PartyChatAccess>>(
+        `/dashboard/parties/${partyId}/chat-access`,
+        access,
     );
     return response.data.data;
 };

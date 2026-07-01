@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { Button } from '../components/Button';
-import { getParty, joinParty, cancelParty } from '../services/party';
-import { Party } from '../types/api';
-import { ChevronLeft, Calendar, MapPin, Users, Info, CheckCircle } from 'lucide-react';
+import { getParty, getPartyChatAccess, joinParty, cancelParty } from '../services/party';
+import { Party, PartyChatAccess } from '../types/api';
+import { ChevronLeft, Calendar, MapPin, Users, Info, CheckCircle, ExternalLink, KeyRound, MessageCircle } from 'lucide-react';
 import { getApiErrorMessage, getApiErrorStatus } from '../lib/apiError';
 import { PlanningModeBadge } from '../components/party/PlanningModeBadge';
 import { getPartyActivityLabel } from '../constants/partyActivity';
@@ -17,6 +17,7 @@ export default function PartyDetail({ partyId, onBack }: PartyDetailProps) {
     const [loading, setLoading] = useState(true);
     const [errorMsg, setErrorMsg] = useState<string | null>(null);
     const [actionLoading, setActionLoading] = useState(false);
+    const [chatAccess, setChatAccess] = useState<PartyChatAccess | null>(null);
 
     const fetchPartyDetail = async () => {
         try {
@@ -24,6 +25,16 @@ export default function PartyDetail({ partyId, onBack }: PartyDetailProps) {
             setErrorMsg(null);
             const data = await getParty(partyId);
             setParty(data);
+            if (data.currentUserStatus === 'JOINED') {
+                try {
+                    setChatAccess(await getPartyChatAccess(partyId));
+                } catch (chatError) {
+                    console.error('Failed to fetch party chat access:', chatError);
+                    setChatAccess(null);
+                }
+            } else {
+                setChatAccess(null);
+            }
         } catch (error: unknown) {
             console.error('Failed to fetch party detail:', error);
             if (getApiErrorStatus(error) === 403) {
@@ -232,6 +243,36 @@ export default function PartyDetail({ partyId, onBack }: PartyDetailProps) {
                             </div>
                         )}
                     </div>
+
+                    {hasJoined && chatAccess?.chatUrl && (
+                        <div className="bg-white p-5 border border-emerald-200 shadow-sm space-y-4 rounded-lg">
+                            <div className="flex items-center gap-2">
+                                <MessageCircle className="w-5 h-5 text-emerald-600" />
+                                <h3 className="text-sm font-bold text-zinc-900">참가자 채팅방</h3>
+                            </div>
+                            {chatAccess.chatInstructions && (
+                                <p className="text-sm text-zinc-600 leading-relaxed whitespace-pre-wrap">
+                                    {chatAccess.chatInstructions}
+                                </p>
+                            )}
+                            {chatAccess.chatPasscode && (
+                                <div className="flex items-center justify-between gap-3 bg-zinc-50 border border-zinc-200 rounded p-3">
+                                    <span className="flex items-center gap-2 text-xs font-bold text-zinc-500">
+                                        <KeyRound className="w-4 h-4" /> 입장 코드
+                                    </span>
+                                    <code className="text-sm font-bold text-zinc-900">{chatAccess.chatPasscode}</code>
+                                </div>
+                            )}
+                            <a
+                                href={chatAccess.chatUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex items-center justify-center gap-2 w-full h-11 bg-[#162660] text-white text-sm font-bold rounded hover:bg-[#1e3a8a] transition-colors"
+                            >
+                                외부 채팅방 열기 <ExternalLink className="w-4 h-4" />
+                            </a>
+                        </div>
+                    )}
 
                     {/* Description */}
                     {party.description && (

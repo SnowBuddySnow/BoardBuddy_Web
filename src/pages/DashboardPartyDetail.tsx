@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { Button } from '../components/Button';
-import { getPartyDashboard, updateParty, listParticipants, updateParticipantManagement, updateParticipantStatus } from '../services/party';
-import { Party, PartyParticipant, PaymentStatus } from '../types/api';
-import { ChevronLeft, Play, Power, Clock, Check, Save, X } from 'lucide-react';
+import { getPartyChatAccess, getPartyDashboard, updateParty, listParticipants, updateParticipantManagement, updateParticipantStatus, updatePartyChatAccess } from '../services/party';
+import { Party, PartyChatAccess, PartyParticipant, PaymentStatus } from '../types/api';
+import { ChevronLeft, Play, Power, Clock, Check, Save, X, MessageCircle } from 'lucide-react';
 import { PlanningModeBadge } from '../components/party/PlanningModeBadge';
 
 interface DashboardPartyDetailProps {
@@ -18,6 +18,12 @@ export default function DashboardPartyDetail({ partyId, onBack, onEditClick }: D
     const [actionLoading, setActionLoading] = useState(false);
     const [participantActionId, setParticipantActionId] = useState<number | null>(null);
     const [participantManagementId, setParticipantManagementId] = useState<number | null>(null);
+    const [chatAccess, setChatAccess] = useState<PartyChatAccess>({
+        chatUrl: null,
+        chatPasscode: null,
+        chatInstructions: null,
+    });
+    const [chatAccessSaving, setChatAccessSaving] = useState(false);
 
     const fetchDetailData = async () => {
         try {
@@ -27,6 +33,7 @@ export default function DashboardPartyDetail({ partyId, onBack, onEditClick }: D
 
             const partsData = await listParticipants(partyId);
             setParticipants(partsData);
+            setChatAccess(await getPartyChatAccess(partyId));
         } catch (error) {
             console.error('Failed to fetch dashboard party detail data:', error);
         } finally {
@@ -106,6 +113,20 @@ export default function DashboardPartyDetail({ partyId, onBack, onEditClick }: D
             alert('참가자 관리 정보 저장에 실패했습니다.');
         } finally {
             setParticipantManagementId(null);
+        }
+    };
+
+    const handleChatAccessSave = async () => {
+        try {
+            setChatAccessSaving(true);
+            const updated = await updatePartyChatAccess(partyId, chatAccess);
+            setChatAccess(updated);
+            alert(updated.chatUrl ? '채팅방 정보가 저장되었습니다.' : '채팅방 정보가 삭제되었습니다.');
+        } catch (error) {
+            console.error('Failed to update party chat access:', error);
+            alert('HTTPS 형식의 올바른 채팅방 링크를 확인해 주세요.');
+        } finally {
+            setChatAccessSaving(false);
         }
     };
 
@@ -367,6 +388,59 @@ export default function DashboardPartyDetail({ partyId, onBack, onEditClick }: D
                                 <p className="text-xs font-semibold text-zinc-600 pt-1">크루당 최대 {party.crewMemberLimit}명</p>
                             )}
                         </div>
+                    </div>
+
+                    <div className="bg-white p-6 border border-zinc-100 shadow-sm space-y-4 rounded-lg">
+                        <div className="flex items-center gap-2">
+                            <MessageCircle className="w-5 h-5 text-[#162660]" />
+                            <h2 className="text-base font-bold text-zinc-900">참가자 채팅방</h2>
+                        </div>
+                        <p className="text-xs text-zinc-500 leading-relaxed">
+                            확정 참가자에게만 공개됩니다. 링크를 비우고 저장하면 입장 코드와 안내도 함께 삭제됩니다.
+                        </p>
+                        <div className="space-y-1.5">
+                            <label className="text-xs font-bold text-zinc-500" htmlFor="party-chat-url">채팅방 링크</label>
+                            <input
+                                id="party-chat-url"
+                                type="url"
+                                value={chatAccess.chatUrl ?? ''}
+                                onChange={event => setChatAccess(current => ({ ...current, chatUrl: event.target.value || null }))}
+                                placeholder="https://open.kakao.com/..."
+                                maxLength={1000}
+                                className="w-full px-3 py-2.5 bg-white border border-zinc-200 rounded text-sm text-zinc-800 focus:outline-none focus:ring-2 focus:ring-[#162660]/20"
+                            />
+                        </div>
+                        <div className="space-y-1.5">
+                            <label className="text-xs font-bold text-zinc-500" htmlFor="party-chat-passcode">입장 코드 (선택)</label>
+                            <input
+                                id="party-chat-passcode"
+                                type="text"
+                                value={chatAccess.chatPasscode ?? ''}
+                                onChange={event => setChatAccess(current => ({ ...current, chatPasscode: event.target.value || null }))}
+                                maxLength={100}
+                                className="w-full px-3 py-2.5 bg-white border border-zinc-200 rounded text-sm text-zinc-800 focus:outline-none focus:ring-2 focus:ring-[#162660]/20"
+                            />
+                        </div>
+                        <div className="space-y-1.5">
+                            <label className="text-xs font-bold text-zinc-500" htmlFor="party-chat-instructions">입장 안내 (선택)</label>
+                            <textarea
+                                id="party-chat-instructions"
+                                rows={3}
+                                value={chatAccess.chatInstructions ?? ''}
+                                onChange={event => setChatAccess(current => ({ ...current, chatInstructions: event.target.value || null }))}
+                                maxLength={1000}
+                                className="w-full px-3 py-2.5 bg-white border border-zinc-200 rounded text-sm text-zinc-800 focus:outline-none focus:ring-2 focus:ring-[#162660]/20 resize-y"
+                            />
+                        </div>
+                        <Button
+                            variant="primary"
+                            onClick={handleChatAccessSave}
+                            disabled={chatAccessSaving}
+                            className="w-full rounded flex items-center justify-center gap-2"
+                        >
+                            <Save className="w-4 h-4" />
+                            {chatAccessSaving ? '저장 중...' : '채팅방 정보 저장'}
+                        </Button>
                     </div>
 
                     <div className="bg-white rounded-3xl p-6 border border-zinc-100 shadow-sm space-y-4">
