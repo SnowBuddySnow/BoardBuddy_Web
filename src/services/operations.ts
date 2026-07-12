@@ -1,6 +1,7 @@
 import apiClient from '../lib/axios';
 import { ApiResponse } from '../types/api';
 import { isDevMode } from './devMocks';
+import { getDevRoleOverride } from '../lib/session';
 
 export type OperationPermission =
   | 'CREW_MEMBERS_MANAGE'
@@ -18,8 +19,25 @@ export interface OperationsContext {
 
 export const getOperationsContext = async (): Promise<OperationsContext> => {
   if (isDevMode()) {
+    const roleOverride = getDevRoleOverride();
+    const permissionsByRole: Record<string, OperationPermission[]> = {
+      admin: [
+        'CREW_MEMBERS_MANAGE',
+        'CREW_PARTY_MANAGERS_ASSIGN',
+        'RESERVATIONS_MANAGE',
+        'PARTIES_CREATE',
+        'PARTIES_MANAGE',
+        'PARTY_GROUPS_CREATE',
+        'PARTY_GROUPS_MANAGE',
+        'PARTY_GROUPS_VIEW',
+      ],
+      organizer: ['PARTIES_CREATE', 'PARTIES_MANAGE', 'PARTY_GROUPS_CREATE', 'PARTY_GROUPS_MANAGE', 'PARTY_GROUPS_VIEW'],
+      viewer: ['PARTY_GROUPS_VIEW'],
+      member: [],
+      server: [],
+    };
     return {
-      permissions: ['RESERVATIONS_MANAGE', 'PARTIES_CREATE', 'PARTY_GROUPS_CREATE', 'PARTY_GROUPS_MANAGE'],
+      permissions: permissionsByRole[roleOverride || 'server'] || [],
     };
   }
   const response = await apiClient.get<ApiResponse<OperationsContext>>('/operations/context');

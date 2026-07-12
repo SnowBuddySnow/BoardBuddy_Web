@@ -32,9 +32,12 @@ import DashboardGroupDetail from './pages/DashboardGroupDetail';
 import OperationsCenter from './pages/OperationsCenter';
 import CrewPermissions from './pages/CrewPermissions';
 import PartyConceptOptions from './pages/PartyConceptOptions';
+import GuestAccess from './pages/GuestAccess';
 import DevPanel from './components/DevPanel';
 import { getAccessToken, hasDevOverride, isAutoLoginEnabled } from './lib/session';
 import { getOperationsContext, type OperationPermission } from './services/operations';
+import { getUserInfo } from './services/user';
+import { getMyApplications } from './services/crew';
 import { useDesktopViewport } from './hooks/useDesktopViewport';
 import { getOperatingSeason } from './constants/operatingSeason';
 
@@ -52,6 +55,7 @@ type View =
   | 'crew_member'
   | 'crew_settings'
   | 'guest_reservation'
+  | 'guest_access'
   | 'my_page'
   | 'account_info'
   | 'crew_admin'
@@ -117,7 +121,10 @@ const getInitialView = (): View => {
 function App() {
   const [currentView, setCurrentView] = useState<View>('login');
   const [hasCrew, setHasCrew] = useState(false);
+  const [hasPendingCrewApplication, setHasPendingCrewApplication] = useState(false);
   const [selectedPartyId, setSelectedPartyId] = useState<number | null>(null);
+  const [guestCrewId, setGuestCrewId] = useState<number | null>(null);
+  const [isGuestPartyApplication, setIsGuestPartyApplication] = useState(false);
   const [selectedGroupId, setSelectedGroupId] = useState<number | null>(null);
   const [signupUserType, setSignupUserType] = useState<SignupUserType>('GENERAL');
   const [notificationRefreshKey, setNotificationRefreshKey] = useState(0);
@@ -127,13 +134,39 @@ function App() {
   const [managementAccessResolved, setManagementAccessResolved] = useState(false);
   const isDesktop = useDesktopViewport();
   const usedDesktopLanding = useRef(false);
+  const shouldLoadPermissions = !['login', 'user_type', 'user_info'].includes(currentView);
 
   // Check for auto-login on app start
   useEffect(() => {
     setCurrentView(getInitialView());
   }, []);
 
-  const shouldLoadPermissions = !['login', 'user_type', 'user_info'].includes(currentView);
+  useEffect(() => {
+    if (!shouldLoadPermissions) return;
+
+    let cancelled = false;
+    const loadCrewAccess = async () => {
+      try {
+        const user = await getUserInfo();
+        if (cancelled) return;
+        setHasCrew(Boolean(user.crew));
+        if (user.crew) {
+          setHasPendingCrewApplication(false);
+          return;
+        }
+        const applications = await getMyApplications();
+        if (!cancelled) setHasPendingCrewApplication(applications.some(application => application.status === 'PENDING'));
+      } catch {
+        if (!cancelled) {
+          setHasCrew(false);
+          setHasPendingCrewApplication(false);
+        }
+      }
+    };
+
+    void loadCrewAccess();
+    return () => { cancelled = true; };
+  }, [shouldLoadPermissions]);
 
   useEffect(() => {
     if (!shouldLoadPermissions) {
@@ -196,6 +229,7 @@ function App() {
     if (currentView === 'my_parties') return 'my_parties';
     if (currentView === 'my_reservations') return 'my_reservations';
     if (currentView === 'reservation' || currentView === 'guest_reservation') return 'reservation';
+    if (currentView === 'guest_access') return 'reservation';
     if (['crew_detail', 'crew_settings', 'crew_member', 'stats', 'search_crew'].includes(currentView)) return 'crew_detail';
     if (currentView === 'my_page' || currentView === 'account_info') return 'my_page';
     return 'home';
@@ -206,8 +240,15 @@ function App() {
   };
 
   const openPartyDetail = (id: number, destination: View = 'party_detail') => {
+    setIsGuestPartyApplication(false);
     setSelectedPartyId(id);
     setCurrentView(destination);
+  };
+
+  const openGuestPartyApplication = (id: number) => {
+    setIsGuestPartyApplication(true);
+    setSelectedPartyId(id);
+    setCurrentView('party_detail');
   };
 
   const renderCurrentView = () => {
@@ -259,7 +300,13 @@ function App() {
       case 'reservation':
         return <Reservation onBack={() => setCurrentView('home')} />;
       case 'guest_reservation':
-        return <Reservation onBack={() => setCurrentView('home')} isGuest={true} />;
+        return <Reservation onBack={() => setCurrentView('guest_access')} isGuest={true} guestCrewId={guestCrewId ?? undefined} />;
+      case 'guest_access':
+        return <GuestAccess
+          onBack={() => setCurrentView('home')}
+          onSeasonHouseAccess={(crewId) => { setGuestCrewId(crewId); setCurrentView('guest_reservation'); }}
+          onPartyAccess={openGuestPartyApplication}
+        />;
       case 'stats':
         return (
           <ReservationStats
@@ -313,7 +360,7 @@ function App() {
           />
         );
       case 'party_detail':
-        return <PartyDetail partyId={selectedPartyId || 0} onBack={() => setCurrentView('parties')} />;
+        return <PartyDetail partyId={selectedPartyId || 0} onBack={() => setCurrentView(isGuestPartyApplication ? 'guest_access' : 'parties')} isGuestApplication={isGuestPartyApplication} />;
       case 'my_parties':
         return <MyParties onBack={() => setCurrentView('home')} onPartyClick={(id) => openPartyDetail(id)} />;
       case 'operations_center':
@@ -381,7 +428,7 @@ function App() {
         return (
           <Home
             onMakeReservationClick={() => setCurrentView('reservation')}
-            onGuestReservationClick={() => setCurrentView('guest_reservation')}
+            onGuestReservationClick={() => setCurrentView('guest_access')}
             onCalendarClick={() => setCurrentView('my_reservations')}
             onTeamClick={() => setCurrentView('crew_detail')}
             onSearchClick={() => setCurrentView('search_crew')}
@@ -399,6 +446,8 @@ function App() {
   };
 
   const usesDesktopShell = isDesktop
+    && hasCrew
+    && !hasPendingCrewApplication
     && !isDashboardView
     && !['login', 'user_info', 'user_type'].includes(currentView);
 

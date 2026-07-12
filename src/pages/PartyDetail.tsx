@@ -10,9 +10,10 @@ import { getPartyActivityLabel } from '../constants/partyActivity';
 interface PartyDetailProps {
     partyId: number;
     onBack: () => void;
+    isGuestApplication?: boolean;
 }
 
-export default function PartyDetail({ partyId, onBack }: PartyDetailProps) {
+export default function PartyDetail({ partyId, onBack, isGuestApplication = false }: PartyDetailProps) {
     const [party, setParty] = useState<Party | null>(null);
     const [loading, setLoading] = useState(true);
     const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -72,7 +73,7 @@ export default function PartyDetail({ partyId, onBack }: PartyDetailProps) {
         try {
             setActionLoading(true);
             await joinParty(party.id);
-            alert(party.joinPolicy === 'APPROVAL_REQUIRED' ? '참여 신청이 대기 상태로 접수되었습니다.' : '성공적으로 참가했습니다!');
+            alert(party.joinPolicy === 'APPROVAL_REQUIRED' ? '게스트 참여 신청이 대기 상태로 접수되었습니다.' : '게스트 참여가 접수되었습니다.');
             await fetchPartyDetail(); // Refresh
         } catch (error: unknown) {
             console.error('Failed to join:', error);
@@ -182,6 +183,7 @@ export default function PartyDetail({ partyId, onBack }: PartyDetailProps) {
                 <div className="w-full h-44 bg-gradient-to-br from-[#162660] via-[#1e3a8a] to-[#2563eb] relative flex items-end p-5">
                     <div className="absolute inset-0 bg-black/10"></div>
                     <div className="z-10 flex flex-col gap-1.5">
+                        {isGuestApplication && <span className="w-max rounded-full bg-amber-300 px-2.5 py-1 text-[10px] font-black text-[#162660]">게스트 초대</span>}
                         <PlanningModeBadge mode={party.planningMode} />
                         <span className="text-[10px] uppercase font-black text-blue-200 tracking-widest px-3 py-1 bg-white/10 backdrop-blur-md rounded-full w-max">
                             {getPartyActivityLabel(party.activityType)}
@@ -355,7 +357,7 @@ export default function PartyDetail({ partyId, onBack }: PartyDetailProps) {
                         disabled={actionLoading}
                         className="w-full h-12 bg-[#162660] hover:bg-[#1e3a8a] text-white border-none rounded-full font-bold shadow-md hover:scale-[1.01] transition-all"
                     >
-                        {actionLoading ? '신청 중...' : '참여 신청하기'}
+                        {actionLoading ? '신청 중...' : isGuestApplication ? '게스트로 신청하기' : '참여 신청하기'}
                     </Button>
                 )}
             </div>

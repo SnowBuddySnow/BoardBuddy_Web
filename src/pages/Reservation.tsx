@@ -11,6 +11,7 @@ import { CrewDetail, MyReservation } from '../types/api';
 interface ReservationProps {
     onBack: () => void;
     isGuest?: boolean;
+    guestCrewId?: number;
 }
 
 const CheckIcon = ({ className }: { className?: string }) => (
@@ -19,7 +20,7 @@ const CheckIcon = ({ className }: { className?: string }) => (
     </svg>
 );
 
-export default function Reservation({ onBack, isGuest = false }: ReservationProps) {
+export default function Reservation({ onBack, isGuest = false, guestCrewId }: ReservationProps) {
     const todayDate = new Date();
 
     // Dynamic View Date State
@@ -87,6 +88,11 @@ export default function Reservation({ onBack, isGuest = false }: ReservationProp
     // Fetch User Info -> Crew ID -> Crew Detail
     const fetchAllData = async () => {
         try {
+            if (isGuest && guestCrewId) {
+                setCrewId(guestCrewId);
+                setCrew(await getCrewInfo(guestCrewId));
+                return;
+            }
             const userData = await getUserInfo();
             if (userData.crew && userData.crew.crewId) {
                 const cId = userData.crew.crewId;
@@ -111,7 +117,7 @@ export default function Reservation({ onBack, isGuest = false }: ReservationProp
 
     useEffect(() => {
         fetchAllData();
-    }, []);
+    }, [guestCrewId, isGuest]);
 
     // Derived state: reserved days for the current month view
     const reservedDays = myReservations

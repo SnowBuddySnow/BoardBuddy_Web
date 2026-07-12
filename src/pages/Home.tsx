@@ -4,7 +4,7 @@ import { getCrewInfo, getMyApplications, withdrawCrewApplication } from '../serv
 import { listParties } from '../services/party';
 import { listOrganizerGroups } from '../services/organizerGroup';
 import { UserDetail, CrewDetail, MyApplication, Party } from '../types/api';
-import { Bus, Mountain, UserPlus, Sparkles, MapPin, Users, Calendar as CalendarIcon, ChevronRight, LayoutTemplate, Clock3, ShieldCheck, X, Building2 } from 'lucide-react';
+import { Bus, Mountain, UserPlus, Sparkles, MapPin, Users, Calendar as CalendarIcon, ChevronRight, LayoutTemplate, Clock3, ShieldCheck, X, PartyPopper, TentTree, CalendarHeart } from 'lucide-react';
 import { getWeather, WeatherData } from '../services/weather';
 import { PlanningModeBadge } from '../components/party/PlanningModeBadge';
 import { getPartyActivityLabel } from '../constants/partyActivity';
@@ -206,7 +206,8 @@ export default function Home({
             <main className="flex-1 overflow-y-auto pb-[110px] space-y-6">
 
                 {/* Team Info / Host Metadata (De-emphasized compact row) */}
-                <div className="px-4">
+                {(hasCrew && userInfo?.crew || pendingApplication) && (
+                    <div className="px-4">
                     {hasCrew && userInfo?.crew ? (
                         <div className="bg-white/80 border border-zinc-100 rounded-2xl px-4 py-2.5 flex items-center justify-between text-xs shadow-sm">
                             <div className="flex items-center gap-2">
@@ -252,15 +253,9 @@ export default function Home({
                                 </button>
                             </div>
                         </div>
-                    ) : (
-                        <div
-                            onClick={onSearchClick}
-                            className="bg-white/80 border border-zinc-100 rounded-2xl px-4 py-2.5 text-xs font-bold text-zinc-400 shadow-sm text-center cursor-pointer hover:bg-white"
-                        >
-                            크루 가입하러 가기
-                        </div>
-                    )}
-                </div>
+                    ) : null}
+                    </div>
+                )}
 
                 {!hasCrew && !pendingApplication && (
                     <section className="px-4">
@@ -269,23 +264,23 @@ export default function Home({
                             <p className="mt-0.5 text-xs font-medium text-zinc-500">내게 맞는 방식으로 지금 바로 이용해 보세요.</p>
                         </div>
                         <div className="grid grid-cols-2 gap-3">
-                            <button type="button" onClick={onSearchClick} className="col-span-2 flex min-h-[116px] items-center justify-between rounded-3xl bg-[#162660] p-5 text-left text-white shadow-sm transition-transform hover:bg-[#0f1b48] active:scale-[0.99]">
+                            <button type="button" onClick={onSearchClick} className="col-span-2 flex min-h-[152px] items-center justify-between overflow-hidden rounded-3xl bg-[#162660] p-6 text-left text-white shadow-sm transition-transform hover:bg-[#0f1b48] active:scale-[0.99]">
                                 <span>
-                                    <span className="mb-2 flex h-9 w-9 items-center justify-center rounded-xl bg-white/12"><Users className="h-5 w-5 text-blue-100" /></span>
-                                    <span className="block text-sm font-black">크루 가입하기</span>
-                                    <span className="mt-1 block text-xs font-medium text-blue-100">크루를 찾아 PIN으로 가입 신청하세요.</span>
+                                    <span className="mb-3 flex h-11 w-11 -rotate-6 items-center justify-center rounded-2xl border border-white/20 bg-white/15 shadow-sm"><PartyPopper className="h-5 w-5 text-amber-200" /></span>
+                                    <span className="block text-base font-black">크루 가입하기</span>
+                                    <span className="mt-1.5 block text-xs font-medium text-blue-100">크루를 찾아 PIN으로 가입 신청하세요.</span>
                                 </span>
-                                <ChevronRight className="h-5 w-5 text-blue-200" />
+                                <span className="flex h-11 w-11 rotate-6 items-center justify-center rounded-full bg-white/10"><ChevronRight className="h-5 w-5 text-blue-100" /></span>
                             </button>
-                            <button type="button" onClick={onCreateCrewClick} className="min-h-[128px] rounded-3xl border border-blue-100 bg-blue-50 p-4 text-left transition-colors hover:bg-blue-100 active:scale-[0.99]">
-                                <span className="mb-3 flex h-9 w-9 items-center justify-center rounded-xl bg-white text-[#162660] shadow-sm"><Building2 className="h-5 w-5" /></span>
-                                <span className="block text-sm font-black text-zinc-900">크루 만들기</span>
-                                <span className="mt-1 block text-[11px] leading-4 font-medium text-zinc-500">새 크루를 등록하고 운영을 시작하세요.</span>
+                            <button type="button" onClick={onCreateCrewClick} className="min-h-[164px] rounded-3xl border border-sky-100 bg-sky-50 p-5 text-left transition-colors hover:bg-sky-100 active:scale-[0.99]">
+                                <span className="mb-4 flex h-11 w-11 rotate-3 items-center justify-center rounded-2xl border border-sky-100 bg-white text-sky-700 shadow-sm"><TentTree className="h-5 w-5" /></span>
+                                <span className="block text-base font-black text-zinc-900">크루 만들기</span>
+                                <span className="mt-1.5 block text-xs leading-4 font-medium text-zinc-500">새 크루를 등록하고 운영을 시작하세요.</span>
                             </button>
-                            <button type="button" onClick={onGuestReservationClick} className="min-h-[128px] rounded-3xl border border-amber-100 bg-amber-50 p-4 text-left transition-colors hover:bg-amber-100 active:scale-[0.99]">
-                                <span className="mb-3 flex h-9 w-9 items-center justify-center rounded-xl bg-white text-amber-700 shadow-sm"><CalendarIcon className="h-5 w-5" /></span>
-                                <span className="block text-sm font-black text-zinc-900">게스트 예약하기</span>
-                                <span className="mt-1 block text-[11px] leading-4 font-medium text-zinc-500">크루 가입 전에도 게스트로 예약할 수 있어요.</span>
+                            <button type="button" onClick={onGuestReservationClick} className="min-h-[164px] rounded-3xl border border-rose-100 bg-rose-50 p-5 text-left transition-colors hover:bg-rose-100 active:scale-[0.99]">
+                                <span className="mb-4 flex h-11 w-11 -rotate-3 items-center justify-center rounded-2xl border border-rose-100 bg-white text-rose-500 shadow-sm"><CalendarHeart className="h-5 w-5" /></span>
+                                <span className="block text-base font-black text-zinc-900">게스트 예약하기</span>
+                                <span className="mt-1.5 block text-xs leading-4 font-medium text-zinc-500">크루 가입 전에도 게스트로 예약할 수 있어요.</span>
                             </button>
                         </div>
                     </section>
@@ -438,7 +433,7 @@ export default function Home({
                             </div>
                         </div>
                     </section>
-                ) : !pendingApplication ? (
+                ) : hasCrew && !pendingApplication ? (
                     <section className="px-4">
                         <div className="bg-white border border-zinc-100 rounded-3xl p-8 text-center text-zinc-400 text-sm">
                             현재 열려 있는 소모임이 없습니다.
