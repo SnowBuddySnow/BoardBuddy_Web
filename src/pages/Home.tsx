@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
 import { getUserInfo } from '../services/user';
-import { getCrewInfo, getMyApplications } from '../services/crew';
+import { getCrewInfo, getMyApplications, withdrawCrewApplication } from '../services/crew';
 import { listParties } from '../services/party';
 import { listOrganizerGroups } from '../services/organizerGroup';
 import { UserDetail, CrewDetail, MyApplication, Party } from '../types/api';
-import { Bus, Mountain, UserPlus, Sparkles, MapPin, Users, Calendar as CalendarIcon, ChevronRight, LayoutTemplate } from 'lucide-react';
+import { Bus, Mountain, UserPlus, Sparkles, MapPin, Users, Calendar as CalendarIcon, ChevronRight, LayoutTemplate, Clock3, ShieldCheck, X, Building2 } from 'lucide-react';
 import { getWeather, WeatherData } from '../services/weather';
 import { PlanningModeBadge } from '../components/party/PlanningModeBadge';
 import { getPartyActivityLabel } from '../constants/partyActivity';
@@ -25,6 +25,7 @@ interface HomeProps {
     onCalendarClick: () => void;
     onTeamClick: () => void;
     onSearchClick: () => void;
+    onCreateCrewClick: () => void;
     hasCrew?: boolean;
     onJoinCrew?: () => void;
     onPartyClick: (partyId: number) => void;
@@ -40,6 +41,7 @@ export default function Home({
     onCalendarClick,
     onTeamClick,
     onSearchClick,
+    onCreateCrewClick,
     hasCrew: initialHasCrew = true,
     onPartyClick,
     onSeeAllPartiesClick,
@@ -53,6 +55,9 @@ export default function Home({
     const [hasCrew, setHasCrew] = useState(initialHasCrew);
     const [weather, setWeather] = useState<WeatherData | null>(null);
     const [currentDate, setCurrentDate] = useState<string>('');
+    const [applicationToWithdraw, setApplicationToWithdraw] = useState<MyApplication | null>(null);
+    const [isWithdrawing, setIsWithdrawing] = useState(false);
+    const [withdrawError, setWithdrawError] = useState('');
 
     // Small gathering related states
     const [parties, setParties] = useState<Party[]>([]);
@@ -155,6 +160,29 @@ export default function Home({
 
     // Plans user has joined or has pending
     const myPlansCount = parties.filter(p => p.currentUserStatus === 'JOINED' || p.currentUserStatus === 'PENDING').length;
+    const pendingApplication = myApplications.find(app => app.status === 'PENDING');
+
+    const formatApplicationDate = (date: string) => new Intl.DateTimeFormat('ko-KR', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+    }).format(new Date(date));
+
+    const handleWithdrawApplication = async () => {
+        if (!applicationToWithdraw) return;
+        setIsWithdrawing(true);
+        setWithdrawError('');
+        try {
+            await withdrawCrewApplication(applicationToWithdraw.application_id);
+            setMyApplications(current => current.filter(app => app.application_id !== applicationToWithdraw.application_id));
+            setApplicationToWithdraw(null);
+        } catch (error) {
+            console.error('Failed to withdraw crew application', error);
+            setWithdrawError('신청을 철회하지 못했습니다. 잠시 후 다시 시도해 주세요.');
+        } finally {
+            setIsWithdrawing(false);
+        }
+    };
 
     return (
         <div className="flex-1 flex flex-col h-full overflow-hidden bg-[#FAF8F3] relative">
@@ -163,6 +191,7 @@ export default function Home({
                 <div className="flex items-center gap-2">
                     <h1 className="text-[20px] font-black italic text-zinc-900 font-['Joti_One']">BoardBuddy</h1>
                 </div>
+
                 {hasOrganizerPermission && (
                     <button
                         onClick={onDashboardClick}
@@ -196,9 +225,32 @@ export default function Home({
                                 </a>
                             </div>
                         </div>
-                    ) : myApplications.some(app => app.status === 'PENDING') ? (
-                        <div className="bg-white/80 border border-zinc-100 rounded-2xl px-4 py-2.5 text-xs font-semibold text-zinc-500 shadow-sm text-center">
-                            {myApplications.find(app => app.status === 'PENDING')?.crew_name} 가입 대기 중 (승인 대기)
+                    ) : pendingApplication ? (
+                        <div className="overflow-hidden rounded-3xl border border-blue-100 bg-white shadow-sm">
+                            <div className="bg-gradient-to-br from-[#162660] to-[#273c83] px-5 py-5 text-white">
+                                <div className="mb-4 flex items-center justify-between">
+                                    <span className="inline-flex items-center gap-1.5 rounded-full bg-white/12 px-2.5 py-1 text-[11px] font-black text-blue-100">
+                                        <Clock3 className="h-3.5 w-3.5" /> 승인 대기 중
+                                    </span>
+                                    <span className="text-[11px] font-semibold text-blue-200">{formatApplicationDate(pendingApplication.created_at)} 신청</span>
+                                </div>
+                                <p className="text-xs font-bold text-blue-200">가입을 기다리는 크루</p>
+                                <h2 className="mt-1 text-xl font-black tracking-tight">{pendingApplication.crew_name}</h2>
+                                <p className="mt-2 text-xs leading-5 text-blue-100">크루 운영진이 신청을 확인하고 있어요. 승인되면 크루 예약과 파티 기능을 이용할 수 있습니다.</p>
+                            </div>
+                            <div className="flex items-center justify-between gap-4 px-5 py-4">
+                                <div className="flex min-w-0 items-center gap-2 text-xs font-semibold text-zinc-500">
+                                    <ShieldCheck className="h-4 w-4 shrink-0 text-emerald-600" />
+                                    <span>결과는 승인 후 바로 반영됩니다.</span>
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={() => setApplicationToWithdraw(pendingApplication)}
+                                    className="shrink-0 rounded-xl border border-zinc-200 bg-white px-3 py-2 text-xs font-black text-zinc-600 transition-colors hover:border-red-200 hover:bg-red-50 hover:text-red-600"
+                                >
+                                    신청 철회
+                                </button>
+                            </div>
                         </div>
                     ) : (
                         <div
@@ -209,6 +261,59 @@ export default function Home({
                         </div>
                     )}
                 </div>
+
+                {!hasCrew && !pendingApplication && (
+                    <section className="px-4">
+                        <div className="mb-3">
+                            <h2 className="text-base font-black text-zinc-900">BoardBuddy 시작하기</h2>
+                            <p className="mt-0.5 text-xs font-medium text-zinc-500">내게 맞는 방식으로 지금 바로 이용해 보세요.</p>
+                        </div>
+                        <div className="grid grid-cols-2 gap-3">
+                            <button type="button" onClick={onSearchClick} className="col-span-2 flex min-h-[116px] items-center justify-between rounded-3xl bg-[#162660] p-5 text-left text-white shadow-sm transition-transform hover:bg-[#0f1b48] active:scale-[0.99]">
+                                <span>
+                                    <span className="mb-2 flex h-9 w-9 items-center justify-center rounded-xl bg-white/12"><Users className="h-5 w-5 text-blue-100" /></span>
+                                    <span className="block text-sm font-black">크루 가입하기</span>
+                                    <span className="mt-1 block text-xs font-medium text-blue-100">크루를 찾아 PIN으로 가입 신청하세요.</span>
+                                </span>
+                                <ChevronRight className="h-5 w-5 text-blue-200" />
+                            </button>
+                            <button type="button" onClick={onCreateCrewClick} className="min-h-[128px] rounded-3xl border border-blue-100 bg-blue-50 p-4 text-left transition-colors hover:bg-blue-100 active:scale-[0.99]">
+                                <span className="mb-3 flex h-9 w-9 items-center justify-center rounded-xl bg-white text-[#162660] shadow-sm"><Building2 className="h-5 w-5" /></span>
+                                <span className="block text-sm font-black text-zinc-900">크루 만들기</span>
+                                <span className="mt-1 block text-[11px] leading-4 font-medium text-zinc-500">새 크루를 등록하고 운영을 시작하세요.</span>
+                            </button>
+                            <button type="button" onClick={onGuestReservationClick} className="min-h-[128px] rounded-3xl border border-amber-100 bg-amber-50 p-4 text-left transition-colors hover:bg-amber-100 active:scale-[0.99]">
+                                <span className="mb-3 flex h-9 w-9 items-center justify-center rounded-xl bg-white text-amber-700 shadow-sm"><CalendarIcon className="h-5 w-5" /></span>
+                                <span className="block text-sm font-black text-zinc-900">게스트 예약하기</span>
+                                <span className="mt-1 block text-[11px] leading-4 font-medium text-zinc-500">크루 가입 전에도 게스트로 예약할 수 있어요.</span>
+                            </button>
+                        </div>
+                    </section>
+                )}
+
+                {applicationToWithdraw && (
+                    <div className="fixed inset-0 z-50 flex items-end justify-center bg-zinc-950/45 p-4 backdrop-blur-[2px] sm:items-center" role="dialog" aria-modal="true" aria-labelledby="withdraw-title">
+                        <div className="w-full max-w-sm rounded-3xl bg-white p-5 shadow-2xl">
+                            <div className="flex items-start justify-between gap-4">
+                                <div>
+                                    <p className="text-xs font-black text-red-600">가입 신청 철회</p>
+                                    <h2 id="withdraw-title" className="mt-1 text-lg font-black text-zinc-900">{applicationToWithdraw.crew_name} 신청을 철회할까요?</h2>
+                                </div>
+                                <button type="button" onClick={() => setApplicationToWithdraw(null)} disabled={isWithdrawing} className="rounded-full p-1.5 text-zinc-400 hover:bg-zinc-100" aria-label="닫기">
+                                    <X className="h-5 w-5" />
+                                </button>
+                            </div>
+                            <p className="mt-3 text-sm leading-6 text-zinc-500">철회하면 승인 대기 목록에서 사라집니다. 다시 가입하려면 크루를 검색하고 PIN을 입력해 새로 신청해야 해요.</p>
+                            {withdrawError && <p className="mt-3 rounded-xl bg-red-50 px-3 py-2 text-xs font-bold text-red-600">{withdrawError}</p>}
+                            <div className="mt-5 flex gap-2">
+                                <button type="button" onClick={() => setApplicationToWithdraw(null)} disabled={isWithdrawing} className="flex-1 rounded-xl bg-zinc-100 px-4 py-3 text-sm font-black text-zinc-700 hover:bg-zinc-200 disabled:opacity-50">계속 기다리기</button>
+                                <button type="button" onClick={handleWithdrawApplication} disabled={isWithdrawing} className="flex-1 rounded-xl bg-red-600 px-4 py-3 text-sm font-black text-white hover:bg-red-700 disabled:opacity-50">
+                                    {isWithdrawing ? '철회 중...' : '신청 철회하기'}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
 
                 {isWinter && hasCrew && !seasonHouseUnavailable && (
                     <section className="px-4">
@@ -333,13 +438,13 @@ export default function Home({
                             </div>
                         </div>
                     </section>
-                ) : (
+                ) : !pendingApplication ? (
                     <section className="px-4">
                         <div className="bg-white border border-zinc-100 rounded-3xl p-8 text-center text-zinc-400 text-sm">
                             현재 열려 있는 소모임이 없습니다.
                         </div>
                     </section>
-                )}
+                ) : null}
 
                 {/* 3. This Week Timeline */}
                 {thisWeekParties.length > 0 && (

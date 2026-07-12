@@ -385,6 +385,7 @@ function App() {
             onCalendarClick={() => setCurrentView('my_reservations')}
             onTeamClick={() => setCurrentView('crew_detail')}
             onSearchClick={() => setCurrentView('search_crew')}
+            onCreateCrewClick={() => setCurrentView('crew_admin')}
             hasCrew={hasCrew}
             onJoinCrew={() => setHasCrew(true)}
             onPartyClick={(id) => openPartyDetail(id)}

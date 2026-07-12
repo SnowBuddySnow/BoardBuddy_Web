@@ -122,6 +122,14 @@ export const getMyApplications = async (): Promise<MyApplication[]> => {
     return response.data.data;
 };
 
+export const withdrawCrewApplication = async (applicationId: number): Promise<void> => {
+    if (hasDevOverride()) {
+        return;
+    }
+
+    await apiClient.delete(`/crews/my-applications/${applicationId}`);
+};
+
 // --- New / Updated Reservation Endpoints ---
 
 export const getReservationDetail = async (crewId: number, date: string): Promise<ReservationDayResponse> => {
