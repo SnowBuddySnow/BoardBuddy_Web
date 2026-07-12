@@ -45,6 +45,7 @@ export const getCrewInfo = async (crewId: number): Promise<CrewDetail> => {
             member_count: 12,
             profile_image_url: null,
             isCapacityLimited: true,
+            seasonHouseActive: true,
         };
     }
 

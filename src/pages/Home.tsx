@@ -151,6 +151,7 @@ export default function Home({
     // Nearest upcoming open small gathering serves as the featured item.
     const featuredParty = upcomingParties[0];
     const isWinter = getOperatingSeason() === 'WINTER';
+    const seasonHouseUnavailable = crewDetail?.seasonHouseActive === false;
 
     // Plans user has joined or has pending
     const myPlansCount = parties.filter(p => p.currentUserStatus === 'JOINED' || p.currentUserStatus === 'PENDING').length;
@@ -209,7 +210,7 @@ export default function Home({
                     )}
                 </div>
 
-                {isWinter && hasCrew && (
+                {isWinter && hasCrew && !seasonHouseUnavailable && (
                     <section className="px-4">
                         <button
                             onClick={onMakeReservationClick}
@@ -228,6 +229,14 @@ export default function Home({
                                 <ChevronRight className="h-5 w-5 text-blue-200" />
                             </div>
                         </button>
+                    </section>
+                )}
+
+                {hasCrew && seasonHouseUnavailable && (
+                    <section className="px-4">
+                        <div className="rounded-2xl border border-zinc-200 bg-white px-4 py-4 text-center text-sm font-bold text-zinc-500 shadow-sm">
+                            현재 시즌방이 오픈되지 않았습니다.
+                        </div>
                     </section>
                 )}
 
@@ -400,7 +409,7 @@ export default function Home({
                 )}
 
                 {/* Legacy Actions / Reservations (Kept at the bottom as optional helper entry points) */}
-                {hasCrew && (
+                {hasCrew && !seasonHouseUnavailable && (
                     <section className="px-4 space-y-3 pt-4 border-t border-zinc-100">
                         <h2 className="text-xs font-bold text-zinc-400 uppercase tracking-widest">시즌방/일반 예약 (겨울)</h2>
                         <div className="grid grid-cols-2 gap-4">

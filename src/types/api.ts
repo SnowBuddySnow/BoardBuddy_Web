@@ -32,6 +32,7 @@ export interface CrewDetail {
     profile_image_url: string | null;
     isCapacityLimited: boolean;
     kusbfAssociated?: boolean;
+    seasonHouseActive?: boolean;
 }
 
 export interface CrewSimple {
