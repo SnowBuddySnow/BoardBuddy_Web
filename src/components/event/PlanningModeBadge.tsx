@@ -1,7 +1,7 @@
-import type { PartyPlanningMode } from '../../types/api';
+import type { EventPlanningMode } from '../../types/api';
 
 interface PlanningModeBadgeProps {
-    mode: PartyPlanningMode;
+    mode: EventPlanningMode;
 }
 
 export function PlanningModeBadge({ mode }: PlanningModeBadgeProps) {

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { ChevronLeft, ShieldCheck, UserRound } from 'lucide-react';
 import { getUserInfo } from '../services/user';
-import { grantPartyManager, listCrewMemberAccess, revokePartyManager, type CrewMemberAccess } from '../services/crewPermissions';
+import { grantEventManager, listCrewMemberAccess, revokeEventManager, type CrewMemberAccess } from '../services/crewPermissions';
 
 interface CrewPermissionsProps {
   onBack: () => void;
@@ -42,18 +42,18 @@ export default function CrewPermissions({ onBack }: CrewPermissionsProps) {
     void load();
   }, []);
 
-  const togglePartyManager = async (member: CrewMemberAccess) => {
+  const toggleEventManager = async (member: CrewMemberAccess) => {
     if (crewId == null) return;
     setChangingAccountId(member.accountId);
     setError('');
     try {
-      if (member.partyManager) {
-        await revokePartyManager(crewId, member.accountId);
+      if (member.eventManager) {
+        await revokeEventManager(crewId, member.accountId);
       } else {
-        await grantPartyManager(crewId, member.accountId);
+        await grantEventManager(crewId, member.accountId);
       }
       setMembers((current) => current.map((item) => item.accountId === member.accountId
-        ? { ...item, partyManager: !item.partyManager }
+        ? { ...item, eventManager: !item.eventManager }
         : item));
     } catch {
       setError('소모임 관리자 권한을 변경하지 못했습니다. CREW CAPTAIN 권한을 확인해 주세요.');
@@ -92,15 +92,15 @@ export default function CrewPermissions({ onBack }: CrewPermissionsProps) {
                 <button
                   type="button"
                   disabled={changingAccountId === member.accountId}
-                  onClick={() => void togglePartyManager(member)}
+                  onClick={() => void toggleEventManager(member)}
                   className={`shrink-0 rounded-lg border px-3 py-2 text-xs font-black transition-colors cursor-pointer disabled:cursor-wait ${
-                    member.partyManager
+                    member.eventManager
                       ? 'border-[#162660] bg-[#162660] text-white hover:bg-[#0f1b48]'
                       : 'border-zinc-200 bg-white text-zinc-600 hover:bg-zinc-50'
                   }`}
                 >
                   <ShieldCheck className="mr-1 inline h-3.5 w-3.5" />
-                  {member.partyManager ? 'PARTY MANAGER' : '관리자 지정'}
+                  {member.eventManager ? 'EVENT MANAGER' : '관리자 지정'}
                 </button>
               </div>
             ))}

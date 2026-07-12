@@ -1,21 +1,21 @@
 import { useState, useEffect } from 'react';
 import { Button } from '../components/Button';
-import { getPartyDashboard, updateParty } from '../services/party';
+import { getEventDashboard, updateEvent } from '../services/event';
 import { listOrganizerGroups } from '../services/organizerGroup';
-import { JoinPolicy, OrganizerGroup, PartyPlanningMode, PartyStatus, VisibilityType } from '../types/api';
-import { PlanningModeSelector } from '../components/party/PlanningModeSelector';
-import { PARTY_ACTIVITY_OPTIONS, PartyActivityType } from '../constants/partyActivity';
-import { ActivityTypeSelector } from '../components/party/ActivityTypeSelector';
+import { JoinPolicy, OrganizerGroup, EventPlanningMode, EventStatus, VisibilityType } from '../types/api';
+import { PlanningModeSelector } from '../components/event/PlanningModeSelector';
+import { EVENT_ACTIVITY_OPTIONS, EventActivityType } from '../constants/eventActivity';
+import { ActivityTypeSelector } from '../components/event/ActivityTypeSelector';
 import { ChevronLeft, Save } from 'lucide-react';
 import { getApiErrorMessage, getApiErrorStatus } from '../lib/apiError';
 
-interface DashboardPartyEditProps {
-    partyId: number;
+interface DashboardEventEditProps {
+    eventId: number;
     onBack: () => void;
     onSuccess: () => void;
 }
 
-export default function DashboardPartyEdit({ partyId, onBack, onSuccess }: DashboardPartyEditProps) {
+export default function DashboardEventEdit({ eventId, onBack, onSuccess }: DashboardEventEditProps) {
     const [groups, setGroups] = useState<OrganizerGroup[]>([]);
     const [loading, setLoading] = useState(true);
     const [submitLoading, setSubmitLoading] = useState(false);
@@ -23,8 +23,8 @@ export default function DashboardPartyEdit({ partyId, onBack, onSuccess }: Dashb
     // Form states
     const [title, setTitle] = useState('');
     const [description, setDescription] = useState('');
-    const [activityType, setActivityType] = useState<PartyActivityType>('OTHER');
-    const [planningMode, setPlanningMode] = useState<PartyPlanningMode>('MANAGER_PLANNED');
+    const [activityType, setActivityType] = useState<EventActivityType>('OTHER');
+    const [planningMode, setPlanningMode] = useState<EventPlanningMode>('MANAGER_PLANNED');
     const [startsAt, setStartsAt] = useState('');
     const [endsAt, setEndsAt] = useState('');
     const [locationName, setLocationName] = useState('');
@@ -36,7 +36,7 @@ export default function DashboardPartyEdit({ partyId, onBack, onSuccess }: Dashb
     const [visibilityType, setVisibilityType] = useState<VisibilityType>('PUBLIC');
     const [joinPolicy, setJoinPolicy] = useState<JoinPolicy>('INSTANT');
     const [organizerGroupId, setOrganizerGroupId] = useState<number | ''>('');
-    const [status, setStatus] = useState<PartyStatus>('DRAFT');
+    const [status, setStatus] = useState<EventStatus>('DRAFT');
 
     useEffect(() => {
         const loadInitData = async () => {
@@ -46,14 +46,14 @@ export default function DashboardPartyEdit({ partyId, onBack, onSuccess }: Dashb
                 const groupsList = await listOrganizerGroups();
                 setGroups(groupsList);
 
-                // 2. Load party data
-                const partyData = await getPartyDashboard(partyId);
-                setTitle(partyData.title);
-                setDescription(partyData.description || '');
-                setActivityType(PARTY_ACTIVITY_OPTIONS.some(option => option.value === partyData.activityType)
-                    ? partyData.activityType as PartyActivityType
+                // 2. Load event data
+                const eventData = await getEventDashboard(eventId);
+                setTitle(eventData.title);
+                setDescription(eventData.description || '');
+                setActivityType(EVENT_ACTIVITY_OPTIONS.some(option => option.value === eventData.activityType)
+                    ? eventData.activityType as EventActivityType
                     : 'OTHER');
-                setPlanningMode(partyData.planningMode || 'MANAGER_PLANNED');
+                setPlanningMode(eventData.planningMode || 'MANAGER_PLANNED');
 
                 // Convert ISO startsAt / endsAt to input datetime-local format (YYYY-MM-DDTHH:MM)
                 const formatForInput = (isoStr?: string) => {
@@ -63,20 +63,20 @@ export default function DashboardPartyEdit({ partyId, onBack, onSuccess }: Dashb
                     return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
                 };
 
-                setStartsAt(formatForInput(partyData.startsAt));
-                setEndsAt(formatForInput(partyData.endsAt));
-                setLocationName(partyData.locationName || '');
-                setLocationAddress(partyData.locationAddress || '');
-                setCapacity(partyData.capacity);
-                setCrewMemberLimitEnabled(partyData.crewMemberLimit != null);
-                setCrewMemberLimit(partyData.crewMemberLimit ?? 3);
-                setKusbfAssociated(partyData.kusbfAssociated ?? true);
-                setVisibilityType(partyData.visibilityType);
-                setJoinPolicy(partyData.joinPolicy);
-                setOrganizerGroupId(partyData.organizerGroupId);
-                setStatus(partyData.status);
+                setStartsAt(formatForInput(eventData.startsAt));
+                setEndsAt(formatForInput(eventData.endsAt));
+                setLocationName(eventData.locationName || '');
+                setLocationAddress(eventData.locationAddress || '');
+                setCapacity(eventData.capacity);
+                setCrewMemberLimitEnabled(eventData.crewMemberLimit != null);
+                setCrewMemberLimit(eventData.crewMemberLimit ?? 3);
+                setKusbfAssociated(eventData.kusbfAssociated ?? true);
+                setVisibilityType(eventData.visibilityType);
+                setJoinPolicy(eventData.joinPolicy);
+                setOrganizerGroupId(eventData.organizerGroupId);
+                setStatus(eventData.status);
             } catch (error) {
-                console.error('Failed to load party edit data:', error);
+                console.error('Failed to load event edit data:', error);
                 alert('소모임 정보를 불러오는 도중 오류가 발생했습니다.');
                 onBack();
             } finally {
@@ -84,7 +84,7 @@ export default function DashboardPartyEdit({ partyId, onBack, onSuccess }: Dashb
             }
         };
         loadInitData();
-    }, [partyId]);
+    }, [eventId]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -125,11 +125,11 @@ export default function DashboardPartyEdit({ partyId, onBack, onSuccess }: Dashb
                 status
             };
 
-            await updateParty(partyId, payload);
+            await updateEvent(eventId, payload);
             alert('소모임 정보가 성공적으로 수정되었습니다.');
             onSuccess();
         } catch (error: unknown) {
-            console.error('Failed to update party:', error);
+            console.error('Failed to update event:', error);
             const apiMessage = getApiErrorMessage(error);
             if (getApiErrorStatus(error) === 403) {
                 alert('이 소모임을 관리할 권한이 없습니다.');
@@ -215,7 +215,7 @@ export default function DashboardPartyEdit({ partyId, onBack, onSuccess }: Dashb
                                 <label className="text-xs font-bold text-zinc-400 uppercase tracking-wider">모집 상태</label>
                                 <select
                                     value={status}
-                                    onChange={e => setStatus(e.target.value as PartyStatus)}
+                                    onChange={e => setStatus(e.target.value as EventStatus)}
                                     className="w-full px-4 py-2.5 bg-white border border-zinc-200 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-[#162660]/20 text-zinc-800"
                                 >
                                     <option value="DRAFT">Draft (초안)</option>

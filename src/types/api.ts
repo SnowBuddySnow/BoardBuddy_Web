@@ -236,28 +236,28 @@ export interface ReservationInfo {
     waiting_position: number | null;
 }
 
-// --- Party DTOs ---
+// --- Event DTOs ---
 
-export type PartyStatus = 'DRAFT' | 'OPEN' | 'CLOSED' | 'CANCELLED';
-export type PartyPlanningMode = 'MANAGER_PLANNED' | 'MEMBER_PLANNED';
+export type EventStatus = 'DRAFT' | 'OPEN' | 'CLOSED' | 'CANCELLED';
+export type EventPlanningMode = 'MANAGER_PLANNED' | 'MEMBER_PLANNED';
 export type VisibilityType = 'PUBLIC' | 'CREW_LIMITED' | 'INVITE_ONLY' | 'LINK_ONLY';
 export type JoinPolicy = 'INSTANT' | 'APPROVAL_REQUIRED' | 'INVITE_ONLY' | 'PUBLIC';
 export type ParticipantStatus = 'JOINED' | 'PENDING' | 'CANCELLED' | 'REMOVED' | 'NONE';
 export type PaymentStatus = 'UNPAID' | 'PAID';
 
-export interface Party {
+export interface Event {
     id: number;
     title: string;
     description: string;
     activityType: string;
-    planningMode: PartyPlanningMode;
+    planningMode: EventPlanningMode;
     startsAt: string; // ISO LocalDateTime
     endsAt?: string; // ISO LocalDateTime
     locationName: string;
     locationAddress: string;
     capacity: number;
     crewMemberLimit?: number | null;
-    status: PartyStatus;
+    status: EventStatus;
     visibilityType: VisibilityType;
     joinPolicy: JoinPolicy;
     createdByUserId?: number;
@@ -270,10 +270,10 @@ export interface Party {
     updatedAt?: string;
 }
 
-export interface PartyParticipant {
+export interface EventParticipant {
     id: number;
-    partyEventId?: number;
-    partyId?: number;
+    eventEventId?: number;
+    eventId?: number;
     userId: number;
     userName?: string;
     status: ParticipantStatus;
@@ -284,7 +284,7 @@ export interface PartyParticipant {
     cancelledAt?: string | null;
 }
 
-export interface PartyChatAccess {
+export interface EventChatAccess {
     chatUrl: string | null;
     chatPasscode: string | null;
     chatInstructions: string | null;
@@ -301,7 +301,7 @@ export interface OrganizerGroupMembership {
     userId: number;
     crewId?: number | null;
     crewName?: string | null;
-    role: 'PARTY_GROUP_OWNER' | 'PARTY_GROUP_MANAGER' | 'PARTY_GROUP_VIEWER';
+    role: 'EVENT_GROUP_OWNER' | 'EVENT_GROUP_MANAGER' | 'EVENT_GROUP_VIEWER';
     userName?: string;
 }
 
@@ -319,7 +319,7 @@ export interface OrganizerGroupInvitation {
     invitedCrewId: number;
     invitedCrewName: string;
     invitedByAccountId: number;
-    proposedRole: 'PARTY_GROUP_MANAGER' | 'PARTY_GROUP_VIEWER';
+    proposedRole: 'EVENT_GROUP_MANAGER' | 'EVENT_GROUP_VIEWER';
     status: 'PENDING' | 'ACCEPTED' | 'DECLINED' | 'REVOKED';
     createdAt: string;
 }

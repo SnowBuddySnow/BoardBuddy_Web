@@ -19,19 +19,19 @@ import NotificationBell from './components/NotificationBell';
 import DesktopShell, { type DesktopDestination } from './components/DesktopShell';
 import DesktopRequired from './components/DesktopRequired';
 
-// New Party Pages
+// New Event Pages
 import Parties from './pages/Parties';
-import PartyDetail from './pages/PartyDetail';
+import EventDetail from './pages/EventDetail';
 import MyParties from './pages/MyParties';
 import DashboardParties from './pages/DashboardParties';
-import DashboardPartyNew from './pages/DashboardPartyNew';
-import DashboardPartyDetail from './pages/DashboardPartyDetail';
-import DashboardPartyEdit from './pages/DashboardPartyEdit';
+import DashboardEventNew from './pages/DashboardEventNew';
+import DashboardEventDetail from './pages/DashboardEventDetail';
+import DashboardEventEdit from './pages/DashboardEventEdit';
 import DashboardGroups from './pages/DashboardGroups';
 import DashboardGroupDetail from './pages/DashboardGroupDetail';
 import OperationsCenter from './pages/OperationsCenter';
 import CrewPermissions from './pages/CrewPermissions';
-import PartyConceptOptions from './pages/PartyConceptOptions';
+import EventConceptOptions from './pages/EventConceptOptions';
 import GuestAccess from './pages/GuestAccess';
 import DevPanel from './components/DevPanel';
 import { getAccessToken, hasDevOverride, isAutoLoginEnabled } from './lib/session';
@@ -62,23 +62,23 @@ type View =
   | 'crew_permissions'
   | 'notifications'
   | 'parties'
-  | 'party_detail'
+  | 'event_detail'
   | 'my_parties'
   | 'operations_center'
   | 'dashboard_parties'
-  | 'dashboard_party_new'
-  | 'dashboard_party_detail'
-  | 'dashboard_party_edit'
+  | 'dashboard_event_new'
+  | 'dashboard_event_detail'
+  | 'dashboard_event_edit'
   | 'dashboard_groups'
   | 'dashboard_group_detail'
-  | 'party_concepts';
+  | 'event_concepts';
 
 const viewTabs: Partial<Record<View, Tab>> = {
   home: 'home',
   parties: 'home',
-  party_detail: 'home',
+  event_detail: 'home',
   my_parties: 'home',
-  party_concepts: 'home',
+  event_concepts: 'home',
   my_reservations: 'calendar',
   reservation: 'edit',
   guest_reservation: 'edit',
@@ -122,9 +122,9 @@ function App() {
   const [currentView, setCurrentView] = useState<View>('login');
   const [hasCrew, setHasCrew] = useState(false);
   const [hasPendingCrewApplication, setHasPendingCrewApplication] = useState(false);
-  const [selectedPartyId, setSelectedPartyId] = useState<number | null>(null);
+  const [selectedEventId, setSelectedEventId] = useState<number | null>(null);
   const [guestCrewId, setGuestCrewId] = useState<number | null>(null);
-  const [isGuestPartyApplication, setIsGuestPartyApplication] = useState(false);
+  const [isGuestEventApplication, setIsGuestEventApplication] = useState(false);
   const [selectedGroupId, setSelectedGroupId] = useState<number | null>(null);
   const [signupUserType, setSignupUserType] = useState<SignupUserType>('GENERAL');
   const [notificationRefreshKey, setNotificationRefreshKey] = useState(0);
@@ -225,7 +225,7 @@ function App() {
 
   const getDesktopDestination = (): DesktopDestination => {
     if (currentView === 'operations_center') return 'operations_center';
-    if (currentView === 'parties' || currentView === 'party_detail') return 'parties';
+    if (currentView === 'parties' || currentView === 'event_detail') return 'parties';
     if (currentView === 'my_parties') return 'my_parties';
     if (currentView === 'my_reservations') return 'my_reservations';
     if (currentView === 'reservation' || currentView === 'guest_reservation') return 'reservation';
@@ -239,16 +239,16 @@ function App() {
     setCurrentView(destination);
   };
 
-  const openPartyDetail = (id: number, destination: View = 'party_detail') => {
-    setIsGuestPartyApplication(false);
-    setSelectedPartyId(id);
+  const openEventDetail = (id: number, destination: View = 'event_detail') => {
+    setIsGuestEventApplication(false);
+    setSelectedEventId(id);
     setCurrentView(destination);
   };
 
-  const openGuestPartyApplication = (id: number) => {
-    setIsGuestPartyApplication(true);
-    setSelectedPartyId(id);
-    setCurrentView('party_detail');
+  const openGuestEventApplication = (id: number) => {
+    setIsGuestEventApplication(true);
+    setSelectedEventId(id);
+    setCurrentView('event_detail');
   };
 
   const renderCurrentView = () => {
@@ -305,7 +305,7 @@ function App() {
         return <GuestAccess
           onBack={() => setCurrentView('home')}
           onSeasonHouseAccess={(crewId) => { setGuestCrewId(crewId); setCurrentView('guest_reservation'); }}
-          onPartyAccess={openGuestPartyApplication}
+          onEventAccess={openGuestEventApplication}
         />;
       case 'stats':
         return (
@@ -354,15 +354,15 @@ function App() {
         return (
           <Parties
             onBack={() => setCurrentView('home')}
-            onPartyClick={(id) => openPartyDetail(id)}
-            onCreateClick={() => setCurrentView('dashboard_party_new')}
+            onEventClick={(id) => openEventDetail(id)}
+            onCreateClick={() => setCurrentView('dashboard_event_new')}
             canCreate={canManage && isDesktop}
           />
         );
-      case 'party_detail':
-        return <PartyDetail partyId={selectedPartyId || 0} onBack={() => setCurrentView(isGuestPartyApplication ? 'guest_access' : 'parties')} isGuestApplication={isGuestPartyApplication} />;
+      case 'event_detail':
+        return <EventDetail eventId={selectedEventId || 0} onBack={() => setCurrentView(isGuestEventApplication ? 'guest_access' : 'parties')} isGuestApplication={isGuestEventApplication} />;
       case 'my_parties':
-        return <MyParties onBack={() => setCurrentView('home')} onPartyClick={(id) => openPartyDetail(id)} />;
+        return <MyParties onBack={() => setCurrentView('home')} onEventClick={(id) => openEventDetail(id)} />;
       case 'operations_center':
         return (
           <OperationsCenter
@@ -374,38 +374,38 @@ function App() {
             onCrewClick={() => setCurrentView('crew_permissions')}
           />
         );
-      case 'party_concepts':
-        return <PartyConceptOptions onBack={() => setCurrentView('home')} onOpenParties={() => setCurrentView('parties')} />;
+      case 'event_concepts':
+        return <EventConceptOptions onBack={() => setCurrentView('home')} onOpenParties={() => setCurrentView('parties')} />;
       case 'dashboard_parties':
         return (
           <DashboardParties
-            onCreatePartyClick={() => setCurrentView('dashboard_party_new')}
-            onEditPartyClick={(id) => openPartyDetail(id, 'dashboard_party_edit')}
-            onViewDetailClick={(id) => openPartyDetail(id, 'dashboard_party_detail')}
+            onCreateEventClick={() => setCurrentView('dashboard_event_new')}
+            onEditEventClick={(id) => openEventDetail(id, 'dashboard_event_edit')}
+            onViewDetailClick={(id) => openEventDetail(id, 'dashboard_event_detail')}
             onBackToHomeClick={() => setCurrentView('home')}
             onGroupsClick={() => setCurrentView('dashboard_groups')}
-            onConceptsClick={() => setCurrentView('party_concepts')}
+            onConceptsClick={() => setCurrentView('event_concepts')}
           />
         );
-      case 'dashboard_party_new':
+      case 'dashboard_event_new':
         return (
-          <DashboardPartyNew
+          <DashboardEventNew
             onBack={() => setCurrentView('dashboard_parties')}
-            onSuccess={(id) => openPartyDetail(id, 'dashboard_party_detail')}
+            onSuccess={(id) => openEventDetail(id, 'dashboard_event_detail')}
           />
         );
-      case 'dashboard_party_detail':
+      case 'dashboard_event_detail':
         return (
-          <DashboardPartyDetail
-            partyId={selectedPartyId || 0}
+          <DashboardEventDetail
+            eventId={selectedEventId || 0}
             onBack={() => setCurrentView('dashboard_parties')}
-            onEditClick={(id) => openPartyDetail(id, 'dashboard_party_edit')}
+            onEditClick={(id) => openEventDetail(id, 'dashboard_event_edit')}
           />
         );
-      case 'dashboard_party_edit':
+      case 'dashboard_event_edit':
         return (
-          <DashboardPartyEdit
-            partyId={selectedPartyId || 0}
+          <DashboardEventEdit
+            eventId={selectedEventId || 0}
             onBack={() => setCurrentView('dashboard_parties')}
             onSuccess={() => setCurrentView('dashboard_parties')}
           />
@@ -435,11 +435,11 @@ function App() {
             onCreateCrewClick={() => setCurrentView('crew_admin')}
             hasCrew={hasCrew}
             onJoinCrew={() => setHasCrew(true)}
-            onPartyClick={(id) => openPartyDetail(id)}
+            onEventClick={(id) => openEventDetail(id)}
             onSeeAllPartiesClick={() => setCurrentView('parties')}
             onMyPlansClick={() => setCurrentView('my_parties')}
             onDashboardClick={() => setCurrentView('operations_center')}
-            onConceptsClick={() => setCurrentView('party_concepts')}
+            onConceptsClick={() => setCurrentView('event_concepts')}
           />
         );
     }

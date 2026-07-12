@@ -1,14 +1,15 @@
 import { useState, useEffect } from 'react';
 import { getUserInfo } from '../services/user';
 import { getCrewInfo, getMyApplications, withdrawCrewApplication } from '../services/crew';
-import { listParties } from '../services/party';
+import { listParties } from '../services/event';
 import { listOrganizerGroups } from '../services/organizerGroup';
-import { UserDetail, CrewDetail, MyApplication, Party } from '../types/api';
-import { Bus, Mountain, UserPlus, Sparkles, MapPin, Users, Calendar as CalendarIcon, ChevronRight, LayoutTemplate, Clock3, ShieldCheck, X, PartyPopper, TentTree, CalendarHeart } from 'lucide-react';
+import { UserDetail, CrewDetail, MyApplication, Event } from '../types/api';
+import { Bus, Mountain, UserPlus, Sparkles, MapPin, Users, Calendar as CalendarIcon, ChevronRight, LayoutTemplate, Clock3, ShieldCheck, X, TentTree, CalendarHeart } from 'lucide-react';
 import { getWeather, WeatherData } from '../services/weather';
-import { PlanningModeBadge } from '../components/party/PlanningModeBadge';
-import { getPartyActivityLabel } from '../constants/partyActivity';
+import { PlanningModeBadge } from '../components/event/PlanningModeBadge';
+import { getEventActivityLabel } from '../constants/eventActivity';
 import { getOperatingSeason } from '../constants/operatingSeason';
+import boardBuddyLogo from '../assets/boardbuddy-logo.png';
 
 const SnowflakeDecorIcon = ({ className }: { className?: string }) => (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
@@ -28,7 +29,7 @@ interface HomeProps {
     onCreateCrewClick: () => void;
     hasCrew?: boolean;
     onJoinCrew?: () => void;
-    onPartyClick: (partyId: number) => void;
+    onEventClick: (eventId: number) => void;
     onSeeAllPartiesClick: () => void;
     onMyPlansClick: () => void;
     onDashboardClick: () => void;
@@ -43,7 +44,7 @@ export default function Home({
     onSearchClick,
     onCreateCrewClick,
     hasCrew: initialHasCrew = true,
-    onPartyClick,
+    onEventClick,
     onSeeAllPartiesClick,
     onMyPlansClick,
     onDashboardClick,
@@ -60,7 +61,7 @@ export default function Home({
     const [withdrawError, setWithdrawError] = useState('');
 
     // Small gathering related states
-    const [parties, setParties] = useState<Party[]>([]);
+    const [parties, setParties] = useState<Event[]>([]);
     const [hasOrganizerPermission, setHasOrganizerPermission] = useState(false);
 
     useEffect(() => {
@@ -94,7 +95,7 @@ export default function Home({
             }
         };
 
-        const fetchPartyData = async () => {
+        const fetchEventData = async () => {
             try {
                 // Fetch public small gatherings
                 const partiesList = await listParties();
@@ -111,7 +112,7 @@ export default function Home({
         };
 
         fetchData();
-        fetchPartyData();
+        fetchEventData();
 
         // Fetch Weather
         getWeather().then(data => {
@@ -130,7 +131,7 @@ export default function Home({
     }, []);
 
     // Helper to format small gathering date
-    const formatPartyDate = (dateStr: string) => {
+    const formatEventDate = (dateStr: string) => {
         const d = new Date(dateStr);
         const month = d.getMonth() + 1;
         const date = d.getDate();
@@ -154,7 +155,7 @@ export default function Home({
     }).sort((a, b) => new Date(a.startsAt).getTime() - new Date(b.startsAt).getTime());
 
     // Nearest upcoming open small gathering serves as the featured item.
-    const featuredParty = upcomingParties[0];
+    const featuredEvent = upcomingParties[0];
     const isWinter = getOperatingSeason() === 'WINTER';
     const seasonHouseUnavailable = crewDetail?.seasonHouseActive === false;
 
@@ -188,8 +189,8 @@ export default function Home({
         <div className="flex-1 flex flex-col h-full overflow-hidden bg-[#FAF8F3] relative">
             {/* Header */}
             <header className="px-4 pt-4 pb-3 flex items-center justify-between z-10 bg-[#FAF8F3] lg:hidden">
-                <div className="flex items-center gap-2">
-                    <h1 className="text-[20px] font-black italic text-zinc-900 font-['Joti_One']">BoardBuddy</h1>
+                <div className="flex h-8 w-32 items-center">
+                    <img src={boardBuddyLogo} alt="BoardBuddy" className="h-full w-full object-cover object-center" />
                 </div>
 
                 {hasOrganizerPermission && (
@@ -260,13 +261,13 @@ export default function Home({
                 {!hasCrew && !pendingApplication && (
                     <section className="px-4">
                         <div className="mb-3">
-                            <h2 className="text-base font-black text-zinc-900">BoardBuddy 시작하기</h2>
+                            <h2 className="text-base font-black text-zinc-900">시작하기</h2>
                             <p className="mt-0.5 text-xs font-medium text-zinc-500">내게 맞는 방식으로 지금 바로 이용해 보세요.</p>
                         </div>
                         <div className="grid grid-cols-2 gap-3">
                             <button type="button" onClick={onSearchClick} className="col-span-2 flex min-h-[152px] items-center justify-between overflow-hidden rounded-3xl bg-[#162660] p-6 text-left text-white shadow-sm transition-transform hover:bg-[#0f1b48] active:scale-[0.99]">
                                 <span>
-                                    <span className="mb-3 flex h-11 w-11 -rotate-6 items-center justify-center rounded-2xl border border-white/20 bg-white/15 shadow-sm"><PartyPopper className="h-5 w-5 text-amber-200" /></span>
+                                    <span className="mb-3 flex h-11 w-11 -rotate-6 items-center justify-center rounded-2xl border border-white/20 bg-white/15 shadow-sm"><Sparkles className="h-5 w-5 text-amber-200" /></span>
                                     <span className="block text-base font-black">크루 가입하기</span>
                                     <span className="mt-1.5 block text-xs font-medium text-blue-100">크루를 찾아 PIN으로 가입 신청하세요.</span>
                                 </span>
@@ -380,42 +381,42 @@ export default function Home({
                 </section>
 
                 {/* 2. Featured Small Gathering (Hero Card) */}
-                {featuredParty ? (
+                {featuredEvent ? (
                     <section className="px-4 space-y-2.5">
                         <h2 className="text-base font-black text-zinc-900 flex items-center gap-1.5">
-                            <Sparkles className="w-4 h-4 text-amber-500 fill-amber-500" /> 지금 참가할 소모임
+                            <Sparkles className="w-4 h-4 text-amber-500 fill-amber-500" /> 지금 참가할 크루 이벤트
                         </h2>
                         <div
-                            onClick={() => onPartyClick(featuredParty.id)}
+                            onClick={() => onEventClick(featuredEvent.id)}
                             className="bg-white border border-zinc-100 rounded-3xl p-5 shadow-sm hover:shadow-md transition-all active:scale-[0.99] cursor-pointer flex flex-col justify-between min-h-[180px]"
                         >
                             <div>
                                 <div className="flex items-center justify-between mb-2">
                                     <div className="flex items-center gap-2">
                                         <span className="text-[10px] uppercase font-black px-2.5 py-0.5 bg-amber-50 border border-amber-100 text-amber-800 rounded">
-                                            {getPartyActivityLabel(featuredParty.activityType)}
+                                            {getEventActivityLabel(featuredEvent.activityType)}
                                         </span>
-                                        <PlanningModeBadge mode={featuredParty.planningMode} />
+                                        <PlanningModeBadge mode={featuredEvent.planningMode} />
                                     </div>
-                                    {featuredParty.organizerGroupName && (
+                                    {featuredEvent.organizerGroupName && (
                                         <span className="text-xs text-zinc-400 font-semibold">
-                                            주최 {featuredParty.organizerGroupName}
+                                            주최 {featuredEvent.organizerGroupName}
                                         </span>
                                     )}
                                 </div>
 
                                 <h3 className="text-lg font-bold text-zinc-900 mb-3 leading-snug">
-                                    {featuredParty.title}
+                                    {featuredEvent.title}
                                 </h3>
 
                                 <div className="space-y-1.5 text-xs text-zinc-500 mb-3 font-semibold">
                                     <div className="flex items-center gap-1.5">
                                         <CalendarIcon className="w-4 h-4 text-zinc-400 shrink-0" />
-                                        <span>{formatPartyDate(featuredParty.startsAt)}</span>
+                                        <span>{formatEventDate(featuredEvent.startsAt)}</span>
                                     </div>
                                     <div className="flex items-center gap-1.5">
                                         <MapPin className="w-4 h-4 text-zinc-400 shrink-0" />
-                                        <span className="truncate">{featuredParty.locationName || '참가 멤버와 추후 협의'}</span>
+                                        <span className="truncate">{featuredEvent.locationName || '참가 멤버와 추후 협의'}</span>
                                     </div>
                                 </div>
                             </div>
@@ -424,7 +425,7 @@ export default function Home({
                                 <div className="flex items-center gap-1.5 text-xs font-bold text-zinc-600">
                                     <Users className="w-4 h-4 text-zinc-400" />
                                     <span>
-                                        {featuredParty.joinedCount || 0}/{featuredParty.capacity}명 참여
+                                        {featuredEvent.joinedCount || 0}/{featuredEvent.capacity}명 참여
                                     </span>
                                 </div>
                                 <span className="bg-[#162660] text-white text-xs font-bold px-4 py-1.5 rounded-full shadow-sm hover:bg-blue-900 transition-colors">
@@ -436,7 +437,7 @@ export default function Home({
                 ) : hasCrew && !pendingApplication ? (
                     <section className="px-4">
                         <div className="bg-white border border-zinc-100 rounded-3xl p-8 text-center text-zinc-400 text-sm">
-                            현재 열려 있는 소모임이 없습니다.
+                            현재 열려 있는 크루 이벤트가 없습니다.
                         </div>
                     </section>
                 ) : null}
@@ -445,22 +446,22 @@ export default function Home({
                 {thisWeekParties.length > 0 && (
                     <section className="px-4 space-y-2.5">
                         <div className="flex items-center justify-between">
-                            <h2 className="text-base font-black text-zinc-900">이번 주 모임</h2>
+                            <h2 className="text-base font-black text-zinc-900">이번 주 이벤트</h2>
                         </div>
                         <div className="space-y-3">
-                            {thisWeekParties.slice(0, 3).map(party => (
+                            {thisWeekParties.slice(0, 3).map(event => (
                                 <div
-                                    key={party.id}
-                                    onClick={() => onPartyClick(party.id)}
+                                    key={event.id}
+                                    onClick={() => onEventClick(event.id)}
                                     className="bg-white border border-zinc-50 rounded-2xl p-4 flex items-center justify-between hover:shadow-sm transition-all active:scale-[0.99] cursor-pointer"
                                 >
                                     <div className="space-y-1 pr-4">
-                                        <PlanningModeBadge mode={party.planningMode} />
-                                        <h3 className="text-sm font-bold text-zinc-900 truncate max-w-[200px]">{party.title}</h3>
+                                        <PlanningModeBadge mode={event.planningMode} />
+                                        <h3 className="text-sm font-bold text-zinc-900 truncate max-w-[200px]">{event.title}</h3>
                                         <div className="flex items-center gap-2 text-xs text-zinc-400 font-semibold">
-                                            <span>{formatPartyDate(party.startsAt)}</span>
+                                            <span>{formatEventDate(event.startsAt)}</span>
                                             <span>•</span>
-                                            <span className="truncate max-w-[100px]">{party.locationName || '추후 협의'}</span>
+                                            <span className="truncate max-w-[100px]">{event.locationName || '추후 협의'}</span>
                                         </div>
                                     </div>
                                     <ChevronRight className="w-4 h-4 text-zinc-300 shrink-0" />
@@ -483,23 +484,23 @@ export default function Home({
                             </button>
                         </div>
                         <div className="space-y-3">
-                            {upcomingParties.slice(0, 5).map(party => (
+                            {upcomingParties.slice(0, 5).map(event => (
                                 <div
-                                    key={party.id}
-                                    onClick={() => onPartyClick(party.id)}
+                                    key={event.id}
+                                    onClick={() => onEventClick(event.id)}
                                     className="bg-white border border-zinc-100 rounded-2xl p-4.5 hover:shadow-sm transition-all active:scale-[0.99] cursor-pointer flex flex-col justify-between"
                                 >
                                     <div className="flex items-start justify-between gap-4">
                                         <div className="space-y-1">
                                             <h3 className="text-sm font-bold text-zinc-900 leading-tight">
-                                                {party.title}
+                                                {event.title}
                                             </h3>
                                             <div className="text-xs text-zinc-400 font-bold uppercase tracking-wider">
-                                                {getPartyActivityLabel(party.activityType)} · 주최 {party.organizerGroupName}
+                                                {getEventActivityLabel(event.activityType)} · 주최 {event.organizerGroupName}
                                             </div>
                                         </div>
                                         <span className="text-xs text-zinc-500 font-bold shrink-0">
-                                            {party.joinedCount || 0}/{party.capacity}명
+                                            {event.joinedCount || 0}/{event.capacity}명
                                         </span>
                                     </div>
                                 </div>

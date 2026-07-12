@@ -1,20 +1,20 @@
 import { useState, useEffect } from 'react';
 import { Button } from '../components/Button';
-import { createParty } from '../services/party';
+import { createEvent } from '../services/event';
 import { listOrganizerGroups } from '../services/organizerGroup';
-import { JoinPolicy, OrganizerGroup, PartyPlanningMode, VisibilityType } from '../types/api';
-import { PlanningModeSelector } from '../components/party/PlanningModeSelector';
-import { PartyActivityType } from '../constants/partyActivity';
-import { ActivityTypeSelector } from '../components/party/ActivityTypeSelector';
+import { JoinPolicy, OrganizerGroup, EventPlanningMode, VisibilityType } from '../types/api';
+import { PlanningModeSelector } from '../components/event/PlanningModeSelector';
+import { EventActivityType } from '../constants/eventActivity';
+import { ActivityTypeSelector } from '../components/event/ActivityTypeSelector';
 import { ChevronLeft, Save, HelpCircle } from 'lucide-react';
 import { getApiErrorMessage, getApiErrorStatus } from '../lib/apiError';
 
-interface DashboardPartyNewProps {
+interface DashboardEventNewProps {
     onBack: () => void;
-    onSuccess: (partyId: number) => void;
+    onSuccess: (eventId: number) => void;
 }
 
-export default function DashboardPartyNew({ onBack, onSuccess }: DashboardPartyNewProps) {
+export default function DashboardEventNew({ onBack, onSuccess }: DashboardEventNewProps) {
     const [groups, setGroups] = useState<OrganizerGroup[]>([]);
     const [groupsLoading, setGroupsLoading] = useState(true);
     const [submitLoading, setSubmitLoading] = useState(false);
@@ -22,8 +22,8 @@ export default function DashboardPartyNew({ onBack, onSuccess }: DashboardPartyN
     // Form states
     const [title, setTitle] = useState('');
     const [description, setDescription] = useState('');
-    const [activityType, setActivityType] = useState<PartyActivityType>('OTHER');
-    const [planningMode, setPlanningMode] = useState<PartyPlanningMode>('MANAGER_PLANNED');
+    const [activityType, setActivityType] = useState<EventActivityType>('OTHER');
+    const [planningMode, setPlanningMode] = useState<EventPlanningMode>('MANAGER_PLANNED');
     const [startsAt, setStartsAt] = useState('');
     const [endsAt, setEndsAt] = useState('');
     const [locationName, setLocationName] = useState('');
@@ -93,11 +93,11 @@ export default function DashboardPartyNew({ onBack, onSuccess }: DashboardPartyN
                 organizerGroupId: Number(organizerGroupId)
             };
 
-            const newParty = await createParty(payload);
+            const newEvent = await createEvent(payload);
             alert('소모임이 DRAFT 상태로 정상 개설되었습니다. 등록을 진행하려면 목록이나 상세조회에서 "오픈"을 클릭하세요.');
-            onSuccess(newParty.id);
+            onSuccess(newEvent.id);
         } catch (error: unknown) {
-            console.error('Failed to create party:', error);
+            console.error('Failed to create event:', error);
             const apiMessage = getApiErrorMessage(error);
             if (getApiErrorStatus(error) === 403) {
                 alert('이 소모임을 관리할 권한이 없습니다.');

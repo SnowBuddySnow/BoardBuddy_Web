@@ -1,44 +1,44 @@
 import { useState, useEffect } from 'react';
 import { Button } from '../components/Button';
-import { getParty, getPartyChatAccess, joinParty, cancelParty } from '../services/party';
-import { Party, PartyChatAccess } from '../types/api';
+import { getEvent, getEventChatAccess, joinEvent, cancelEvent } from '../services/event';
+import { Event, EventChatAccess } from '../types/api';
 import { ChevronLeft, Calendar, MapPin, Users, Info, CheckCircle, ExternalLink, KeyRound, MessageCircle } from 'lucide-react';
 import { getApiErrorMessage, getApiErrorStatus } from '../lib/apiError';
-import { PlanningModeBadge } from '../components/party/PlanningModeBadge';
-import { getPartyActivityLabel } from '../constants/partyActivity';
+import { PlanningModeBadge } from '../components/event/PlanningModeBadge';
+import { getEventActivityLabel } from '../constants/eventActivity';
 
-interface PartyDetailProps {
-    partyId: number;
+interface EventDetailProps {
+    eventId: number;
     onBack: () => void;
     isGuestApplication?: boolean;
 }
 
-export default function PartyDetail({ partyId, onBack, isGuestApplication = false }: PartyDetailProps) {
-    const [party, setParty] = useState<Party | null>(null);
+export default function EventDetail({ eventId, onBack, isGuestApplication = false }: EventDetailProps) {
+    const [event, setEvent] = useState<Event | null>(null);
     const [loading, setLoading] = useState(true);
     const [errorMsg, setErrorMsg] = useState<string | null>(null);
     const [actionLoading, setActionLoading] = useState(false);
     const [showPhoneConsentModal, setShowPhoneConsentModal] = useState(false);
-    const [chatAccess, setChatAccess] = useState<PartyChatAccess | null>(null);
+    const [chatAccess, setChatAccess] = useState<EventChatAccess | null>(null);
 
-    const fetchPartyDetail = async () => {
+    const fetchEventDetail = async () => {
         try {
             setLoading(true);
             setErrorMsg(null);
-            const data = await getParty(partyId);
-            setParty(data);
+            const data = await getEvent(eventId);
+            setEvent(data);
             if (data.currentUserStatus === 'JOINED') {
                 try {
-                    setChatAccess(await getPartyChatAccess(partyId));
+                    setChatAccess(await getEventChatAccess(eventId));
                 } catch (chatError) {
-                    console.error('Failed to fetch party chat access:', chatError);
+                    console.error('Failed to fetch event chat access:', chatError);
                     setChatAccess(null);
                 }
             } else {
                 setChatAccess(null);
             }
         } catch (error: unknown) {
-            console.error('Failed to fetch party detail:', error);
+            console.error('Failed to fetch event detail:', error);
             if (getApiErrorStatus(error) === 403) {
                 setErrorMsg('이 소모임을 볼 권한이 없습니다.');
             } else if (getApiErrorStatus(error) === 404) {
@@ -52,11 +52,11 @@ export default function PartyDetail({ partyId, onBack, isGuestApplication = fals
     };
 
     useEffect(() => {
-        fetchPartyDetail();
-    }, [partyId]);
+        fetchEventDetail();
+    }, [eventId]);
 
     const handleJoinAction = async () => {
-        if (!party) return;
+        if (!event) return;
 
         // Check phone sharing consent preference
         const consentPref = localStorage.getItem('phone_sharing_consent_preference') || 'each_time';
@@ -69,12 +69,12 @@ export default function PartyDetail({ partyId, onBack, isGuestApplication = fals
     };
 
     const executeJoinAction = async () => {
-        if (!party) return;
+        if (!event) return;
         try {
             setActionLoading(true);
-            await joinParty(party.id);
-            alert(party.joinPolicy === 'APPROVAL_REQUIRED' ? '게스트 참여 신청이 대기 상태로 접수되었습니다.' : '게스트 참여가 접수되었습니다.');
-            await fetchPartyDetail(); // Refresh
+            await joinEvent(event.id);
+            alert(event.joinPolicy === 'APPROVAL_REQUIRED' ? '게스트 참여 신청이 대기 상태로 접수되었습니다.' : '게스트 참여가 접수되었습니다.');
+            await fetchEventDetail(); // Refresh
         } catch (error: unknown) {
             console.error('Failed to join:', error);
             const apiMessage = getApiErrorMessage(error);
@@ -99,15 +99,15 @@ export default function PartyDetail({ partyId, onBack, isGuestApplication = fals
     };
 
     const handleCancelAction = async () => {
-        if (!party) return;
+        if (!event) return;
         const confirmCancel = window.confirm('정말 참여를 취소하시겠습니까?');
         if (!confirmCancel) return;
 
         try {
             setActionLoading(true);
-            await cancelParty(party.id);
+            await cancelEvent(event.id);
             alert('참여 신청이 취소되었습니다.');
-            await fetchPartyDetail(); // Refresh
+            await fetchEventDetail(); // Refresh
         } catch (error: unknown) {
             console.error('Failed to cancel:', error);
             const apiMessage = getApiErrorMessage(error);
@@ -155,12 +155,12 @@ export default function PartyDetail({ partyId, onBack, isGuestApplication = fals
         );
     }
 
-    if (!party) return null;
+    if (!event) return null;
 
-    const isClosed = party.status === 'CLOSED' || party.status === 'CANCELLED';
-    const isFull = party.capacity <= (party.joinedCount || 0);
-    const hasJoined = party.currentUserStatus === 'JOINED';
-    const isPending = party.currentUserStatus === 'PENDING';
+    const isClosed = event.status === 'CLOSED' || event.status === 'CANCELLED';
+    const isFull = event.capacity <= (event.joinedCount || 0);
+    const hasJoined = event.currentUserStatus === 'JOINED';
+    const isPending = event.currentUserStatus === 'PENDING';
 
     return (
         <div className="flex-1 flex flex-col h-full overflow-hidden bg-[#FAF8F3] relative">
@@ -184,12 +184,12 @@ export default function PartyDetail({ partyId, onBack, isGuestApplication = fals
                     <div className="absolute inset-0 bg-black/10"></div>
                     <div className="z-10 flex flex-col gap-1.5">
                         {isGuestApplication && <span className="w-max rounded-full bg-amber-300 px-2.5 py-1 text-[10px] font-black text-[#162660]">게스트 초대</span>}
-                        <PlanningModeBadge mode={party.planningMode} />
+                        <PlanningModeBadge mode={event.planningMode} />
                         <span className="text-[10px] uppercase font-black text-blue-200 tracking-widest px-3 py-1 bg-white/10 backdrop-blur-md rounded-full w-max">
-                            {getPartyActivityLabel(party.activityType)}
+                            {getEventActivityLabel(event.activityType)}
                         </span>
                         <h1 className="text-xl font-bold text-white leading-tight">
-                            {party.title}
+                            {event.title}
                         </h1>
                     </div>
                 </div>
@@ -202,9 +202,9 @@ export default function PartyDetail({ partyId, onBack, isGuestApplication = fals
                             <Calendar className="w-5 h-5 text-[#162660] shrink-0 mt-0.5" />
                             <div>
                                 <h3 className="text-xs text-zinc-400 font-bold uppercase tracking-wider">언제 하나요</h3>
-                                <p className="text-sm font-bold text-zinc-800 mt-1">{formatDate(party.startsAt)}</p>
-                                {party.endsAt && (
-                                    <p className="text-xs text-zinc-500 mt-0.5">~ {formatDate(party.endsAt)}</p>
+                                <p className="text-sm font-bold text-zinc-800 mt-1">{formatDate(event.startsAt)}</p>
+                                {event.endsAt && (
+                                    <p className="text-xs text-zinc-500 mt-0.5">~ {formatDate(event.endsAt)}</p>
                                 )}
                             </div>
                         </div>
@@ -213,8 +213,8 @@ export default function PartyDetail({ partyId, onBack, isGuestApplication = fals
                             <MapPin className="w-5 h-5 text-[#162660] shrink-0 mt-0.5" />
                             <div>
                                 <h3 className="text-xs text-zinc-400 font-bold uppercase tracking-wider">어디서 만나나요</h3>
-                                <p className="text-sm font-bold text-zinc-800 mt-1">{party.locationName || '참가 멤버와 추후 협의'}</p>
-                                <p className="text-xs text-zinc-500 mt-0.5">{party.locationAddress}</p>
+                                <p className="text-sm font-bold text-zinc-800 mt-1">{event.locationName || '참가 멤버와 추후 협의'}</p>
+                                <p className="text-xs text-zinc-500 mt-0.5">{event.locationAddress}</p>
                             </div>
                         </div>
 
@@ -223,12 +223,12 @@ export default function PartyDetail({ partyId, onBack, isGuestApplication = fals
                             <div>
                                 <h3 className="text-xs text-zinc-400 font-bold uppercase tracking-wider">모집 인원</h3>
                                 <p className="text-sm font-bold text-zinc-800 mt-1">
-                                    {party.joinedCount || 0} / {party.capacity} 명 참여 중
+                                    {event.joinedCount || 0} / {event.capacity} 명 참여 중
                                 </p>
                                 <div className="w-full bg-zinc-100 h-1.5 rounded-full mt-2 overflow-hidden">
                                     <div
                                         className="bg-[#162660] h-full rounded-full transition-all duration-300"
-                                        style={{ width: `${Math.min(100, ((party.joinedCount || 0) / party.capacity) * 100)}%` }}
+                                        style={{ width: `${Math.min(100, ((event.joinedCount || 0) / event.capacity) * 100)}%` }}
                                     ></div>
                                 </div>
                             </div>
@@ -239,31 +239,31 @@ export default function PartyDetail({ partyId, onBack, isGuestApplication = fals
                     <div className="bg-white rounded-3xl p-5 border border-zinc-100 shadow-sm space-y-4">
                         <h3 className="text-sm font-bold text-zinc-900 border-b border-zinc-50 pb-2">모임 정보</h3>
 
-                        {party.organizerGroupName && (
+                        {event.organizerGroupName && (
                             <div className="flex items-center justify-between text-sm">
                                 <span className="text-zinc-500 font-medium">주최 그룹</span>
-                                <span className="font-bold text-zinc-800">{party.organizerGroupName}</span>
+                                <span className="font-bold text-zinc-800">{event.organizerGroupName}</span>
                             </div>
                         )}
 
                         <div className="flex items-center justify-between text-sm">
                             <span className="text-zinc-500 font-medium">참가 승인 정책</span>
                             <span className="font-bold text-zinc-800">
-                                {party.joinPolicy === 'INSTANT' ? '즉시 승인' : '운영진 승인 필요'}
+                                {event.joinPolicy === 'INSTANT' ? '즉시 승인' : '운영진 승인 필요'}
                             </span>
                         </div>
 
                         <div className="flex items-center justify-between text-sm">
                             <span className="text-zinc-500 font-medium">공개 설정</span>
                             <span className="font-bold text-zinc-800">
-                                {party.visibilityType === 'PUBLIC' ? '전체 공개' : '제한 공개'}
+                                {event.visibilityType === 'PUBLIC' ? '전체 공개' : '제한 공개'}
                             </span>
                         </div>
 
-                        {party.crewMemberLimit != null && (
+                        {event.crewMemberLimit != null && (
                             <div className="flex items-center justify-between text-sm">
                                 <span className="text-zinc-500 font-medium">크루별 참가 제한</span>
-                                <span className="font-bold text-zinc-800">크루당 최대 {party.crewMemberLimit}명</span>
+                                <span className="font-bold text-zinc-800">크루당 최대 {event.crewMemberLimit}명</span>
                             </div>
                         )}
                     </div>
@@ -299,11 +299,11 @@ export default function PartyDetail({ partyId, onBack, isGuestApplication = fals
                     )}
 
                     {/* Description */}
-                    {party.description && (
+                    {event.description && (
                         <div className="bg-white rounded-3xl p-5 border border-zinc-100 shadow-sm space-y-3">
                             <h3 className="text-sm font-bold text-zinc-900">상세 설명</h3>
                             <p className="text-sm text-zinc-600 leading-relaxed whitespace-pre-wrap">
-                                {party.description}
+                                {event.description}
                             </p>
                         </div>
                     )}
@@ -314,7 +314,7 @@ export default function PartyDetail({ partyId, onBack, isGuestApplication = fals
             <div className="absolute bottom-0 left-0 right-0 bg-white border-t border-zinc-100 px-5 py-4 z-10 flex flex-col justify-center">
                 {isClosed ? (
                     <Button disabled className="w-full h-12 bg-zinc-300 border-zinc-300 text-zinc-500 rounded-full font-bold">
-                        {party.status === 'CANCELLED' ? '취소된 모임' : '마감된 모임'}
+                        {event.status === 'CANCELLED' ? '취소된 모임' : '마감된 모임'}
                     </Button>
                 ) : hasJoined ? (
                     <div className="flex flex-col gap-2">

@@ -1,11 +1,12 @@
 import type { ReactNode } from 'react';
+import boardBuddyLogo from '../assets/boardbuddy-logo.png';
 import {
   CalendarDays,
   CircleUserRound,
   ClipboardPenLine,
   Home,
   LayoutDashboard,
-  PartyPopper,
+  Sparkles,
   UsersRound,
 } from 'lucide-react';
 
@@ -31,8 +32,8 @@ const primaryItems = [
   { id: 'my_reservations', label: '내 예약', icon: CalendarDays },
   { id: 'reservation', label: '예약하기', icon: ClipboardPenLine },
   { id: 'crew_detail', label: '내 크루', icon: UsersRound },
-  { id: 'parties', label: '소모임 찾기', icon: PartyPopper },
-  { id: 'my_parties', label: '내 소모임', icon: CalendarDays },
+  { id: 'parties', label: '크루 이벤트', icon: Sparkles },
+  { id: 'my_parties', label: '내 이벤트', icon: CalendarDays },
   { id: 'my_page', label: '내 정보', icon: CircleUserRound },
 ] as const;
 
@@ -48,9 +49,10 @@ export default function DesktopShell({
         <button
           type="button"
           onClick={() => onNavigate('home')}
-          className="mb-8 border-0 bg-transparent px-3 text-left text-2xl font-black italic text-[#162660] font-['Joti_One'] cursor-pointer"
+          className="mb-8 h-10 w-44 border-0 bg-transparent px-3 text-left cursor-pointer"
+          aria-label="BoardBuddy 홈"
         >
-          BoardBuddy
+          <img src={boardBuddyLogo} alt="BoardBuddy" className="h-full w-full object-cover object-center" />
         </button>
 
         <nav className="flex flex-1 flex-col gap-1" aria-label="주요 메뉴">

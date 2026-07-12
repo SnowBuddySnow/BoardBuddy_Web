@@ -4,28 +4,28 @@ import { ChevronLeft, Keyboard, ScanLine, Sparkles } from 'lucide-react';
 interface GuestAccessProps {
     onBack: () => void;
     onSeasonHouseAccess: (crewId: number) => void;
-    onPartyAccess: (partyId: number) => void;
+    onEventAccess: (eventId: number) => void;
 }
 
-type GuestDestination = { type: 'SEASON'; id: number } | { type: 'PARTY'; id: number };
+type GuestDestination = { type: 'SEASON'; id: number } | { type: 'EVENT'; id: number };
 
 const parseGuestCode = (rawCode: string): GuestDestination | null => {
     const code = rawCode.trim();
-    const match = code.match(/^(?:BB:)?(SEASON|PARTY)[:\-/](\d+)$/i);
-    if (match) return { type: match[1].toUpperCase() as 'SEASON' | 'PARTY', id: Number(match[2]) };
+    const match = code.match(/^(?:BB:)?(SEASON|EVENT)[:\-/](\d+)$/i);
+    if (match) return { type: match[1].toUpperCase() as 'SEASON' | 'EVENT', id: Number(match[2]) };
 
     try {
         const url = new URL(code);
         const type = url.searchParams.get('type')?.toUpperCase();
         const id = Number(url.searchParams.get('id'));
-        if ((type === 'SEASON' || type === 'PARTY') && Number.isInteger(id) && id > 0) return { type, id };
+        if ((type === 'SEASON' || type === 'EVENT') && Number.isInteger(id) && id > 0) return { type, id };
     } catch {
         // The code may be a short code rather than a URL.
     }
     return null;
 };
 
-export default function GuestAccess({ onBack, onSeasonHouseAccess, onPartyAccess }: GuestAccessProps) {
+export default function GuestAccess({ onBack, onSeasonHouseAccess, onEventAccess }: GuestAccessProps) {
     const [code, setCode] = useState('');
     const [error, setError] = useState('');
     const [scanning, setScanning] = useState(false);
@@ -49,14 +49,14 @@ export default function GuestAccess({ onBack, onSeasonHouseAccess, onPartyAccess
     const openDestination = (rawCode: string) => {
         const destination = parseGuestCode(rawCode);
         if (!destination) {
-            setError('초대 코드를 확인해 주세요. 예: BB:SEASON:12 또는 BB:PARTY:34');
+            setError('초대 코드를 확인해 주세요. 예: BB:SEASON:12 또는 BB:EVENT:34');
             return;
         }
         stopScanner();
         if (destination.type === 'SEASON') {
             onSeasonHouseAccess(destination.id);
         } else {
-            onPartyAccess(destination.id);
+            onEventAccess(destination.id);
         }
     };
 
@@ -124,7 +124,7 @@ export default function GuestAccess({ onBack, onSeasonHouseAccess, onPartyAccess
                     <button onClick={() => openDestination(code)} className="rounded-2xl bg-[#162660] px-4 text-sm font-black text-white">확인</button>
                 </div>
                 {error && <p className="mt-3 rounded-xl bg-red-50 px-3 py-2 text-xs font-bold leading-5 text-red-600">{error}</p>}
-                <p className="mt-3 text-xs leading-5 text-zinc-400">시즌방: <strong>BB:SEASON:크루번호</strong> · 소모임: <strong>BB:PARTY:모임번호</strong></p>
+                <p className="mt-3 text-xs leading-5 text-zinc-400">시즌방: <strong>BB:SEASON:크루번호</strong> · 소모임: <strong>BB:EVENT:모임번호</strong></p>
             </main>
         </div>
     );

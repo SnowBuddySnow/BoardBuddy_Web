@@ -55,7 +55,7 @@ export const listOrganizerGroupCrews = async (groupId: number): Promise<Organize
 export const inviteCrewManager = async (
     groupId: number,
     userId: number,
-    role: 'PARTY_GROUP_MANAGER' | 'PARTY_GROUP_VIEWER',
+    role: 'EVENT_GROUP_MANAGER' | 'EVENT_GROUP_VIEWER',
 ): Promise<OrganizerGroupInvitation> => {
     if (isDevMode()) return inviteDevCrewManager(groupId, userId, role);
     const response = await apiClient.post<ApiResponse<OrganizerGroupInvitation>>(

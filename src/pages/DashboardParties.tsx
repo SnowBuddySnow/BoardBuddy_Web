@@ -1,29 +1,30 @@
 import { useState, useEffect } from 'react';
 import { Button } from '../components/Button';
-import { listDashboardParties, updateParty, deleteParty } from '../services/party';
-import { Party } from '../types/api';
+import { listDashboardParties, updateEvent, deleteEvent } from '../services/event';
+import { Event } from '../types/api';
 import { Plus, Edit2, Play, Power, Trash2, Users, ShieldAlert } from 'lucide-react';
 import { getApiErrorStatus } from '../lib/apiError';
-import { PlanningModeBadge } from '../components/party/PlanningModeBadge';
+import { PlanningModeBadge } from '../components/event/PlanningModeBadge';
+import boardBuddyLogo from '../assets/boardbuddy-logo.png';
 
 interface DashboardPartiesProps {
-    onCreatePartyClick: () => void;
-    onEditPartyClick: (partyId: number) => void;
-    onViewDetailClick: (partyId: number) => void;
+    onCreateEventClick: () => void;
+    onEditEventClick: (eventId: number) => void;
+    onViewDetailClick: (eventId: number) => void;
     onBackToHomeClick: () => void;
     onGroupsClick: () => void;
     onConceptsClick: () => void;
 }
 
 export default function DashboardParties({
-    onCreatePartyClick,
-    onEditPartyClick,
+    onCreateEventClick,
+    onEditEventClick,
     onViewDetailClick,
     onBackToHomeClick,
     onGroupsClick,
     onConceptsClick
 }: DashboardPartiesProps) {
-    const [parties, setParties] = useState<Party[]>([]);
+    const [parties, setParties] = useState<Event[]>([]);
     const [loading, setLoading] = useState(true);
     const [actionLoadingId, setActionLoadingId] = useState<number | null>(null);
 
@@ -43,10 +44,10 @@ export default function DashboardParties({
         fetchManagedParties();
     }, []);
 
-    const handleOpenRegistration = async (partyId: number) => {
+    const handleOpenRegistration = async (eventId: number) => {
         try {
-            setActionLoadingId(partyId);
-            await updateParty(partyId, { status: 'OPEN' });
+            setActionLoadingId(eventId);
+            await updateEvent(eventId, { status: 'OPEN' });
             alert('소모임이 오픈되었습니다! 일반 멤버들의 참여 신청을 받습니다.');
             fetchManagedParties();
         } catch (error) {
@@ -57,10 +58,10 @@ export default function DashboardParties({
         }
     };
 
-    const handleCloseRegistration = async (partyId: number) => {
+    const handleCloseRegistration = async (eventId: number) => {
         try {
-            setActionLoadingId(partyId);
-            await updateParty(partyId, { status: 'CLOSED' });
+            setActionLoadingId(eventId);
+            await updateEvent(eventId, { status: 'CLOSED' });
             alert('소모임 모집이 마감되었습니다.');
             fetchManagedParties();
         } catch (error) {
@@ -71,17 +72,17 @@ export default function DashboardParties({
         }
     };
 
-    const handleDelete = async (partyId: number) => {
+    const handleDelete = async (eventId: number) => {
         const confirmDelete = window.confirm('정말 이 소모임을 삭제하시겠습니까? 삭제된 정보는 복구할 수 없습니다.');
         if (!confirmDelete) return;
 
         try {
-            setActionLoadingId(partyId);
-            await deleteParty(partyId);
+            setActionLoadingId(eventId);
+            await deleteEvent(eventId);
             alert('소모임이 성공적으로 삭제되었습니다.');
             fetchManagedParties();
         } catch (error: unknown) {
-            console.error('Failed to delete party:', error);
+            console.error('Failed to delete event:', error);
             if (getApiErrorStatus(error) === 403) {
                 alert('이 소모임을 관리할 권한이 없습니다.');
             } else {
@@ -124,7 +125,7 @@ export default function DashboardParties({
             {/* Top Desktop Navigation */}
             <header className="bg-white border-b border-zinc-100 px-6 py-4 flex items-center justify-between">
                 <div className="flex items-center gap-6">
-                    <h1 className="text-xl font-black italic text-[#162660] font-['Joti_One']">BoardBuddy Manager</h1>
+                    <div className="flex h-8 items-center gap-2"><img src={boardBuddyLogo} alt="BoardBuddy" className="h-8 w-32 object-cover object-center" /><span className="text-sm font-black text-[#162660]">Manager</span></div>
                     <span className="h-4 w-px bg-zinc-200"></span>
                     <div className="flex gap-1 bg-zinc-100 p-1 rounded-full text-xs font-bold shrink-0">
                         <button
@@ -156,7 +157,7 @@ export default function DashboardParties({
                     </Button>
                     <Button
                         variant="primary"
-                        onClick={onCreatePartyClick}
+                        onClick={onCreateEventClick}
                         className="bg-[#162660] hover:bg-[#1e3a8a] text-white border-none rounded-full h-10 py-0 font-bold flex items-center gap-1.5 shadow-sm"
                     >
                         <Plus className="w-4 h-4" />
@@ -181,7 +182,7 @@ export default function DashboardParties({
                         </p>
                         <Button
                             variant="primary"
-                            onClick={onCreatePartyClick}
+                            onClick={onCreateEventClick}
                             className="bg-[#162660] rounded-full font-bold px-6"
                         >
                             첫 번째 소모임 개설하기
@@ -203,38 +204,38 @@ export default function DashboardParties({
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-zinc-50 text-sm text-zinc-700">
-                                    {parties.map(party => {
-                                        const isDraft = party.status === 'DRAFT';
-                                        const isOpen = party.status === 'OPEN';
-                                        const isDisabled = actionLoadingId === party.id;
+                                    {parties.map(event => {
+                                        const isDraft = event.status === 'DRAFT';
+                                        const isOpen = event.status === 'OPEN';
+                                        const isDisabled = actionLoadingId === event.id;
 
                                         return (
-                                            <tr key={party.id} className="hover:bg-zinc-50/50 transition-colors">
+                                            <tr key={event.id} className="hover:bg-zinc-50/50 transition-colors">
                                                 <td className="px-6 py-4.5">
-                                                    <div className="font-bold text-zinc-900 hover:text-[#162660] cursor-pointer" onClick={() => onViewDetailClick(party.id)}>
-                                                        {party.title}
+                                                    <div className="font-bold text-zinc-900 hover:text-[#162660] cursor-pointer" onClick={() => onViewDetailClick(event.id)}>
+                                                        {event.title}
                                                     </div>
                                                     <div className="text-xs text-zinc-400 font-medium mt-1">
-                                                        그룹: {party.organizerGroupName || `ID ${party.organizerGroupId}`}
+                                                        그룹: {event.organizerGroupName || `ID ${event.organizerGroupId}`}
                                                     </div>
-                                                    <div className="mt-2"><PlanningModeBadge mode={party.planningMode} /></div>
+                                                    <div className="mt-2"><PlanningModeBadge mode={event.planningMode} /></div>
                                                 </td>
                                                 <td className="px-6 py-4.5">
-                                                    <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs border ${getStatusStyle(party.status)}`}>
-                                                        {party.status}
+                                                    <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs border ${getStatusStyle(event.status)}`}>
+                                                        {event.status}
                                                     </span>
                                                 </td>
                                                 <td className="px-6 py-4.5 font-medium text-zinc-500">
-                                                    {formatDate(party.startsAt)}
+                                                    {formatDate(event.startsAt)}
                                                 </td>
                                                 <td className="px-6 py-4.5">
-                                                    <div className="font-semibold text-zinc-800">{party.visibilityType}</div>
-                                                    <div className="text-xs text-zinc-400 font-medium mt-0.5">{party.joinPolicy}</div>
+                                                    <div className="font-semibold text-zinc-800">{event.visibilityType}</div>
+                                                    <div className="text-xs text-zinc-400 font-medium mt-0.5">{event.joinPolicy}</div>
                                                 </td>
                                                 <td className="px-6 py-4.5">
                                                     <div className="flex items-center gap-2 font-bold text-zinc-800">
                                                         <Users className="w-4 h-4 text-zinc-400" />
-                                                        <span>{party.joinedCount || 0} / {party.capacity} 명</span>
+                                                        <span>{event.joinedCount || 0} / {event.capacity} 명</span>
                                                     </div>
                                                 </td>
                                                 <td className="px-6 py-4.5 text-right">
@@ -244,7 +245,7 @@ export default function DashboardParties({
                                                             <Button
                                                                 variant="outline"
                                                                 size="small"
-                                                                onClick={() => handleOpenRegistration(party.id)}
+                                                                onClick={() => handleOpenRegistration(event.id)}
                                                                 disabled={isDisabled}
                                                                 className="border-emerald-200 text-emerald-600 hover:bg-emerald-50 rounded-full font-bold text-xs"
                                                             >
@@ -255,7 +256,7 @@ export default function DashboardParties({
                                                             <Button
                                                                 variant="outline"
                                                                 size="small"
-                                                                onClick={() => handleCloseRegistration(party.id)}
+                                                                onClick={() => handleCloseRegistration(event.id)}
                                                                 disabled={isDisabled}
                                                                 className="border-zinc-200 text-zinc-500 hover:bg-zinc-100 rounded-full font-semibold text-xs"
                                                             >
@@ -266,7 +267,7 @@ export default function DashboardParties({
                                                         <Button
                                                             variant="outline"
                                                             size="small"
-                                                            onClick={() => onViewDetailClick(party.id)}
+                                                            onClick={() => onViewDetailClick(event.id)}
                                                             className="border-zinc-200 text-zinc-700 hover:bg-zinc-100 rounded-full font-semibold text-xs"
                                                         >
                                                             상세
@@ -275,7 +276,7 @@ export default function DashboardParties({
                                                         <Button
                                                             variant="outline"
                                                             size="small"
-                                                            onClick={() => onEditPartyClick(party.id)}
+                                                            onClick={() => onEditEventClick(event.id)}
                                                             disabled={isDisabled}
                                                             className="border-zinc-200 text-zinc-700 hover:bg-zinc-100 rounded-full font-semibold text-xs"
                                                         >
@@ -285,7 +286,7 @@ export default function DashboardParties({
                                                         <Button
                                                             variant="ghost"
                                                             size="small"
-                                                            onClick={() => handleDelete(party.id)}
+                                                            onClick={() => handleDelete(event.id)}
                                                             disabled={isDisabled}
                                                             className="text-red-500 hover:bg-red-50 hover:text-red-700 rounded-full p-2"
                                                         >

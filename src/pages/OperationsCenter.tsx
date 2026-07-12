@@ -1,4 +1,4 @@
-import { CalendarDays, PartyPopper, ShieldCheck, UsersRound } from 'lucide-react';
+import { CalendarDays, Sparkles, ShieldCheck, UsersRound } from 'lucide-react';
 import type { OperationPermission } from '../services/operations';
 import { OperatingSeason, seasonCopy } from '../constants/operatingSeason';
 
@@ -24,8 +24,8 @@ export default function OperationsCenter({
 }: OperationsCenterProps) {
   const canManageReservations = hasAny(permissions, ['RESERVATIONS_MANAGE']);
   const canManageParties = hasAny(permissions, ['PARTIES_CREATE', 'PARTIES_MANAGE']);
-  const canManageGroups = hasAny(permissions, ['PARTY_GROUPS_CREATE', 'PARTY_GROUPS_MANAGE', 'PARTY_GROUPS_VIEW']);
-  const canManageCrew = hasAny(permissions, ['CREW_MEMBERS_MANAGE', 'CREW_PARTY_MANAGERS_ASSIGN']);
+  const canManageGroups = hasAny(permissions, ['EVENT_GROUPS_CREATE', 'EVENT_GROUPS_MANAGE', 'EVENT_GROUPS_VIEW']);
+  const canManageCrew = hasAny(permissions, ['CREW_MEMBERS_MANAGE', 'CREW_EVENT_MANAGERS_ASSIGN']);
 
   const modules = [
     canManageReservations && {
@@ -40,7 +40,7 @@ export default function OperationsCenter({
       id: 'parties',
       title: '소모임 관리',
       description: '소모임을 만들고 참가자를 운영합니다.',
-      icon: PartyPopper,
+      icon: Sparkles,
       onClick: onPartiesClick,
       priority: season === 'OFF_SEASON',
     },

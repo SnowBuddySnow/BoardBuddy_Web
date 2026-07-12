@@ -5,20 +5,20 @@ import {
     OrganizerGroupMembership,
     ParticipantStatus,
     PaymentStatus,
-    Party,
-    PartyChatAccess,
-    PartyParticipant,
+    Event,
+    EventChatAccess,
+    EventParticipant,
     UserDetail,
 } from '../types/api';
 import { getDevCrewOverride, getDevRoleOverride, hasDevOverride } from '../lib/session';
-import type { CreatePartyPayload, UpdatePartyPayload } from './party';
+import type { CreateEventPayload, UpdateEventPayload } from './event';
 
 const now = () => new Date().toISOString();
 
 const DEV_PARTIES_KEY = 'dev_parties_list';
 const DEV_GROUPS_KEY = 'dev_organizer_groups';
 const DEV_GROUP_INVITATIONS_KEY = 'dev_group_invitations';
-const devChatAccessKey = (partyId: number) => `dev_party_chat_access_${partyId}`;
+const devChatAccessKey = (eventId: number) => `dev_event_chat_access_${eventId}`;
 
 export const isDevMode = hasDevOverride;
 
@@ -48,16 +48,16 @@ export const getDevUser = (): UserDetail => {
     };
 };
 
-export const getDevParties = (): Party[] => {
+export const getDevParties = (): Event[] => {
     const stored = localStorage.getItem(DEV_PARTIES_KEY);
     if (stored) {
-        return (JSON.parse(stored) as Party[]).map(party => ({
-            ...party,
-            planningMode: party.planningMode || 'MANAGER_PLANNED',
+        return (JSON.parse(stored) as Event[]).map(event => ({
+            ...event,
+            planningMode: event.planningMode || 'MANAGER_PLANNED',
         }));
     }
 
-    const defaultParties: Party[] = [
+    const defaultParties: Event[] = [
         {
             id: 1,
             title: '용평 리조트 주말 카풀 & 보딩 소모임',
@@ -86,22 +86,22 @@ export const getDevParties = (): Party[] => {
     return defaultParties;
 };
 
-export const saveDevParties = (parties: Party[]) => {
+export const saveDevParties = (parties: Event[]) => {
     localStorage.setItem(DEV_PARTIES_KEY, JSON.stringify(parties));
 };
 
-export const getDevParty = (partyId: number): Party => {
-    const found = getDevParties().find((party) => party.id === partyId);
+export const getDevEvent = (eventId: number): Event => {
+    const found = getDevParties().find((event) => event.id === eventId);
     if (!found) {
         throw new Error('Small gathering not found');
     }
     return found;
 };
 
-export const getDevPartyChatAccess = (partyId: number): PartyChatAccess => {
-    const stored = localStorage.getItem(devChatAccessKey(partyId));
+export const getDevEventChatAccess = (eventId: number): EventChatAccess => {
+    const stored = localStorage.getItem(devChatAccessKey(eventId));
     if (stored) return JSON.parse(stored);
-    return partyId === 1
+    return eventId === 1
         ? {
             chatUrl: 'https://open.kakao.com/o/example',
             chatPasscode: '2468',
@@ -110,7 +110,7 @@ export const getDevPartyChatAccess = (partyId: number): PartyChatAccess => {
         : { chatUrl: null, chatPasscode: null, chatInstructions: null };
 };
 
-export const updateDevPartyChatAccess = (partyId: number, access: PartyChatAccess): PartyChatAccess => {
+export const updateDevEventChatAccess = (eventId: number, access: EventChatAccess): EventChatAccess => {
     const normalized = access.chatUrl?.trim()
         ? {
             chatUrl: access.chatUrl.trim(),
@@ -118,13 +118,13 @@ export const updateDevPartyChatAccess = (partyId: number, access: PartyChatAcces
             chatInstructions: access.chatInstructions?.trim() || null,
         }
         : { chatUrl: null, chatPasscode: null, chatInstructions: null };
-    localStorage.setItem(devChatAccessKey(partyId), JSON.stringify(normalized));
+    localStorage.setItem(devChatAccessKey(eventId), JSON.stringify(normalized));
     return normalized;
 };
 
-export const createDevParty = (payload: CreatePartyPayload): Party => {
+export const createDevEvent = (payload: CreateEventPayload): Event => {
     const list = getDevParties();
-    const newParty: Party = {
+    const newEvent: Event = {
         id: Math.floor(Math.random() * 1000) + 10,
         title: payload.title,
         description: payload.description || '',
@@ -148,14 +148,14 @@ export const createDevParty = (payload: CreatePartyPayload): Party => {
         updatedAt: now(),
     };
 
-    list.push(newParty);
+    list.push(newEvent);
     saveDevParties(list);
-    return newParty;
+    return newEvent;
 };
 
-export const updateDevParty = (partyId: number, payload: UpdatePartyPayload): Party => {
+export const updateDevEvent = (eventId: number, payload: UpdateEventPayload): Event => {
     const list = getDevParties();
-    const index = list.findIndex((party) => party.id === partyId);
+    const index = list.findIndex((event) => event.id === eventId);
     if (index === -1) {
         throw new Error('Small gathering not found');
     }
@@ -171,24 +171,24 @@ export const updateDevParty = (partyId: number, payload: UpdatePartyPayload): Pa
     return updated;
 };
 
-export const deleteDevParty = (partyId: number) => {
-    saveDevParties(getDevParties().filter((party) => party.id !== partyId));
+export const deleteDevEvent = (eventId: number) => {
+    saveDevParties(getDevParties().filter((event) => event.id !== eventId));
 };
 
-export const setDevPartyParticipation = (partyId: number, status: ParticipantStatus): PartyParticipant => {
+export const setDevEventParticipation = (eventId: number, status: ParticipantStatus): EventParticipant => {
     const list = getDevParties();
-    const party = list.find((item) => item.id === partyId);
-    if (party) {
-        const wasJoined = party.currentUserStatus === 'JOINED';
+    const event = list.find((item) => item.id === eventId);
+    if (event) {
+        const wasJoined = event.currentUserStatus === 'JOINED';
         const isJoined = status === 'JOINED';
-        party.currentUserStatus = status;
-        party.joinedCount = Math.max(0, (party.joinedCount || 0) + (isJoined && !wasJoined ? 1 : 0) - (!isJoined && wasJoined ? 1 : 0));
+        event.currentUserStatus = status;
+        event.joinedCount = Math.max(0, (event.joinedCount || 0) + (isJoined && !wasJoined ? 1 : 0) - (!isJoined && wasJoined ? 1 : 0));
         saveDevParties(list);
     }
 
     return {
         id: Math.floor(Math.random() * 1000) + 500,
-        partyId,
+        eventId,
         userId: 999,
         userName: 'Mock User (Dev Mode)',
         status,
@@ -196,14 +196,14 @@ export const setDevPartyParticipation = (partyId: number, status: ParticipantSta
     };
 };
 
-export const getDevParticipants = (partyId: number): PartyParticipant[] => [
-    { id: 201, partyId, userId: 10, userName: 'Jake Kim (Simulated Owner)', status: 'JOINED', paymentStatus: 'PAID', managerMemo: '입금자명 확인 완료', createdAt: now() },
-    { id: 202, partyId, userId: 11, userName: 'Jane Doe (Simulated Editor)', status: 'JOINED', paymentStatus: 'UNPAID', managerMemo: null, createdAt: now() },
+export const getDevParticipants = (eventId: number): EventParticipant[] => [
+    { id: 201, eventId, userId: 10, userName: 'Jake Kim (Simulated Owner)', status: 'JOINED', paymentStatus: 'PAID', managerMemo: '입금자명 확인 완료', createdAt: now() },
+    { id: 202, eventId, userId: 11, userName: 'Jane Doe (Simulated Editor)', status: 'JOINED', paymentStatus: 'UNPAID', managerMemo: null, createdAt: now() },
 ];
 
-export const updateDevParticipantStatus = (partyId: number, userId: number, status: ParticipantStatus): PartyParticipant => ({
+export const updateDevParticipantStatus = (eventId: number, userId: number, status: ParticipantStatus): EventParticipant => ({
     id: Math.floor(Math.random() * 1000) + 300,
-    partyId,
+    eventId,
     userId,
     userName: `User ${userId}`,
     status,
@@ -211,12 +211,12 @@ export const updateDevParticipantStatus = (partyId: number, userId: number, stat
 });
 
 export const updateDevParticipantManagement = (
-    partyId: number,
+    eventId: number,
     userId: number,
     paymentStatus: PaymentStatus | null,
     managerMemo: string | null,
-): PartyParticipant => {
-    const participant = getDevParticipants(partyId).find(item => item.userId === userId);
+): EventParticipant => {
+    const participant = getDevParticipants(eventId).find(item => item.userId === userId);
     if (!participant) {
         throw new Error('Participant not found');
     }
@@ -255,9 +255,9 @@ export const getDevGroupMembers = (groupId: number): OrganizerGroupMembership[] 
     }
 
     const defaultList: OrganizerGroupMembership[] = [
-        { id: 101, groupId, userId: 10, crewId: 401, crewName: 'Mock Crew 401', role: 'PARTY_GROUP_OWNER', userName: 'Jake Kim (Simulated Owner)' },
-        { id: 102, groupId, userId: 11, crewId: 402, crewName: 'Mock Crew 402', role: 'PARTY_GROUP_MANAGER', userName: 'Jane Doe (Simulated Manager)' },
-        { id: 103, groupId, userId: 12, crewId: 402, crewName: 'Mock Crew 402', role: 'PARTY_GROUP_VIEWER', userName: 'Bob Smith (Simulated Viewer)' },
+        { id: 101, groupId, userId: 10, crewId: 401, crewName: 'Mock Crew 401', role: 'EVENT_GROUP_OWNER', userName: 'Jake Kim (Simulated Owner)' },
+        { id: 102, groupId, userId: 11, crewId: 402, crewName: 'Mock Crew 402', role: 'EVENT_GROUP_MANAGER', userName: 'Jane Doe (Simulated Manager)' },
+        { id: 103, groupId, userId: 12, crewId: 402, crewName: 'Mock Crew 402', role: 'EVENT_GROUP_VIEWER', userName: 'Bob Smith (Simulated Viewer)' },
     ];
     localStorage.setItem(key, JSON.stringify(defaultList));
     return defaultList;
@@ -311,7 +311,7 @@ export const getDevGroupCrews = (groupId: number): OrganizerGroupCrew[] => {
 export const inviteDevCrewManager = (
     groupId: number,
     userId: number,
-    role: 'PARTY_GROUP_MANAGER' | 'PARTY_GROUP_VIEWER',
+    role: 'EVENT_GROUP_MANAGER' | 'EVENT_GROUP_VIEWER',
 ): OrganizerGroupInvitation => {
     const invitation: OrganizerGroupInvitation = {
         id: Math.floor(Math.random() * 1000) + 500,

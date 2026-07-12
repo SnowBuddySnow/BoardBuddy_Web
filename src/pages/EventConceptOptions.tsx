@@ -12,7 +12,7 @@ import {
     Users
 } from 'lucide-react';
 
-interface PartyConceptOptionsProps {
+interface EventConceptOptionsProps {
     onBack: () => void;
     onOpenParties: () => void;
 }
@@ -71,7 +71,7 @@ const dummySchedule = [
     { time: '11:30', label: '점심 및 다음 일정 안내' }
 ];
 
-export default function PartyConceptOptions({ onBack, onOpenParties }: PartyConceptOptionsProps) {
+export default function EventConceptOptions({ onBack, onOpenParties }: EventConceptOptionsProps) {
     return (
         <div className="flex-1 flex flex-col h-full overflow-hidden bg-[#FAF8F3] relative">
             <header className="px-4 pt-3 pb-3 flex items-center justify-between border-b border-zinc-100 bg-[#FAF8F3]">

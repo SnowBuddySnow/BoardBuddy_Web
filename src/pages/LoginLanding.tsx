@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { CheckIcon } from 'lucide-react';
 import { APP_VERSION, COPYRIGHT_TEXT } from '../version';
 import kakaoLogin from '../assets/login/kakao.png';
+import boardBuddyLogo from '../assets/boardbuddy-logo.png';
 import apiClient from '../lib/axios';
 import {
     isAutoLoginEnabled,
@@ -105,7 +106,7 @@ export default function LoginLanding({ onLogin, onSignupNeeded, /* onDebugUserIn
             {/* Content */}
             <div className="z-10 flex-1 flex flex-col items-center justify-between w-full max-w-md px-8 py-10 mx-auto">
                 <div className="flex-1 flex items-center justify-center">
-                    <h1 className="text-4xl font-normal tracking-tight" style={{ fontFamily: '"Joti One", serif' }}>BoardBuddy</h1>
+                    <img src={boardBuddyLogo} alt="BoardBuddy" className="h-20 w-72 object-cover object-center" />
                 </div>
 
                 <div className="w-full space-y-3 mt-auto mb-8">

@@ -1,13 +1,13 @@
 import { CalendarCheck, Users } from 'lucide-react';
-import type { PartyPlanningMode } from '../../types/api';
+import type { EventPlanningMode } from '../../types/api';
 
 interface PlanningModeSelectorProps {
-    value: PartyPlanningMode;
-    onChange: (value: PartyPlanningMode) => void;
+    value: EventPlanningMode;
+    onChange: (value: EventPlanningMode) => void;
 }
 
 const options: Array<{
-    value: PartyPlanningMode;
+    value: EventPlanningMode;
     label: string;
     description: string;
     icon: typeof CalendarCheck;

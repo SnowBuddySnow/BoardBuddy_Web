@@ -7,7 +7,7 @@ export interface CrewMemberAccess {
   accountId: number;
   displayName: string | null;
   crewRole: CrewRole;
-  partyManager: boolean;
+  eventManager: boolean;
 }
 
 export const listCrewMemberAccess = async (crewId: number): Promise<CrewMemberAccess[]> => {
@@ -15,10 +15,10 @@ export const listCrewMemberAccess = async (crewId: number): Promise<CrewMemberAc
   return response.data.data;
 };
 
-export const grantPartyManager = async (crewId: number, accountId: number): Promise<void> => {
-  await apiClient.post<ApiResponse<unknown>>(`/operations/crews/${crewId}/party-managers`, { accountId });
+export const grantEventManager = async (crewId: number, accountId: number): Promise<void> => {
+  await apiClient.post<ApiResponse<unknown>>(`/operations/crews/${crewId}/event-managers`, { accountId });
 };
 
-export const revokePartyManager = async (crewId: number, accountId: number): Promise<void> => {
-  await apiClient.delete<ApiResponse<void>>(`/operations/crews/${crewId}/party-managers/${accountId}`);
+export const revokeEventManager = async (crewId: number, accountId: number): Promise<void> => {
+  await apiClient.delete<ApiResponse<void>>(`/operations/crews/${crewId}/event-managers/${accountId}`);
 };

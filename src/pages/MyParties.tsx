@@ -1,17 +1,17 @@
 import { useState, useEffect } from 'react';
 import { Button } from '../components/Button';
-import { listParties } from '../services/party';
-import { Party } from '../types/api';
-import { getPartyActivityLabel } from '../constants/partyActivity';
+import { listParties } from '../services/event';
+import { Event } from '../types/api';
+import { getEventActivityLabel } from '../constants/eventActivity';
 import { ChevronLeft, Calendar, MapPin, Users, Heart } from 'lucide-react';
 
 interface MyPartiesProps {
     onBack: () => void;
-    onPartyClick: (partyId: number) => void;
+    onEventClick: (eventId: number) => void;
 }
 
-export default function MyParties({ onBack, onPartyClick }: MyPartiesProps) {
-    const [joinedParties, setJoinedParties] = useState<Party[]>([]);
+export default function MyParties({ onBack, onEventClick }: MyPartiesProps) {
+    const [joinedParties, setJoinedParties] = useState<Event[]>([]);
     const [loading, setLoading] = useState(true);
 
     const fetchMyPlans = async () => {
@@ -69,19 +69,19 @@ export default function MyParties({ onBack, onPartyClick }: MyPartiesProps) {
                     </div>
                 ) : (
                     <div className="space-y-4">
-                        {joinedParties.map(party => {
-                            const isPending = party.currentUserStatus === 'PENDING';
+                        {joinedParties.map(event => {
+                            const isPending = event.currentUserStatus === 'PENDING';
 
                             return (
                                 <div
-                                    key={party.id}
-                                    onClick={() => onPartyClick(party.id)}
+                                    key={event.id}
+                                    onClick={() => onEventClick(event.id)}
                                     className="bg-white rounded-3xl p-5 border border-zinc-100 shadow-sm hover:shadow-md transition-all active:scale-[0.99] cursor-pointer flex flex-col justify-between min-h-[140px]"
                                 >
                                     <div>
                                         <div className="flex items-center justify-between mb-2">
                                             <span className="text-[10px] uppercase font-black text-blue-800 px-2 py-0.5 bg-blue-50 border border-blue-100 rounded-full">
-                                                {getPartyActivityLabel(party.activityType)}
+                                                {getEventActivityLabel(event.activityType)}
                                             </span>
                                             {isPending ? (
                                                 <span className="text-xs font-bold text-amber-600 px-2.5 py-1 bg-amber-50 rounded-full border border-amber-100">
@@ -95,27 +95,27 @@ export default function MyParties({ onBack, onPartyClick }: MyPartiesProps) {
                                         </div>
 
                                         <h2 className="text-base font-bold text-zinc-900 leading-tight mb-3">
-                                            {party.title}
+                                            {event.title}
                                         </h2>
 
                                         <div className="space-y-1.5 mb-2">
                                             <div className="flex items-center text-xs text-zinc-500 gap-1.5 font-medium">
                                                 <Calendar className="w-4 h-4 text-zinc-400 shrink-0" />
-                                                <span>{formatDate(party.startsAt)}</span>
+                                                <span>{formatDate(event.startsAt)}</span>
                                             </div>
                                             <div className="flex items-center text-xs text-zinc-500 gap-1.5 font-medium">
                                                 <MapPin className="w-4 h-4 text-zinc-400 shrink-0" />
-                                                <span className="truncate">{party.locationName}</span>
+                                                <span className="truncate">{event.locationName}</span>
                                             </div>
                                         </div>
                                     </div>
 
                                     <div className="flex items-center justify-between border-t border-zinc-50 pt-3 mt-2 text-xs text-zinc-400 font-medium">
-                                        <span>주최 {party.organizerGroupName}</span>
+                                        <span>주최 {event.organizerGroupName}</span>
                                         <div className="flex items-center gap-1 font-bold text-zinc-700">
                                             <Users className="w-4 h-4 text-zinc-400" />
                                             <span>
-                                                {party.joinedCount || 0}/{party.capacity}
+                                                {event.joinedCount || 0}/{event.capacity}
                                             </span>
                                         </div>
                                     </div>

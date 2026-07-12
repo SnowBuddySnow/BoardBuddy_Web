@@ -1,21 +1,21 @@
 import { useState, useEffect } from 'react';
 import { Button } from '../components/Button';
-import { listParties, joinParty } from '../services/party';
-import { Party } from '../types/api';
+import { listParties, joinEvent } from '../services/event';
+import { Event } from '../types/api';
 import { ChevronLeft, Calendar, MapPin, Users, Search, Sparkles, AlertCircle } from 'lucide-react';
 import { getApiErrorMessage, getApiErrorStatus } from '../lib/apiError';
-import { PlanningModeBadge } from '../components/party/PlanningModeBadge';
-import { getPartyActivityLabel, PARTY_ACTIVITY_OPTIONS } from '../constants/partyActivity';
+import { PlanningModeBadge } from '../components/event/PlanningModeBadge';
+import { getEventActivityLabel, EVENT_ACTIVITY_OPTIONS } from '../constants/eventActivity';
 
 interface PartiesProps {
     onBack: () => void;
-    onPartyClick: (partyId: number) => void;
+    onEventClick: (eventId: number) => void;
     onCreateClick?: () => void;
     canCreate?: boolean;
 }
 
-export default function Parties({ onBack, onPartyClick, onCreateClick, canCreate = false }: PartiesProps) {
-    const [parties, setParties] = useState<Party[]>([]);
+export default function Parties({ onBack, onEventClick, onCreateClick, canCreate = false }: PartiesProps) {
+    const [parties, setParties] = useState<Event[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedTag, setSelectedTag] = useState('ALL');
@@ -40,17 +40,17 @@ export default function Parties({ onBack, onPartyClick, onCreateClick, canCreate
         fetchAllParties();
     }, []);
 
-    const handleJoin = async (e: React.MouseEvent, partyId: number) => {
+    const handleJoin = async (e: React.MouseEvent, eventId: number) => {
         e.stopPropagation(); // Avoid navigating to details
-        if (joiningIds.includes(partyId)) return;
+        if (joiningIds.includes(eventId)) return;
 
         try {
-            setJoiningIds(prev => [...prev, partyId]);
-            await joinParty(partyId);
+            setJoiningIds(prev => [...prev, eventId]);
+            await joinEvent(eventId);
             alert('소모임 신청이 완료되었습니다!');
             fetchAllParties(); // Refresh details
         } catch (error: unknown) {
-            console.error('Failed to join party:', error);
+            console.error('Failed to join event:', error);
             const apiMessage = getApiErrorMessage(error);
             if (getApiErrorStatus(error) === 403) {
                 alert('이 소모임에 참여할 권한이 없습니다.');
@@ -60,7 +60,7 @@ export default function Parties({ onBack, onPartyClick, onCreateClick, canCreate
                 alert('소모임 참여 신청에 실패했습니다.');
             }
         } finally {
-            setJoiningIds(prev => prev.filter(id => id !== partyId));
+            setJoiningIds(prev => prev.filter(id => id !== eventId));
         }
     };
 
@@ -75,16 +75,16 @@ export default function Parties({ onBack, onPartyClick, onCreateClick, canCreate
         return `${month}월 ${date}일 (${day}) ${hour}:${min}`;
     };
 
-    const activityTags = ['ALL', ...PARTY_ACTIVITY_OPTIONS.map(option => option.value)];
+    const activityTags = ['ALL', ...EVENT_ACTIVITY_OPTIONS.map(option => option.value)];
 
-    const filteredParties = parties.filter(party => {
-        const matchesSearch = party.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            getPartyActivityLabel(party.activityType).toLowerCase().includes(searchQuery.toLowerCase()) ||
-            (party.description && party.description.toLowerCase().includes(searchQuery.toLowerCase())) ||
-            (party.locationName && party.locationName.toLowerCase().includes(searchQuery.toLowerCase()));
+    const filteredParties = parties.filter(event => {
+        const matchesSearch = event.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            getEventActivityLabel(event.activityType).toLowerCase().includes(searchQuery.toLowerCase()) ||
+            (event.description && event.description.toLowerCase().includes(searchQuery.toLowerCase())) ||
+            (event.locationName && event.locationName.toLowerCase().includes(searchQuery.toLowerCase()));
 
         const matchesTag = selectedTag === 'ALL'
-            || getPartyActivityLabel(party.activityType) === getPartyActivityLabel(selectedTag);
+            || getEventActivityLabel(event.activityType) === getEventActivityLabel(selectedTag);
 
         return matchesSearch && matchesTag;
     });
@@ -134,7 +134,7 @@ export default function Parties({ onBack, onPartyClick, onCreateClick, canCreate
                                     : 'bg-white text-zinc-600 border-zinc-200 hover:bg-zinc-50'
                             }`}
                         >
-                                                {tag === 'ALL' ? '전체' : getPartyActivityLabel(tag)}
+                                                {tag === 'ALL' ? '전체' : getEventActivityLabel(tag)}
                         </button>
                     ))}
                 </div>
@@ -155,16 +155,16 @@ export default function Parties({ onBack, onPartyClick, onCreateClick, canCreate
                     </div>
                 ) : (
                     <div className="space-y-4 pt-1">
-                        {filteredParties.map(party => {
-                            const isClosed = party.status === 'CLOSED' || party.status === 'CANCELLED';
-                            const isFull = party.capacity <= (party.joinedCount || 0);
-                            const hasJoined = party.currentUserStatus === 'JOINED';
-                            const isPending = party.currentUserStatus === 'PENDING';
+                        {filteredParties.map(event => {
+                            const isClosed = event.status === 'CLOSED' || event.status === 'CANCELLED';
+                            const isFull = event.capacity <= (event.joinedCount || 0);
+                            const hasJoined = event.currentUserStatus === 'JOINED';
+                            const isPending = event.currentUserStatus === 'PENDING';
 
                             return (
                                 <div
-                                    key={party.id}
-                                    onClick={() => onPartyClick(party.id)}
+                                    key={event.id}
+                                    onClick={() => onEventClick(event.id)}
                                     className={`bg-white rounded-3xl p-5 border border-zinc-100 hover:shadow-md transition-all active:scale-[0.99] cursor-pointer flex flex-col justify-between min-h-[160px] ${
                                         isClosed ? 'opacity-65' : ''
                                     }`}
@@ -174,31 +174,31 @@ export default function Parties({ onBack, onPartyClick, onCreateClick, canCreate
                                         <div className="flex items-center justify-between mb-2">
                                             <div className="flex items-center gap-2">
                                                 <span className="text-[10px] uppercase font-extrabold px-2.5 py-1 bg-zinc-100 text-zinc-700 rounded">
-                                                    {getPartyActivityLabel(party.activityType)}
+                                                    {getEventActivityLabel(event.activityType)}
                                                 </span>
-                                                <PlanningModeBadge mode={party.planningMode} />
+                                                <PlanningModeBadge mode={event.planningMode} />
                                             </div>
-                                            {party.organizerGroupName && (
+                                            {event.organizerGroupName && (
                                                 <span className="text-xs text-zinc-400 font-medium">
-                                                    주최 {party.organizerGroupName}
+                                                    주최 {event.organizerGroupName}
                                                 </span>
                                             )}
                                         </div>
 
                                         {/* Title */}
                                         <h2 className="text-lg font-bold text-zinc-900 leading-tight mb-3">
-                                            {party.title}
+                                            {event.title}
                                         </h2>
 
                                         {/* Date and Location */}
                                         <div className="space-y-1.5 mb-4">
                                             <div className="flex items-center text-xs text-zinc-500 font-medium gap-1.5">
                                                 <Calendar className="w-4 h-4 text-zinc-400 shrink-0" />
-                                                <span>{formatDate(party.startsAt)}</span>
+                                                <span>{formatDate(event.startsAt)}</span>
                                             </div>
                                             <div className="flex items-center text-xs text-zinc-500 font-medium gap-1.5">
                                                 <MapPin className="w-4 h-4 text-zinc-400 shrink-0" />
-                                                <span className="truncate">{party.locationName || '참가 멤버와 추후 협의'}</span>
+                                                <span className="truncate">{event.locationName || '참가 멤버와 추후 협의'}</span>
                                             </div>
                                         </div>
                                     </div>
@@ -208,14 +208,14 @@ export default function Parties({ onBack, onPartyClick, onCreateClick, canCreate
                                         <div className="flex items-center gap-1.5 text-xs font-bold text-zinc-700">
                                             <Users className="w-4 h-4 text-zinc-400" />
                                             <span>
-                                                {party.joinedCount || 0}/{party.capacity}명 참여
+                                                {event.joinedCount || 0}/{event.capacity}명 참여
                                             </span>
                                         </div>
 
                                         {/* CTA logic */}
                                         {isClosed ? (
                                             <span className="text-xs font-bold text-zinc-400 px-3 py-1.5 bg-zinc-50 rounded-full border border-zinc-200/50">
-                                                {party.status === 'CANCELLED' ? '취소됨' : '마감됨'}
+                                                {event.status === 'CANCELLED' ? '취소됨' : '마감됨'}
                                             </span>
                                         ) : hasJoined ? (
                                             <span className="text-xs font-bold text-emerald-600 px-3 py-1.5 bg-emerald-50 rounded-full border border-emerald-100">
@@ -231,11 +231,11 @@ export default function Parties({ onBack, onPartyClick, onCreateClick, canCreate
                                             </span>
                                         ) : (
                                             <button
-                                                onClick={(e) => handleJoin(e, party.id)}
-                                                disabled={joiningIds.includes(party.id)}
+                                                onClick={(e) => handleJoin(e, event.id)}
+                                                disabled={joiningIds.includes(event.id)}
                                                 className="bg-[#162660] hover:bg-[#1e3a8a] text-white text-xs font-bold px-4.5 py-2 rounded-2xl shadow-sm transition-all hover:scale-[1.02] disabled:opacity-50"
                                             >
-                                                {joiningIds.includes(party.id) ? '신청 중...' : '신청'}
+                                                {joiningIds.includes(event.id) ? '신청 중...' : '신청'}
                                             </button>
                                         )}
                                     </div>

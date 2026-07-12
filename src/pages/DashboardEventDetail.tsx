@@ -1,24 +1,24 @@
 import { useState, useEffect } from 'react';
 import { Button } from '../components/Button';
-import { getPartyChatAccess, getPartyDashboard, updateParty, listParticipants, updateParticipantManagement, updateParticipantStatus, updatePartyChatAccess } from '../services/party';
-import { Party, PartyChatAccess, PartyParticipant, PaymentStatus } from '../types/api';
+import { getEventChatAccess, getEventDashboard, updateEvent, listParticipants, updateParticipantManagement, updateParticipantStatus, updateEventChatAccess } from '../services/event';
+import { Event, EventChatAccess, EventParticipant, PaymentStatus } from '../types/api';
 import { ChevronLeft, Play, Power, Clock, Check, Save, X, MessageCircle } from 'lucide-react';
-import { PlanningModeBadge } from '../components/party/PlanningModeBadge';
+import { PlanningModeBadge } from '../components/event/PlanningModeBadge';
 
-interface DashboardPartyDetailProps {
-    partyId: number;
+interface DashboardEventDetailProps {
+    eventId: number;
     onBack: () => void;
-    onEditClick: (partyId: number) => void;
+    onEditClick: (eventId: number) => void;
 }
 
-export default function DashboardPartyDetail({ partyId, onBack, onEditClick }: DashboardPartyDetailProps) {
-    const [party, setParty] = useState<Party | null>(null);
-    const [participants, setParticipants] = useState<PartyParticipant[]>([]);
+export default function DashboardEventDetail({ eventId, onBack, onEditClick }: DashboardEventDetailProps) {
+    const [event, setEvent] = useState<Event | null>(null);
+    const [participants, setParticipants] = useState<EventParticipant[]>([]);
     const [loading, setLoading] = useState(true);
     const [actionLoading, setActionLoading] = useState(false);
     const [participantActionId, setParticipantActionId] = useState<number | null>(null);
     const [participantManagementId, setParticipantManagementId] = useState<number | null>(null);
-    const [chatAccess, setChatAccess] = useState<PartyChatAccess>({
+    const [chatAccess, setChatAccess] = useState<EventChatAccess>({
         chatUrl: null,
         chatPasscode: null,
         chatInstructions: null,
@@ -28,14 +28,14 @@ export default function DashboardPartyDetail({ partyId, onBack, onEditClick }: D
     const fetchDetailData = async () => {
         try {
             setLoading(true);
-            const partyData = await getPartyDashboard(partyId);
-            setParty(partyData);
+            const eventData = await getEventDashboard(eventId);
+            setEvent(eventData);
 
-            const partsData = await listParticipants(partyId);
+            const partsData = await listParticipants(eventId);
             setParticipants(partsData);
-            setChatAccess(await getPartyChatAccess(partyId));
+            setChatAccess(await getEventChatAccess(eventId));
         } catch (error) {
-            console.error('Failed to fetch dashboard party detail data:', error);
+            console.error('Failed to fetch dashboard event detail data:', error);
         } finally {
             setLoading(false);
         }
@@ -43,12 +43,12 @@ export default function DashboardPartyDetail({ partyId, onBack, onEditClick }: D
 
     useEffect(() => {
         fetchDetailData();
-    }, [partyId]);
+    }, [eventId]);
 
     const handleOpenRegistration = async () => {
         try {
             setActionLoading(true);
-            await updateParty(partyId, { status: 'OPEN' });
+            await updateEvent(eventId, { status: 'OPEN' });
             alert('소모임이 오픈되었습니다.');
             fetchDetailData();
         } catch (error) {
@@ -62,7 +62,7 @@ export default function DashboardPartyDetail({ partyId, onBack, onEditClick }: D
     const handleCloseRegistration = async () => {
         try {
             setActionLoading(true);
-            await updateParty(partyId, { status: 'CLOSED' });
+            await updateEvent(eventId, { status: 'CLOSED' });
             alert('소모임이 마감되었습니다.');
             fetchDetailData();
         } catch (error) {
@@ -76,13 +76,13 @@ export default function DashboardPartyDetail({ partyId, onBack, onEditClick }: D
     const handleParticipantStatusChange = async (userId: number, targetStatus: 'JOINED' | 'REMOVED' | 'PENDING' | 'CANCELLED') => {
         try {
             setParticipantActionId(userId);
-            await updateParticipantStatus(partyId, userId, targetStatus);
+            await updateParticipantStatus(eventId, userId, targetStatus);
             alert('참가자 상태가 정상적으로 변경되었습니다.');
-            const partsData = await listParticipants(partyId);
+            const partsData = await listParticipants(eventId);
             setParticipants(partsData);
-            // Refresh party count as well
-            const partyData = await getPartyDashboard(partyId);
-            setParty(partyData);
+            // Refresh event count as well
+            const eventData = await getEventDashboard(eventId);
+            setEvent(eventData);
         } catch (error) {
             console.error('Failed to update participant status:', error);
             alert('참가자 상태 변경에 실패했습니다.');
@@ -91,17 +91,17 @@ export default function DashboardPartyDetail({ partyId, onBack, onEditClick }: D
         }
     };
 
-    const updateParticipantDraft = (participantId: number, updates: Partial<PartyParticipant>) => {
+    const updateParticipantDraft = (participantId: number, updates: Partial<EventParticipant>) => {
         setParticipants(current => current.map(participant => (
             participant.id === participantId ? { ...participant, ...updates } : participant
         )));
     };
 
-    const handleParticipantManagementSave = async (participant: PartyParticipant) => {
+    const handleParticipantManagementSave = async (participant: EventParticipant) => {
         try {
             setParticipantManagementId(participant.id);
             const updated = await updateParticipantManagement(
-                partyId,
+                eventId,
                 participant.userId,
                 participant.paymentStatus ?? null,
                 participant.managerMemo?.trim() || null,
@@ -119,11 +119,11 @@ export default function DashboardPartyDetail({ partyId, onBack, onEditClick }: D
     const handleChatAccessSave = async () => {
         try {
             setChatAccessSaving(true);
-            const updated = await updatePartyChatAccess(partyId, chatAccess);
+            const updated = await updateEventChatAccess(eventId, chatAccess);
             setChatAccess(updated);
             alert(updated.chatUrl ? '채팅방 정보가 저장되었습니다.' : '채팅방 정보가 삭제되었습니다.');
         } catch (error) {
-            console.error('Failed to update party chat access:', error);
+            console.error('Failed to update event chat access:', error);
             alert('HTTPS 형식의 올바른 채팅방 링크를 확인해 주세요.');
         } finally {
             setChatAccessSaving(false);
@@ -157,10 +157,10 @@ export default function DashboardPartyDetail({ partyId, onBack, onEditClick }: D
         );
     }
 
-    if (!party) return null;
+    if (!event) return null;
 
-    const isDraft = party.status === 'DRAFT';
-    const isOpen = party.status === 'OPEN';
+    const isDraft = event.status === 'DRAFT';
+    const isOpen = event.status === 'OPEN';
 
     return (
         <div className="flex-1 flex flex-col h-full bg-[#FAF8F3] overflow-hidden">
@@ -170,12 +170,12 @@ export default function DashboardPartyDetail({ partyId, onBack, onEditClick }: D
                     <Button variant="ghost" onClick={onBack} className="-ml-2 gap-1 text-zinc-600 hover:bg-transparent">
                         <ChevronLeft className="w-5 h-5" />
                     </Button>
-                    <h1 className="text-lg font-bold text-zinc-900">{party.title} (관리)</h1>
+                    <h1 className="text-lg font-bold text-zinc-900">{event.title} (관리)</h1>
                 </div>
                 <div className="flex items-center gap-2">
                     <Button
                         variant="outline"
-                        onClick={() => onEditClick(party.id)}
+                        onClick={() => onEditClick(event.id)}
                         className="rounded-full px-5 font-semibold text-sm"
                     >
                         수정하기
@@ -209,31 +209,31 @@ export default function DashboardPartyDetail({ partyId, onBack, onEditClick }: D
                     {/* Basic Info panel */}
                     <div className="bg-white rounded-3xl p-6 border border-zinc-100 shadow-sm space-y-4">
                         <h2 className="text-base font-bold text-zinc-900">모임 요약</h2>
-                        <PlanningModeBadge mode={party.planningMode} />
+                        <PlanningModeBadge mode={event.planningMode} />
                         <div className="grid grid-cols-2 gap-4 text-sm">
                             <div>
                                 <span className="text-zinc-400 font-bold block text-xs uppercase">일시</span>
-                                <span className="font-bold text-zinc-800 mt-1 block">{formatDate(party.startsAt)}</span>
+                                <span className="font-bold text-zinc-800 mt-1 block">{formatDate(event.startsAt)}</span>
                             </div>
                             <div>
                                 <span className="text-zinc-400 font-bold block text-xs uppercase">모임 장소</span>
-                                <span className="font-bold text-zinc-800 mt-1 block">{party.locationName || '참가 멤버와 추후 협의'}</span>
+                                <span className="font-bold text-zinc-800 mt-1 block">{event.locationName || '참가 멤버와 추후 협의'}</span>
                             </div>
                             <div>
                                 <span className="text-zinc-400 font-bold block text-xs uppercase">상태</span>
                                 <span className="font-bold mt-1 block">
                                     <span className={`inline-block px-2.5 py-0.5 rounded-full text-xs font-bold ${
-                                        party.status === 'DRAFT' ? 'bg-amber-100 text-amber-800' :
-                                        party.status === 'OPEN' ? 'bg-emerald-100 text-emerald-800' :
+                                        event.status === 'DRAFT' ? 'bg-amber-100 text-amber-800' :
+                                        event.status === 'OPEN' ? 'bg-emerald-100 text-emerald-800' :
                                         'bg-zinc-100 text-zinc-600'
                                     }`}>
-                                        {party.status}
+                                        {event.status}
                                     </span>
                                 </span>
                             </div>
                             <div>
                                 <span className="text-zinc-400 font-bold block text-xs uppercase">가입 정책</span>
-                                <span className="font-bold text-zinc-800 mt-1 block">{party.joinPolicy}</span>
+                                <span className="font-bold text-zinc-800 mt-1 block">{event.joinPolicy}</span>
                             </div>
                         </div>
                     </div>
@@ -371,21 +371,21 @@ export default function DashboardPartyDetail({ partyId, onBack, onEditClick }: D
                             <div className="flex justify-between text-sm">
                                 <span className="text-zinc-500 font-medium">참여율</span>
                                 <span className="font-bold text-zinc-800">
-                                    {Math.round(((party.joinedCount || 0) / party.capacity) * 100)}%
+                                    {Math.round(((event.joinedCount || 0) / event.capacity) * 100)}%
                                 </span>
                             </div>
                             <div className="w-full bg-zinc-100 h-2.5 rounded-full overflow-hidden">
                                 <div
                                     className="bg-[#162660] h-full rounded-full transition-all duration-300"
-                                    style={{ width: `${Math.min(100, ((party.joinedCount || 0) / party.capacity) * 100)}%` }}
+                                    style={{ width: `${Math.min(100, ((event.joinedCount || 0) / event.capacity) * 100)}%` }}
                                 ></div>
                             </div>
                             <div className="flex justify-between text-xs text-zinc-400 pt-1">
-                                <span>정원: {party.capacity}명</span>
-                                <span>확정: {party.joinedCount || 0}명</span>
+                                <span>정원: {event.capacity}명</span>
+                                <span>확정: {event.joinedCount || 0}명</span>
                             </div>
-                            {party.crewMemberLimit != null && (
-                                <p className="text-xs font-semibold text-zinc-600 pt-1">크루당 최대 {party.crewMemberLimit}명</p>
+                            {event.crewMemberLimit != null && (
+                                <p className="text-xs font-semibold text-zinc-600 pt-1">크루당 최대 {event.crewMemberLimit}명</p>
                             )}
                         </div>
                     </div>
@@ -399,9 +399,9 @@ export default function DashboardPartyDetail({ partyId, onBack, onEditClick }: D
                             확정 참가자에게만 공개됩니다. 링크를 비우고 저장하면 입장 코드와 안내도 함께 삭제됩니다.
                         </p>
                         <div className="space-y-1.5">
-                            <label className="text-xs font-bold text-zinc-500" htmlFor="party-chat-url">채팅방 링크</label>
+                            <label className="text-xs font-bold text-zinc-500" htmlFor="event-chat-url">채팅방 링크</label>
                             <input
-                                id="party-chat-url"
+                                id="event-chat-url"
                                 type="url"
                                 value={chatAccess.chatUrl ?? ''}
                                 onChange={event => setChatAccess(current => ({ ...current, chatUrl: event.target.value || null }))}
@@ -411,9 +411,9 @@ export default function DashboardPartyDetail({ partyId, onBack, onEditClick }: D
                             />
                         </div>
                         <div className="space-y-1.5">
-                            <label className="text-xs font-bold text-zinc-500" htmlFor="party-chat-passcode">입장 코드 (선택)</label>
+                            <label className="text-xs font-bold text-zinc-500" htmlFor="event-chat-passcode">입장 코드 (선택)</label>
                             <input
-                                id="party-chat-passcode"
+                                id="event-chat-passcode"
                                 type="text"
                                 value={chatAccess.chatPasscode ?? ''}
                                 onChange={event => setChatAccess(current => ({ ...current, chatPasscode: event.target.value || null }))}
@@ -422,9 +422,9 @@ export default function DashboardPartyDetail({ partyId, onBack, onEditClick }: D
                             />
                         </div>
                         <div className="space-y-1.5">
-                            <label className="text-xs font-bold text-zinc-500" htmlFor="party-chat-instructions">입장 안내 (선택)</label>
+                            <label className="text-xs font-bold text-zinc-500" htmlFor="event-chat-instructions">입장 안내 (선택)</label>
                             <textarea
-                                id="party-chat-instructions"
+                                id="event-chat-instructions"
                                 rows={3}
                                 value={chatAccess.chatInstructions ?? ''}
                                 onChange={event => setChatAccess(current => ({ ...current, chatInstructions: event.target.value || null }))}

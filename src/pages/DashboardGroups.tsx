@@ -3,6 +3,7 @@ import { Button } from '../components/Button';
 import { acceptOrganizerGroupInvitation, createOrganizerGroup, declineOrganizerGroupInvitation, listMyOrganizerGroupInvitations, listOrganizerGroups } from '../services/organizerGroup';
 import { OrganizerGroup, OrganizerGroupInvitation } from '../types/api';
 import { Users, ArrowRight, ShieldAlert, Award, Check, Mail, Plus, X } from 'lucide-react';
+import boardBuddyLogo from '../assets/boardbuddy-logo.png';
 
 interface DashboardGroupsProps {
     onBackToHomeClick: () => void;
@@ -80,17 +81,17 @@ export default function DashboardGroups({
     const getSimulatedRole = () => {
         const roleOverride = localStorage.getItem('dev_role_override');
         if (roleOverride === 'admin') return 'ADMIN';
-        if (roleOverride === 'organizer') return 'PARTY_GROUP_OWNER';
+        if (roleOverride === 'organizer') return 'EVENT_GROUP_OWNER';
         if (roleOverride === 'member') return 'MEMBER';
-        return 'PARTY_GROUP_MANAGER'; // Default fallback
+        return 'EVENT_GROUP_MANAGER'; // Default fallback
     };
 
     const getRoleBadgeStyle = (role: string) => {
         switch (role) {
             case 'ADMIN':
-            case 'PARTY_GROUP_OWNER':
+            case 'EVENT_GROUP_OWNER':
                 return 'bg-amber-50 text-amber-700 border border-amber-200';
-            case 'PARTY_GROUP_MANAGER':
+            case 'EVENT_GROUP_MANAGER':
                 return 'bg-blue-50 text-blue-700 border border-blue-200';
             default:
                 return 'bg-zinc-50 text-zinc-500 border border-zinc-200';
@@ -102,7 +103,7 @@ export default function DashboardGroups({
             {/* Top Desktop Navigation */}
             <header className="bg-white border-b border-zinc-100 px-6 py-4 flex items-center justify-between">
                 <div className="flex items-center gap-6">
-                    <h1 className="text-xl font-black italic text-[#162660] font-['Joti_One']">BoardBuddy Manager</h1>
+                    <div className="flex h-8 items-center gap-2"><img src={boardBuddyLogo} alt="BoardBuddy" className="h-8 w-32 object-cover object-center" /><span className="text-sm font-black text-[#162660]">Manager</span></div>
                     <span className="h-4 w-px bg-zinc-200"></span>
                     <div className="flex gap-1 bg-zinc-100 p-1 rounded-full text-xs font-bold shrink-0">
                         <button

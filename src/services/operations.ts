@@ -5,13 +5,13 @@ import { getDevRoleOverride } from '../lib/session';
 
 export type OperationPermission =
   | 'CREW_MEMBERS_MANAGE'
-  | 'CREW_PARTY_MANAGERS_ASSIGN'
+  | 'CREW_EVENT_MANAGERS_ASSIGN'
   | 'RESERVATIONS_MANAGE'
   | 'PARTIES_CREATE'
   | 'PARTIES_MANAGE'
-  | 'PARTY_GROUPS_CREATE'
-  | 'PARTY_GROUPS_MANAGE'
-  | 'PARTY_GROUPS_VIEW';
+  | 'EVENT_GROUPS_CREATE'
+  | 'EVENT_GROUPS_MANAGE'
+  | 'EVENT_GROUPS_VIEW';
 
 export interface OperationsContext {
   permissions: OperationPermission[];
@@ -23,16 +23,16 @@ export const getOperationsContext = async (): Promise<OperationsContext> => {
     const permissionsByRole: Record<string, OperationPermission[]> = {
       admin: [
         'CREW_MEMBERS_MANAGE',
-        'CREW_PARTY_MANAGERS_ASSIGN',
+        'CREW_EVENT_MANAGERS_ASSIGN',
         'RESERVATIONS_MANAGE',
         'PARTIES_CREATE',
         'PARTIES_MANAGE',
-        'PARTY_GROUPS_CREATE',
-        'PARTY_GROUPS_MANAGE',
-        'PARTY_GROUPS_VIEW',
+        'EVENT_GROUPS_CREATE',
+        'EVENT_GROUPS_MANAGE',
+        'EVENT_GROUPS_VIEW',
       ],
-      organizer: ['PARTIES_CREATE', 'PARTIES_MANAGE', 'PARTY_GROUPS_CREATE', 'PARTY_GROUPS_MANAGE', 'PARTY_GROUPS_VIEW'],
-      viewer: ['PARTY_GROUPS_VIEW'],
+      organizer: ['PARTIES_CREATE', 'PARTIES_MANAGE', 'EVENT_GROUPS_CREATE', 'EVENT_GROUPS_MANAGE', 'EVENT_GROUPS_VIEW'],
+      viewer: ['EVENT_GROUPS_VIEW'],
       member: [],
       server: [],
     };

@@ -20,7 +20,7 @@ export default function DashboardGroupDetail({ groupId, onBack }: DashboardGroup
     // Form States
     const [isAddOpen, setIsAddOpen] = useState(false);
     const [newUserId, setNewUserId] = useState('');
-    const [newRole, setNewRole] = useState<'PARTY_GROUP_MANAGER' | 'PARTY_GROUP_VIEWER'>('PARTY_GROUP_MANAGER');
+    const [newRole, setNewRole] = useState<'EVENT_GROUP_MANAGER' | 'EVENT_GROUP_VIEWER'>('EVENT_GROUP_MANAGER');
 
     // Get Simulated Role
     const roleOverride = localStorage.getItem('dev_role_override') || 'server';
@@ -118,11 +118,11 @@ export default function DashboardGroupDetail({ groupId, onBack }: DashboardGroup
 
     const getRoleBadgeStyle = (role: string) => {
         switch (role) {
-            case 'PARTY_GROUP_OWNER':
+            case 'EVENT_GROUP_OWNER':
                 return 'bg-amber-50 text-amber-700 border border-amber-200 font-bold';
-            case 'PARTY_GROUP_MANAGER':
+            case 'EVENT_GROUP_MANAGER':
                 return 'bg-blue-50 text-blue-700 border border-blue-200 font-bold';
-            case 'PARTY_GROUP_VIEWER':
+            case 'EVENT_GROUP_VIEWER':
             default:
                 return 'bg-zinc-50 text-zinc-500 border border-zinc-200 font-medium';
         }
@@ -293,7 +293,7 @@ export default function DashboardGroupDetail({ groupId, onBack }: DashboardGroup
                             <div className="space-y-1.5">
                                 <label className="text-xs font-bold text-zinc-500 uppercase tracking-wider">수락 후 역할</label>
                                 <div className="grid grid-cols-2 gap-2">
-                                    {(['PARTY_GROUP_MANAGER', 'PARTY_GROUP_VIEWER'] as const).map((role) => (
+                                    {(['EVENT_GROUP_MANAGER', 'EVENT_GROUP_VIEWER'] as const).map((role) => (
                                         <button
                                             key={role}
                                             type="button"
@@ -304,7 +304,7 @@ export default function DashboardGroupDetail({ groupId, onBack }: DashboardGroup
                                                     : 'bg-zinc-50 text-zinc-600 border-zinc-200/60 hover:bg-zinc-100'
                                             }`}
                                         >
-                                            {role === 'PARTY_GROUP_MANAGER' ? 'Manager' : 'Viewer'}
+                                            {role === 'EVENT_GROUP_MANAGER' ? 'Manager' : 'Viewer'}
                                         </button>
                                     ))}
                                 </div>
