@@ -255,9 +255,9 @@ export const getDevGroupMembers = (groupId: number): OrganizerGroupMembership[] 
     }
 
     const defaultList: OrganizerGroupMembership[] = [
-        { id: 101, groupId, userId: 10, crewId: 401, crewName: 'Mock Crew 401', role: 'OWNER', userName: 'Jake Kim (Simulated Owner)' },
-        { id: 102, groupId, userId: 11, crewId: 402, crewName: 'Mock Crew 402', role: 'EDITOR', userName: 'Jane Doe (Simulated Editor)' },
-        { id: 103, groupId, userId: 12, crewId: 402, crewName: 'Mock Crew 402', role: 'VIEWER', userName: 'Bob Smith (Simulated Viewer)' },
+        { id: 101, groupId, userId: 10, crewId: 401, crewName: 'Mock Crew 401', role: 'PARTY_GROUP_OWNER', userName: 'Jake Kim (Simulated Owner)' },
+        { id: 102, groupId, userId: 11, crewId: 402, crewName: 'Mock Crew 402', role: 'PARTY_GROUP_MANAGER', userName: 'Jane Doe (Simulated Manager)' },
+        { id: 103, groupId, userId: 12, crewId: 402, crewName: 'Mock Crew 402', role: 'PARTY_GROUP_VIEWER', userName: 'Bob Smith (Simulated Viewer)' },
     ];
     localStorage.setItem(key, JSON.stringify(defaultList));
     return defaultList;
@@ -311,7 +311,7 @@ export const getDevGroupCrews = (groupId: number): OrganizerGroupCrew[] => {
 export const inviteDevCrewManager = (
     groupId: number,
     userId: number,
-    role: 'EDITOR' | 'VIEWER',
+    role: 'PARTY_GROUP_MANAGER' | 'PARTY_GROUP_VIEWER',
 ): OrganizerGroupInvitation => {
     const invitation: OrganizerGroupInvitation = {
         id: Math.floor(Math.random() * 1000) + 500,

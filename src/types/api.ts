@@ -300,7 +300,7 @@ export interface OrganizerGroupMembership {
     userId: number;
     crewId?: number | null;
     crewName?: string | null;
-    role: 'OWNER' | 'EDITOR' | 'VIEWER';
+    role: 'PARTY_GROUP_OWNER' | 'PARTY_GROUP_MANAGER' | 'PARTY_GROUP_VIEWER';
     userName?: string;
 }
 
@@ -318,7 +318,7 @@ export interface OrganizerGroupInvitation {
     invitedCrewId: number;
     invitedCrewName: string;
     invitedByAccountId: number;
-    proposedRole: 'EDITOR' | 'VIEWER';
+    proposedRole: 'PARTY_GROUP_MANAGER' | 'PARTY_GROUP_VIEWER';
     status: 'PENDING' | 'ACCEPTED' | 'DECLINED' | 'REVOKED';
     createdAt: string;
 }

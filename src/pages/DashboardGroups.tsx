@@ -80,17 +80,17 @@ export default function DashboardGroups({
     const getSimulatedRole = () => {
         const roleOverride = localStorage.getItem('dev_role_override');
         if (roleOverride === 'admin') return 'ADMIN';
-        if (roleOverride === 'organizer') return 'OWNER';
+        if (roleOverride === 'organizer') return 'PARTY_GROUP_OWNER';
         if (roleOverride === 'member') return 'MEMBER';
-        return 'EDITOR'; // Default fallback
+        return 'PARTY_GROUP_MANAGER'; // Default fallback
     };
 
     const getRoleBadgeStyle = (role: string) => {
         switch (role) {
             case 'ADMIN':
-            case 'OWNER':
+            case 'PARTY_GROUP_OWNER':
                 return 'bg-amber-50 text-amber-700 border border-amber-200';
-            case 'EDITOR':
+            case 'PARTY_GROUP_MANAGER':
                 return 'bg-blue-50 text-blue-700 border border-blue-200';
             default:
                 return 'bg-zinc-50 text-zinc-500 border border-zinc-200';

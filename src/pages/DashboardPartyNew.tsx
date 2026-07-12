@@ -136,7 +136,7 @@ export default function DashboardPartyNew({ onBack, onSuccess }: DashboardPartyN
                         <HelpCircle className="w-12 h-12 stroke-[1.5] text-zinc-300 mx-auto mb-2" />
                         <h3 className="text-base font-bold text-zinc-900">주최 권한이 없습니다</h3>
                         <p className="text-xs mt-1 leading-relaxed">
-                            소모임을 생성하려면 하나 이상의 주최 그룹에 OWNER 혹은 EDITOR 역할로 속해있어야 합니다.
+                            소모임을 생성하려면 소모임 그룹에서 OWNER 또는 MANAGER 역할을 받아야 합니다.
                         </p>
                         <Button variant="primary" onClick={onBack} className="rounded-full mt-4">
                             돌아가기
