@@ -58,6 +58,9 @@ export default function Reservation({ onBack, isGuest = false }: ReservationProp
     // User's Crew ID
     const [crewId, setCrewId] = useState<number | null>(null);
 
+    // Phone Sharing Consent State
+    const [showPhoneConsentModal, setShowPhoneConsentModal] = useState(false);
+
     // Fetch Reservations on Mount
 
 
@@ -241,6 +244,24 @@ export default function Reservation({ onBack, isGuest = false }: ReservationProp
             return;
         }
 
+        // Check phone sharing consent preference if NOT guest
+        if (!isGuest) {
+            const consentPref = localStorage.getItem('phone_sharing_consent_preference') || 'each_time';
+            if (consentPref !== 'always') {
+                setShowPhoneConsentModal(true);
+                return;
+            }
+        }
+
+        await executeSubmitReservation();
+    };
+
+    const executeSubmitReservation = async () => {
+        if (crewId == null) {
+            alert("크루 정보를 불러오는 중입니다. 잠시 후 다시 시도해주세요.");
+            return;
+        }
+
         // Format dates
         const formattedDates = selectedDays.map(day => {
             return `${currentYear}-${String(currentMonthIndex + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
@@ -259,6 +280,14 @@ export default function Reservation({ onBack, isGuest = false }: ReservationProp
             console.error("Reservation creation failed:", error);
             alert("예약 신청에 실패했습니다.");
         }
+    };
+
+    const handleConfirmConsent = async (always: boolean) => {
+        if (always) {
+            localStorage.setItem('phone_sharing_consent_preference', 'always');
+        }
+        setShowPhoneConsentModal(false);
+        await executeSubmitReservation();
     };
 
     return (
@@ -453,6 +482,46 @@ export default function Reservation({ onBack, isGuest = false }: ReservationProp
                         >
                             예약하기
                         </Button>
+                    </div>
+                </div>
+            )}
+
+            {/* Phone Sharing Consent Modal */}
+            {showPhoneConsentModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                    <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setShowPhoneConsentModal(false)} />
+                    <div className="bg-white dark:bg-zinc-900 rounded-2xl w-full max-w-sm p-6 shadow-xl relative z-10 animate-in fade-in zoom-in-95 duration-200">
+                        <h3 className="text-lg font-bold text-zinc-900 dark:text-zinc-100 mb-3 text-center">
+                            전화번호 제공 동의
+                        </h3>
+                        <p className="text-sm text-zinc-600 dark:text-zinc-400 mb-6 text-center leading-relaxed">
+                            예약 확인, 안내 및 안전 연락 등 원활한 모임 운영을 위해 시즌방 운영진에게 본인의 전화번호를 제공하시겠습니까?
+                            <br />
+                            <span className="text-xs text-zinc-400 dark:text-zinc-500 block mt-2.5 leading-normal">
+                                * '항상 동의' 선택 시 마이페이지 계정 관리에서 설정을 변경하기 전까지 더 이상 동의 여부를 묻지 않습니다.
+                            </span>
+                        </p>
+                        <div className="flex flex-col gap-2">
+                            <Button
+                                onClick={() => handleConfirmConsent(true)}
+                                className="w-full h-11 text-sm font-bold bg-[#1E3A8A] text-white rounded-xl"
+                            >
+                                항상 동의하고 진행
+                            </Button>
+                            <Button
+                                variant="outline"
+                                onClick={() => handleConfirmConsent(false)}
+                                className="w-full h-11 text-sm font-bold rounded-xl"
+                            >
+                                이번만 동의하고 진행
+                            </Button>
+                            <button
+                                onClick={() => setShowPhoneConsentModal(false)}
+                                className="w-full h-10 text-xs text-zinc-400 hover:text-zinc-600 font-semibold"
+                            >
+                                취소
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}

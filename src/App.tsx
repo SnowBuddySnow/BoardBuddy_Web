@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { LowerMenuBar } from './components/LowerMenuBar';
 import Home from './pages/Home';
 import Reservation from './pages/Reservation';
@@ -13,8 +13,11 @@ import SearchCrew from './pages/SearchCrew';
 import CrewSettings from './pages/CrewSettings';
 import MyPage from './pages/MyPage';
 import AccountInfo from './pages/AccountInfo';
+import CrewAdmin from './pages/CrewAdmin';
 import Notifications from './pages/Notifications';
 import NotificationBell from './components/NotificationBell';
+import DesktopShell, { type DesktopDestination } from './components/DesktopShell';
+import DesktopRequired from './components/DesktopRequired';
 
 // New Party Pages
 import Parties from './pages/Parties';
@@ -26,9 +29,14 @@ import DashboardPartyDetail from './pages/DashboardPartyDetail';
 import DashboardPartyEdit from './pages/DashboardPartyEdit';
 import DashboardGroups from './pages/DashboardGroups';
 import DashboardGroupDetail from './pages/DashboardGroupDetail';
+import OperationsCenter from './pages/OperationsCenter';
+import CrewPermissions from './pages/CrewPermissions';
 import PartyConceptOptions from './pages/PartyConceptOptions';
 import DevPanel from './components/DevPanel';
 import { getAccessToken, hasDevOverride, isAutoLoginEnabled } from './lib/session';
+import { getOperationsContext, type OperationPermission } from './services/operations';
+import { useDesktopViewport } from './hooks/useDesktopViewport';
+import { getOperatingSeason } from './constants/operatingSeason';
 
 type Tab = 'home' | 'calendar' | 'edit' | 'heart' | 'user';
 type View =
@@ -46,10 +54,13 @@ type View =
   | 'guest_reservation'
   | 'my_page'
   | 'account_info'
+  | 'crew_admin'
+  | 'crew_permissions'
   | 'notifications'
   | 'parties'
   | 'party_detail'
   | 'my_parties'
+  | 'operations_center'
   | 'dashboard_parties'
   | 'dashboard_party_new'
   | 'dashboard_party_detail'
@@ -91,6 +102,8 @@ const viewsWithoutBottomNav: View[] = [
   'account_info',
   'reservation',
   'guest_reservation',
+  'crew_admin',
+  'crew_permissions',
   'notifications',
 ];
 
@@ -109,15 +122,88 @@ function App() {
   const [signupUserType, setSignupUserType] = useState<SignupUserType>('GENERAL');
   const [notificationRefreshKey, setNotificationRefreshKey] = useState(0);
   const [notificationReturnView, setNotificationReturnView] = useState<View>('home');
+  const [canManage, setCanManage] = useState(false);
+  const [operationPermissions, setOperationPermissions] = useState<OperationPermission[]>([]);
+  const [managementAccessResolved, setManagementAccessResolved] = useState(false);
+  const isDesktop = useDesktopViewport();
+  const usedDesktopLanding = useRef(false);
 
   // Check for auto-login on app start
   useEffect(() => {
     setCurrentView(getInitialView());
   }, []);
 
+  const shouldLoadPermissions = !['login', 'user_type', 'user_info'].includes(currentView);
+
+  useEffect(() => {
+    if (!shouldLoadPermissions) {
+      setCanManage(false);
+      setManagementAccessResolved(false);
+      return;
+    }
+
+    let cancelled = false;
+    getOperationsContext()
+      .then((context) => {
+        if (!cancelled) {
+          setOperationPermissions(context.permissions);
+          setCanManage(context.permissions.length > 0);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setOperationPermissions([]);
+          setCanManage(false);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setManagementAccessResolved(true);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [shouldLoadPermissions]);
+
+  useEffect(() => {
+    if (!isDesktop) {
+      usedDesktopLanding.current = false;
+      if (currentView.startsWith('dashboard_') || currentView === 'operations_center') {
+        setCurrentView('home');
+      }
+      return;
+    }
+
+    if (
+      managementAccessResolved
+      && canManage
+      && currentView === 'home'
+      && !usedDesktopLanding.current
+    ) {
+      usedDesktopLanding.current = true;
+      setCurrentView('operations_center');
+    }
+  }, [canManage, currentView, isDesktop, managementAccessResolved]);
+
   const isDashboardView = currentView.startsWith('dashboard_');
+  const isManagementView = isDashboardView || currentView === 'operations_center';
   const activeTab = viewTabs[currentView] || 'home';
   const showBottomNav = !viewsWithoutBottomNav.includes(currentView) && !isDashboardView;
+
+  const getDesktopDestination = (): DesktopDestination => {
+    if (currentView === 'operations_center') return 'operations_center';
+    if (currentView === 'parties' || currentView === 'party_detail') return 'parties';
+    if (currentView === 'my_parties') return 'my_parties';
+    if (currentView === 'my_reservations') return 'my_reservations';
+    if (currentView === 'reservation' || currentView === 'guest_reservation') return 'reservation';
+    if (['crew_detail', 'crew_settings', 'crew_member', 'stats', 'search_crew'].includes(currentView)) return 'crew_detail';
+    if (currentView === 'my_page' || currentView === 'account_info') return 'my_page';
+    return 'home';
+  };
+
+  const handleDesktopNavigate = (destination: DesktopDestination) => {
+    setCurrentView(destination);
+  };
 
   const openPartyDetail = (id: number, destination: View = 'party_detail') => {
     setSelectedPartyId(id);
@@ -125,6 +211,32 @@ function App() {
   };
 
   const renderCurrentView = () => {
+    if (isManagementView && !isDesktop) {
+      return <DesktopRequired onBack={() => setCurrentView('home')} />;
+    }
+
+    if (isManagementView && !managementAccessResolved) {
+      return (
+        <div className="flex h-full items-center justify-center bg-[#FAF8F3]">
+          <div className="h-8 w-8 animate-spin rounded-full border-2 border-zinc-200 border-t-[#162660]" aria-label="관리 권한 확인 중" />
+        </div>
+      );
+    }
+
+    if (isManagementView && managementAccessResolved && !canManage) {
+      return (
+        <div className="flex h-full items-center justify-center bg-[#FAF8F3] px-6">
+          <div className="max-w-md rounded-3xl border border-zinc-200 bg-white p-8 text-center shadow-sm">
+            <h1 className="text-xl font-black text-zinc-900">관리 권한이 없습니다</h1>
+            <p className="mt-2 text-sm text-zinc-500">관리자 그룹에 속한 계정으로 다시 시도해 주세요.</p>
+            <button onClick={() => setCurrentView('home')} className="mt-6 rounded-xl border-0 bg-[#162660] px-5 py-3 text-sm font-bold text-white cursor-pointer">
+              홈으로 돌아가기
+            </button>
+          </div>
+        </div>
+      );
+    }
+
     switch (currentView) {
       case 'login':
         return (
@@ -185,6 +297,10 @@ function App() {
         return <MyPage onBack={() => setCurrentView('home')} onAccountInfoClick={() => setCurrentView('account_info')} />;
       case 'account_info':
         return <AccountInfo onBack={() => setCurrentView('my_page')} />;
+      case 'crew_admin':
+        return <CrewAdmin onBack={() => setCurrentView('home')} />;
+      case 'crew_permissions':
+        return <CrewPermissions onBack={() => setCurrentView('operations_center')} />;
       case 'notifications':
         return <Notifications onBack={() => setCurrentView(notificationReturnView)} onChanged={() => setNotificationRefreshKey(key => key + 1)} />;
       case 'parties':
@@ -193,13 +309,24 @@ function App() {
             onBack={() => setCurrentView('home')}
             onPartyClick={(id) => openPartyDetail(id)}
             onCreateClick={() => setCurrentView('dashboard_party_new')}
-            canCreate={true}
+            canCreate={canManage && isDesktop}
           />
         );
       case 'party_detail':
         return <PartyDetail partyId={selectedPartyId || 0} onBack={() => setCurrentView('parties')} />;
       case 'my_parties':
         return <MyParties onBack={() => setCurrentView('home')} onPartyClick={(id) => openPartyDetail(id)} />;
+      case 'operations_center':
+        return (
+          <OperationsCenter
+            permissions={operationPermissions}
+            season={getOperatingSeason()}
+            onReservationsClick={() => setCurrentView('stats')}
+            onPartiesClick={() => setCurrentView('dashboard_parties')}
+            onGroupsClick={() => setCurrentView('dashboard_groups')}
+            onCrewClick={() => setCurrentView('crew_permissions')}
+          />
+        );
       case 'party_concepts':
         return <PartyConceptOptions onBack={() => setCurrentView('home')} onOpenParties={() => setCurrentView('parties')} />;
       case 'dashboard_parties':
@@ -263,20 +390,34 @@ function App() {
             onPartyClick={(id) => openPartyDetail(id)}
             onSeeAllPartiesClick={() => setCurrentView('parties')}
             onMyPlansClick={() => setCurrentView('my_parties')}
-            onDashboardClick={() => setCurrentView('dashboard_parties')}
+            onDashboardClick={() => setCurrentView('operations_center')}
             onConceptsClick={() => setCurrentView('party_concepts')}
           />
         );
     }
   };
 
+  const usesDesktopShell = isDesktop
+    && !isDashboardView
+    && !['login', 'user_info', 'user_type'].includes(currentView);
+
+  const currentContent = renderCurrentView();
+
   return (
     <div className="w-full h-screen bg-zinc-100 dark:bg-zinc-900 flex items-center justify-center overflow-hidden">
-      <div className={isDashboardView 
+      <div className={isDashboardView || usesDesktopShell
         ? "w-full h-full bg-white dark:bg-zinc-950 relative overflow-hidden flex flex-col" 
         : "w-full h-full max-w-md bg-[#FAF8F3] relative shadow-2xl overflow-hidden flex flex-col"
       }>
-        {renderCurrentView()}
+        {usesDesktopShell ? (
+          <DesktopShell
+            activeDestination={getDesktopDestination()}
+            canManage={canManage}
+            onNavigate={handleDesktopNavigate}
+          >
+            {currentContent}
+          </DesktopShell>
+        ) : currentContent}
 
         {currentView !== 'login' && currentView !== 'user_info' && currentView !== 'user_type' && currentView !== 'notifications' && !isDashboardView && (
           <NotificationBell refreshKey={notificationRefreshKey} onClick={() => {
@@ -285,7 +426,7 @@ function App() {
           }} />
         )}
 
-        {showBottomNav && (
+        {showBottomNav && !isDesktop && (
           <LowerMenuBar
             activeTab={activeTab}
             onTabChange={(tab) => {
@@ -294,7 +435,7 @@ function App() {
           />
         )}
       </div>
-      {import.meta.env.DEV && <DevPanel />}
+      {import.meta.env.DEV && <DevPanel onOpenCrewAdmin={() => setCurrentView('crew_admin')} />}
     </div>
   );
 }

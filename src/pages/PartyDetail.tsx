@@ -17,6 +17,7 @@ export default function PartyDetail({ partyId, onBack }: PartyDetailProps) {
     const [loading, setLoading] = useState(true);
     const [errorMsg, setErrorMsg] = useState<string | null>(null);
     const [actionLoading, setActionLoading] = useState(false);
+    const [showPhoneConsentModal, setShowPhoneConsentModal] = useState(false);
     const [chatAccess, setChatAccess] = useState<PartyChatAccess | null>(null);
 
     const fetchPartyDetail = async () => {
@@ -55,6 +56,19 @@ export default function PartyDetail({ partyId, onBack }: PartyDetailProps) {
 
     const handleJoinAction = async () => {
         if (!party) return;
+
+        // Check phone sharing consent preference
+        const consentPref = localStorage.getItem('phone_sharing_consent_preference') || 'each_time';
+        if (consentPref !== 'always') {
+            setShowPhoneConsentModal(true);
+            return;
+        }
+
+        await executeJoinAction();
+    };
+
+    const executeJoinAction = async () => {
+        if (!party) return;
         try {
             setActionLoading(true);
             await joinParty(party.id);
@@ -73,6 +87,14 @@ export default function PartyDetail({ partyId, onBack }: PartyDetailProps) {
         } finally {
             setActionLoading(false);
         }
+    };
+
+    const handleConfirmConsent = async (always: boolean) => {
+        if (always) {
+            localStorage.setItem('phone_sharing_consent_preference', 'always');
+        }
+        setShowPhoneConsentModal(false);
+        await executeJoinAction();
     };
 
     const handleCancelAction = async () => {
@@ -337,6 +359,46 @@ export default function PartyDetail({ partyId, onBack }: PartyDetailProps) {
                     </Button>
                 )}
             </div>
+
+            {/* Phone Sharing Consent Modal */}
+            {showPhoneConsentModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                    <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setShowPhoneConsentModal(false)} />
+                    <div className="bg-white dark:bg-zinc-900 rounded-2xl w-full max-w-sm p-6 shadow-xl relative z-10 animate-in fade-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
+                        <h3 className="text-lg font-bold text-zinc-900 dark:text-zinc-100 mb-3 text-center">
+                            전화번호 제공 동의
+                        </h3>
+                        <p className="text-sm text-zinc-600 dark:text-zinc-400 mb-6 text-center leading-relaxed">
+                            예약 확인, 안내 및 안전 연락 등 원활한 모임 운영을 위해 소모임 관리자(호스트)에게 본인의 전화번호를 제공하시겠습니까?
+                            <br />
+                            <span className="text-xs text-zinc-400 dark:text-zinc-500 block mt-2.5 leading-normal">
+                                * '항상 동의' 선택 시 마이페이지 계정 관리에서 설정을 변경하기 전까지 더 이상 동의 여부를 묻지 않습니다.
+                            </span>
+                        </p>
+                        <div className="flex flex-col gap-2">
+                            <Button
+                                onClick={() => handleConfirmConsent(true)}
+                                className="w-full h-11 text-sm font-bold bg-[#162660] text-white rounded-xl"
+                            >
+                                항상 동의하고 진행
+                            </Button>
+                            <Button
+                                variant="outline"
+                                onClick={() => handleConfirmConsent(false)}
+                                className="w-full h-11 text-sm font-bold rounded-xl"
+                            >
+                                이번만 동의하고 진행
+                            </Button>
+                            <button
+                                onClick={() => setShowPhoneConsentModal(false)}
+                                className="w-full h-10 text-xs text-zinc-400 hover:text-zinc-600 font-semibold"
+                            >
+                                취소
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

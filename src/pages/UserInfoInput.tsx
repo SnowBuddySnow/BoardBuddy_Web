@@ -35,36 +35,41 @@ const CAN_SKIP_PHONE_VERIFICATION = import.meta.env.DEV;
 
 const TERMS_CONTENT = {
     service: {
-        title: '베타 테스트 서비스 이용약관',
+        title: '보드버디 서비스 이용약관',
         content: `제1조 (목적)
-본 약관은 '보드버디(BoardBuddy)'(이하 "서비스")가 제공하는 베타 테스트 서비스의 이용 조건 및 절차에 관한 사항을 규정함을 목적으로 합니다. 본 서비스는 시즌방 운영진의 효율적인 관리와 이용자들의 편리한 예약 및 정보 확인을 돕기 위해 제공됩니다.
+본 약관은 '보드버디(BoardBuddy)'(이하 "서비스")가 제공하는 서비스의 이용 조건 및 절차에 관한 사항을 규정함을 목적으로 합니다. 본 서비스는 시즌방 운영진의 효율적인 관리와 이용자들의 편리한 예약 및 정보 확인을 돕기 위해 제공됩니다.
 
-제2조 (베타 테스트의 특수성 및 한계)
-1. 개발팀은 테스트 목적에 따라 사전 예고 없이 서비스의 기능, UI 등을 변경하거나 서비스를 일시 중단할 수 있습니다.
-2. 베타 테스트 기간 중 생성된 데이터(예약 내역, 회원 정보 등)는 정식 서비스 출시 시 이관되지 않을 수 있으며, 테스트 종료 후 초기화될 수 있습니다.
-3. 이용자는 본 서비스가 테스트 목적임을 인지합니다.`
+제2조 (서비스의 제공 및 제한)
+1. 본 서비스는 소규모 그룹 프로젝트로 진행 중이며, 운영 환경에 따라 일부 기능의 오작동 및 예상치 못한 버그가 발생할 수 있습니다.
+2. 개발팀은 버그 및 시스템 오류가 발생할 경우 신속히 조치하기 위해 노력할 것이나, 예외적인 조치 시간이 소요될 수 있습니다.
+3. 이용자는 소규모 프로젝트의 특성상 오류가 발생할 수 있음을 인지하고 동의합니다.`
     },
     privacy: {
         title: '개인정보 수집 및 이용 동의',
-        content: `'보드버디'는 베타 테스트 진행을 위해 최소한의 개인정보만을 수집하며, 수집된 정보는 테스트 종료 후 안전하게 파기됩니다. 제3자에게 제공하지 않습니다.
+        content: `'보드버디'는 이용자의 프라이버시 및 개인정보를 매우 소중하게 생각하며, 이를 안전하게 보존합니다. 수집된 정보는 본인 확인 및 서비스 제공 목적 외에 제3자에게 무단 제공되지 않습니다.
 
-1. 수집 및 이용 목적
-- 베타 테스트 서비스 제공 (본인 확인 및 회원 관리)
-- 시즌방 예약 및 이용 현황 관리
-- 서비스 관련 공지 및 피드백 수집
+1. 개인정보 수집 및 이용 목적
+- 서비스 제공 (본인 확인, 회원 식별 및 회원 관리)
+- 시즌방 예약 및 모임 이용 현황 관리
+- 서비스 오류 발생 시 공지 및 대응
 
-2. 수집 항목
-- 닉네임 또는 성명, 성별, 휴대전화번호, 이메일(선택)
+2. 개인정보 수집 항목
+- 성명 또는 닉네임, 성별, 휴대전화번호, 이메일(선택)
 - KUSBF 회원의 경우 학교, 학번
 
-3. 보유 및 이용 기간
-- 베타 테스트 종료 시까지
-(단, 관계 법령에 따라 보존할 필요가 있는 경우 해당 기간까지 보관 후 파기)
+3. 개인정보 제3자 제공 동의 (휴대전화번호 제공)
+- 시즌방 예약 확인, 공지사항 전달, 비상 연락 및 이용자 안전 등 원활한 모임 운영 및 서비스 제공을 위해, 귀하가 속한 시즌방 운영진 및 모임 관리자(manager users)에게 귀하의 휴대전화번호가 제공될 수 있습니다.
+- 귀하는 제공 시마다 매번 확인 동의를 하거나, 매번 묻지 않도록 '항상 동의' 설정을 선택할 수 있습니다. 동의 여부는 마이페이지 계정 관리에서 언제든지 변경 가능합니다.
 
-4. 동의 거부 권리
-- 귀하는 개인정보 수집 및 이용에 대한 동의를 거부할 권리가 있습니다. 다만, 필수 항목 동의를 거부할 경우 베타 테스트 참여 및 서비스 이용이 불가능합니다.`
+4. 보유 및 이용 기간
+- 회원 탈퇴 시 혹은 서비스 종료 시까지 즉시 파기
+(단, 관계 법령에 의하여 보존할 필요가 있는 경우 해당 기간 보존)
+
+5. 동의 거부 권리
+- 귀하는 개인정보 수집 및 이용에 동의를 거부할 권리가 있습니다. 필수 동의 사항을 거부하실 경우 서비스 이용이 제한됩니다.`
     }
 };
+
 
 export default function UserInfoInput({ userType, onBack, onSuccess }: UserInfoInputProps) {
     const [name, setName] = useState('');
@@ -83,6 +88,7 @@ export default function UserInfoInput({ userType, onBack, onSuccess }: UserInfoI
         term1: false,
         term2: false,
     });
+    const [phoneConsentPreference, setPhoneConsentPreference] = useState<'each_time' | 'always'>('each_time');
     const [activeModal, setActiveModal] = useState<'service' | 'privacy' | null>(null);
     const [isLoading, setIsLoading] = useState(false);
 
@@ -285,6 +291,9 @@ export default function UserInfoInput({ userType, onBack, onSuccess }: UserInfoI
             if (response.status >= 200 && response.status < 300) {
                 alert('회원가입이 완료되었습니다.');
                 
+                // Save phone number sharing consent preference
+                localStorage.setItem('phone_sharing_consent_preference', phoneConsentPreference);
+
                 // Promote temp token to final token
                 const tempToken = localStorage.getItem('tempAccessToken');
                 if (tempToken) {
@@ -545,6 +554,37 @@ export default function UserInfoInput({ userType, onBack, onSuccess }: UserInfoI
                             </Button>
                         </div>
 
+                        {/* Phone Sharing Consent Preference Choice */}
+                        <div className="mt-4 pt-4 border-t border-zinc-100 flex flex-col gap-2.5">
+                            <span className="text-zinc-800 text-sm font-bold">전화번호 제공 동의 설정 (선택)</span>
+                            <span className="text-xs text-zinc-500 leading-normal">
+                                시즌방/모임 서비스 이용 시 관리자에게 본인의 전화번호를 제공하는 방식입니다. 마이페이지에서 언제든지 변경할 수 있습니다.
+                            </span>
+                            <div className="flex gap-6 mt-1">
+                                <label className="flex items-center gap-2 cursor-pointer">
+                                    <input
+                                        type="radio"
+                                        name="phoneConsentPref"
+                                        value="each_time"
+                                        checked={phoneConsentPreference === 'each_time'}
+                                        onChange={() => setPhoneConsentPreference('each_time')}
+                                        className="w-4 h-4 text-blue-600 border-zinc-300 focus:ring-blue-500 cursor-pointer"
+                                    />
+                                    <span className="text-sm text-zinc-700 font-medium">제공 시 매번 동의</span>
+                                </label>
+                                <label className="flex items-center gap-2 cursor-pointer">
+                                    <input
+                                        type="radio"
+                                        name="phoneConsentPref"
+                                        value="always"
+                                        checked={phoneConsentPreference === 'always'}
+                                        onChange={() => setPhoneConsentPreference('always')}
+                                        className="w-4 h-4 text-blue-600 border-zinc-300 focus:ring-blue-500 cursor-pointer"
+                                    />
+                                    <span className="text-sm text-zinc-700 font-medium">항상 동의</span>
+                                </label>
+                            </div>
+                        </div>
 
                     </div>
                 </div>

@@ -13,6 +13,9 @@ interface AccountInfoProps {
 export default function AccountInfo({ onBack }: AccountInfoProps) {
     const [userInfo, setUserInfo] = useState<UserDetail | null>(null);
     const [isLoading, setIsLoading] = useState(true);
+    const [phoneSharingConsent, setPhoneSharingConsent] = useState<'each_time' | 'always'>(() => {
+        return (localStorage.getItem('phone_sharing_consent_preference') as 'each_time' | 'always') || 'each_time';
+    });
 
     useEffect(() => {
         const fetchUserInfo = async () => {
@@ -83,6 +86,39 @@ export default function AccountInfo({ onBack }: AccountInfoProps) {
                             <div>
                                 <div className="text-xs text-zinc-500 mb-1">전화번호</div>
                                 <div className="text-base font-medium">{userInfo.phoneNumber}</div>
+                            </div>
+                            <div>
+                                <div className="text-xs text-zinc-500 mb-1.5">전화번호 제공 동의 설정</div>
+                                <div className="flex gap-4 bg-white dark:bg-zinc-800 p-2.5 rounded-lg border border-zinc-200 dark:border-zinc-700 w-fit">
+                                    <label className="flex items-center gap-2 cursor-pointer">
+                                        <input
+                                            type="radio"
+                                            name="accountPhoneConsent"
+                                            value="each_time"
+                                            checked={phoneSharingConsent === 'each_time'}
+                                            onChange={() => {
+                                                setPhoneSharingConsent('each_time');
+                                                localStorage.setItem('phone_sharing_consent_preference', 'each_time');
+                                            }}
+                                            className="w-4 h-4 text-blue-600 border-zinc-300 focus:ring-blue-500 cursor-pointer"
+                                        />
+                                        <span className="text-sm text-zinc-700 dark:text-zinc-300 font-medium">제공 시 매번 동의</span>
+                                    </label>
+                                    <label className="flex items-center gap-2 cursor-pointer">
+                                        <input
+                                            type="radio"
+                                            name="accountPhoneConsent"
+                                            value="always"
+                                            checked={phoneSharingConsent === 'always'}
+                                            onChange={() => {
+                                                setPhoneSharingConsent('always');
+                                                localStorage.setItem('phone_sharing_consent_preference', 'always');
+                                            }}
+                                            className="w-4 h-4 text-blue-600 border-zinc-300 focus:ring-blue-500 cursor-pointer"
+                                        />
+                                        <span className="text-sm text-zinc-700 dark:text-zinc-300 font-medium">항상 동의</span>
+                                    </label>
+                                </div>
                             </div>
                             <div>
                                 <div className="text-xs text-zinc-500 mb-1">성별</div>

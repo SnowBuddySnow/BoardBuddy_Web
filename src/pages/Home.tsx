@@ -8,6 +8,7 @@ import { Bus, Mountain, UserPlus, Sparkles, MapPin, Users, Calendar as CalendarI
 import { getWeather, WeatherData } from '../services/weather';
 import { PlanningModeBadge } from '../components/party/PlanningModeBadge';
 import { getPartyActivityLabel } from '../constants/partyActivity';
+import { getOperatingSeason } from '../constants/operatingSeason';
 
 const SnowflakeDecorIcon = ({ className }: { className?: string }) => (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
@@ -149,6 +150,7 @@ export default function Home({
 
     // Nearest upcoming open small gathering serves as the featured item.
     const featuredParty = upcomingParties[0];
+    const isWinter = getOperatingSeason() === 'WINTER';
 
     // Plans user has joined or has pending
     const myPlansCount = parties.filter(p => p.currentUserStatus === 'JOINED' || p.currentUserStatus === 'PENDING').length;
@@ -156,7 +158,7 @@ export default function Home({
     return (
         <div className="flex-1 flex flex-col h-full overflow-hidden bg-[#FAF8F3] relative">
             {/* Header */}
-            <header className="px-4 pt-4 pb-3 flex items-center justify-between z-10 bg-[#FAF8F3]">
+            <header className="px-4 pt-4 pb-3 flex items-center justify-between z-10 bg-[#FAF8F3] lg:hidden">
                 <div className="flex items-center gap-2">
                     <h1 className="text-[20px] font-black italic text-zinc-900 font-['Joti_One']">BoardBuddy</h1>
                 </div>
@@ -165,7 +167,7 @@ export default function Home({
                         onClick={onDashboardClick}
                         className="text-xs font-black bg-[#162660] text-white px-3 py-1.5 rounded-full hover:bg-blue-900 transition-colors shadow-sm flex items-center gap-1"
                     >
-                        <Sparkles className="w-3 h-3" /> 소모임 관리자
+                        <Sparkles className="w-3 h-3" /> 운영 센터
                     </button>
                 )}
             </header>
@@ -206,6 +208,28 @@ export default function Home({
                         </div>
                     )}
                 </div>
+
+                {isWinter && hasCrew && (
+                    <section className="px-4">
+                        <button
+                            onClick={onMakeReservationClick}
+                            className="w-full border-0 bg-[#162660] p-4 text-left text-white shadow-sm transition-colors hover:bg-[#0f1b48] cursor-pointer rounded-2xl"
+                        >
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-3">
+                                    <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/10">
+                                        <CalendarIcon className="h-5 w-5 text-blue-100" />
+                                    </span>
+                                    <span>
+                                        <span className="block text-sm font-black">겨울 예약</span>
+                                        <span className="mt-0.5 block text-xs text-blue-100">예약하기와 내 예약 현황을 확인합니다.</span>
+                                    </span>
+                                </div>
+                                <ChevronRight className="h-5 w-5 text-blue-200" />
+                            </div>
+                        </button>
+                    </section>
+                )}
 
                 {/* 1. My Plans Shortcut Card */}
                 {myPlansCount > 0 && (

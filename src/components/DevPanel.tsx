@@ -1,7 +1,11 @@
 import { useState } from 'react';
 import { Sliders, Check, RefreshCw, X, AlertTriangle } from 'lucide-react';
 
-export default function DevPanel() {
+interface DevPanelProps {
+    onOpenCrewAdmin: () => void;
+}
+
+export default function DevPanel({ onOpenCrewAdmin }: DevPanelProps) {
     const [isOpen, setIsOpen] = useState(false);
 
     // Read current overrides
@@ -129,6 +133,15 @@ export default function DevPanel() {
                     </div>
 
                     {/* Action buttons */}
+                    <button
+                        onClick={() => {
+                            setIsOpen(false);
+                            onOpenCrewAdmin();
+                        }}
+                        className="w-full bg-white hover:bg-zinc-50 text-zinc-800 text-xs font-bold py-2.5 rounded-xl transition-all cursor-pointer border border-zinc-300"
+                    >
+                        Manage crews
+                    </button>
                     <button
                         onClick={handleApply}
                         className="w-full bg-[#162660] hover:bg-blue-900 text-white text-xs font-bold py-2.5 rounded-xl shadow-sm transition-all flex items-center justify-center gap-1 cursor-pointer border-none"
