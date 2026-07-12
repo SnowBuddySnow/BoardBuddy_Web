@@ -15,7 +15,6 @@ export interface AdminCrew {
     dailyCapacity: number;
     capacityLimited: boolean;
     reservationPeriodLimitDays: number;
-    kusbfAssociated: boolean;
     reservationOpenDay: string | null;
     reservationOpenTime: string | null;
     reservationOpenOffsetDays: number | null;
@@ -30,12 +29,11 @@ export interface AdminCrewData {
 
 export interface CreateCrewRequest {
     name: string;
-    schoolId: number;
+    schoolId: number | null;
     pin: string;
     dailyCapacity: number;
     capacityLimited: boolean;
     reservationPeriodLimitDays: number;
-    kusbfAssociated: boolean;
     reservationOpenDay: string | null;
     reservationOpenTime: string | null;
     reservationOpenOffsetDays: number | null;

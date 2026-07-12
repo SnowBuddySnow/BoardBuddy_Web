@@ -37,7 +37,6 @@ export default function CrewAdmin({ onBack }: CrewAdminProps) {
     const [dailyCapacity, setDailyCapacity] = useState('8');
     const [periodLimit, setPeriodLimit] = useState('7');
     const [capacityLimited, setCapacityLimited] = useState(true);
-    const [kusbfAssociated, setKusbfAssociated] = useState(true);
     const [openingEnabled, setOpeningEnabled] = useState(false);
     const [openingDay, setOpeningDay] = useState('FRIDAY');
     const [openingTime, setOpeningTime] = useState('18:00');
@@ -50,7 +49,6 @@ export default function CrewAdmin({ onBack }: CrewAdminProps) {
             const data = await getCrewAdminData();
             setCrews(data.crews);
             setSchools(data.schools);
-            setSchoolId((current) => current || String(data.schools[0]?.id || ''));
         } catch (loadError) {
             setError(getErrorMessage(loadError));
         } finally {
@@ -64,19 +62,18 @@ export default function CrewAdmin({ onBack }: CrewAdminProps) {
 
     const handleSubmit = async (event: FormEvent) => {
         event.preventDefault();
-        if (!schoolId || !/^\d{4}$/.test(pin)) return;
+        if (!/^\d{4}$/.test(pin)) return;
 
         setSaving(true);
         setError('');
         try {
             const crew = await createCrew({
                 name: name.trim(),
-                schoolId: Number(schoolId),
+                schoolId: schoolId ? Number(schoolId) : null,
                 pin,
                 dailyCapacity: Number(dailyCapacity),
                 capacityLimited,
                 reservationPeriodLimitDays: Number(periodLimit),
-                kusbfAssociated,
                 reservationOpenDay: openingEnabled ? openingDay : null,
                 reservationOpenTime: openingEnabled ? openingTime : null,
                 reservationOpenOffsetDays: openingEnabled ? Number(openingOffset) : null,
@@ -119,7 +116,8 @@ export default function CrewAdmin({ onBack }: CrewAdminProps) {
 
                     <label className="block text-sm font-medium">
                         소속 학교
-                        <select required value={schoolId} onChange={(event) => setSchoolId(event.target.value)} className={`${inputClass} mt-1`}>
+                        <select value={schoolId} onChange={(event) => setSchoolId(event.target.value)} className={`${inputClass} mt-1`}>
+                            <option value="">학교 미연계</option>
                             {schools.map((school) => <option key={school.id} value={school.id}>{school.name}</option>)}
                         </select>
                     </label>
@@ -142,7 +140,6 @@ export default function CrewAdmin({ onBack }: CrewAdminProps) {
 
                     <div className="space-y-2 text-sm">
                         <label className="flex items-center gap-2"><input type="checkbox" checked={capacityLimited} onChange={(event) => setCapacityLimited(event.target.checked)} /> 일일 정원 제한 사용</label>
-                        <label className="flex items-center gap-2"><input type="checkbox" checked={kusbfAssociated} onChange={(event) => setKusbfAssociated(event.target.checked)} /> KUSBF 소속 크루</label>
                         <label className="flex items-center gap-2"><input type="checkbox" checked={openingEnabled} onChange={(event) => setOpeningEnabled(event.target.checked)} /> 예약 오픈 시간 설정</label>
                     </div>
 
