@@ -12,6 +12,7 @@ import {
     saveTempAccessToken,
 } from '../lib/session';
 import { confirmPhoneVerification, requestPhoneVerification } from '../services/phoneVerification';
+import { getSchools, type SchoolOption } from '../services/schools';
 import type { SignupUserType } from './UserTypeSelection';
 
 interface UserInfoInputProps {
@@ -20,14 +21,14 @@ interface UserInfoInputProps {
     onSuccess?: () => void;
 }
 
-const SCHOOL_DATA = [
-    { name: '홍익대학교', aliases: ['홍대', 'hongik university', 'hongik'] },
-    { name: '충남대학교', aliases: ['충남대', '충대', 'chungnam national university', 'chungnam', 'cnu'] },
-    { name: '카이스트', aliases: ['한국과학기술원', 'kaist'] },
-    { name: '세종대학교', aliases: ['세종대', 'sejong university', 'sejong'] },
-    { name: '이화여자대학교', aliases: ['이대', 'ewha womans university', 'ewha'] },
-    { name: '숙명여자대학교', aliases: ['숙대', 'sookmyung womens university', 'sookmyung'] },
-];
+const SCHOOL_ALIASES: Record<string, string[]> = {
+    '홍익대학교': ['홍대', 'hongik university', 'hongik'],
+    '충남대학교': ['충남대', '충대', 'chungnam national university', 'chungnam', 'cnu'],
+    '카이스트': ['한국과학기술원', 'kaist'],
+    '세종대학교': ['세종대', 'sejong university', 'sejong'],
+    '이화여자대학교': ['이대', 'ewha womans university', 'ewha'],
+    '숙명여자대학교': ['숙대', 'sookmyung womens university', 'sookmyung'],
+};
 
 // DEV PHONE BYPASS: Vite removes this path from production builds because import.meta.env.DEV is false.
 // Delete this constant, the skip handler, and the development-only button to restore verification-only UI.
@@ -93,7 +94,8 @@ export default function UserInfoInput({ userType, onBack, onSuccess }: UserInfoI
     const [isLoading, setIsLoading] = useState(false);
 
     // School Search State
-    const [filteredSchools, setFilteredSchools] = useState<{ name: string; aliases: string[] }[]>([]);
+    const [schools, setSchools] = useState<SchoolOption[]>([]);
+    const [filteredSchools, setFilteredSchools] = useState<SchoolOption[]>([]);
     const [showSchoolDropdown, setShowSchoolDropdown] = useState(false);
     const schoolInputRef = useRef<HTMLDivElement>(null);
 
@@ -108,6 +110,18 @@ export default function UserInfoInput({ userType, onBack, onSuccess }: UserInfoI
         return () => {
             document.removeEventListener('mousedown', handleClickOutside);
         };
+    }, []);
+
+    useEffect(() => {
+        let cancelled = false;
+        getSchools()
+            .then((data) => {
+                if (!cancelled) setSchools(data);
+            })
+            .catch(() => {
+                if (!cancelled) alert('학교 목록을 불러오지 못했습니다. 잠시 후 다시 시도해주세요.');
+            });
+        return () => { cancelled = true; };
     }, []);
 
     const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -209,9 +223,9 @@ export default function UserInfoInput({ userType, onBack, onSuccess }: UserInfoI
         }
 
         const lowerValue = value.toLowerCase();
-        const filtered = SCHOOL_DATA.filter(item =>
+        const filtered = schools.filter(item =>
             item.name.toLowerCase().includes(lowerValue) ||
-            item.aliases.some(alias => alias.includes(lowerValue))
+            (SCHOOL_ALIASES[item.name] || []).some(alias => alias.includes(lowerValue))
         );
 
         setFilteredSchools(filtered);
@@ -246,16 +260,8 @@ export default function UserInfoInput({ userType, onBack, onSuccess }: UserInfoI
             return;
         }
 
-        const SCHOOL_ID_MAP: Record<string, number> = {
-            '홍익대학교': 1,
-            '충남대학교': 2,
-            '카이스트': 3,
-            '세종대학교': 4,
-            '이화여자대학교': 5,
-            '숙명여자대학교': 6,
-        };
-
-        if (userType === 'KUSBF' && !SCHOOL_ID_MAP[school]) {
+        const selectedSchool = schools.find((item) => item.name === school);
+        if (userType === 'KUSBF' && !selectedSchool) {
             alert('검색 결과에서 학교를 선택해주세요.');
             return;
         }
@@ -272,7 +278,7 @@ export default function UserInfoInput({ userType, onBack, onSuccess }: UserInfoI
                 return;
             }
 
-            const schoolId = school ? SCHOOL_ID_MAP[school] : undefined;
+            const schoolId = selectedSchool?.id;
 
             const response = await apiClient.put(`/accounts/${accountId}/profile`, {
                 userType,
@@ -386,8 +392,8 @@ export default function UserInfoInput({ userType, onBack, onSuccess }: UserInfoI
                                             onClick={() => handleSchoolSelect(item.name)}
                                         >
                                             <span className="font-bold">{item.name}</span>
-                                            {item.aliases.length > 0 && (
-                                                <span className="text-zinc-400 text-xs ml-2">({item.aliases[0]})</span>
+                                            {(SCHOOL_ALIASES[item.name] || []).length > 0 && (
+                                                <span className="text-zinc-400 text-xs ml-2">({SCHOOL_ALIASES[item.name][0]})</span>
                                             )}
                                         </button>
                                     ))}

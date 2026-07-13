@@ -40,6 +40,11 @@ export interface CreateCrewRequest {
     profileImageUrl: string | null;
 }
 
+export const createSchool = async (name: string): Promise<AdminSchool> => {
+    const response = await apiClient.post<ApiResponse<AdminSchool>>('/admin/crews/schools', { name });
+    return response.data.data;
+};
+
 export const getCrewAdminData = async (): Promise<AdminCrewData> => {
     const response = await apiClient.get<ApiResponse<AdminCrewData>>('/admin/crews');
     return response.data.data;
