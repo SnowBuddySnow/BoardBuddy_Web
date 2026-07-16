@@ -23,6 +23,7 @@ export type DesktopDestination =
 interface DesktopShellProps {
   activeDestination: DesktopDestination;
   canManage: boolean;
+  availableEventCount?: number;
   children: ReactNode;
   onNavigate: (destination: DesktopDestination) => void;
 }
@@ -40,6 +41,7 @@ const primaryItems = [
 export default function DesktopShell({
   activeDestination,
   canManage,
+  availableEventCount = 0,
   children,
   onNavigate,
 }: DesktopShellProps) {
@@ -70,7 +72,14 @@ export default function DesktopShell({
                 }`}
               >
                 <Icon className="h-4.5 w-4.5" />
-                {label}
+                <span className="min-w-0 flex-1">{label}</span>
+                {id === 'parties' && availableEventCount > 0 && (
+                  <span className={`flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[10px] font-black ${
+                    active ? 'bg-white text-[#162660]' : 'bg-rose-500 text-white'
+                  }`}>
+                    {availableEventCount > 99 ? '99+' : availableEventCount}
+                  </span>
+                )}
               </button>
             );
           })}

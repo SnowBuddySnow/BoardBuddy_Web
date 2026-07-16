@@ -76,6 +76,11 @@ export default function Parties({ onBack, onEventClick, onCreateClick, canCreate
     };
 
     const activityTags = ['ALL', ...EVENT_ACTIVITY_OPTIONS.map(option => option.value)];
+    const availableEventCount = parties.filter(event => (
+        event.status === 'OPEN'
+        && new Date(event.startsAt).getTime() > Date.now()
+        && (event.joinedCount || 0) < event.capacity
+    )).length;
 
     const filteredParties = parties.filter(event => {
         const matchesSearch = event.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -96,7 +101,10 @@ export default function Parties({ onBack, onEventClick, onCreateClick, canCreate
                 <Button variant="ghost" onClick={onBack} className="-ml-2 gap-1 text-zinc-800 hover:bg-transparent">
                     <ChevronLeft className="w-6 h-6" />
                 </Button>
-                <h1 className="text-lg font-bold text-zinc-900">소모임 둘러보기</h1>
+                <div className="text-center">
+                    <h1 className="text-lg font-bold text-zinc-900">소모임 둘러보기</h1>
+                    <p className="text-[11px] font-bold text-zinc-500">현재 참가 가능 {availableEventCount}개</p>
+                </div>
                 <div className="w-10">
                     {canCreate && onCreateClick && (
                         <button

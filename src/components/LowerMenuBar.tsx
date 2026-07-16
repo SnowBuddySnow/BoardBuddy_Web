@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { cn } from '../lib/utils';
 import { Button } from './Button'; // Import Button
-import { Menu, X } from 'lucide-react'; // Import Lucide icons
+import { Menu, Sparkles, X } from 'lucide-react'; // Import Lucide icons
 
 type IconProps = React.SVGProps<SVGSVGElement>;
 
@@ -104,19 +104,22 @@ const UserIcon = ({ className, ...props }: IconProps) => (
 
 interface LowerMenuBarProps {
   className?: string;
-  activeTab?: 'home' | 'calendar' | 'edit' | 'heart' | 'user';
-  onTabChange?: (tab: 'home' | 'calendar' | 'edit' | 'heart' | 'user') => void;
+  activeTab?: 'home' | 'events' | 'calendar' | 'edit' | 'heart' | 'user';
+  availableEventCount?: number;
+  onTabChange?: (tab: 'home' | 'events' | 'calendar' | 'edit' | 'heart' | 'user') => void;
 }
 
 export const LowerMenuBar = ({
   className,
   activeTab = 'home',
+  availableEventCount = 0,
   onTabChange,
 }: LowerMenuBarProps) => {
   const [isExpanded, setIsExpanded] = useState(false);
 
   const menuItems = [
     { id: 'home', icon: HomeIcon, label: 'Home' },
+    { id: 'events', icon: Sparkles, label: 'Events' },
     { id: 'calendar', icon: CalendarIcon, label: 'Reservation Calendar' },
     { id: 'edit', icon: EditIcon, label: 'Make Reservation' },
     { id: 'heart', icon: HeartIcon, label: 'My Crew' },
@@ -161,7 +164,14 @@ export const LowerMenuBar = ({
               )}
               aria-label={item.label}
             >
-              <Icon className="w-6 h-6" />
+              <span className="relative flex h-6 w-6 items-center justify-center">
+                <Icon className="w-6 h-6" />
+                {item.id === 'events' && availableEventCount > 0 && (
+                  <span className="absolute -right-2.5 -top-2 flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-500 px-1 text-[9px] font-black leading-none text-white ring-2 ring-white">
+                    {availableEventCount > 99 ? '99+' : availableEventCount}
+                  </span>
+                )}
+              </span>
             </Button>
           );
         })}

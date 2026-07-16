@@ -39,8 +39,9 @@ import { getUserInfo } from './services/user';
 import { getMyApplications } from './services/crew';
 import { useDesktopViewport } from './hooks/useDesktopViewport';
 import { getOperatingSeason } from './constants/operatingSeason';
+import { listParties } from './services/event';
 
-type Tab = 'home' | 'calendar' | 'edit' | 'heart' | 'user';
+type Tab = 'home' | 'events' | 'calendar' | 'edit' | 'heart' | 'user';
 type View =
   | 'login'
   | 'home'
@@ -73,8 +74,8 @@ type View =
 
 const viewTabs: Partial<Record<View, Tab>> = {
   home: 'home',
-  parties: 'home',
-  event_detail: 'home',
+  parties: 'events',
+  event_detail: 'events',
   my_parties: 'home',
   my_reservations: 'calendar',
   reservation: 'edit',
@@ -89,6 +90,7 @@ const viewTabs: Partial<Record<View, Tab>> = {
 
 const tabViews: Record<Tab, View> = {
   home: 'home',
+  events: 'parties',
   calendar: 'my_reservations',
   edit: 'reservation',
   heart: 'crew_detail',
@@ -129,6 +131,7 @@ function App() {
   const [canManage, setCanManage] = useState(false);
   const [operationPermissions, setOperationPermissions] = useState<OperationPermission[]>([]);
   const [managementAccessResolved, setManagementAccessResolved] = useState(false);
+  const [availableEventCount, setAvailableEventCount] = useState(0);
   const isDesktop = useDesktopViewport();
   const usedDesktopLanding = useRef(false);
   const shouldLoadPermissions = !['login', 'user_type', 'user_info'].includes(currentView);
@@ -164,6 +167,30 @@ function App() {
     void loadCrewAccess();
     return () => { cancelled = true; };
   }, [shouldLoadPermissions]);
+
+  useEffect(() => {
+    if (!shouldLoadPermissions) {
+      setAvailableEventCount(0);
+      return;
+    }
+
+    let cancelled = false;
+    listParties()
+      .then((events) => {
+        if (cancelled) return;
+        const currentTime = Date.now();
+        setAvailableEventCount(events.filter((event) => (
+          event.status === 'OPEN'
+          && new Date(event.startsAt).getTime() > currentTime
+          && (event.joinedCount || 0) < event.capacity
+        )).length);
+      })
+      .catch(() => {
+        if (!cancelled) setAvailableEventCount(0);
+      });
+
+    return () => { cancelled = true; };
+  }, [currentView, shouldLoadPermissions]);
 
   useEffect(() => {
     if (!shouldLoadPermissions) {
@@ -456,6 +483,7 @@ function App() {
           <DesktopShell
             activeDestination={getDesktopDestination()}
             canManage={canManage}
+            availableEventCount={availableEventCount}
             onNavigate={handleDesktopNavigate}
           >
             {currentContent}
@@ -472,6 +500,7 @@ function App() {
         {showBottomNav && !isDesktop && (
           <LowerMenuBar
             activeTab={activeTab}
+            availableEventCount={availableEventCount}
             onTabChange={(tab) => {
               setCurrentView(tabViews[tab]);
             }}

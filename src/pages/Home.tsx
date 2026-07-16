@@ -140,16 +140,9 @@ export default function Home({
 
     // Filter logic for sections
     const nowTime = new Date();
-    const oneWeekLater = new Date(nowTime.getTime() + 7 * 24 * 60 * 60 * 1000);
-
-    const thisWeekParties = parties.filter(p => {
-        const start = new Date(p.startsAt);
-        return start >= nowTime && start <= oneWeekLater;
-    });
-
     const upcomingParties = parties.filter(p => {
         const start = new Date(p.startsAt);
-        return start > nowTime;
+        return start > nowTime && (p.joinedCount || 0) < p.capacity;
     }).sort((a, b) => new Date(a.startsAt).getTime() - new Date(b.startsAt).getTime());
 
     // Nearest upcoming open small gathering serves as the featured item.
@@ -363,9 +356,18 @@ export default function Home({
                 {/* 2. Featured Small Gathering (Hero Card) */}
                 {featuredEvent ? (
                     <section className="px-4 space-y-2.5">
-                        <h2 className="text-base font-black text-zinc-900 flex items-center gap-1.5">
-                            <Sparkles className="w-4 h-4 text-amber-500 fill-amber-500" /> 지금 참가할 크루 이벤트
-                        </h2>
+                        <div className="flex items-center justify-between">
+                            <h2 className="text-base font-black text-zinc-900 flex items-center gap-1.5">
+                                <Sparkles className="w-4 h-4 text-amber-500 fill-amber-500" /> 지금 참가할 크루 이벤트
+                            </h2>
+                            <button
+                                type="button"
+                                onClick={onSeeAllPartiesClick}
+                                className="flex items-center gap-0.5 border-0 bg-transparent text-xs font-black text-[#162660]"
+                            >
+                                참가 가능 {upcomingParties.length}개 <ChevronRight className="h-3.5 w-3.5" />
+                            </button>
+                        </div>
                         <div
                             onClick={() => onEventClick(featuredEvent.id)}
                             className="bg-white border border-zinc-100 rounded-3xl p-5 shadow-sm hover:shadow-md transition-all active:scale-[0.99] cursor-pointer flex flex-col justify-between min-h-[180px]"
@@ -421,73 +423,6 @@ export default function Home({
                         </div>
                     </section>
                 ) : null}
-
-                {/* 3. This Week Timeline */}
-                {thisWeekParties.length > 0 && (
-                    <section className="px-4 space-y-2.5">
-                        <div className="flex items-center justify-between">
-                            <h2 className="text-base font-black text-zinc-900">이번 주 이벤트</h2>
-                        </div>
-                        <div className="space-y-3">
-                            {thisWeekParties.slice(0, 3).map(event => (
-                                <div
-                                    key={event.id}
-                                    onClick={() => onEventClick(event.id)}
-                                    className="bg-white border border-zinc-50 rounded-2xl p-4 flex items-center justify-between hover:shadow-sm transition-all active:scale-[0.99] cursor-pointer"
-                                >
-                                    <div className="space-y-1 pr-4">
-                                        <PlanningModeBadge mode={event.planningMode} />
-                                        <h3 className="text-sm font-bold text-zinc-900 truncate max-w-[200px]">{event.title}</h3>
-                                        <div className="flex items-center gap-2 text-xs text-zinc-400 font-semibold">
-                                            <span>{formatEventDate(event.startsAt)}</span>
-                                            <span>•</span>
-                                            <span className="truncate max-w-[100px]">{event.locationName || '추후 협의'}</span>
-                                        </div>
-                                    </div>
-                                    <ChevronRight className="w-4 h-4 text-zinc-300 shrink-0" />
-                                </div>
-                            ))}
-                        </div>
-                    </section>
-                )}
-
-                {/* 4. Upcoming / All joinable parties */}
-                {upcomingParties.length > 0 && (
-                    <section className="px-4 space-y-2.5">
-                        <div className="flex items-center justify-between">
-                            <h2 className="text-base font-black text-zinc-900">다가오는 액티비티</h2>
-                            <button
-                                onClick={onSeeAllPartiesClick}
-                                className="text-xs font-bold text-[#162660] hover:underline flex items-center gap-0.5 bg-transparent border-none"
-                            >
-                                전체 보기 <ChevronRight className="w-3.5 h-3.5" />
-                            </button>
-                        </div>
-                        <div className="space-y-3">
-                            {upcomingParties.slice(0, 5).map(event => (
-                                <div
-                                    key={event.id}
-                                    onClick={() => onEventClick(event.id)}
-                                    className="bg-white border border-zinc-100 rounded-2xl p-4.5 hover:shadow-sm transition-all active:scale-[0.99] cursor-pointer flex flex-col justify-between"
-                                >
-                                    <div className="flex items-start justify-between gap-4">
-                                        <div className="space-y-1">
-                                            <h3 className="text-sm font-bold text-zinc-900 leading-tight">
-                                                {event.title}
-                                            </h3>
-                                            <div className="text-xs text-zinc-400 font-bold uppercase tracking-wider">
-                                                {getEventActivityLabel(event.activityType)} · 주최 {event.organizerGroupName}
-                                            </div>
-                                        </div>
-                                        <span className="text-xs text-zinc-500 font-bold shrink-0">
-                                            {event.joinedCount || 0}/{event.capacity}명
-                                        </span>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    </section>
-                )}
 
                 {/* Legacy Actions / Reservations (Kept at the bottom as optional helper entry points) */}
                 {hasCrew && !seasonHouseUnavailable && (
