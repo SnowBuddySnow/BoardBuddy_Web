@@ -14,6 +14,8 @@ interface DashboardEventNewProps {
     onSuccess: (eventId: number) => void;
 }
 
+const createAnonymousEventTitle = () => `소모임#${String(Math.floor(Math.random() * 10_000)).padStart(4, '0')}`;
+
 export default function DashboardEventNew({ onBack, onSuccess }: DashboardEventNewProps) {
     const [groups, setGroups] = useState<OrganizerGroup[]>([]);
     const [groupsLoading, setGroupsLoading] = useState(true);
@@ -21,6 +23,7 @@ export default function DashboardEventNew({ onBack, onSuccess }: DashboardEventN
 
     // Form states
     const [title, setTitle] = useState('');
+    const [anonymousEvent, setAnonymousEvent] = useState(false);
     const [description, setDescription] = useState('');
     const [activityType, setActivityType] = useState<EventActivityType>('OTHER');
     const [planningMode, setPlanningMode] = useState<EventPlanningMode>('MANAGER_PLANNED');
@@ -53,6 +56,27 @@ export default function DashboardEventNew({ onBack, onSuccess }: DashboardEventN
         };
         fetchGroups();
     }, []);
+
+    const handlePlanningModeChange = (mode: EventPlanningMode) => {
+        setPlanningMode(mode);
+        if (mode === 'MEMBER_PLANNED') {
+            const anonymousTitle = createAnonymousEventTitle();
+            setAnonymousEvent(true);
+            setTitle(anonymousTitle);
+        } else {
+            if (anonymousEvent) {
+                setTitle('');
+            }
+            setAnonymousEvent(false);
+        }
+    };
+
+    const handleAnonymousEventChange = (enabled: boolean) => {
+        setAnonymousEvent(enabled);
+        if (enabled) {
+            setTitle(createAnonymousEventTitle());
+        }
+    };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -144,7 +168,7 @@ export default function DashboardEventNew({ onBack, onSuccess }: DashboardEventN
                     </div>
                 ) : (
                     <form onSubmit={handleSubmit} className="bg-white border border-zinc-100 rounded-3xl p-6 shadow-sm space-y-6">
-                        <PlanningModeSelector value={planningMode} onChange={setPlanningMode} />
+                        <PlanningModeSelector value={planningMode} onChange={handlePlanningModeChange} />
                         {/* Organizer Group Selection */}
                         <div className="space-y-1.5">
                             <label className="text-xs font-bold text-zinc-400 uppercase tracking-wider">주최 그룹 *</label>
@@ -163,13 +187,29 @@ export default function DashboardEventNew({ onBack, onSuccess }: DashboardEventN
 
                         {/* Title */}
                         <div className="space-y-1.5">
-                            <label className="text-xs font-bold text-zinc-400 uppercase tracking-wider">소모임 제목 *</label>
+                            <div className="flex items-center justify-between gap-3">
+                                <label className="text-xs font-bold text-zinc-400 uppercase tracking-wider">소모임 제목 *</label>
+                                {planningMode === 'MEMBER_PLANNED' && (
+                                    <label className="flex cursor-pointer items-center gap-2 text-xs font-bold text-zinc-600">
+                                        <input
+                                            type="checkbox"
+                                            checked={anonymousEvent}
+                                            onChange={event => handleAnonymousEventChange(event.target.checked)}
+                                            className="h-4 w-4 accent-[#162660]"
+                                        />
+                                        이름없는소모임생성
+                                    </label>
+                                )}
+                            </div>
                             <input
                                 type="text"
-                                placeholder="예: Summer Beach Skate & Surf"
+                                placeholder={anonymousEvent ? '소모임#0000' : '예: Summer Beach Skate & Surf'}
                                 value={title}
                                 onChange={e => setTitle(e.target.value)}
-                                className="w-full px-4 py-2.5 bg-white border border-zinc-200 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-[#162660]/20 text-zinc-800"
+                                readOnly={anonymousEvent}
+                                className={`w-full px-4 py-2.5 border rounded-2xl text-sm text-zinc-800 ${anonymousEvent
+                                    ? 'cursor-default border-zinc-200 bg-zinc-50'
+                                    : 'bg-white border-zinc-200 focus:outline-none focus:ring-2 focus:ring-[#162660]/20'}`}
                                 required
                             />
                         </div>
