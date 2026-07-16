@@ -11,6 +11,7 @@ export default function DevPanel({ onOpenCrewAdmin }: DevPanelProps) {
     // Read current overrides
     const [crewOverride, setCrewOverride] = useState(localStorage.getItem('dev_crew_override') || 'server');
     const [roleOverride, setRoleOverride] = useState(localStorage.getItem('dev_role_override') || 'server');
+    const [eventDataMode, setEventDataMode] = useState(localStorage.getItem('dev_event_data_mode') || 'server');
 
     const handleApply = () => {
         if (crewOverride === 'server') {
@@ -25,12 +26,19 @@ export default function DevPanel({ onOpenCrewAdmin }: DevPanelProps) {
             localStorage.setItem('dev_role_override', roleOverride);
         }
 
+        if (eventDataMode === 'server') {
+            localStorage.removeItem('dev_event_data_mode');
+        } else {
+            localStorage.setItem('dev_event_data_mode', eventDataMode);
+        }
+
         window.location.reload();
     };
 
     const handleClear = () => {
         localStorage.removeItem('dev_crew_override');
         localStorage.removeItem('dev_role_override');
+        localStorage.removeItem('dev_event_data_mode');
         window.location.reload();
     };
 
@@ -127,6 +135,35 @@ export default function DevPanel({ onOpenCrewAdmin }: DevPanelProps) {
                                         className="hidden"
                                     />
                                     {roleOverride === opt.id && <Check className="w-3.5 h-3.5" />}
+                                </label>
+                            ))}
+                        </div>
+                    </div>
+
+                    <div className="space-y-2">
+                        <h4 className="text-[10px] font-black uppercase tracking-wider text-zinc-400">이벤트 데이터</h4>
+                        <div className="space-y-1.5">
+                            {[
+                                { id: 'server', label: 'Use Real Server Data' },
+                                { id: 'sample_events', label: 'Use Sample Event Data' },
+                            ].map(opt => (
+                                <label
+                                    key={opt.id}
+                                    className={`flex items-center justify-between px-3 py-2 border rounded-xl text-xs font-bold cursor-pointer transition-all ${
+                                        eventDataMode === opt.id
+                                            ? 'bg-zinc-900 text-white border-zinc-900 shadow-sm'
+                                            : 'bg-zinc-50 text-zinc-600 border-zinc-200/60 hover:bg-zinc-100'
+                                    }`}
+                                >
+                                    <span>{opt.label}</span>
+                                    <input
+                                        type="radio"
+                                        name="dev_event_data_mode"
+                                        checked={eventDataMode === opt.id}
+                                        onChange={() => setEventDataMode(opt.id)}
+                                        className="hidden"
+                                    />
+                                    {eventDataMode === opt.id && <Check className="w-3.5 h-3.5" />}
                                 </label>
                             ))}
                         </div>

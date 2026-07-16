@@ -31,7 +31,6 @@ import DashboardGroups from './pages/DashboardGroups';
 import DashboardGroupDetail from './pages/DashboardGroupDetail';
 import OperationsCenter from './pages/OperationsCenter';
 import CrewPermissions from './pages/CrewPermissions';
-import EventConceptOptions from './pages/EventConceptOptions';
 import GuestAccess from './pages/GuestAccess';
 import DevPanel from './components/DevPanel';
 import { getAccessToken, hasDevOverride, isAutoLoginEnabled } from './lib/session';
@@ -70,15 +69,13 @@ type View =
   | 'dashboard_event_detail'
   | 'dashboard_event_edit'
   | 'dashboard_groups'
-  | 'dashboard_group_detail'
-  | 'event_concepts';
+  | 'dashboard_group_detail';
 
 const viewTabs: Partial<Record<View, Tab>> = {
   home: 'home',
   parties: 'home',
   event_detail: 'home',
   my_parties: 'home',
-  event_concepts: 'home',
   my_reservations: 'calendar',
   reservation: 'edit',
   guest_reservation: 'edit',
@@ -374,8 +371,6 @@ function App() {
             onCrewClick={() => setCurrentView('crew_permissions')}
           />
         );
-      case 'event_concepts':
-        return <EventConceptOptions onBack={() => setCurrentView('home')} onOpenParties={() => setCurrentView('parties')} />;
       case 'dashboard_parties':
         return (
           <DashboardParties
@@ -384,7 +379,6 @@ function App() {
             onViewDetailClick={(id) => openEventDetail(id, 'dashboard_event_detail')}
             onBackToHomeClick={() => setCurrentView('home')}
             onGroupsClick={() => setCurrentView('dashboard_groups')}
-            onConceptsClick={() => setCurrentView('event_concepts')}
           />
         );
       case 'dashboard_event_new':
@@ -439,7 +433,6 @@ function App() {
             onSeeAllPartiesClick={() => setCurrentView('parties')}
             onMyPlansClick={() => setCurrentView('my_parties')}
             onDashboardClick={() => setCurrentView('operations_center')}
-            onConceptsClick={() => setCurrentView('event_concepts')}
           />
         );
     }

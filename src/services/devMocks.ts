@@ -10,12 +10,13 @@ import {
     EventParticipant,
     UserDetail,
 } from '../types/api';
-import { getDevCrewOverride, getDevRoleOverride, hasDevOverride } from '../lib/session';
+import { getDevCrewOverride, getDevEventDataMode, getDevRoleOverride, hasDevOverride } from '../lib/session';
 import type { CreateEventPayload, UpdateEventPayload } from './event';
 
 const now = () => new Date().toISOString();
 
 const DEV_PARTIES_KEY = 'dev_parties_list';
+const DEV_SAMPLE_EVENTS_KEY = 'dev_sample_events_list';
 const DEV_GROUPS_KEY = 'dev_organizer_groups';
 const DEV_GROUP_INVITATIONS_KEY = 'dev_group_invitations';
 const devChatAccessKey = (eventId: number) => `dev_event_chat_access_${eventId}`;
@@ -48,16 +49,113 @@ export const getDevUser = (): UserDetail => {
     };
 };
 
+const normalizeDevEvents = (events: Event[]) => events.map(event => ({
+    ...event,
+    planningMode: event.planningMode || 'MANAGER_PLANNED',
+}));
+
+const sampleEvents = (): Event[] => [
+    {
+        id: 10001,
+        title: '한강 웨이크보드 체험 데이',
+        description: '장비 안내와 초보자 세션을 포함한 운영진 진행 행사입니다.',
+        activityType: 'WAKE',
+        planningMode: 'MANAGER_PLANNED',
+        startsAt: '2026-07-19T10:00:00',
+        endsAt: '2026-07-19T16:00:00',
+        locationName: '한강 잠원 수상레저',
+        locationAddress: '서울 서초구 잠원동',
+        capacity: 24,
+        crewMemberLimit: 4,
+        kusbfAssociated: true,
+        joinedCount: 16,
+        status: 'OPEN',
+        visibilityType: 'CREW_LIMITED',
+        joinPolicy: 'APPROVAL_REQUIRED',
+        organizerGroupId: 1,
+        organizerGroupName: '여름 수상 스포츠 운영진',
+        currentUserStatus: 'JOINED',
+        createdAt: '2026-07-01T10:00:00',
+        updatedAt: '2026-07-01T10:00:00',
+    },
+    {
+        id: 10002,
+        title: '소모임#0427',
+        description: '참가자가 함께 장소와 활동을 정하는 자율 소모임입니다.',
+        activityType: 'OTHER',
+        planningMode: 'MEMBER_PLANNED',
+        startsAt: '2026-07-20T14:00:00',
+        locationName: '',
+        locationAddress: '',
+        capacity: 8,
+        crewMemberLimit: null,
+        kusbfAssociated: true,
+        joinedCount: 5,
+        status: 'OPEN',
+        visibilityType: 'PUBLIC',
+        joinPolicy: 'INSTANT',
+        organizerGroupId: 1,
+        organizerGroupName: '여름 수상 스포츠 운영진',
+        currentUserStatus: 'NONE',
+        createdAt: '2026-07-03T10:00:00',
+        updatedAt: '2026-07-03T10:00:00',
+    },
+    {
+        id: 10003,
+        title: '여름 MT 사전 모임',
+        description: 'MT 일정과 준비물을 확정하는 크루 공동 행사입니다.',
+        activityType: 'MT',
+        planningMode: 'MANAGER_PLANNED',
+        startsAt: '2026-07-26T18:30:00',
+        endsAt: '2026-07-26T21:00:00',
+        locationName: '건대입구 회의실',
+        locationAddress: '서울 광진구 능동로',
+        capacity: 18,
+        crewMemberLimit: 2,
+        kusbfAssociated: true,
+        joinedCount: 12,
+        status: 'OPEN',
+        visibilityType: 'CREW_LIMITED',
+        joinPolicy: 'INSTANT',
+        organizerGroupId: 1,
+        organizerGroupName: '여름 수상 스포츠 운영진',
+        currentUserStatus: 'PENDING',
+        createdAt: '2026-07-05T10:00:00',
+        updatedAt: '2026-07-05T10:00:00',
+    },
+    {
+        id: 10004,
+        title: '서핑 원데이 클래스',
+        description: '정원 마감된 운영진 진행 서핑 클래스입니다.',
+        activityType: 'SURF',
+        planningMode: 'MANAGER_PLANNED',
+        startsAt: '2026-08-02T09:00:00',
+        endsAt: '2026-08-02T17:00:00',
+        locationName: '양양 죽도해변',
+        locationAddress: '강원특별자치도 양양군 현남면',
+        capacity: 12,
+        crewMemberLimit: 3,
+        kusbfAssociated: true,
+        joinedCount: 12,
+        status: 'CLOSED',
+        visibilityType: 'CREW_LIMITED',
+        joinPolicy: 'APPROVAL_REQUIRED',
+        organizerGroupId: 1,
+        organizerGroupName: '여름 수상 스포츠 운영진',
+        currentUserStatus: 'NONE',
+        createdAt: '2026-07-06T10:00:00',
+        updatedAt: '2026-07-06T10:00:00',
+    },
+];
+
 export const getDevParties = (): Event[] => {
-    const stored = localStorage.getItem(DEV_PARTIES_KEY);
+    const storageKey = getDevEventDataMode() === 'sample_events' ? DEV_SAMPLE_EVENTS_KEY : DEV_PARTIES_KEY;
+    const stored = localStorage.getItem(storageKey);
     if (stored) {
-        return (JSON.parse(stored) as Event[]).map(event => ({
-            ...event,
-            planningMode: event.planningMode || 'MANAGER_PLANNED',
-        }));
+        return normalizeDevEvents(JSON.parse(stored) as Event[]);
     }
 
-    const defaultParties: Event[] = [
+    const defaultParties: Event[] = getDevEventDataMode() === 'sample_events' ? sampleEvents() : [
         {
             id: 1,
             title: '용평 리조트 주말 카풀 & 보딩 소모임',
@@ -87,7 +185,8 @@ export const getDevParties = (): Event[] => {
 };
 
 export const saveDevParties = (parties: Event[]) => {
-    localStorage.setItem(DEV_PARTIES_KEY, JSON.stringify(parties));
+    const storageKey = getDevEventDataMode() === 'sample_events' ? DEV_SAMPLE_EVENTS_KEY : DEV_PARTIES_KEY;
+    localStorage.setItem(storageKey, JSON.stringify(parties));
 };
 
 export const getDevEvent = (eventId: number): Event => {
@@ -101,7 +200,7 @@ export const getDevEvent = (eventId: number): Event => {
 export const getDevEventChatAccess = (eventId: number): EventChatAccess => {
     const stored = localStorage.getItem(devChatAccessKey(eventId));
     if (stored) return JSON.parse(stored);
-    return eventId === 1
+    return eventId === 1 || eventId === 10001
         ? {
             chatUrl: 'https://open.kakao.com/o/example',
             chatPasscode: '2468',

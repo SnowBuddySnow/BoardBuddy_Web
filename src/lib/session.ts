@@ -6,6 +6,7 @@ export const SESSION_KEYS = {
     accountId: 'accountId',
     devCrewOverride: 'dev_crew_override',
     devRoleOverride: 'dev_role_override',
+    devEventDataMode: 'dev_event_data_mode',
 } as const;
 
 export const getAccessToken = () => localStorage.getItem(SESSION_KEYS.accessToken);
@@ -65,8 +66,15 @@ export const getDevCrewOverride = () => localStorage.getItem(SESSION_KEYS.devCre
 
 export const getDevRoleOverride = () => localStorage.getItem(SESSION_KEYS.devRoleOverride);
 
+export const getDevEventDataMode = () => localStorage.getItem(SESSION_KEYS.devEventDataMode);
+
 export const hasDevOverride = () => {
     const crewOverride = getDevCrewOverride();
     const roleOverride = getDevRoleOverride();
-    return Boolean((crewOverride && crewOverride !== 'server') || (roleOverride && roleOverride !== 'server'));
+    const eventDataMode = getDevEventDataMode();
+    return Boolean(
+        (crewOverride && crewOverride !== 'server')
+        || (roleOverride && roleOverride !== 'server')
+        || (eventDataMode && eventDataMode !== 'server'),
+    );
 };

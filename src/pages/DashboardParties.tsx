@@ -13,7 +13,6 @@ interface DashboardPartiesProps {
     onViewDetailClick: (eventId: number) => void;
     onBackToHomeClick: () => void;
     onGroupsClick: () => void;
-    onConceptsClick: () => void;
 }
 
 export default function DashboardParties({
@@ -21,8 +20,7 @@ export default function DashboardParties({
     onEditEventClick,
     onViewDetailClick,
     onBackToHomeClick,
-    onGroupsClick,
-    onConceptsClick
+    onGroupsClick
 }: DashboardPartiesProps) {
     const [parties, setParties] = useState<Event[]>([]);
     const [loading, setLoading] = useState(true);
@@ -138,12 +136,6 @@ export default function DashboardParties({
                             className="px-4 py-1.5 rounded-full text-zinc-500 hover:text-zinc-800 bg-transparent border-none cursor-pointer font-bold"
                         >
                             그룹 관리
-                        </button>
-                        <button
-                            onClick={onConceptsClick}
-                            className="px-4 py-1.5 rounded-full text-zinc-500 hover:text-zinc-800 bg-transparent border-none cursor-pointer font-bold"
-                        >
-                            옵션 샘플
                         </button>
                     </div>
                 </div>

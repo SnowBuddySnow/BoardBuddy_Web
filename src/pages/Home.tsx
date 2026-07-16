@@ -4,7 +4,7 @@ import { getCrewInfo, getMyApplications, withdrawCrewApplication } from '../serv
 import { listParties } from '../services/event';
 import { listOrganizerGroups } from '../services/organizerGroup';
 import { UserDetail, CrewDetail, MyApplication, Event } from '../types/api';
-import { Bus, Mountain, UserPlus, Sparkles, MapPin, Users, Calendar as CalendarIcon, ChevronRight, LayoutTemplate, Clock3, ShieldCheck, X, TentTree, CalendarHeart } from 'lucide-react';
+import { Bus, Mountain, UserPlus, Sparkles, MapPin, Users, Calendar as CalendarIcon, ChevronRight, Clock3, ShieldCheck, X, TentTree, CalendarHeart } from 'lucide-react';
 import { getWeather, WeatherData } from '../services/weather';
 import { PlanningModeBadge } from '../components/event/PlanningModeBadge';
 import { getEventActivityLabel } from '../constants/eventActivity';
@@ -33,7 +33,6 @@ interface HomeProps {
     onSeeAllPartiesClick: () => void;
     onMyPlansClick: () => void;
     onDashboardClick: () => void;
-    onConceptsClick: () => void;
 }
 
 export default function Home({
@@ -47,8 +46,7 @@ export default function Home({
     onEventClick,
     onSeeAllPartiesClick,
     onMyPlansClick,
-    onDashboardClick,
-    onConceptsClick
+    onDashboardClick
 }: HomeProps) {
     const [userInfo, setUserInfo] = useState<UserDetail | null>(null);
     const [crewDetail, setCrewDetail] = useState<CrewDetail | null>(null);
@@ -361,24 +359,6 @@ export default function Home({
                         </button>
                     </div>
                 )}
-
-                <section className="px-4">
-                    <button
-                        onClick={onConceptsClick}
-                        className="w-full bg-white border border-zinc-100 rounded-2xl p-4 flex items-center justify-between shadow-sm hover:shadow-md transition-all active:scale-[0.99] text-left"
-                    >
-                        <div className="flex items-center gap-3">
-                            <div className="p-2 bg-amber-50 border border-amber-100 rounded-xl text-amber-700">
-                                <LayoutTemplate className="w-4 h-4" />
-                            </div>
-                            <div>
-                                <h4 className="text-sm font-black text-zinc-900">소모임 옵션 샘플 보기</h4>
-                                <p className="text-xs text-zinc-500 mt-0.5">테스터 리뷰용 3가지 더미 화면</p>
-                            </div>
-                        </div>
-                        <ChevronRight className="w-5 h-5 text-zinc-300" />
-                    </button>
-                </section>
 
                 {/* 2. Featured Small Gathering (Hero Card) */}
                 {featuredEvent ? (
