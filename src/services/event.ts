@@ -68,6 +68,7 @@ export interface CreateEventPayload {
     description?: string;
     activityType?: string;
     planningMode: EventPlanningMode;
+    applicationStartsAt?: string | null;
     startsAt: string; // ISO string e.g. "2026-07-01T14:00:00"
     endsAt?: string;
     locationName?: string;

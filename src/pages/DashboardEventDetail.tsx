@@ -212,6 +212,12 @@ export default function DashboardEventDetail({ eventId, onBack, onEditClick }: D
                         <PlanningModeBadge mode={event.planningMode} />
                         <div className="grid grid-cols-2 gap-4 text-sm">
                             <div>
+                                <span className="text-zinc-400 font-bold block text-xs uppercase">신청 시작</span>
+                                <span className="font-bold text-zinc-800 mt-1 block">
+                                    {event.applicationStartsAt ? formatDate(event.applicationStartsAt) : '즉시 신청 가능'}
+                                </span>
+                            </div>
+                            <div>
                                 <span className="text-zinc-400 font-bold block text-xs uppercase">일시</span>
                                 <span className="font-bold text-zinc-800 mt-1 block">{formatDate(event.startsAt)}</span>
                             </div>

@@ -251,6 +251,7 @@ export interface Event {
     description: string;
     activityType: string;
     planningMode: EventPlanningMode;
+    applicationStartsAt?: string | null; // ISO LocalDateTime
     startsAt: string; // ISO LocalDateTime
     endsAt?: string; // ISO LocalDateTime
     locationName: string;

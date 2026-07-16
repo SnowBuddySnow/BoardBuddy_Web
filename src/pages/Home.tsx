@@ -142,7 +142,8 @@ export default function Home({
     const nowTime = new Date();
     const upcomingParties = parties.filter(p => {
         const start = new Date(p.startsAt);
-        return start > nowTime && (p.joinedCount || 0) < p.capacity;
+        const applicationStarted = !p.applicationStartsAt || new Date(p.applicationStartsAt) <= nowTime;
+        return start > nowTime && applicationStarted && (p.joinedCount || 0) < p.capacity;
     }).sort((a, b) => new Date(a.startsAt).getTime() - new Date(b.startsAt).getTime());
 
     // Nearest upcoming open small gathering serves as the featured item.

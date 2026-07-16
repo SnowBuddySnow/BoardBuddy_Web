@@ -79,6 +79,7 @@ export default function Parties({ onBack, onEventClick, onCreateClick, canCreate
     const availableEventCount = parties.filter(event => (
         event.status === 'OPEN'
         && new Date(event.startsAt).getTime() > Date.now()
+        && (!event.applicationStartsAt || new Date(event.applicationStartsAt).getTime() <= Date.now())
         && (event.joinedCount || 0) < event.capacity
     )).length;
 
@@ -168,6 +169,10 @@ export default function Parties({ onBack, onEventClick, onCreateClick, canCreate
                             const isFull = event.capacity <= (event.joinedCount || 0);
                             const hasJoined = event.currentUserStatus === 'JOINED';
                             const isPending = event.currentUserStatus === 'PENDING';
+                            const applicationNotOpen = Boolean(
+                                event.applicationStartsAt
+                                && new Date(event.applicationStartsAt).getTime() > Date.now(),
+                            );
 
                             return (
                                 <div
@@ -232,6 +237,10 @@ export default function Parties({ onBack, onEventClick, onCreateClick, canCreate
                                         ) : isPending ? (
                                             <span className="text-xs font-bold text-amber-600 px-3 py-1.5 bg-amber-50 rounded-full border border-amber-100 animate-pulse">
                                                 승인 대기
+                                            </span>
+                                        ) : applicationNotOpen ? (
+                                            <span className="text-xs font-bold text-amber-700 px-3 py-1.5 bg-amber-50 rounded-full border border-amber-100">
+                                                {formatDate(event.applicationStartsAt!)} 신청 시작
                                             </span>
                                         ) : isFull ? (
                                             <span className="text-xs font-bold text-zinc-400 px-3 py-1.5 bg-zinc-50 rounded-full border border-zinc-200/50">

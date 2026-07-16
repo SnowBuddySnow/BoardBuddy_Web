@@ -25,6 +25,7 @@ export default function DashboardEventEdit({ eventId, onBack, onSuccess }: Dashb
     const [description, setDescription] = useState('');
     const [activityType, setActivityType] = useState<EventActivityType>('OTHER');
     const [planningMode, setPlanningMode] = useState<EventPlanningMode>('MANAGER_PLANNED');
+    const [applicationStartsAt, setApplicationStartsAt] = useState('');
     const [startsAt, setStartsAt] = useState('');
     const [endsAt, setEndsAt] = useState('');
     const [locationName, setLocationName] = useState('');
@@ -63,6 +64,7 @@ export default function DashboardEventEdit({ eventId, onBack, onSuccess }: Dashb
                     return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
                 };
 
+                setApplicationStartsAt(formatForInput(eventData.applicationStartsAt || undefined));
                 setStartsAt(formatForInput(eventData.startsAt));
                 setEndsAt(formatForInput(eventData.endsAt));
                 setLocationName(eventData.locationName || '');
@@ -91,6 +93,9 @@ export default function DashboardEventEdit({ eventId, onBack, onSuccess }: Dashb
 
         if (!title.trim()) return alert('제목을 입력하세요.');
         if (!startsAt) return alert('시작 일시를 설정하세요.');
+        if (applicationStartsAt && new Date(applicationStartsAt) >= new Date(startsAt)) {
+            return alert('신청 시작 일시는 모임 시작 일시보다 빨라야 합니다.');
+        }
         if (capacity < 1) return alert('모집인원은 최소 1명 이상이어야 합니다.');
         if ((visibilityType === 'PUBLIC' || visibilityType === 'CREW_LIMITED')
             && crewMemberLimitEnabled
@@ -102,6 +107,9 @@ export default function DashboardEventEdit({ eventId, onBack, onSuccess }: Dashb
         // Format dates correctly (LocalDateTime format like YYYY-MM-DDTHH:MM:SS)
         const formattedStartsAt = startsAt.includes(':') && startsAt.split(':').length === 2 ? `${startsAt}:00` : startsAt;
         const formattedEndsAt = endsAt && endsAt.includes(':') && endsAt.split(':').length === 2 ? `${endsAt}:00` : endsAt;
+        const formattedApplicationStartsAt = applicationStartsAt && applicationStartsAt.includes(':') && applicationStartsAt.split(':').length === 2
+            ? `${applicationStartsAt}:00`
+            : applicationStartsAt;
 
         try {
             setSubmitLoading(true);
@@ -110,6 +118,7 @@ export default function DashboardEventEdit({ eventId, onBack, onSuccess }: Dashb
                 description: description || undefined,
                 activityType,
                 planningMode,
+                applicationStartsAt: formattedApplicationStartsAt || null,
                 startsAt: formattedStartsAt,
                 endsAt: formattedEndsAt || undefined,
                 locationName,
@@ -270,7 +279,17 @@ export default function DashboardEventEdit({ eventId, onBack, onSuccess }: Dashb
                         </div>
 
                         {/* Dates */}
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-3 gap-4">
+                            <div className="space-y-1.5">
+                                <label className="text-xs font-bold text-zinc-400 uppercase tracking-wider">신청 시작 일시</label>
+                                <input
+                                    type="datetime-local"
+                                    value={applicationStartsAt}
+                                    max={startsAt || undefined}
+                                    onChange={e => setApplicationStartsAt(e.target.value)}
+                                    className="w-full px-4 py-2.5 bg-white border border-zinc-200 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-[#162660]/20 text-zinc-800"
+                                />
+                            </div>
                             <div className="space-y-1.5">
                                 <label className="text-xs font-bold text-zinc-400 uppercase tracking-wider">시작 일시 *</label>
                                 <input

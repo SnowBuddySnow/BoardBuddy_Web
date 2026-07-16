@@ -182,6 +182,7 @@ function App() {
         setAvailableEventCount(events.filter((event) => (
           event.status === 'OPEN'
           && new Date(event.startsAt).getTime() > currentTime
+          && (!event.applicationStartsAt || new Date(event.applicationStartsAt).getTime() <= currentTime)
           && (event.joinedCount || 0) < event.capacity
         )).length);
       })

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Button } from '../components/Button';
 import { getEvent, getEventChatAccess, joinEvent, cancelEvent } from '../services/event';
 import { Event, EventChatAccess } from '../types/api';
-import { ChevronLeft, Calendar, MapPin, Users, Info, CheckCircle, ExternalLink, KeyRound, MessageCircle } from 'lucide-react';
+import { ChevronLeft, Calendar, Clock3, MapPin, Users, Info, CheckCircle, ExternalLink, KeyRound, MessageCircle } from 'lucide-react';
 import { getApiErrorMessage, getApiErrorStatus } from '../lib/apiError';
 import { PlanningModeBadge } from '../components/event/PlanningModeBadge';
 import { getEventActivityLabel } from '../constants/eventActivity';
@@ -20,6 +20,7 @@ export default function EventDetail({ eventId, onBack, isGuestApplication = fals
     const [actionLoading, setActionLoading] = useState(false);
     const [showPhoneConsentModal, setShowPhoneConsentModal] = useState(false);
     const [chatAccess, setChatAccess] = useState<EventChatAccess | null>(null);
+    const [currentTime, setCurrentTime] = useState(Date.now());
 
     const fetchEventDetail = async () => {
         try {
@@ -54,6 +55,14 @@ export default function EventDetail({ eventId, onBack, isGuestApplication = fals
     useEffect(() => {
         fetchEventDetail();
     }, [eventId]);
+
+    useEffect(() => {
+        if (!event?.applicationStartsAt) return;
+        const delay = new Date(event.applicationStartsAt).getTime() - Date.now();
+        if (delay <= 0) return;
+        const timeoutId = window.setTimeout(() => setCurrentTime(Date.now()), delay + 100);
+        return () => window.clearTimeout(timeoutId);
+    }, [event?.applicationStartsAt]);
 
     const handleJoinAction = async () => {
         if (!event) return;
@@ -161,6 +170,10 @@ export default function EventDetail({ eventId, onBack, isGuestApplication = fals
     const isFull = event.capacity <= (event.joinedCount || 0);
     const hasJoined = event.currentUserStatus === 'JOINED';
     const isPending = event.currentUserStatus === 'PENDING';
+    const applicationNotOpen = Boolean(
+        event.applicationStartsAt
+        && new Date(event.applicationStartsAt).getTime() > currentTime,
+    );
 
     return (
         <div className="flex-1 flex flex-col h-full overflow-hidden bg-[#FAF8F3] relative">
@@ -208,6 +221,16 @@ export default function EventDetail({ eventId, onBack, isGuestApplication = fals
                                 )}
                             </div>
                         </div>
+
+                        {event.applicationStartsAt && (
+                            <div className="flex items-start gap-3.5 border-t border-zinc-50 pt-4">
+                                <Clock3 className="w-5 h-5 text-[#162660] shrink-0 mt-0.5" />
+                                <div>
+                                    <h3 className="text-xs text-zinc-400 font-bold uppercase tracking-wider">신청 시작</h3>
+                                    <p className="text-sm font-bold text-zinc-800 mt-1">{formatDate(event.applicationStartsAt)}</p>
+                                </div>
+                            </div>
+                        )}
 
                         <div className="flex items-start gap-3.5 border-t border-zinc-50 pt-4">
                             <MapPin className="w-5 h-5 text-[#162660] shrink-0 mt-0.5" />
@@ -346,6 +369,10 @@ export default function EventDetail({ eventId, onBack, isGuestApplication = fals
                             신청 취소하기
                         </Button>
                     </div>
+                ) : applicationNotOpen ? (
+                    <Button disabled className="w-full h-12 bg-amber-100 border-amber-200 text-amber-800 rounded-full font-bold">
+                        {formatDate(event.applicationStartsAt!)} 신청 시작
+                    </Button>
                 ) : isFull ? (
                     <Button disabled className="w-full h-12 bg-zinc-300 border-zinc-300 text-zinc-500 rounded-full font-bold">
                         정원이 모두 찼습니다
