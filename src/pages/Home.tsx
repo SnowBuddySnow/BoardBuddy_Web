@@ -4,21 +4,12 @@ import { getCrewInfo, getMyApplications, withdrawCrewApplication } from '../serv
 import { listParties } from '../services/event';
 import { listOrganizerGroups } from '../services/organizerGroup';
 import { UserDetail, CrewDetail, MyApplication, Event } from '../types/api';
-import { Bus, Mountain, UserPlus, Sparkles, MapPin, Users, Calendar as CalendarIcon, ChevronRight, Clock3, ShieldCheck, X, TentTree, CalendarHeart } from 'lucide-react';
+import { Bus, Mountain, UserPlus, Sparkles, MapPin, Users, Calendar as CalendarIcon, ChevronRight, Clock3, ShieldCheck, X, TentTree, CalendarHeart, CloudSun, LockKeyhole } from 'lucide-react';
 import { getWeather, WeatherData } from '../services/weather';
 import { PlanningModeBadge } from '../components/event/PlanningModeBadge';
 import { getEventActivityLabel } from '../constants/eventActivity';
 import { getOperatingSeason } from '../constants/operatingSeason';
 import boardBuddyLogo from '../assets/boardbuddy-logo.png';
-
-const SnowflakeDecorIcon = ({ className }: { className?: string }) => (
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
-        <path d="M2 12h20" />
-        <path d="M12 2v20" />
-        <path d="m4.93 4.93 14.14 14.14" />
-        <path d="m4.93 19.07 14.14-14.14" />
-    </svg>
-);
 
 interface HomeProps {
     onMakeReservationClick: () => void;
@@ -196,7 +187,7 @@ export default function Home({
             </header>
 
             {/* Content Area */}
-            <main className="flex-1 overflow-y-auto pb-[110px] space-y-6">
+            <main className="flex-1 overflow-y-auto pb-[110px] space-y-5">
 
                 {/* Team Info / Host Metadata (De-emphasized compact row) */}
                 {(hasCrew && userInfo?.crew || pendingApplication) && (
@@ -303,180 +294,162 @@ export default function Home({
                     </div>
                 )}
 
-                {isWinter && hasCrew && !seasonHouseUnavailable && (
-                    <section className="px-4">
-                        <button
-                            onClick={onMakeReservationClick}
-                            className="w-full border-0 bg-[#162660] p-4 text-left text-white shadow-sm transition-colors hover:bg-[#0f1b48] cursor-pointer rounded-2xl"
-                        >
-                            <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-3">
-                                    <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/10">
-                                        <CalendarIcon className="h-5 w-5 text-blue-100" />
-                                    </span>
-                                    <span>
-                                        <span className="block text-sm font-black">겨울 예약</span>
-                                        <span className="mt-0.5 block text-xs text-blue-100">예약하기와 내 예약 현황을 확인합니다.</span>
-                                    </span>
-                                </div>
-                                <ChevronRight className="h-5 w-5 text-blue-200" />
-                            </div>
-                        </button>
-                    </section>
-                )}
-
-                {hasCrew && seasonHouseUnavailable && (
-                    <section className="px-4">
-                        <div className="rounded-2xl border border-zinc-200 bg-white px-4 py-4 text-center text-sm font-bold text-zinc-500 shadow-sm">
-                            현재 시즌방이 오픈되지 않았습니다.
-                        </div>
-                    </section>
-                )}
-
-                {/* 1. My Plans Shortcut Card */}
-                {myPlansCount > 0 && (
-                    <div className="px-4">
-                        <button
-                            onClick={onMyPlansClick}
-                            className="w-full bg-[#162660] text-white rounded-3xl p-4.5 flex items-center justify-between shadow-md hover:bg-blue-900 transition-all active:scale-[0.99] border-none"
-                        >
-                            <div className="flex items-center gap-3">
-                                <div className="p-2 bg-white/10 rounded-2xl">
-                                    <CalendarIcon className="w-5 h-5 text-blue-200" />
-                                </div>
-                                <div className="text-left">
-                                    <h4 className="text-sm font-bold">내가 참가한 모임</h4>
-                                    <p className="text-xs text-blue-200 mt-0.5">{myPlansCount}개의 참여 예정인 소모임 일정이 있습니다.</p>
-                                </div>
-                            </div>
-                            <ChevronRight className="w-5 h-5 text-blue-300" />
-                        </button>
-                    </div>
-                )}
-
-                {/* 2. Featured Small Gathering (Hero Card) */}
-                {featuredEvent ? (
-                    <section className="px-4 space-y-2.5">
-                        <div className="flex items-center justify-between">
-                            <h2 className="text-base font-black text-zinc-900 flex items-center gap-1.5">
-                                <Sparkles className="w-4 h-4 text-amber-500 fill-amber-500" /> 지금 참가할 크루 이벤트
-                            </h2>
-                            <button
-                                type="button"
-                                onClick={onSeeAllPartiesClick}
-                                className="flex items-center gap-0.5 border-0 bg-transparent text-xs font-black text-[#162660]"
-                            >
-                                참가 가능 {upcomingParties.length}개 <ChevronRight className="h-3.5 w-3.5" />
-                            </button>
-                        </div>
-                        <div
-                            onClick={() => onEventClick(featuredEvent.id)}
-                            className="bg-white border border-zinc-100 rounded-3xl p-5 shadow-sm hover:shadow-md transition-all active:scale-[0.99] cursor-pointer flex flex-col justify-between min-h-[180px]"
-                        >
-                            <div>
-                                <div className="flex items-center justify-between mb-2">
-                                    <div className="flex items-center gap-2">
-                                        <span className="text-[10px] uppercase font-black px-2.5 py-0.5 bg-amber-50 border border-amber-100 text-amber-800 rounded">
-                                            {getEventActivityLabel(featuredEvent.activityType)}
+                {hasCrew && (
+                    <>
+                        {isWinter && !seasonHouseUnavailable && (
+                            <section className="px-4">
+                                <button
+                                    type="button"
+                                    onClick={onMakeReservationClick}
+                                    className="flex w-full items-center justify-between rounded-2xl border-0 bg-[#162660] p-4 text-left text-white shadow-sm transition-colors hover:bg-[#0f1b48]"
+                                >
+                                    <span className="flex min-w-0 items-center gap-3">
+                                        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/10">
+                                            <CalendarIcon className="h-5 w-5 text-blue-100" />
                                         </span>
-                                        <PlanningModeBadge mode={featuredEvent.planningMode} />
-                                    </div>
-                                    {featuredEvent.organizerGroupName && (
-                                        <span className="text-xs text-zinc-400 font-semibold">
-                                            주최 {featuredEvent.organizerGroupName}
+                                        <span className="min-w-0">
+                                            <span className="block text-sm font-black">시즌방 예약</span>
+                                            <span className="mt-0.5 block truncate text-xs text-blue-100">예약 가능한 날짜와 현황을 확인하세요.</span>
                                         </span>
-                                    )}
-                                </div>
+                                    </span>
+                                    <ChevronRight className="h-5 w-5 shrink-0 text-blue-200" />
+                                </button>
+                            </section>
+                        )}
 
-                                <h3 className="text-lg font-bold text-zinc-900 mb-3 leading-snug">
-                                    {featuredEvent.title}
-                                </h3>
-
-                                <div className="space-y-1.5 text-xs text-zinc-500 mb-3 font-semibold">
-                                    <div className="flex items-center gap-1.5">
-                                        <CalendarIcon className="w-4 h-4 text-zinc-400 shrink-0" />
-                                        <span>{formatEventDate(featuredEvent.startsAt)}</span>
-                                    </div>
-                                    <div className="flex items-center gap-1.5">
-                                        <MapPin className="w-4 h-4 text-zinc-400 shrink-0" />
-                                        <span className="truncate">{featuredEvent.locationName || '참가 멤버와 추후 협의'}</span>
-                                    </div>
+                        <section className="space-y-2.5 px-4">
+                            <div className="flex items-end justify-between gap-3">
+                                <div>
+                                    <p className="text-[11px] font-black text-[#162660]">CREW EVENTS</p>
+                                    <h2 className="mt-0.5 text-base font-black text-zinc-900">지금 참여할 이벤트</h2>
                                 </div>
+                                <button
+                                    type="button"
+                                    onClick={onSeeAllPartiesClick}
+                                    className="flex shrink-0 items-center gap-0.5 border-0 bg-transparent text-xs font-black text-[#162660]"
+                                >
+                                    참가 가능 {upcomingParties.length}개 <ChevronRight className="h-3.5 w-3.5" />
+                                </button>
                             </div>
 
-                            <div className="flex items-center justify-between border-t border-zinc-50 pt-3.5 mt-1">
-                                <div className="flex items-center gap-1.5 text-xs font-bold text-zinc-600">
-                                    <Users className="w-4 h-4 text-zinc-400" />
-                                    <span>
-                                        {featuredEvent.joinedCount || 0}/{featuredEvent.capacity}명 참여
+                            {featuredEvent ? (
+                                <button
+                                    type="button"
+                                    onClick={() => onEventClick(featuredEvent.id)}
+                                    className="flex min-h-[160px] w-full flex-col justify-between rounded-2xl border border-zinc-200 bg-white p-5 text-left shadow-sm transition-all hover:border-zinc-300 hover:shadow-md active:scale-[0.99]"
+                                >
+                                    <span className="block w-full">
+                                        <span className="flex items-start justify-between gap-3">
+                                            <span className="flex min-w-0 flex-wrap items-center gap-1.5">
+                                                <span className="rounded bg-amber-50 px-2 py-1 text-[10px] font-black text-amber-800">
+                                                    {getEventActivityLabel(featuredEvent.activityType)}
+                                                </span>
+                                                <PlanningModeBadge mode={featuredEvent.planningMode} />
+                                            </span>
+                                            <span className="shrink-0 text-xs font-black text-zinc-500">
+                                                {featuredEvent.joinedCount || 0}/{featuredEvent.capacity}명
+                                            </span>
+                                        </span>
+                                        <span className="mt-3 block text-lg font-black leading-snug text-zinc-900">{featuredEvent.title}</span>
+                                        {featuredEvent.organizerGroupName && (
+                                            <span className="mt-1 block truncate text-xs font-medium text-zinc-400">{featuredEvent.organizerGroupName} 주최</span>
+                                        )}
+                                    </span>
+                                    <span className="mt-4 flex w-full items-center justify-between gap-3 border-t border-zinc-100 pt-3 text-xs font-semibold text-zinc-500">
+                                        <span className="flex min-w-0 items-center gap-3">
+                                            <span className="flex shrink-0 items-center gap-1"><CalendarIcon className="h-3.5 w-3.5" /> {formatEventDate(featuredEvent.startsAt)}</span>
+                                            <span className="flex min-w-0 items-center gap-1"><MapPin className="h-3.5 w-3.5 shrink-0" /><span className="truncate">{featuredEvent.locationName || '장소 협의 중'}</span></span>
+                                        </span>
+                                        <ChevronRight className="h-4 w-4 shrink-0 text-zinc-300" />
+                                    </span>
+                                </button>
+                            ) : (
+                                <button
+                                    type="button"
+                                    onClick={onSeeAllPartiesClick}
+                                    className="flex w-full items-center justify-between rounded-2xl border border-dashed border-zinc-300 bg-white/60 px-4 py-4 text-left"
+                                >
+                                    <span className="flex items-center gap-3">
+                                        <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-zinc-100 text-zinc-400"><Sparkles className="h-4 w-4" /></span>
+                                        <span>
+                                            <span className="block text-sm font-black text-zinc-700">현재 참가 가능한 이벤트가 없어요</span>
+                                            <span className="mt-0.5 block text-xs text-zinc-400">전체 이벤트와 예정된 모집을 확인할 수 있어요.</span>
+                                        </span>
+                                    </span>
+                                    <ChevronRight className="h-4 w-4 shrink-0 text-zinc-300" />
+                                </button>
+                            )}
+                        </section>
+
+                        {myPlansCount > 0 && (
+                            <section className="px-4">
+                                <button
+                                    type="button"
+                                    onClick={onMyPlansClick}
+                                    className="flex w-full items-center justify-between rounded-2xl border border-blue-100 bg-blue-50 px-4 py-3 text-left transition-colors hover:bg-blue-100"
+                                >
+                                    <span className="flex items-center gap-3">
+                                        <CalendarHeart className="h-5 w-5 text-[#162660]" />
+                                        <span>
+                                            <span className="block text-sm font-black text-zinc-900">내 참여 일정</span>
+                                            <span className="block text-xs font-medium text-zinc-500">예정된 이벤트 {myPlansCount}개</span>
+                                        </span>
+                                    </span>
+                                    <ChevronRight className="h-4 w-4 text-zinc-400" />
+                                </button>
+                            </section>
+                        )}
+
+                        {seasonHouseUnavailable && (
+                            <section className="px-4">
+                                <div className="flex items-center gap-3 rounded-2xl border border-zinc-200 bg-white px-4 py-3.5">
+                                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-zinc-100 text-zinc-500">
+                                        <LockKeyhole className="h-4 w-4" />
+                                    </span>
+                                    <span className="min-w-0">
+                                        <span className="block text-sm font-black text-zinc-800">현재 시즌방이 오픈되지 않았습니다.</span>
+                                        <span className="mt-0.5 block text-xs font-medium text-zinc-400">오픈되면 홈에서 바로 예약할 수 있어요.</span>
                                     </span>
                                 </div>
-                                <span className="bg-[#162660] text-white text-xs font-bold px-4 py-1.5 rounded-full shadow-sm hover:bg-blue-900 transition-colors">
-                                    자세히 보기
-                                </span>
-                            </div>
-                        </div>
-                    </section>
-                ) : hasCrew && !pendingApplication ? (
-                    <section className="px-4">
-                        <div className="bg-white border border-zinc-100 rounded-3xl p-8 text-center text-zinc-400 text-sm">
-                            현재 열려 있는 크루 이벤트가 없습니다.
-                        </div>
-                    </section>
-                ) : null}
+                            </section>
+                        )}
 
-                {/* Legacy Actions / Reservations (Kept at the bottom as optional helper entry points) */}
-                {hasCrew && !seasonHouseUnavailable && (
-                    <section className="px-4 space-y-3 pt-4 border-t border-zinc-100">
-                        <h2 className="text-xs font-bold text-zinc-400 uppercase tracking-widest">시즌방/일반 예약 (겨울)</h2>
-                        <div className="grid grid-cols-2 gap-4">
-                            <button
-                                onClick={onMakeReservationClick}
-                                className="bg-[#FAF0D7]/65 hover:bg-[#FAF0D7] aspect-square rounded-[20px] p-4.5 flex flex-col items-center justify-center text-zinc-900 transition-all shadow-sm border-none gap-2"
-                            >
-                                <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center shadow-sm">
-                                    <CalendarIcon className="w-5 h-5 text-amber-800" />
+                        <section className="px-4">
+                            <h2 className="mb-2.5 text-xs font-black text-zinc-500">바로가기</h2>
+                            <div className="grid grid-cols-3 gap-2">
+                                {[
+                                    { label: '내 예약', icon: CalendarIcon, action: onCalendarClick },
+                                    { label: '게스트 예약', icon: UserPlus, action: onGuestReservationClick },
+                                    { label: '내 크루', icon: Users, action: onTeamClick },
+                                ].map(({ label, icon: Icon, action }) => (
+                                    <button
+                                        key={label}
+                                        type="button"
+                                        onClick={action}
+                                        className="flex min-h-20 flex-col items-center justify-center gap-2 rounded-2xl border border-zinc-200 bg-white px-2 py-3 text-xs font-black text-zinc-700 transition-colors hover:bg-zinc-50"
+                                    >
+                                        <Icon className="h-5 w-5 text-[#162660]" />
+                                        <span>{label}</span>
+                                    </button>
+                                ))}
+                            </div>
+                        </section>
+
+                        {isWinter && !seasonHouseUnavailable && (
+                            <section className="px-4">
+                                <div className="flex items-center justify-between rounded-2xl border border-zinc-200 bg-white px-4 py-3">
+                                    <span className="flex items-center gap-3">
+                                        <CloudSun className="h-5 w-5 text-sky-600" />
+                                        <span>
+                                            <span className="block text-xs font-black text-zinc-800">휘닉스파크</span>
+                                            <span className="block text-[11px] text-zinc-400">{currentDate} · {weather?.weatherLabel || '날씨 확인 중'}</span>
+                                        </span>
+                                    </span>
+                                    <span className="text-xl font-black text-zinc-800">{weather ? Math.round(weather.temperature) : '--'}°</span>
                                 </div>
-                                <span className="font-bold text-sm">크루 예약하기</span>
-                            </button>
-
-                            <button
-                                onClick={onGuestReservationClick}
-                                className="bg-[#D6E6F5]/50 hover:bg-[#D6E6F5]/70 aspect-square rounded-[20px] p-4.5 flex flex-col items-center justify-center text-zinc-900 transition-all shadow-sm border-none gap-2"
-                            >
-                                <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center shadow-sm">
-                                    <UserPlus className="w-5 h-5 text-blue-800" />
-                                </div>
-                                <span className="font-bold text-sm">게스트 예약</span>
-                            </button>
-                        </div>
-
-                        {/* Calendar */}
-                        <div
-                            onClick={onCalendarClick}
-                            className="bg-[#FAF8F3] border border-zinc-200/50 rounded-[20px] p-4 shadow-sm cursor-pointer hover:bg-white transition-all text-left"
-                        >
-                            <span className="font-bold text-zinc-500 ml-2 text-xs block mb-1">나의 예약 달력</span>
-                            <div className="text-sm font-bold text-zinc-800 ml-2">확인하러 가기 &gt;</div>
-                        </div>
-
-                        {/* Weather Banner */}
-                        <div className="w-full bg-gradient-to-r from-[#F8CACC] to-[#A0C4FF] min-h-[100px] rounded-[20px] flex items-center justify-between relative overflow-hidden mt-4 shadow-sm">
-                            <div className="absolute left-2 bottom-[-1px] opacity-40">
-                                <SnowflakeDecorIcon className="w-20 h-20 text-white" />
-                            </div>
-                            <div className="z-10 pl-24 py-4 text-left">
-                                <div className="font-bold text-sm text-white">휘닉스파크 날씨</div>
-                                <div className="text-[10px] text-white/90">{currentDate}</div>
-                                <div className="text-[10px] text-white/80 mt-0.5">{weather?.weatherLabel}</div>
-                            </div>
-                            <div className="z-10 pr-6 flex flex-col items-end">
-                                <div className="text-3xl font-light text-white flex items-start">
-                                    {weather ? Math.round(weather.temperature) : '--'}<span className="text-lg">°</span>
-                                </div>
-                            </div>
-                        </div>
-                    </section>
+                            </section>
+                        )}
+                    </>
                 )}
             </main>
         </div>
