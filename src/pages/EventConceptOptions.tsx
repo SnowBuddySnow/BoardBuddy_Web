@@ -1,15 +1,15 @@
+import { useMemo, useState } from 'react';
 import { Button } from '../components/Button';
 import {
     CalendarDays,
-    CheckCircle2,
     ChevronLeft,
     ChevronRight,
-    ClipboardList,
+    Clock3,
     MapPin,
-    MessageCircle,
     ShieldCheck,
-    Sparkles,
-    Users
+    SlidersHorizontal,
+    Users,
+    X,
 } from 'lucide-react';
 
 interface EventConceptOptionsProps {
@@ -17,175 +17,211 @@ interface EventConceptOptionsProps {
     onOpenParties: () => void;
 }
 
-const options = [
+type EventSample = {
+    id: number;
+    name: string;
+    date: string;
+    gatheringTime?: string;
+    location?: string;
+    currentCount: number;
+    capacity: number;
+    planningMode: 'SELF_ORGANIZED' | 'HOST_MANAGED';
+    crewPolicies: Array<{ name: string; limit?: number }>;
+};
+
+const eventSamples: EventSample[] = [
     {
-        label: 'Option A',
-        title: '빠른 모집형',
-        summary: '열린 소모임을 카드로 빠르게 탐색하고 바로 신청하는 버전',
-        bestFor: '모집 속도와 참여 전환율 확인',
-        tone: '즉시 신청',
-        color: 'bg-[#162660]',
-        accent: 'text-[#162660]',
-        bg: 'bg-blue-50',
-        border: 'border-blue-100',
-        bullets: ['날짜, 장소, 잔여 정원 우선 노출', '신청 CTA를 목록 카드 안에 고정', '마감/승인대기 상태를 명확히 표시'],
-        sampleTitle: '토요일 휘팍 카빙 소모임',
-        sampleMeta: '6월 29일 08:30 · 휘닉스파크',
-        joined: '7/12명 참여'
+        id: 1,
+        name: '토요일 휘팍 카빙 소모임',
+        date: '6월 29일 (토)',
+        gatheringTime: '08:30 집결',
+        location: '휘닉스파크 스노우파크 정문',
+        currentCount: 7,
+        capacity: 12,
+        planningMode: 'SELF_ORGANIZED',
+        crewPolicies: [
+            { name: '보드버디 연합', limit: 4 },
+            { name: '스노우브릿지', limit: 3 },
+        ],
     },
     {
-        label: 'Option B',
-        title: '호스트 큐레이션형',
-        summary: '운영진이 추천하는 소모임을 스토리처럼 보여주는 버전',
-        bestFor: '브랜드감, 주최자 신뢰, 콘텐츠성 확인',
-        tone: '추천/큐레이션',
-        color: 'bg-emerald-700',
-        accent: 'text-emerald-700',
-        bg: 'bg-emerald-50',
-        border: 'border-emerald-100',
-        bullets: ['주최 그룹과 난이도/분위기 강조', '추천 이유와 준비물 섹션 추가', '처음 참가하는 멤버의 불안 감소'],
-        sampleTitle: '입문자 웰컴 라이딩',
-        sampleMeta: '호스트 추천 · 장비 체크 포함',
-        joined: '4/8명 확정'
+        id: 2,
+        name: '여름 MT 사전 모임',
+        date: '7월 6일 (토)',
+        gatheringTime: '13:00 집결',
+        location: '건국대학교 서울캠퍼스',
+        currentCount: 18,
+        capacity: 24,
+        planningMode: 'HOST_MANAGED',
+        crewPolicies: [
+            { name: '보드버디 연합', limit: 8 },
+            { name: '웨이브클럽' },
+            { name: '스노우브릿지', limit: 6 },
+        ],
     },
     {
-        label: 'Option C',
-        title: '운영 관리형',
-        summary: '소모임 개설, 승인, 출석 체크를 운영진 중심으로 정리한 버전',
-        bestFor: '관리 효율과 승인 플로우 검증',
-        tone: '관리/승인',
-        color: 'bg-zinc-900',
-        accent: 'text-zinc-900',
-        bg: 'bg-zinc-50',
-        border: 'border-zinc-200',
-        bullets: ['승인 대기, 확정, 취소 상태를 한 화면에서 관리', '정원 진행률과 정책 설정을 강조', '출석/노쇼 관리 확장에 적합'],
-        sampleTitle: '운영진 승인 필요 소모임',
-        sampleMeta: '승인 대기 3명 · 정원 15명',
-        joined: '9/15명 확정'
-    }
+        id: 3,
+        name: '주말 라이딩 번개',
+        date: '7월 13일 (토)',
+        currentCount: 3,
+        capacity: 10,
+        planningMode: 'SELF_ORGANIZED',
+        crewPolicies: [
+            { name: '보드버디 연합' },
+        ],
+    },
+    {
+        id: 4,
+        name: '신입 부원 오리엔테이션',
+        date: '7월 20일 (토)',
+        gatheringTime: '11:00 집결',
+        location: '서울숲 커뮤니티룸',
+        currentCount: 20,
+        capacity: 20,
+        planningMode: 'HOST_MANAGED',
+        crewPolicies: [
+            { name: '보드버디 연합', limit: 20 },
+        ],
+    },
 ];
 
-const dummySchedule = [
-    { time: '08:30', label: '집결 및 장비 체크' },
-    { time: '09:00', label: '레벨별 팀 나누기' },
-    { time: '11:30', label: '점심 및 다음 일정 안내' }
-];
+const formatAvailability = (event: EventSample) => `${event.currentCount} / ${event.capacity}`;
 
 export default function EventConceptOptions({ onBack, onOpenParties }: EventConceptOptionsProps) {
+    const [sort, setSort] = useState<'date' | 'availability' | 'participants'>('date');
+    const [selectedEvent, setSelectedEvent] = useState<EventSample | null>(null);
+
+    const events = useMemo(() => [...eventSamples].sort((left, right) => {
+        if (sort === 'availability') {
+            return (right.capacity - right.currentCount) - (left.capacity - left.currentCount);
+        }
+        if (sort === 'participants') {
+            return right.currentCount - left.currentCount;
+        }
+        return left.id - right.id;
+    }), [sort]);
+
     return (
-        <div className="flex-1 flex flex-col h-full overflow-hidden bg-[#FAF8F3] relative">
-            <header className="px-4 pt-3 pb-3 flex items-center justify-between border-b border-zinc-100 bg-[#FAF8F3]">
+        <div className="flex h-full flex-1 flex-col overflow-hidden bg-[#FAF8F3]">
+            <header className="flex items-center justify-between border-b border-zinc-200 bg-white px-4 py-3">
                 <Button variant="ghost" onClick={onBack} className="-ml-2 gap-1 text-zinc-800 hover:bg-transparent">
-                    <ChevronLeft className="w-6 h-6" />
+                    <ChevronLeft className="h-6 w-6" />
                 </Button>
-                <h1 className="text-lg font-bold text-zinc-900">소모임 옵션 샘플</h1>
-                <div className="w-10"></div>
+                <h1 className="text-lg font-black text-zinc-900">이벤트 목록 샘플</h1>
+                <div className="w-10" />
             </header>
 
-            <main className="flex-1 overflow-y-auto px-4 pb-[110px] pt-4 space-y-5">
-                <section className="bg-white border border-zinc-100 rounded-3xl p-5 shadow-sm">
-                    <div className="flex items-start gap-3">
-                        <div className="p-2.5 rounded-2xl bg-amber-50 border border-amber-100 text-amber-700">
-                            <Sparkles className="w-5 h-5" />
-                        </div>
-                        <div>
-                            <h2 className="text-base font-black text-zinc-950">테스터 리뷰 후보</h2>
-                            <p className="text-sm text-zinc-500 leading-relaxed mt-1">
-                                백엔드 변경 없이 비교할 수 있는 더미 화면입니다. 리뷰 후 하나의 방향을 골라 실제 소모임 플로우에 반영하면 됩니다.
-                            </p>
-                        </div>
+            <main className="flex-1 overflow-y-auto px-4 pb-28 pt-5">
+                <div className="mx-auto max-w-3xl">
+                    <div className="mb-4 flex items-center justify-between gap-3">
+                        <p className="text-sm font-bold text-zinc-700">다가오는 이벤트</p>
+                        <label className="flex items-center gap-2 text-xs font-bold text-zinc-500">
+                            <SlidersHorizontal className="h-4 w-4" />
+                            <select
+                                value={sort}
+                                onChange={(event) => setSort(event.target.value as typeof sort)}
+                                className="rounded-lg border border-zinc-200 bg-white px-2.5 py-2 text-xs font-bold text-zinc-700 outline-none focus:border-[#162660]"
+                                aria-label="이벤트 정렬"
+                            >
+                                <option value="date">날짜순</option>
+                                <option value="availability">여유 인원순</option>
+                                <option value="participants">참가 인원순</option>
+                            </select>
+                        </label>
                     </div>
-                </section>
 
-                <div className="space-y-4">
-                    {options.map((option) => (
-                        <section key={option.label} className="bg-white border border-zinc-100 rounded-3xl p-5 shadow-sm space-y-4">
-                            <div className="flex items-start justify-between gap-3">
-                                <div>
-                                    <span className={`text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-full ${option.bg} ${option.accent} ${option.border} border`}>
-                                        {option.label}
-                                    </span>
-                                    <h2 className="text-lg font-black text-zinc-950 mt-2">{option.title}</h2>
-                                    <p className="text-sm text-zinc-500 leading-relaxed mt-1">{option.summary}</p>
-                                </div>
-                                <div className={`${option.color} text-white px-3 py-1.5 rounded-full text-xs font-bold shrink-0`}>
-                                    {option.tone}
-                                </div>
-                            </div>
-
-                            <div className={`${option.bg} ${option.border} border rounded-2xl p-4 space-y-3`}>
-                                <div className="flex items-start justify-between gap-3">
-                                    <div>
-                                        <h3 className="text-sm font-black text-zinc-900">{option.sampleTitle}</h3>
-                                        <div className="flex items-center gap-1.5 text-xs text-zinc-500 font-semibold mt-1">
-                                            <CalendarDays className="w-3.5 h-3.5" />
-                                            <span>{option.sampleMeta}</span>
+                    <div className="space-y-3">
+                        {events.map((event) => {
+                            const isFull = event.currentCount >= event.capacity;
+                            return (
+                                <article key={event.id} className="rounded-lg border border-zinc-200 bg-white p-4 shadow-sm">
+                                    <div className="flex items-start justify-between gap-4">
+                                        <div className="min-w-0">
+                                            <h2 className="text-base font-black text-zinc-900">{event.name}</h2>
+                                            <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1.5 text-xs font-semibold text-zinc-500">
+                                                <span className="flex items-center gap-1.5"><CalendarDays className="h-3.5 w-3.5" />{event.date}</span>
+                                                {event.gatheringTime && <span className="flex items-center gap-1.5"><Clock3 className="h-3.5 w-3.5" />{event.gatheringTime}</span>}
+                                                {event.location && <span className="flex items-center gap-1.5"><MapPin className="h-3.5 w-3.5" />{event.location}</span>}
+                                            </div>
+                                        </div>
+                                        <div className="shrink-0 text-right">
+                                            <span className={`inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-black ${isFull ? 'bg-zinc-100 text-zinc-500' : 'bg-emerald-50 text-emerald-700'}`}>
+                                                <Users className="h-3.5 w-3.5" /> {formatAvailability(event)}
+                                            </span>
                                         </div>
                                     </div>
-                                    <span className="text-xs font-black text-zinc-700">{option.joined}</span>
-                                </div>
 
-                                <div className="grid grid-cols-3 gap-2 text-center">
-                                    <div className="bg-white/80 rounded-xl p-2 border border-white">
-                                        <Users className={`w-4 h-4 mx-auto ${option.accent}`} />
-                                        <p className="text-[11px] font-bold text-zinc-600 mt-1">정원</p>
+                                    <div className="mt-4 flex items-center justify-between gap-3 border-t border-zinc-100 pt-3">
+                                        <span className={`text-xs font-bold ${event.planningMode === 'SELF_ORGANIZED' ? 'text-[#162660]' : 'text-amber-700'}`}>
+                                            {event.planningMode === 'SELF_ORGANIZED' ? '자율 소모임' : '호스트 운영'}
+                                        </span>
+                                        <button
+                                            type="button"
+                                            onClick={() => setSelectedEvent(event)}
+                                            className="flex items-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-3 py-2 text-xs font-black text-zinc-700 hover:bg-zinc-50 cursor-pointer"
+                                        >
+                                            <ShieldCheck className="h-3.5 w-3.5 text-[#162660]" /> 정책
+                                        </button>
                                     </div>
-                                    <div className="bg-white/80 rounded-xl p-2 border border-white">
-                                        <MapPin className={`w-4 h-4 mx-auto ${option.accent}`} />
-                                        <p className="text-[11px] font-bold text-zinc-600 mt-1">장소</p>
-                                    </div>
-                                    <div className="bg-white/80 rounded-xl p-2 border border-white">
-                                        <ShieldCheck className={`w-4 h-4 mx-auto ${option.accent}`} />
-                                        <p className="text-[11px] font-bold text-zinc-600 mt-1">정책</p>
-                                    </div>
-                                </div>
-                            </div>
+                                </article>
+                            );
+                        })}
+                    </div>
 
-                            <div className="space-y-2">
-                                <p className="text-xs font-black text-zinc-400 uppercase tracking-wider">검증 포인트</p>
-                                {option.bullets.map((bullet) => (
-                                    <div key={bullet} className="flex items-start gap-2 text-sm text-zinc-600">
-                                        <CheckCircle2 className={`w-4 h-4 mt-0.5 shrink-0 ${option.accent}`} />
-                                        <span>{bullet}</span>
-                                    </div>
-                                ))}
-                            </div>
-                        </section>
-                    ))}
+                    <Button
+                        variant="primary"
+                        onClick={onOpenParties}
+                        className="mt-6 h-12 w-full rounded-lg border-none bg-[#162660] font-bold text-white hover:bg-[#0f1b48]"
+                    >
+                        현재 이벤트 목록과 비교하기
+                        <ChevronRight className="ml-1 inline h-4 w-4" />
+                    </Button>
                 </div>
-
-                <section className="bg-white border border-zinc-100 rounded-3xl p-5 shadow-sm space-y-4">
-                    <div className="flex items-center justify-between">
-                        <h2 className="text-base font-black text-zinc-950">공통 더미 상세 구성</h2>
-                        <ClipboardList className="w-5 h-5 text-zinc-400" />
-                    </div>
-                    <div className="space-y-3">
-                        {dummySchedule.map((item) => (
-                            <div key={item.time} className="flex items-center gap-3">
-                                <span className="w-14 text-xs font-black text-[#162660] bg-blue-50 border border-blue-100 rounded-full py-1 text-center">
-                                    {item.time}
-                                </span>
-                                <span className="text-sm font-semibold text-zinc-700">{item.label}</span>
-                            </div>
-                        ))}
-                    </div>
-                    <div className="flex items-center gap-2 bg-zinc-50 border border-zinc-100 rounded-2xl p-3">
-                        <MessageCircle className="w-4 h-4 text-zinc-500 shrink-0" />
-                        <p className="text-xs text-zinc-500 leading-relaxed">
-                            리뷰 시에는 신청 전환, 호스트 설명 충분성, 운영진 승인 부담을 중심으로 비교하면 됩니다.
-                        </p>
-                    </div>
-                </section>
-
-                <Button
-                    variant="primary"
-                    onClick={onOpenParties}
-                    className="w-full h-12 bg-[#162660] hover:bg-[#1e3a8a] text-white border-none rounded-full font-bold flex items-center justify-center gap-1.5"
-                >
-                    현재 소모임 목록과 비교하기
-                    <ChevronRight className="w-4 h-4" />
-                </Button>
             </main>
+
+            {selectedEvent && (
+                <div className="fixed inset-0 z-[100] flex items-end bg-black/35 p-0 sm:items-center sm:justify-center sm:p-5" role="presentation">
+                    <section className="w-full max-w-lg rounded-t-xl bg-white p-5 shadow-2xl sm:rounded-xl" role="dialog" aria-modal="true" aria-labelledby="event-policy-title">
+                        <div className="flex items-start justify-between gap-4 border-b border-zinc-100 pb-4">
+                            <div>
+                                <h2 id="event-policy-title" className="text-lg font-black text-zinc-900">{selectedEvent.name}</h2>
+                                <p className="mt-1 text-sm font-semibold text-zinc-500">
+                                    {selectedEvent.date}{selectedEvent.gatheringTime ? ` · ${selectedEvent.gatheringTime}` : ''}
+                                </p>
+                            </div>
+                            <button type="button" onClick={() => setSelectedEvent(null)} className="flex h-9 w-9 items-center justify-center rounded-lg border border-zinc-200 bg-white text-zinc-500 hover:bg-zinc-50 cursor-pointer" aria-label="정책 닫기">
+                                <X className="h-5 w-5" />
+                            </button>
+                        </div>
+
+                        <div className="space-y-5 py-5">
+                            <section>
+                                <p className="mb-2 text-xs font-black uppercase tracking-wide text-zinc-400">참여 가능 크루</p>
+                                <div className="space-y-2">
+                                    {selectedEvent.crewPolicies.map((crew) => (
+                                        <div key={crew.name} className="flex items-center justify-between rounded-lg bg-zinc-50 px-3 py-3 text-sm">
+                                            <span className="font-bold text-zinc-800">{crew.name}</span>
+                                            <span className="font-semibold text-zinc-500">{crew.limit ? `크루당 최대 ${crew.limit}명` : '크루별 제한 없음'}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            </section>
+
+                            <section className="rounded-lg border border-zinc-200 p-4">
+                                <p className="text-xs font-black uppercase tracking-wide text-zinc-400">운영 방식</p>
+                                <p className="mt-2 text-sm font-black text-zinc-900">
+                                    {selectedEvent.planningMode === 'SELF_ORGANIZED' ? '자율 소모임' : '호스트 운영 이벤트'}
+                                </p>
+                                <p className="mt-1 text-sm leading-relaxed text-zinc-500">
+                                    {selectedEvent.planningMode === 'SELF_ORGANIZED'
+                                        ? '주최자는 일정과 참가 슬롯을 열고, 참가 멤버가 장소와 세부 활동을 함께 정합니다.'
+                                        : '운영진 또는 호스트가 장소, 일정, 진행 방식을 정하고 참가자를 관리합니다.'}
+                                </p>
+                            </section>
+                        </div>
+                    </section>
+                </div>
+            )}
         </div>
     );
 }
