@@ -103,7 +103,7 @@ export default function Parties({ onBack, onEventClick, onCreateClick, canCreate
                     <ChevronLeft className="w-6 h-6" />
                 </Button>
                 <div className="text-center">
-                    <h1 className="text-lg font-bold text-zinc-900">소모임 둘러보기</h1>
+                    <h1 className="text-lg font-bold text-zinc-900">이벤트 둘러보기</h1>
                     <p className="text-[11px] font-bold text-zinc-500">현재 참가 가능 {availableEventCount}개</p>
                 </div>
                 <div className="w-10">

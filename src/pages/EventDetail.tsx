@@ -343,7 +343,7 @@ export default function EventDetail({ eventId, onBack, isGuestApplication = fals
                     <div className="flex flex-col gap-2">
                         <div className="flex items-center justify-center gap-1.5 text-xs text-emerald-600 font-bold bg-emerald-50 py-2 border border-emerald-100 rounded-2xl">
                             <CheckCircle className="w-4 h-4 shrink-0" />
-                            <span>이 소모임에 참여 중입니다.</span>
+                            <span>이 이벤트에 참여하고 있습니다.</span>
                         </div>
                         <Button
                             variant="danger"
