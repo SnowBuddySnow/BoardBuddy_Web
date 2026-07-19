@@ -184,15 +184,15 @@ export default function Parties({ onBack, onEventClick, onCreateClick, canCreate
                                 >
                                     <div>
                                         {/* Activity Tag & Host Info */}
-                                        <div className="flex items-center justify-between mb-2">
-                                            <div className="flex items-center gap-2">
+                                        <div className="flex items-start justify-between gap-3 mb-2">
+                                            <div className="flex min-w-0 flex-wrap items-center gap-2">
                                                 <span className="text-[10px] uppercase font-extrabold px-2.5 py-1 bg-zinc-100 text-zinc-700 rounded">
                                                     {getEventActivityLabel(event.activityType)}
                                                 </span>
                                                 <PlanningModeBadge mode={event.planningMode} />
                                             </div>
                                             {event.organizerGroupName && (
-                                                <span className="text-xs text-zinc-400 font-medium">
+                                                <span className="max-w-24 truncate text-right text-xs text-zinc-400 font-medium">
                                                     주최 {event.organizerGroupName}
                                                 </span>
                                             )}

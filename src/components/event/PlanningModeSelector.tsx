@@ -1,5 +1,6 @@
-import { CalendarCheck, Users } from 'lucide-react';
+import { CalendarCheck, Info, Users } from 'lucide-react';
 import type { EventPlanningMode } from '../../types/api';
+import { PLANNING_MODE_COPY } from './planningModeCopy';
 
 interface PlanningModeSelectorProps {
     value: EventPlanningMode;
@@ -14,14 +15,14 @@ const options: Array<{
 }> = [
     {
         value: 'MANAGER_PLANNED',
-        label: '운영진 기획형',
-        description: '운영진이 활동과 장소를 정해서 여는 정모 또는 행사',
+        label: PLANNING_MODE_COPY.MANAGER_PLANNED.label,
+        description: PLANNING_MODE_COPY.MANAGER_PLANNED.description,
         icon: CalendarCheck,
     },
     {
         value: 'MEMBER_PLANNED',
-        label: '멤버 협의형',
-        description: '운영진은 날짜와 자리를 열고 참가자가 활동과 장소를 협의',
+        label: PLANNING_MODE_COPY.MEMBER_PLANNED.label,
+        description: PLANNING_MODE_COPY.MEMBER_PLANNED.description,
         icon: Users,
     },
 ];
@@ -57,6 +58,10 @@ export function PlanningModeSelector({ value, onChange }: PlanningModeSelectorPr
                         </label>
                     );
                 })}
+            </div>
+            <div className="flex items-start gap-2 border border-zinc-200 bg-zinc-50 px-3 py-2.5 text-xs leading-5 text-zinc-600">
+                <Info className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#162660]" aria-hidden="true" />
+                <p>{PLANNING_MODE_COPY[value].details}</p>
             </div>
         </fieldset>
     );
