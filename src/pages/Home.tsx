@@ -4,9 +4,8 @@ import { getCrewInfo, getMyApplications, withdrawCrewApplication } from '../serv
 import { listParties } from '../services/event';
 import { listOrganizerGroups } from '../services/organizerGroup';
 import { UserDetail, CrewDetail, MyApplication, Event } from '../types/api';
-import { Bus, Mountain, UserPlus, Sparkles, MapPin, Users, Calendar as CalendarIcon, ChevronRight, Clock3, ShieldCheck, X, TentTree, CalendarHeart, CloudSun, LockKeyhole } from 'lucide-react';
+import { Bus, Mountain, UserPlus, Sparkles, Users, Calendar as CalendarIcon, ChevronRight, Clock3, ShieldCheck, X, TentTree, CalendarHeart, CloudSun, LockKeyhole } from 'lucide-react';
 import { getWeather, WeatherData } from '../services/weather';
-import { PlanningModeBadge } from '../components/event/PlanningModeBadge';
 import { getEventActivityLabel } from '../constants/eventActivity';
 import { getOperatingSeason } from '../constants/operatingSeason';
 import boardBuddyLogo from '../assets/boardbuddy-logo.png';
@@ -137,8 +136,6 @@ export default function Home({
         return start > nowTime && applicationStarted && (p.joinedCount || 0) < p.capacity;
     }).sort((a, b) => new Date(a.startsAt).getTime() - new Date(b.startsAt).getTime());
 
-    // Nearest upcoming open small gathering serves as the featured item.
-    const featuredEvent = upcomingParties[0];
     const isWinter = getOperatingSeason() === 'WINTER';
     const seasonHouseUnavailable = crewDetail?.seasonHouseActive === false;
 
@@ -332,37 +329,32 @@ export default function Home({
                                 </button>
                             </div>
 
-                            {featuredEvent ? (
-                                <button
-                                    type="button"
-                                    onClick={() => onEventClick(featuredEvent.id)}
-                                    className="flex min-h-[160px] w-full flex-col justify-between rounded-2xl border border-zinc-200 bg-white p-5 text-left shadow-sm transition-all hover:border-zinc-300 hover:shadow-md active:scale-[0.99]"
-                                >
-                                    <span className="block w-full">
-                                        <span className="flex items-start justify-between gap-3">
-                                            <span className="flex min-w-0 flex-wrap items-center gap-1.5">
-                                                <span className="rounded bg-amber-50 px-2 py-1 text-[10px] font-black text-amber-800">
-                                                    {getEventActivityLabel(featuredEvent.activityType)}
+                            {upcomingParties.length > 0 ? (
+                                <div className="overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm">
+                                    {upcomingParties.slice(0, 3).map((event, index) => (
+                                        <button
+                                            key={event.id}
+                                            type="button"
+                                            onClick={() => onEventClick(event.id)}
+                                            className={`flex w-full items-center gap-3 bg-white px-4 py-3.5 text-left transition-colors hover:bg-zinc-50 ${
+                                                index > 0 ? 'border-t border-zinc-100' : 'border-x-0 border-b-0 border-t-0'
+                                            }`}
+                                        >
+                                            <span className="flex w-14 shrink-0 flex-col">
+                                                <span className="text-[10px] font-black text-[#162660]">{getEventActivityLabel(event.activityType)}</span>
+                                                <span className="mt-0.5 text-[11px] font-bold text-zinc-500">{formatEventDate(event.startsAt)}</span>
+                                            </span>
+                                            <span className="min-w-0 flex-1">
+                                                <span className="block truncate text-sm font-black text-zinc-900">{event.title}</span>
+                                                <span className="mt-0.5 block truncate text-[11px] font-medium text-zinc-400">
+                                                    {event.locationName || '참가자와 장소 협의'}
                                                 </span>
-                                                <PlanningModeBadge mode={featuredEvent.planningMode} />
                                             </span>
-                                            <span className="shrink-0 text-xs font-black text-zinc-500">
-                                                {featuredEvent.joinedCount || 0}/{featuredEvent.capacity}명
-                                            </span>
-                                        </span>
-                                        <span className="mt-3 block text-lg font-black leading-snug text-zinc-900">{featuredEvent.title}</span>
-                                        {featuredEvent.organizerGroupName && (
-                                            <span className="mt-1 block truncate text-xs font-medium text-zinc-400">{featuredEvent.organizerGroupName} 주최</span>
-                                        )}
-                                    </span>
-                                    <span className="mt-4 flex w-full items-center justify-between gap-3 border-t border-zinc-100 pt-3 text-xs font-semibold text-zinc-500">
-                                        <span className="flex min-w-0 items-center gap-3">
-                                            <span className="flex shrink-0 items-center gap-1"><CalendarIcon className="h-3.5 w-3.5" /> {formatEventDate(featuredEvent.startsAt)}</span>
-                                            <span className="flex min-w-0 items-center gap-1"><MapPin className="h-3.5 w-3.5 shrink-0" /><span className="truncate">{featuredEvent.locationName || '장소 협의 중'}</span></span>
-                                        </span>
-                                        <ChevronRight className="h-4 w-4 shrink-0 text-zinc-300" />
-                                    </span>
-                                </button>
+                                            <span className="shrink-0 text-xs font-black text-zinc-500">{event.joinedCount || 0}/{event.capacity}</span>
+                                            <ChevronRight className="h-4 w-4 shrink-0 text-zinc-300" />
+                                        </button>
+                                    ))}
+                                </div>
                             ) : (
                                 <button
                                     type="button"
