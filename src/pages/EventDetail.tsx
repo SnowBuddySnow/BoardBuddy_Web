@@ -209,6 +209,16 @@ export default function EventDetail({ eventId, onBack, isGuestApplication = fals
 
                 {/* Details Section */}
                 <div className="p-5 space-y-6">
+                    {/* Description */}
+                    {event.description && (
+                        <div className="bg-white rounded-3xl p-5 border border-zinc-100 shadow-sm space-y-3">
+                            <h3 className="text-sm font-bold text-zinc-900">상세 설명</h3>
+                            <p className="text-sm text-zinc-600 leading-relaxed whitespace-pre-wrap">
+                                {event.description}
+                            </p>
+                        </div>
+                    )}
+
                     {/* Location & Time Info */}
                     <div className="bg-white rounded-3xl p-5 border border-zinc-100 shadow-sm space-y-4">
                         <div className="flex items-start gap-3.5">
@@ -321,15 +331,6 @@ export default function EventDetail({ eventId, onBack, isGuestApplication = fals
                         </div>
                     )}
 
-                    {/* Description */}
-                    {event.description && (
-                        <div className="bg-white rounded-3xl p-5 border border-zinc-100 shadow-sm space-y-3">
-                            <h3 className="text-sm font-bold text-zinc-900">상세 설명</h3>
-                            <p className="text-sm text-zinc-600 leading-relaxed whitespace-pre-wrap">
-                                {event.description}
-                            </p>
-                        </div>
-                    )}
                 </div>
             </div>
 
