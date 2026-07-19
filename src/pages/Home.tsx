@@ -4,7 +4,7 @@ import { getCrewInfo, getMyApplications, withdrawCrewApplication } from '../serv
 import { listParties } from '../services/event';
 import { listOrganizerGroups } from '../services/organizerGroup';
 import { UserDetail, CrewDetail, MyApplication, Event } from '../types/api';
-import { Bus, Mountain, UserPlus, Sparkles, Users, Calendar as CalendarIcon, ChevronRight, Clock3, ShieldCheck, X, TentTree, CalendarHeart, CloudSun, LockKeyhole } from 'lucide-react';
+import { UserPlus, Sparkles, Users, Calendar as CalendarIcon, ChevronRight, Clock3, ShieldCheck, X, TentTree, CalendarHeart, CloudSun, LockKeyhole } from 'lucide-react';
 import { getWeather, WeatherData } from '../services/weather';
 import { getEventActivityLabel } from '../constants/eventActivity';
 import { getOperatingSeason } from '../constants/operatingSeason';
@@ -197,14 +197,6 @@ export default function Home({
                                 <span onClick={onTeamClick} className="font-black text-zinc-700 hover:text-[#162660] cursor-pointer flex items-center gap-0.5">
                                     {userInfo.crew.crewName} <ChevronRight className="w-3.5 h-3.5 text-zinc-400" />
                                 </span>
-                            </div>
-                            <div className="flex items-center gap-2 shrink-0">
-                                <a href="https://skibus.purplebus.co.kr/Pp/" target="_blank" rel="noopener noreferrer" className="p-1 text-zinc-500 hover:text-[#162660]" aria-label="Bus">
-                                    <Bus className="w-4 h-4" />
-                                </a>
-                                <a href="https://phoenixhnr.co.kr/m/static/pyeongchang/snowpark/slope-lift" target="_blank" rel="noopener noreferrer" className="p-1 text-zinc-500 hover:text-[#162660]" aria-label="Slope">
-                                    <Mountain className="w-4 h-4" />
-                                </a>
                             </div>
                         </div>
                     ) : pendingApplication ? (
