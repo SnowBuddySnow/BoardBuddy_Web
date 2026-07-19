@@ -34,7 +34,7 @@ export function PlanningModeBadge({ mode }: PlanningModeBadgeProps) {
             {isOpen && (
                 <span
                     role="tooltip"
-                    className="absolute left-0 top-full z-30 mt-2 w-52 max-w-[calc(100vw-2rem)] whitespace-normal rounded-lg border border-zinc-200 bg-white p-3 text-left text-xs font-medium leading-5 text-zinc-600 shadow-lg"
+                    className="absolute left-0 top-full z-30 mt-2 w-40 max-w-[calc(100vw-2rem)] whitespace-normal rounded-lg border border-zinc-200 bg-white p-3 text-left text-xs font-medium leading-5 text-zinc-600 shadow-lg"
                 >
                     <span className="mb-1 block font-black text-zinc-900">{copy.label}</span>
                     {copy.details}
