@@ -414,26 +414,28 @@ export default function Home({
                             </section>
                         )}
 
-                        <section className="px-4">
-                            <h2 className="mb-2.5 text-xs font-black text-zinc-500">바로가기</h2>
-                            <div className="grid grid-cols-3 gap-2">
-                                {[
-                                    { label: '내 예약', icon: CalendarIcon, action: onCalendarClick },
-                                    { label: '게스트 예약', icon: UserPlus, action: onGuestReservationClick },
-                                    { label: '내 크루', icon: Users, action: onTeamClick },
-                                ].map(({ label, icon: Icon, action }) => (
-                                    <button
-                                        key={label}
-                                        type="button"
-                                        onClick={action}
-                                        className="flex min-h-20 flex-col items-center justify-center gap-2 rounded-2xl border border-zinc-200 bg-white px-2 py-3 text-xs font-black text-zinc-700 transition-colors hover:bg-zinc-50"
-                                    >
-                                        <Icon className="h-5 w-5 text-[#162660]" />
-                                        <span>{label}</span>
-                                    </button>
-                                ))}
-                            </div>
-                        </section>
+                        {!seasonHouseUnavailable && (
+                            <section className="px-4">
+                                <h2 className="mb-2.5 text-xs font-black text-zinc-500">바로가기</h2>
+                                <div className="grid grid-cols-3 gap-2">
+                                    {[
+                                        { label: '내 예약', icon: CalendarIcon, action: onCalendarClick },
+                                        { label: '게스트 예약', icon: UserPlus, action: onGuestReservationClick },
+                                        { label: '내 크루', icon: Users, action: onTeamClick },
+                                    ].map(({ label, icon: Icon, action }) => (
+                                        <button
+                                            key={label}
+                                            type="button"
+                                            onClick={action}
+                                            className="flex min-h-20 flex-col items-center justify-center gap-2 rounded-2xl border border-zinc-200 bg-white px-2 py-3 text-xs font-black text-zinc-700 transition-colors hover:bg-zinc-50"
+                                        >
+                                            <Icon className="h-5 w-5 text-[#162660]" />
+                                            <span>{label}</span>
+                                        </button>
+                                    ))}
+                                </div>
+                            </section>
+                        )}
 
                         {isWinter && !seasonHouseUnavailable && (
                             <section className="px-4">
