@@ -7,7 +7,11 @@ import {
     PaymentStatus,
     Event,
     EventChatAccess,
+    EventPaymentPolicy,
     EventParticipant,
+    ConsentItem,
+    ConsentResponseInput,
+    ParticipantConsentState,
     UserDetail,
 } from '../types/api';
 import { getDevCrewOverride, getDevEventDataMode, getDevRoleOverride, hasDevOverride } from '../lib/session';
@@ -17,9 +21,12 @@ const now = () => new Date().toISOString();
 
 const DEV_PARTIES_KEY = 'dev_parties_list';
 const DEV_SAMPLE_EVENTS_KEY = 'dev_sample_events_list';
+const DEV_ONBOARDING_EVENTS_KEY = 'dev_onboarding_events_list';
 const DEV_GROUPS_KEY = 'dev_organizer_groups';
 const DEV_GROUP_INVITATIONS_KEY = 'dev_group_invitations';
 const devChatAccessKey = (eventId: number) => `dev_event_chat_access_${eventId}`;
+const devConsentDueKey = (eventId: number) => `dev_event_consent_due_${eventId}`;
+const devConsentResponsesKey = (eventId: number) => `dev_event_consent_responses_${eventId}`;
 
 export const isDevMode = hasDevOverride;
 
@@ -152,14 +159,62 @@ const sampleEvents = (): Event[] => [
     },
 ];
 
+const onboardingSimulationEvents = (): Event[] => {
+    const startsAt = new Date(Date.now() + 9 * 24 * 60 * 60 * 1000);
+    startsAt.setHours(10, 0, 0, 0);
+    const endsAt = new Date(startsAt.getTime() + 6 * 60 * 60 * 1000);
+    const paymentDeadlineAt = new Date(startsAt.getTime() - 2 * 24 * 60 * 60 * 1000);
+    paymentDeadlineAt.setHours(18, 0, 0, 0);
+
+    return [{
+        id: 11001,
+        title: '동의서 + 필수 입금 온보딩 체험',
+        description: '참가 신청 후 제한시간 내 동의서를 작성하고, 확정 뒤 계좌이체 안내를 확인하는 개발용 시뮬레이션입니다.',
+        activityType: 'WAKE',
+        planningMode: 'MANAGER_PLANNED',
+        applicationStartsAt: null,
+        startsAt: startsAt.toISOString(),
+        endsAt: endsAt.toISOString(),
+        locationName: '가평 수상레저 베이스',
+        locationAddress: '경기 가평군 설악면',
+        capacity: 12,
+        crewMemberLimit: null,
+        consentWindowMinutes: 10,
+        paymentRequired: true,
+        participationFee: 45000,
+        paymentCurrency: 'KRW',
+        paymentDeadlineAt: paymentDeadlineAt.toISOString(),
+        kusbfAssociated: false,
+        joinedCount: 7,
+        status: 'OPEN',
+        visibilityType: 'PUBLIC',
+        joinPolicy: 'INSTANT',
+        organizerGroupId: 1,
+        organizerGroupName: 'BoardBuddy Experience Lab',
+        currentUserStatus: 'NONE',
+        createdAt: now(),
+        updatedAt: now(),
+    }];
+};
+
+const getDevEventStorageKey = () => {
+    const mode = getDevEventDataMode();
+    if (mode === 'sample_events') return DEV_SAMPLE_EVENTS_KEY;
+    if (mode === 'onboarding_simulation') return DEV_ONBOARDING_EVENTS_KEY;
+    return DEV_PARTIES_KEY;
+};
+
 export const getDevParties = (): Event[] => {
-    const storageKey = getDevEventDataMode() === 'sample_events' ? DEV_SAMPLE_EVENTS_KEY : DEV_PARTIES_KEY;
+    const storageKey = getDevEventStorageKey();
     const stored = localStorage.getItem(storageKey);
     if (stored) {
         return normalizeDevEvents(JSON.parse(stored) as Event[]);
     }
 
-    const defaultParties: Event[] = getDevEventDataMode() === 'sample_events' ? sampleEvents() : [
+    const mode = getDevEventDataMode();
+    const defaultParties: Event[] = mode === 'sample_events' ? sampleEvents()
+        : mode === 'onboarding_simulation' ? onboardingSimulationEvents()
+        : [
         {
             id: 1,
             title: '용평 리조트 주말 카풀 & 보딩 소모임',
@@ -189,7 +244,7 @@ export const getDevParties = (): Event[] => {
 };
 
 export const saveDevParties = (parties: Event[]) => {
-    const storageKey = getDevEventDataMode() === 'sample_events' ? DEV_SAMPLE_EVENTS_KEY : DEV_PARTIES_KEY;
+    const storageKey = getDevEventStorageKey();
     localStorage.setItem(storageKey, JSON.stringify(parties));
 };
 
@@ -282,11 +337,22 @@ export const deleteDevEvent = (eventId: number) => {
 export const setDevEventParticipation = (eventId: number, status: ParticipantStatus): EventParticipant => {
     const list = getDevParties();
     const event = list.find((item) => item.id === eventId);
+    let resolvedStatus = status;
     if (event) {
         const wasJoined = event.currentUserStatus === 'JOINED';
-        const isJoined = status === 'JOINED';
-        event.currentUserStatus = status;
+        if (status === 'JOINED' && event.consentWindowMinutes && event.currentUserStatus !== 'JOINED') {
+            resolvedStatus = 'CONSENT_PENDING';
+            const dueAt = new Date(Date.now() + event.consentWindowMinutes * 60 * 1000).toISOString();
+            localStorage.setItem(devConsentDueKey(eventId), dueAt);
+            localStorage.removeItem(devConsentResponsesKey(eventId));
+        }
+        const isJoined = resolvedStatus === 'JOINED';
+        event.currentUserStatus = resolvedStatus;
         event.joinedCount = Math.max(0, (event.joinedCount || 0) + (isJoined && !wasJoined ? 1 : 0) - (!isJoined && wasJoined ? 1 : 0));
+        if (status === 'NONE') {
+            localStorage.removeItem(devConsentDueKey(eventId));
+            localStorage.removeItem(devConsentResponsesKey(eventId));
+        }
         saveDevParties(list);
     }
 
@@ -295,8 +361,112 @@ export const setDevEventParticipation = (eventId: number, status: ParticipantSta
         eventId,
         userId: 999,
         userName: 'Mock User (Dev Mode)',
-        status,
+        status: resolvedStatus,
+        paymentStatus: resolvedStatus === 'JOINED' && event?.paymentRequired ? 'UNPAID' : null,
+        consentDueAt: localStorage.getItem(devConsentDueKey(eventId)),
         createdAt: now(),
+    };
+};
+
+const onboardingConsentItems = (): ConsentItem[] => [
+    {
+        id: 21001,
+        category: 'RISK_ACKNOWLEDGEMENT',
+        title: '수상 레저 활동 위험 고지',
+        content: '수상 레저 활동에는 낙상, 충돌, 익수 등의 위험이 있으며 안전요원의 지시와 보호장비 착용 기준을 준수해야 합니다.',
+        contentHash: 'a'.repeat(64),
+        required: true,
+        displayOrder: 0,
+        documentVersion: 1,
+    },
+    {
+        id: 21002,
+        category: 'PERSONAL_INFORMATION_COLLECTION_USE',
+        title: '이벤트 운영 개인정보 수집·이용',
+        content: '참가 확인과 안전 연락을 위해 이름과 연락처를 이벤트 종료 후 30일까지 이용합니다. 필수 동의를 거부하면 참가할 수 없습니다.',
+        contentHash: 'b'.repeat(64),
+        required: true,
+        displayOrder: 1,
+        documentVersion: 1,
+    },
+    {
+        id: 21003,
+        category: 'PHOTO_VIDEO_USE',
+        title: '행사 사진·영상 활용',
+        content: '행사 기록과 후기 게시를 위한 사진·영상 활용 동의입니다. 동의하지 않아도 참가할 수 있습니다.',
+        contentHash: 'c'.repeat(64),
+        required: false,
+        displayOrder: 2,
+        documentVersion: 1,
+    },
+];
+
+export const getDevEventConsents = (eventId: number): ParticipantConsentState => {
+    const event = getDevEvent(eventId);
+    const storedResponses = localStorage.getItem(devConsentResponsesKey(eventId));
+    return {
+        participantStatus: event.currentUserStatus || 'NONE',
+        consentDueAt: localStorage.getItem(devConsentDueKey(eventId)),
+        consentCompletedAt: storedResponses ? now() : null,
+        items: onboardingConsentItems(),
+        responses: storedResponses ? JSON.parse(storedResponses) : [],
+    };
+};
+
+export const submitDevEventConsents = (
+    eventId: number,
+    responses: ConsentResponseInput[],
+): ParticipantConsentState => {
+    const items = onboardingConsentItems();
+    if (responses.length !== items.length) {
+        throw new Error('모든 동의 항목에 응답해 주세요.');
+    }
+    for (const item of items) {
+        const response = responses.find(candidate => candidate.consentItemId === item.id);
+        if (!response || response.documentVersion !== item.documentVersion || response.contentHash !== item.contentHash) {
+            throw new Error('동의서 버전이 변경되었습니다.');
+        }
+        if (item.required && !response.agreed) {
+            throw new Error('필수 동의 항목에 동의해야 참가할 수 있습니다.');
+        }
+    }
+
+    const respondedAt = now();
+    const savedResponses = responses.map(response => ({ ...response, respondedAt }));
+    localStorage.setItem(devConsentResponsesKey(eventId), JSON.stringify(savedResponses));
+    localStorage.removeItem(devConsentDueKey(eventId));
+
+    const events = getDevParties();
+    const event = events.find(candidate => candidate.id === eventId);
+    if (!event) throw new Error('Event not found');
+    event.currentUserStatus = 'JOINED';
+    event.joinedCount = Math.min(event.capacity, (event.joinedCount || 0) + 1);
+    saveDevParties(events);
+
+    return {
+        participantStatus: 'JOINED',
+        consentDueAt: null,
+        consentCompletedAt: respondedAt,
+        items,
+        responses: savedResponses,
+    };
+};
+
+export const getDevEventPaymentInfo = (eventId: number): EventPaymentPolicy => {
+    const event = getDevEvent(eventId);
+    if (event.currentUserStatus !== 'JOINED') {
+        throw new Error('확정 참가자만 계좌 정보를 확인할 수 있습니다.');
+    }
+    return {
+        paymentRequired: Boolean(event.paymentRequired),
+        participationFee: event.participationFee ?? null,
+        paymentCurrency: event.paymentCurrency ?? null,
+        bankName: '신한은행',
+        bankAccountNumber: '110-123-456789',
+        bankAccountHolder: '보드버디 체험팀',
+        paymentDeadlineAt: event.paymentDeadlineAt ?? null,
+        paymentInstructions: '반드시 참가자 본인 이름으로 입금해 주세요. 입금 확인은 운영진이 수동으로 처리합니다.',
+        refundPolicy: '행사 3일 전까지 취소하면 전액 환불되며, 이후에는 장비 예약 비용을 제외하고 환불됩니다.',
     };
 };
 

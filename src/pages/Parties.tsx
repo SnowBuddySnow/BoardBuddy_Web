@@ -169,6 +169,7 @@ export default function Parties({ onBack, onEventClick, onCreateClick, canCreate
                             const isFull = event.capacity <= (event.joinedCount || 0);
                             const hasJoined = event.currentUserStatus === 'JOINED';
                             const isPending = event.currentUserStatus === 'PENDING';
+                            const isConsentPending = event.currentUserStatus === 'CONSENT_PENDING';
                             const applicationNotOpen = Boolean(
                                 event.applicationStartsAt
                                 && new Date(event.applicationStartsAt).getTime() > Date.now(),
@@ -233,6 +234,10 @@ export default function Parties({ onBack, onEventClick, onCreateClick, canCreate
                                         ) : hasJoined ? (
                                             <span className="text-xs font-bold text-emerald-600 px-3 py-1.5 bg-emerald-50 rounded-full border border-emerald-100">
                                                 참여 중
+                                            </span>
+                                        ) : isConsentPending ? (
+                                            <span className="rounded-full border border-amber-100 bg-amber-50 px-3 py-1.5 text-xs font-bold text-amber-700">
+                                                동의 작성 필요
                                             </span>
                                         ) : isPending ? (
                                             <span className="text-xs font-bold text-amber-600 px-3 py-1.5 bg-amber-50 rounded-full border border-amber-100 animate-pulse">

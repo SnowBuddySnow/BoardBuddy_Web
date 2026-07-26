@@ -18,8 +18,11 @@ export default function MyParties({ onBack, onEventClick }: MyPartiesProps) {
         try {
             setLoading(true);
             const data = await listParties();
-            // Filter parties where current user status is JOINED or PENDING
-            const plans = data.filter(p => p.currentUserStatus === 'JOINED' || p.currentUserStatus === 'PENDING');
+            const plans = data.filter(p => (
+                p.currentUserStatus === 'JOINED'
+                || p.currentUserStatus === 'PENDING'
+                || p.currentUserStatus === 'CONSENT_PENDING'
+            ));
             setJoinedParties(plans);
         } catch (error) {
             console.error('Failed to fetch my plans:', error);
@@ -71,6 +74,7 @@ export default function MyParties({ onBack, onEventClick }: MyPartiesProps) {
                     <div className="space-y-4">
                         {joinedParties.map(event => {
                             const isPending = event.currentUserStatus === 'PENDING';
+                            const isConsentPending = event.currentUserStatus === 'CONSENT_PENDING';
 
                             return (
                                 <div
@@ -83,7 +87,11 @@ export default function MyParties({ onBack, onEventClick }: MyPartiesProps) {
                                             <span className="text-[10px] uppercase font-black text-blue-800 px-2 py-0.5 bg-blue-50 border border-blue-100 rounded-full">
                                                 {getEventActivityLabel(event.activityType)}
                                             </span>
-                                            {isPending ? (
+                                            {isConsentPending ? (
+                                                <span className="rounded-full border border-amber-100 bg-amber-50 px-2.5 py-1 text-xs font-bold text-amber-700">
+                                                    동의 작성 필요
+                                                </span>
+                                            ) : isPending ? (
                                                 <span className="text-xs font-bold text-amber-600 px-2.5 py-1 bg-amber-50 rounded-full border border-amber-100">
                                                     승인 대기
                                                 </span>

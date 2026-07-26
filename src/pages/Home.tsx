@@ -138,9 +138,14 @@ export default function Home({
 
     const isWinter = getOperatingSeason() === 'WINTER';
     const seasonHouseUnavailable = crewDetail?.seasonHouseActive === false;
+    const showCrewUniversity = crewDetail?.kusbfAssociated === true && Boolean(crewDetail.univ);
 
     // Plans user has joined or has pending
-    const myPlansCount = parties.filter(p => p.currentUserStatus === 'JOINED' || p.currentUserStatus === 'PENDING').length;
+    const myPlansCount = parties.filter(p => (
+        p.currentUserStatus === 'JOINED'
+        || p.currentUserStatus === 'PENDING'
+        || p.currentUserStatus === 'CONSENT_PENDING'
+    )).length;
     const pendingApplication = myApplications.find(app => app.status === 'PENDING');
 
     const formatApplicationDate = (date: string) => new Intl.DateTimeFormat('ko-KR', {
@@ -192,8 +197,12 @@ export default function Home({
                     {hasCrew && userInfo?.crew ? (
                         <div className="bg-white/80 border border-zinc-100 rounded-2xl px-4 py-2.5 flex items-center justify-between text-xs shadow-sm">
                             <div className="flex items-center gap-2">
-                                <span className="font-bold text-zinc-400">{crewDetail?.univ || userInfo.school}</span>
-                                <span className="h-3 w-px bg-zinc-200"></span>
+                                {showCrewUniversity && (
+                                    <>
+                                        <span className="font-bold text-zinc-400">{crewDetail.univ}</span>
+                                        <span className="h-3 w-px bg-zinc-200"></span>
+                                    </>
+                                )}
                                 <span onClick={onTeamClick} className="font-black text-zinc-700 hover:text-[#162660] cursor-pointer flex items-center gap-0.5">
                                     {userInfo.crew.crewName} <ChevronRight className="w-3.5 h-3.5 text-zinc-400" />
                                 </span>

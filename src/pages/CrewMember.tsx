@@ -4,24 +4,16 @@ import { useState, useEffect } from 'react';
 import { getUserInfo } from '../services/user';
 import { getCrewInfo, getCrewManagers, getCrewMembers, getApplicants, manageApplicant } from '../services/crew';
 import { CrewApplicant } from '../types/api';
+import { type CrewRole, normalizeCrewRole } from '../constants/crewRole';
 
 interface CrewMemberProps {
     onBack: () => void;
 }
 
-// ... existing types ...
-
-// Official Roles
-// Guest: Before admitting (Applicants)
-// Member: Default role
-// Admin: Manager
-// President: Chief Manager
-type Role = 'PRESIDENT' | 'ADMIN' | 'MEMBER' | 'GUEST';
-
 interface Member {
     id: string;
     name: string;
-    role: Role;
+    role: CrewRole;
     studentId: string;
 }
 
@@ -34,8 +26,7 @@ interface Applicant {
 }
 
 export default function CrewMember({ onBack }: CrewMemberProps) {
-    // State to toggle between ADMIN (Manager view) and MEMBER (General view)
-    const [currentUserRole, setCurrentUserRole] = useState<'ADMIN' | 'MEMBER'>('MEMBER');
+    const [currentUserRole, setCurrentUserRole] = useState<'CREW_MANAGER' | 'CREW_MEMBER'>('CREW_MEMBER');
 
     const [activeTab, setActiveTab] = useState<'members' | 'applicants'>('members');
     const [members, setMembers] = useState<Member[]>([]);
@@ -80,7 +71,7 @@ export default function CrewMember({ onBack }: CrewMemberProps) {
 
                 console.log("DEBUG: Is Admin?", isAdmin);
 
-                setCurrentUserRole(isAdmin ? 'ADMIN' : 'MEMBER');
+                setCurrentUserRole(isAdmin ? 'CREW_MANAGER' : 'CREW_MEMBER');
 
                 // Conditionally fetch applicants if Admin
                 let apiApplicants: CrewApplicant[] = [];
@@ -108,7 +99,7 @@ export default function CrewMember({ onBack }: CrewMemberProps) {
                             combinedMembers.push({
                                 id: m.user_id.toString(),
                                 name: m.name,
-                                role: 'PRESIDENT',
+                                role: 'CREW_CAPTAIN',
                                 studentId: m.student_id
                             });
                             presidentFound = true;
@@ -116,7 +107,7 @@ export default function CrewMember({ onBack }: CrewMemberProps) {
                             combinedMembers.push({
                                 id: m.user_id.toString(),
                                 name: m.name,
-                                role: 'ADMIN',
+                                role: normalizeCrewRole(m.role),
                                 studentId: m.student_id
                             });
                         }
@@ -128,7 +119,7 @@ export default function CrewMember({ onBack }: CrewMemberProps) {
                     combinedMembers.unshift({
                         id: 'president',
                         name: presidentName,
-                        role: 'PRESIDENT',
+                        role: 'CREW_CAPTAIN',
                         studentId: ''
                     });
                 }
@@ -143,7 +134,7 @@ export default function CrewMember({ onBack }: CrewMemberProps) {
                                 combinedMembers.push({
                                     id: m.user_id.toString(),
                                     name: m.name,
-                                    role: 'MEMBER',
+                                    role: 'CREW_MEMBER',
                                     studentId: m.student_id
                                 });
                             }
@@ -199,7 +190,7 @@ export default function CrewMember({ onBack }: CrewMemberProps) {
                 setMembers([...members, {
                     id: applicant.userId.toString(),
                     name: applicant.name,
-                    role: 'MEMBER',
+                    role: 'CREW_MEMBER',
                     studentId: applicant.studentId
                 }]);
                 setApplicants(applicants.filter(a => a.id !== appId));
@@ -260,7 +251,7 @@ export default function CrewMember({ onBack }: CrewMemberProps) {
 
             {/* Tabs (Admin Only) */}
             {
-                currentUserRole === 'ADMIN' && (
+                currentUserRole === 'CREW_MANAGER' && (
                     <div className="px-6 flex gap-4 border-b border-zinc-100">
                         <button
                             onClick={() => setActiveTab('members')}
@@ -294,13 +285,13 @@ export default function CrewMember({ onBack }: CrewMemberProps) {
             <main className="flex-1 overflow-y-auto px-6 py-6 pb-28">
 
                 {/* MEMBER LIST VIEW */}
-                {(currentUserRole === 'MEMBER' || activeTab === 'members') && (
+                {(currentUserRole === 'CREW_MEMBER' || activeTab === 'members') && (
                     <div className="space-y-6">
                         {/* President (Captain) Section */}
                         <section>
                             <h3 className="text-sm font-bold text-zinc-400 mb-3">크루장</h3>
                             <div className="space-y-3">
-                                {members.filter(m => m.role === 'PRESIDENT').map(member => (
+                                {members.filter(m => m.role === 'CREW_CAPTAIN').map(member => (
                                     <div key={member.id} className="flex items-center justify-between">
                                         <div className="flex items-center gap-3">
                                             <div className="w-10 h-10 rounded-full bg-zinc-100 flex items-center justify-center">
@@ -311,7 +302,7 @@ export default function CrewMember({ onBack }: CrewMemberProps) {
                                                     <p className="font-bold text-zinc-900">{member.name}</p>
                                                     <span className="text-[10px] px-1.5 py-0.5 bg-yellow-100 text-yellow-700 rounded-full font-bold">Captain</span>
                                                 </div>
-                                                {currentUserRole === 'ADMIN' && (
+                                                {currentUserRole === 'CREW_MANAGER' && (
                                                     <p className="text-xs text-zinc-500">{member.studentId}</p>
                                                 )}
                                             </div>
@@ -325,7 +316,7 @@ export default function CrewMember({ onBack }: CrewMemberProps) {
                         <section>
                             <h3 className="text-sm font-bold text-zinc-400 mb-3">운영진</h3>
                             <div className="space-y-3">
-                                {members.filter(m => m.role === 'ADMIN').map(member => (
+                                {members.filter(m => m.role === 'CREW_MANAGER').map(member => (
                                     <div key={member.id} className="flex items-center justify-between">
                                         <div className="flex items-center gap-3">
                                             <div className="w-10 h-10 rounded-full bg-zinc-100 flex items-center justify-center">
@@ -334,14 +325,14 @@ export default function CrewMember({ onBack }: CrewMemberProps) {
                                             <div>
                                                 <div className="flex items-center gap-2">
                                                     <p className="font-bold text-zinc-900">{member.name}</p>
-                                                    <span className="text-[10px] px-1.5 py-0.5 bg-blue-100 text-blue-600 rounded-full font-bold">Admin</span>
+                                                    <span className="text-[10px] px-1.5 py-0.5 bg-blue-100 text-blue-600 rounded-full font-bold">Crew Manager</span>
                                                 </div>
-                                                {currentUserRole === 'ADMIN' && (
+                                                {currentUserRole === 'CREW_MANAGER' && (
                                                     <p className="text-xs text-zinc-500">{member.studentId}</p>
                                                 )}
                                             </div>
                                         </div>
-                                        {currentUserRole === 'ADMIN' && (
+                                        {currentUserRole === 'CREW_MANAGER' && (
                                             <button
                                                 onClick={() => handleDeleteMember(member.id, member.name)}
                                                 className="p-2 text-zinc-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors"
@@ -356,9 +347,9 @@ export default function CrewMember({ onBack }: CrewMemberProps) {
 
                         {/* General Member Section */}
                         <section>
-                            <h3 className="text-sm font-bold text-zinc-400 mb-3">부원 ({members.filter(m => m.role === 'MEMBER').length})</h3>
+                            <h3 className="text-sm font-bold text-zinc-400 mb-3">부원 ({members.filter(m => m.role === 'CREW_MEMBER').length})</h3>
                             <div className="space-y-3">
-                                {members.filter(m => m.role === 'MEMBER').map(member => (
+                                {members.filter(m => m.role === 'CREW_MEMBER').map(member => (
                                     <div key={member.id} className="flex items-center justify-between">
                                         <div className="flex items-center gap-3">
                                             <div className="w-10 h-10 rounded-full bg-zinc-100 flex items-center justify-center">
@@ -366,12 +357,12 @@ export default function CrewMember({ onBack }: CrewMemberProps) {
                                             </div>
                                             <div>
                                                 <p className="font-bold text-zinc-900">{member.name}</p>
-                                                {currentUserRole === 'ADMIN' && (
+                                                {currentUserRole === 'CREW_MANAGER' && (
                                                     <p className="text-xs text-zinc-500">{member.studentId}</p>
                                                 )}
                                             </div>
                                         </div>
-                                        {currentUserRole === 'ADMIN' && (
+                                        {currentUserRole === 'CREW_MANAGER' && (
                                             <button
                                                 onClick={() => handleDeleteMember(member.id, member.name)}
                                                 className="p-2 text-zinc-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors"
@@ -387,7 +378,7 @@ export default function CrewMember({ onBack }: CrewMemberProps) {
                 )}
 
                 {/* APPLICANT LIST VIEW (Admin Only) */}
-                {currentUserRole === 'ADMIN' && activeTab === 'applicants' && (
+                {currentUserRole === 'CREW_MANAGER' && activeTab === 'applicants' && (
                     <div className="space-y-6">
                         {applicants.length > 0 ? (
                             <>

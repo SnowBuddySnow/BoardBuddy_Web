@@ -242,8 +242,16 @@ export type EventStatus = 'DRAFT' | 'OPEN' | 'CLOSED' | 'CANCELLED';
 export type EventPlanningMode = 'MANAGER_PLANNED' | 'MEMBER_PLANNED';
 export type VisibilityType = 'PUBLIC' | 'CREW_LIMITED' | 'INVITE_ONLY' | 'LINK_ONLY';
 export type JoinPolicy = 'INSTANT' | 'APPROVAL_REQUIRED' | 'INVITE_ONLY' | 'PUBLIC';
-export type ParticipantStatus = 'JOINED' | 'PENDING' | 'CANCELLED' | 'REMOVED' | 'NONE';
+export type ParticipantStatus = 'JOINED' | 'PENDING' | 'CONSENT_PENDING' | 'CANCELLED' | 'REMOVED' | 'NONE';
 export type PaymentStatus = 'UNPAID' | 'PAID';
+export type ConsentCategory =
+    | 'RISK_ACKNOWLEDGEMENT'
+    | 'PERSONAL_INFORMATION_COLLECTION_USE'
+    | 'PERSONAL_INFORMATION_THIRD_PARTY_PROVISION'
+    | 'SENSITIVE_INFORMATION'
+    | 'MARKETING'
+    | 'PHOTO_VIDEO_USE'
+    | 'OTHER';
 
 export interface Event {
     id: number;
@@ -258,6 +266,11 @@ export interface Event {
     locationAddress: string;
     capacity: number;
     crewMemberLimit?: number | null;
+    consentWindowMinutes?: number | null;
+    paymentRequired?: boolean;
+    participationFee?: number | null;
+    paymentCurrency?: string | null;
+    paymentDeadlineAt?: string | null;
     status: EventStatus;
     visibilityType: VisibilityType;
     joinPolicy: JoinPolicy;
@@ -283,12 +296,61 @@ export interface EventParticipant {
     joinedAt?: string;
     createdAt?: string;
     cancelledAt?: string | null;
+    consentDueAt?: string | null;
+    consentCompletedAt?: string | null;
+    cancellationReason?: string | null;
 }
 
 export interface EventChatAccess {
     chatUrl: string | null;
     chatPasscode: string | null;
     chatInstructions: string | null;
+}
+
+export interface ConsentItem {
+    id: number;
+    category: ConsentCategory;
+    title: string;
+    content: string;
+    contentHash: string;
+    required: boolean;
+    displayOrder: number;
+    documentVersion: number;
+}
+
+export interface ConsentAnswer {
+    consentItemId: number;
+    agreed: boolean;
+    documentVersion: number;
+    contentHash: string;
+    respondedAt: string;
+}
+
+export interface ParticipantConsentState {
+    participantStatus: ParticipantStatus;
+    consentDueAt: string | null;
+    consentCompletedAt: string | null;
+    items: ConsentItem[];
+    responses: ConsentAnswer[];
+}
+
+export interface ConsentResponseInput {
+    consentItemId: number;
+    documentVersion: number;
+    contentHash: string;
+    agreed: boolean;
+}
+
+export interface EventPaymentPolicy {
+    paymentRequired: boolean;
+    participationFee: number | null;
+    paymentCurrency: string | null;
+    bankName: string | null;
+    bankAccountNumber: string | null;
+    bankAccountHolder: string | null;
+    paymentDeadlineAt: string | null;
+    paymentInstructions: string | null;
+    refundPolicy: string | null;
 }
 
 export interface OrganizerGroup {

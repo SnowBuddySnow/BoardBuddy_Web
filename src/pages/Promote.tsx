@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { Button } from "../components/Button";
 import { getCrewManagers, getCrewMembers, promoteMember, demoteManager } from "../services/crew";
 import { CrewMember } from "../types/api";
+import { isCrewCaptainRole } from "../constants/crewRole";
 
 interface PromoteProps {
     crewId: number;
@@ -93,7 +94,7 @@ export default function Promote({ crewId, onBack }: PromoteProps) {
                                         <span className="text-sm text-zinc-500 dark:text-zinc-400">{manager.student_id}</span>
                                     </div>
                                 </div>
-                                {manager.role !== 'PRESIDENT' && (
+                                {!isCrewCaptainRole(manager.role) && (
                                     <button
                                         onClick={() => handleDemote(manager.user_id)}
                                         className="px-4 py-1.5 rounded-full border border-red-300 text-red-500 hover:bg-red-50 text-sm font-medium transition-colors"

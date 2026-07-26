@@ -5,6 +5,7 @@ import { Calendar } from '../components/Calendar';
 import { getUserInfo, getMyReservations } from '../services/user';
 import { UserDetail, MyReservation } from '../types/api';
 import { clearAuthSession } from '../lib/session';
+import { isCrewCaptainRole, normalizeCrewRole } from '../constants/crewRole';
 
 interface MyPageProps {
     onBack: () => void;
@@ -112,10 +113,10 @@ export default function MyPage({ onBack, onAccountInfoClick }: MyPageProps) {
 
                         {/* Name with role icon */}
                         <div className="flex items-center gap-2 mb-2">
-                            {userInfo.role === 'PRESIDENT' && (
+                            {isCrewCaptainRole(userInfo.role) && (
                                 <Crown className="w-5 h-5" strokeWidth={2.5} color="#162660" fill="#162660" />
                             )}
-                            {(userInfo.role === 'MANAGER' || userInfo.role === 'ADMIN') && (
+                            {normalizeCrewRole(userInfo.role) === 'CREW_MANAGER' && (
                                 <Crown className="w-5 h-5" strokeWidth={2.5} color="#60A5FA" fill="#D0E6FD" />
                             )}
                             <h2 className="text-2xl font-bold">{userInfo.name}</h2>

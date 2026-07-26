@@ -1,192 +1,257 @@
-import { useState } from 'react';
-import { Sliders, Check, RefreshCw, X, AlertTriangle } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import { AlertTriangle, Check, ChevronDown, RefreshCw, Search, Sliders, X } from 'lucide-react';
 
 interface DevPanelProps {
     onOpenCrewAdmin: () => void;
 }
 
+interface SimulationOption {
+    id: string;
+    label: string;
+    description?: string;
+}
+
+interface SimulationSection {
+    id: string;
+    label: string;
+    value: string;
+    setValue: (value: string) => void;
+    storageKey: string;
+    options: SimulationOption[];
+}
+
+const clearSimulationData = () => {
+    const keysToRemove: string[] = [];
+    for (let index = 0; index < localStorage.length; index += 1) {
+        const key = localStorage.key(index);
+        if (key && (
+            key === 'dev_sample_events_list'
+            || key === 'dev_onboarding_events_list'
+            || key.startsWith('dev_event_consent_')
+        )) {
+            keysToRemove.push(key);
+        }
+    }
+    keysToRemove.forEach(key => localStorage.removeItem(key));
+};
+
 export default function DevPanel({ onOpenCrewAdmin }: DevPanelProps) {
     const [isOpen, setIsOpen] = useState(false);
-
-    // Read current overrides
+    const [query, setQuery] = useState('');
     const [crewOverride, setCrewOverride] = useState(localStorage.getItem('dev_crew_override') || 'server');
     const [roleOverride, setRoleOverride] = useState(localStorage.getItem('dev_role_override') || 'server');
     const [eventDataMode, setEventDataMode] = useState(localStorage.getItem('dev_event_data_mode') || 'server');
 
+    const sections: SimulationSection[] = useMemo(() => [
+        {
+            id: 'crew',
+            label: '크루 상태',
+            value: crewOverride,
+            setValue: setCrewOverride,
+            storageKey: 'dev_crew_override',
+            options: [
+                { id: 'server', label: '실제 서버 상태' },
+                { id: 'none', label: '크루 없음' },
+                { id: 'has_crew', label: '크루 가입됨', description: 'Mock Crew 401' },
+                { id: 'pending', label: '가입 승인 대기' },
+            ],
+        },
+        {
+            id: 'role',
+            label: '플랫폼 권한',
+            value: roleOverride,
+            setValue: setRoleOverride,
+            storageKey: 'dev_role_override',
+            options: [
+                { id: 'server', label: '실제 서버 권한' },
+                { id: 'admin', label: '플랫폼 관리자' },
+                { id: 'organizer', label: '이벤트 운영자' },
+                { id: 'viewer', label: '그룹 뷰어', description: '읽기 전용' },
+                { id: 'member', label: '일반 멤버' },
+            ],
+        },
+        {
+            id: 'event',
+            label: '이벤트 데이터',
+            value: eventDataMode,
+            setValue: setEventDataMode,
+            storageKey: 'dev_event_data_mode',
+            options: [
+                { id: 'server', label: '실제 서버 데이터' },
+                { id: 'sample_events', label: '기본 샘플 이벤트' },
+                {
+                    id: 'onboarding_simulation',
+                    label: '동의서 + 필수 입금',
+                    description: '신청부터 계좌 안내까지 체험',
+                },
+            ],
+        },
+    ], [crewOverride, eventDataMode, roleOverride]);
+
+    const normalizedQuery = query.trim().toLocaleLowerCase('ko-KR');
+    const visibleSections = sections
+        .map(section => ({
+            ...section,
+            options: normalizedQuery
+                ? section.options.filter(option => (
+                    `${section.label} ${option.label} ${option.description || ''}`
+                        .toLocaleLowerCase('ko-KR')
+                        .includes(normalizedQuery)
+                ))
+                : section.options,
+        }))
+        .filter(section => section.options.length > 0);
+
     const handleApply = () => {
-        if (crewOverride === 'server') {
-            localStorage.removeItem('dev_crew_override');
-        } else {
-            localStorage.setItem('dev_crew_override', crewOverride);
-        }
-
-        if (roleOverride === 'server') {
-            localStorage.removeItem('dev_role_override');
-        } else {
-            localStorage.setItem('dev_role_override', roleOverride);
-        }
-
-        if (eventDataMode === 'server') {
-            localStorage.removeItem('dev_event_data_mode');
-        } else {
-            localStorage.setItem('dev_event_data_mode', eventDataMode);
-        }
-
+        sections.forEach(section => {
+            if (section.value === 'server') {
+                localStorage.removeItem(section.storageKey);
+            } else {
+                localStorage.setItem(section.storageKey, section.value);
+            }
+        });
         window.location.reload();
     };
 
     const handleClear = () => {
-        localStorage.removeItem('dev_crew_override');
-        localStorage.removeItem('dev_role_override');
-        localStorage.removeItem('dev_event_data_mode');
+        sections.forEach(section => localStorage.removeItem(section.storageKey));
+        clearSimulationData();
         window.location.reload();
     };
 
     return (
         <>
-            {/* Floating Trigger Button */}
             <button
-                onClick={() => setIsOpen(!isOpen)}
-                className="fixed bottom-4 left-4 z-[9999] bg-zinc-900 text-white p-3.5 rounded-full shadow-[0_4px_16px_rgba(0,0,0,0.15)] hover:scale-105 transition-all flex items-center justify-center cursor-pointer border border-zinc-800"
-                aria-label="Dev Menu"
+                onClick={() => setIsOpen(current => !current)}
+                className="fixed bottom-4 left-4 z-[9999] flex items-center justify-center rounded-full border border-zinc-800 bg-zinc-900 p-3.5 text-white shadow-[0_4px_16px_rgba(0,0,0,0.15)] transition-all hover:scale-105"
+                aria-label={isOpen ? '개발 시뮬레이션 닫기' : '개발 시뮬레이션 열기'}
             >
-                {isOpen ? <X className="w-5 h-5" /> : <Sliders className="w-5 h-5" />}
+                {isOpen ? <X className="h-5 w-5" /> : <Sliders className="h-5 w-5" />}
             </button>
 
-            {/* Dev Panel Overlay */}
             {isOpen && (
-                <div className="fixed bottom-20 left-4 z-[9999] w-76 bg-white/95 backdrop-blur-md border border-zinc-200 rounded-3xl p-5 shadow-[0_8px_32px_rgba(0,0,0,0.12)] flex flex-col gap-4 text-zinc-800 animate-in fade-in slide-in-from-bottom-5 duration-200">
-                    <div className="flex items-center justify-between border-b border-zinc-100 pb-2">
-                        <div className="flex items-center gap-1.5 font-black text-sm text-zinc-900 uppercase tracking-wide">
-                            <Sliders className="w-4 h-4 text-zinc-500" />
-                            <span>Dev State overrides</span>
+                <aside className="fixed bottom-20 left-4 z-[9999] flex max-h-[calc(100dvh-6rem)] w-[min(22rem,calc(100vw-2rem))] flex-col overflow-hidden rounded-3xl border border-zinc-200 bg-white/95 text-zinc-800 shadow-[0_8px_32px_rgba(0,0,0,0.16)] backdrop-blur-md">
+                    <header className="shrink-0 border-b border-zinc-100 bg-white/90 px-5 pb-3 pt-4 backdrop-blur">
+                        <div className="flex items-center justify-between gap-3">
+                            <div className="flex min-w-0 items-center gap-2">
+                                <Sliders className="h-4 w-4 shrink-0 text-zinc-500" />
+                                <div className="min-w-0">
+                                    <h2 className="truncate text-sm font-black text-zinc-900">Dev simulations</h2>
+                                    <p className="text-[10px] font-semibold text-zinc-400">상태를 선택한 뒤 적용하세요</p>
+                                </div>
+                            </div>
+                            <button
+                                onClick={handleClear}
+                                className="shrink-0 rounded-lg border border-zinc-200 bg-zinc-100 px-2.5 py-1.5 text-[10px] font-bold text-zinc-600 transition-colors hover:bg-zinc-200"
+                            >
+                                전체 초기화
+                            </button>
                         </div>
+
+                        <div className="relative mt-3">
+                            <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-zinc-400" />
+                            <input
+                                value={query}
+                                onChange={event => setQuery(event.target.value)}
+                                placeholder="시뮬레이션 검색"
+                                className="h-9 w-full rounded-xl border border-zinc-200 bg-zinc-50 pl-9 pr-8 text-xs font-semibold outline-none transition focus:border-[#162660]/40 focus:bg-white focus:ring-2 focus:ring-[#162660]/10"
+                            />
+                            {query && (
+                                <button
+                                    onClick={() => setQuery('')}
+                                    className="absolute right-2.5 top-1/2 -translate-y-1/2 rounded p-0.5 text-zinc-400 hover:bg-zinc-200"
+                                    aria-label="검색어 지우기"
+                                >
+                                    <X className="h-3.5 w-3.5" />
+                                </button>
+                            )}
+                        </div>
+                    </header>
+
+                    <div className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain px-5 py-4">
+                        <div className="flex items-start gap-2 rounded-xl border border-amber-100 bg-amber-50 p-2.5 text-[10px] font-semibold leading-relaxed text-amber-800">
+                            <AlertTriangle className="h-4 w-4 shrink-0 text-amber-600" />
+                            <span>클라이언트 시뮬레이션입니다. 실제 API의 권한 검증에는 영향을 주지 않습니다.</span>
+                        </div>
+
+                        {visibleSections.length === 0 ? (
+                            <div className="rounded-2xl border border-dashed border-zinc-200 py-10 text-center">
+                                <p className="text-xs font-bold text-zinc-500">일치하는 시뮬레이션이 없습니다</p>
+                                <button onClick={() => setQuery('')} className="mt-2 text-[11px] font-bold text-[#162660]">
+                                    검색 초기화
+                                </button>
+                            </div>
+                        ) : visibleSections.map(section => (
+                            <details
+                                key={section.id}
+                                open={Boolean(normalizedQuery) || section.value !== 'server'}
+                                className="group rounded-2xl border border-zinc-200/80 bg-white"
+                            >
+                                <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-3.5 py-3">
+                                    <div>
+                                        <h3 className="text-[11px] font-black uppercase tracking-wider text-zinc-500">
+                                            {section.label}
+                                        </h3>
+                                        <p className="mt-0.5 text-[10px] font-semibold text-[#162660]">
+                                            {section.options.find(option => option.id === section.value)?.label || '선택됨'}
+                                        </p>
+                                    </div>
+                                    <ChevronDown className="h-4 w-4 text-zinc-400 transition-transform group-open:rotate-180" />
+                                </summary>
+                                <div className="space-y-1.5 border-t border-zinc-100 p-2.5">
+                                    {section.options.map(option => (
+                                        <label
+                                            key={option.id}
+                                            className={`flex cursor-pointer items-center justify-between gap-3 rounded-xl border px-3 py-2.5 text-xs transition-all ${
+                                                section.value === option.id
+                                                    ? 'border-zinc-900 bg-zinc-900 text-white shadow-sm'
+                                                    : 'border-zinc-200/70 bg-zinc-50 text-zinc-600 hover:bg-zinc-100'
+                                            }`}
+                                        >
+                                            <span className="min-w-0">
+                                                <span className="block font-bold">{option.label}</span>
+                                                {option.description && (
+                                                    <span className={`mt-0.5 block truncate text-[10px] ${
+                                                        section.value === option.id ? 'text-zinc-300' : 'text-zinc-400'
+                                                    }`}>
+                                                        {option.description}
+                                                    </span>
+                                                )}
+                                            </span>
+                                            <input
+                                                type="radio"
+                                                name={section.storageKey}
+                                                checked={section.value === option.id}
+                                                onChange={() => section.setValue(option.id)}
+                                                className="hidden"
+                                            />
+                                            {section.value === option.id && <Check className="h-3.5 w-3.5 shrink-0" />}
+                                        </label>
+                                    ))}
+                                </div>
+                            </details>
+                        ))}
+                    </div>
+
+                    <footer className="grid shrink-0 grid-cols-[1fr_1.35fr] gap-2 border-t border-zinc-100 bg-white/95 px-5 py-3">
                         <button
-                            onClick={handleClear}
-                            className="text-[10px] bg-zinc-100 hover:bg-zinc-200 px-2 py-1 rounded-md border border-zinc-200 font-bold transition-colors cursor-pointer text-zinc-600"
+                            onClick={() => {
+                                setIsOpen(false);
+                                onOpenCrewAdmin();
+                            }}
+                            className="rounded-xl border border-zinc-300 bg-white py-2.5 text-xs font-bold text-zinc-700 transition hover:bg-zinc-50"
                         >
-                            Reset All
+                            크루 관리
                         </button>
-                    </div>
-
-                    {/* Sim warning */}
-                    <div className="flex items-start gap-2 bg-amber-50 border border-amber-100 p-2.5 rounded-xl text-[10px] text-amber-800 leading-relaxed font-semibold">
-                        <AlertTriangle className="w-4 h-4 shrink-0 text-amber-600" />
-                        <span>Overrides are visual-only on the client side. Backend API requests will still validate credentials.</span>
-                    </div>
-
-                    {/* Crew Simulation Group */}
-                    <div className="space-y-2">
-                        <h4 className="text-[10px] font-black uppercase tracking-wider text-zinc-400">크루 상태 시뮬레이션</h4>
-                        <div className="space-y-1.5">
-                            {[
-                                { id: 'server', label: 'Use Real Server State' },
-                                { id: 'none', label: 'Simulate: No Crew' },
-                                { id: 'has_crew', label: 'Simulate: In Crew (Team 401)' },
-                                { id: 'pending', label: 'Simulate: Pending Application' },
-                            ].map(opt => (
-                                <label
-                                    key={opt.id}
-                                    className={`flex items-center justify-between px-3 py-2 border rounded-xl text-xs font-bold cursor-pointer transition-all ${
-                                        crewOverride === opt.id
-                                            ? 'bg-zinc-900 text-white border-zinc-900 shadow-sm'
-                                            : 'bg-zinc-50 text-zinc-600 border-zinc-200/60 hover:bg-zinc-100'
-                                    }`}
-                                >
-                                    <span>{opt.label}</span>
-                                    <input
-                                        type="radio"
-                                        name="dev_crew_override"
-                                        checked={crewOverride === opt.id}
-                                        onChange={() => setCrewOverride(opt.id)}
-                                        className="hidden"
-                                    />
-                                    {crewOverride === opt.id && <Check className="w-3.5 h-3.5" />}
-                                </label>
-                            ))}
-                        </div>
-                    </div>
-
-                    {/* Role / Permissions Simulation Group */}
-                    <div className="space-y-2">
-                        <h4 className="text-[10px] font-black uppercase tracking-wider text-zinc-400">플랫폼 권한 시뮬레이션</h4>
-                        <div className="space-y-1.5">
-                            {[
-                                { id: 'server', label: 'Use Real Server State' },
-                                { id: 'admin', label: 'Simulate: Platform Admin' },
-                                { id: 'organizer', label: 'Simulate: Event Organizer' },
-                                { id: 'viewer', label: 'Simulate: Group Viewer (Read-Only)' },
-                                { id: 'member', label: 'Simulate: Standard Member' },
-                            ].map(opt => (
-                                <label
-                                    key={opt.id}
-                                    className={`flex items-center justify-between px-3 py-2 border rounded-xl text-xs font-bold cursor-pointer transition-all ${
-                                        roleOverride === opt.id
-                                            ? 'bg-zinc-900 text-white border-zinc-900 shadow-sm'
-                                            : 'bg-zinc-50 text-zinc-600 border-zinc-200/60 hover:bg-zinc-100'
-                                    }`}
-                                >
-                                    <span>{opt.label}</span>
-                                    <input
-                                        type="radio"
-                                        name="dev_role_override"
-                                        checked={roleOverride === opt.id}
-                                        onChange={() => setRoleOverride(opt.id)}
-                                        className="hidden"
-                                    />
-                                    {roleOverride === opt.id && <Check className="w-3.5 h-3.5" />}
-                                </label>
-                            ))}
-                        </div>
-                    </div>
-
-                    <div className="space-y-2">
-                        <h4 className="text-[10px] font-black uppercase tracking-wider text-zinc-400">이벤트 데이터</h4>
-                        <div className="space-y-1.5">
-                            {[
-                                { id: 'server', label: 'Use Real Server Data' },
-                                { id: 'sample_events', label: 'Use Sample Event Data' },
-                            ].map(opt => (
-                                <label
-                                    key={opt.id}
-                                    className={`flex items-center justify-between px-3 py-2 border rounded-xl text-xs font-bold cursor-pointer transition-all ${
-                                        eventDataMode === opt.id
-                                            ? 'bg-zinc-900 text-white border-zinc-900 shadow-sm'
-                                            : 'bg-zinc-50 text-zinc-600 border-zinc-200/60 hover:bg-zinc-100'
-                                    }`}
-                                >
-                                    <span>{opt.label}</span>
-                                    <input
-                                        type="radio"
-                                        name="dev_event_data_mode"
-                                        checked={eventDataMode === opt.id}
-                                        onChange={() => setEventDataMode(opt.id)}
-                                        className="hidden"
-                                    />
-                                    {eventDataMode === opt.id && <Check className="w-3.5 h-3.5" />}
-                                </label>
-                            ))}
-                        </div>
-                    </div>
-
-                    {/* Action buttons */}
-                    <button
-                        onClick={() => {
-                            setIsOpen(false);
-                            onOpenCrewAdmin();
-                        }}
-                        className="w-full bg-white hover:bg-zinc-50 text-zinc-800 text-xs font-bold py-2.5 rounded-xl transition-all cursor-pointer border border-zinc-300"
-                    >
-                        Manage crews
-                    </button>
-                    <button
-                        onClick={handleApply}
-                        className="w-full bg-[#162660] hover:bg-blue-900 text-white text-xs font-bold py-2.5 rounded-xl shadow-sm transition-all flex items-center justify-center gap-1 cursor-pointer border-none"
-                    >
-                        <RefreshCw className="w-3.5 h-3.5" />
-                        Apply & Refresh
-                    </button>
-                </div>
+                        <button
+                            onClick={handleApply}
+                            className="flex items-center justify-center gap-1.5 rounded-xl border-none bg-[#162660] py-2.5 text-xs font-bold text-white shadow-sm transition hover:bg-blue-900"
+                        >
+                            <RefreshCw className="h-3.5 w-3.5" />
+                            적용 후 새로고침
+                        </button>
+                    </footer>
+                </aside>
             )}
         </>
     );

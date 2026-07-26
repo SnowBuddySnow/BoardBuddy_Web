@@ -2,7 +2,7 @@ import axios from 'axios';
 import { ChevronLeftIcon, PlusIcon } from 'lucide-react';
 import { useEffect, useState, type FormEvent } from 'react';
 import { Button } from '../components/Button';
-import { createCrew, createSchool, getCrewAdminData, type AdminCrew, type AdminSchool } from '../services/crewAdmin';
+import { createCrew, getCrewAdminData, type AdminCrew } from '../services/crewAdmin';
 
 interface CrewAdminProps {
     onBack: () => void;
@@ -27,40 +27,15 @@ const getErrorMessage = (error: unknown) => {
 
 export default function CrewAdmin({ onBack }: CrewAdminProps) {
     const [crews, setCrews] = useState<AdminCrew[]>([]);
-    const [schools, setSchools] = useState<AdminSchool[]>([]);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState('');
     const [name, setName] = useState('');
-    const [newSchoolName, setNewSchoolName] = useState('');
-    const [schoolId, setSchoolId] = useState('');
     const [pin, setPin] = useState('');
-    const [dailyCapacity, setDailyCapacity] = useState('8');
-    const [periodLimit, setPeriodLimit] = useState('7');
-    const [capacityLimited, setCapacityLimited] = useState(true);
     const [openingEnabled, setOpeningEnabled] = useState(false);
     const [openingDay, setOpeningDay] = useState('FRIDAY');
     const [openingTime, setOpeningTime] = useState('18:00');
     const [openingOffset, setOpeningOffset] = useState('3');
-
-    const handleCreateSchool = async (event: FormEvent) => {
-        event.preventDefault();
-        const trimmedName = newSchoolName.trim();
-        if (!trimmedName) return;
-
-        setSaving(true);
-        setError('');
-        try {
-            const school = await createSchool(trimmedName);
-            setSchools((current) => [...current, school].sort((a, b) => a.name.localeCompare(b.name)));
-            setSchoolId(String(school.id));
-            setNewSchoolName('');
-        } catch (saveError) {
-            setError(getErrorMessage(saveError));
-        } finally {
-            setSaving(false);
-        }
-    };
 
     const load = async () => {
         setLoading(true);
@@ -68,7 +43,6 @@ export default function CrewAdmin({ onBack }: CrewAdminProps) {
         try {
             const data = await getCrewAdminData();
             setCrews(data.crews);
-            setSchools(data.schools);
         } catch (loadError) {
             setError(getErrorMessage(loadError));
         } finally {
@@ -89,11 +63,7 @@ export default function CrewAdmin({ onBack }: CrewAdminProps) {
         try {
             const crew = await createCrew({
                 name: name.trim(),
-                schoolId: schoolId ? Number(schoolId) : null,
                 pin,
-                dailyCapacity: Number(dailyCapacity),
-                capacityLimited,
-                reservationPeriodLimitDays: Number(periodLimit),
                 reservationOpenDay: openingEnabled ? openingDay : null,
                 reservationOpenTime: openingEnabled ? openingTime : null,
                 reservationOpenOffsetDays: openingEnabled ? Number(openingOffset) : null,
@@ -123,18 +93,6 @@ export default function CrewAdmin({ onBack }: CrewAdminProps) {
             <main className="flex-1 space-y-5 overflow-y-auto p-4">
                 {error && <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</div>}
 
-                <form onSubmit={handleCreateSchool} className="space-y-3 rounded-xl border border-zinc-200 bg-white p-4 shadow-sm">
-                    <div className="flex items-center gap-2">
-                        <PlusIcon className="h-4 w-4" />
-                        <h2 className="font-bold">새 학교 추가</h2>
-                    </div>
-                    <p className="text-sm text-zinc-500">등록 후 회원가입과 크루 생성에서 바로 선택할 수 있습니다.</p>
-                    <div className="flex gap-2">
-                        <input required maxLength={100} value={newSchoolName} onChange={(event) => setNewSchoolName(event.target.value)} className={inputClass} placeholder="학교 이름" />
-                        <button disabled={saving || loading} className="shrink-0 rounded-lg bg-zinc-900 px-4 py-2 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-50">추가</button>
-                    </div>
-                </form>
-
                 <form onSubmit={handleSubmit} className="space-y-4 rounded-xl border border-zinc-200 bg-white p-4 shadow-sm">
                     <div className="flex items-center gap-2">
                         <PlusIcon className="h-4 w-4" />
@@ -147,31 +105,11 @@ export default function CrewAdmin({ onBack }: CrewAdminProps) {
                     </label>
 
                     <label className="block text-sm font-medium">
-                        소속 학교
-                        <select value={schoolId} onChange={(event) => setSchoolId(event.target.value)} className={`${inputClass} mt-1`}>
-                            <option value="">학교 미연계</option>
-                            {schools.map((school) => <option key={school.id} value={school.id}>{school.name}</option>)}
-                        </select>
-                    </label>
-
-                    <div className="grid grid-cols-2 gap-3">
-                        <label className="block text-sm font-medium">
-                            가입 PIN
-                            <input required inputMode="numeric" pattern="\d{4}" maxLength={4} value={pin} onChange={(event) => setPin(event.target.value.replace(/\D/g, ''))} className={`${inputClass} mt-1`} placeholder="4자리" />
-                        </label>
-                        <label className="block text-sm font-medium">
-                            일일 정원
-                            <input required type="number" min={1} max={10000} value={dailyCapacity} onChange={(event) => setDailyCapacity(event.target.value)} className={`${inputClass} mt-1`} />
-                        </label>
-                    </div>
-
-                    <label className="block text-sm font-medium">
-                        예약 가능 기간(일)
-                        <input required type="number" min={0} max={365} value={periodLimit} onChange={(event) => setPeriodLimit(event.target.value)} className={`${inputClass} mt-1`} />
+                        가입 PIN
+                        <input required inputMode="numeric" pattern="\d{4}" maxLength={4} value={pin} onChange={(event) => setPin(event.target.value.replace(/\D/g, ''))} className={`${inputClass} mt-1`} placeholder="4자리" />
                     </label>
 
                     <div className="space-y-2 text-sm">
-                        <label className="flex items-center gap-2"><input type="checkbox" checked={capacityLimited} onChange={(event) => setCapacityLimited(event.target.checked)} /> 일일 정원 제한 사용</label>
                         <label className="flex items-center gap-2"><input type="checkbox" checked={openingEnabled} onChange={(event) => setOpeningEnabled(event.target.checked)} /> 예약 오픈 시간 설정</label>
                     </div>
 
@@ -185,7 +123,7 @@ export default function CrewAdmin({ onBack }: CrewAdminProps) {
                         </div>
                     )}
 
-                    <button disabled={saving || loading || schools.length === 0} className="w-full rounded-lg bg-zinc-900 py-2.5 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-50">
+                    <button disabled={saving || loading} className="w-full rounded-lg bg-zinc-900 py-2.5 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-50">
                         {saving ? '저장 중...' : '크루 추가'}
                     </button>
                 </form>

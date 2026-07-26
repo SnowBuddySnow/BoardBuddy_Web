@@ -1,8 +1,30 @@
 import { useState, useEffect } from 'react';
 import { Button } from '../components/Button';
-import { getEvent, getEventChatAccess, joinEvent, cancelEvent } from '../services/event';
-import { Event, EventChatAccess } from '../types/api';
-import { ChevronLeft, Calendar, Clock3, MapPin, Users, Info, CheckCircle, ExternalLink, KeyRound, MessageCircle } from 'lucide-react';
+import {
+    cancelEvent,
+    getEvent,
+    getEventChatAccess,
+    getEventConsents,
+    getEventPaymentInfo,
+    joinEvent,
+    submitEventConsents,
+} from '../services/event';
+import { Event, EventChatAccess, EventPaymentPolicy, ParticipantConsentState } from '../types/api';
+import {
+    Banknote,
+    Calendar,
+    CheckCircle,
+    ChevronLeft,
+    Clock3,
+    Copy,
+    ExternalLink,
+    Info,
+    KeyRound,
+    MapPin,
+    MessageCircle,
+    ShieldCheck,
+    Users,
+} from 'lucide-react';
 import { getApiErrorMessage, getApiErrorStatus } from '../lib/apiError';
 import { PlanningModeBadge } from '../components/event/PlanningModeBadge';
 import { getEventActivityLabel } from '../constants/eventActivity';
@@ -20,6 +42,10 @@ export default function EventDetail({ eventId, onBack, isGuestApplication = fals
     const [actionLoading, setActionLoading] = useState(false);
     const [showPhoneConsentModal, setShowPhoneConsentModal] = useState(false);
     const [chatAccess, setChatAccess] = useState<EventChatAccess | null>(null);
+    const [consentState, setConsentState] = useState<ParticipantConsentState | null>(null);
+    const [consentAnswers, setConsentAnswers] = useState<Record<number, boolean | undefined>>({});
+    const [paymentInfo, setPaymentInfo] = useState<EventPaymentPolicy | null>(null);
+    const [consentSubmitting, setConsentSubmitting] = useState(false);
     const [currentTime, setCurrentTime] = useState(Date.now());
 
     const fetchEventDetail = async () => {
@@ -28,12 +54,34 @@ export default function EventDetail({ eventId, onBack, isGuestApplication = fals
             setErrorMsg(null);
             const data = await getEvent(eventId);
             setEvent(data);
+            setConsentState(null);
+            setPaymentInfo(null);
             if (data.currentUserStatus === 'JOINED') {
                 try {
                     setChatAccess(await getEventChatAccess(eventId));
                 } catch (chatError) {
                     console.error('Failed to fetch event chat access:', chatError);
                     setChatAccess(null);
+                }
+                if (data.paymentRequired) {
+                    try {
+                        setPaymentInfo(await getEventPaymentInfo(eventId));
+                    } catch (paymentError) {
+                        console.error('Failed to fetch event payment info:', paymentError);
+                        setPaymentInfo(null);
+                    }
+                }
+            } else if (data.currentUserStatus === 'CONSENT_PENDING') {
+                setChatAccess(null);
+                try {
+                    const consentData = await getEventConsents(eventId);
+                    setConsentState(consentData);
+                    setConsentAnswers(Object.fromEntries(
+                        consentData.responses.map(response => [response.consentItemId, response.agreed]),
+                    ));
+                } catch (consentError) {
+                    console.error('Failed to fetch event consents:', consentError);
+                    setConsentState(null);
                 }
             } else {
                 setChatAccess(null);
@@ -81,8 +129,12 @@ export default function EventDetail({ eventId, onBack, isGuestApplication = fals
         if (!event) return;
         try {
             setActionLoading(true);
-            await joinEvent(event.id);
-            alert(event.joinPolicy === 'APPROVAL_REQUIRED' ? '게스트 참여 신청이 대기 상태로 접수되었습니다.' : '게스트 참여가 접수되었습니다.');
+            const participant = await joinEvent(event.id);
+            if (participant.status === 'CONSENT_PENDING') {
+                alert('자리가 임시 확보되었습니다. 제한시간 내 동의서를 작성해 주세요.');
+            } else {
+                alert(event.joinPolicy === 'APPROVAL_REQUIRED' ? '게스트 참여 신청이 대기 상태로 접수되었습니다.' : '게스트 참여가 접수되었습니다.');
+            }
             await fetchEventDetail(); // Refresh
         } catch (error: unknown) {
             console.error('Failed to join:', error);
@@ -130,6 +182,37 @@ export default function EventDetail({ eventId, onBack, isGuestApplication = fals
         }
     };
 
+    const handleConsentSubmit = async () => {
+        if (!event || !consentState) return;
+        const hasUnansweredItem = consentState.items.some(item => consentAnswers[item.id] === undefined);
+        if (hasUnansweredItem) {
+            alert('모든 동의 항목에 동의 또는 동의하지 않음을 선택해 주세요.');
+            return;
+        }
+        const refusedRequiredItem = consentState.items.some(item => item.required && consentAnswers[item.id] !== true);
+        if (refusedRequiredItem) {
+            alert('필수 항목에 동의해야 참가 등록을 완료할 수 있습니다.');
+            return;
+        }
+
+        try {
+            setConsentSubmitting(true);
+            await submitEventConsents(event.id, consentState.items.map(item => ({
+                consentItemId: item.id,
+                documentVersion: item.documentVersion,
+                contentHash: item.contentHash,
+                agreed: consentAnswers[item.id] === true,
+            })));
+            alert('동의서 작성이 완료되어 참가가 확정되었습니다.');
+            await fetchEventDetail();
+        } catch (error: unknown) {
+            console.error('Failed to submit event consents:', error);
+            alert(getApiErrorMessage(error) || (error instanceof Error ? error.message : '동의서 제출에 실패했습니다.'));
+        } finally {
+            setConsentSubmitting(false);
+        }
+    };
+
     const formatDate = (dateStr: string) => {
         const d = new Date(dateStr);
         const options: Intl.DateTimeFormatOptions = {
@@ -141,6 +224,12 @@ export default function EventDetail({ eventId, onBack, isGuestApplication = fals
             hour12: false
         };
         return d.toLocaleDateString('ko-KR', options);
+    };
+
+    const formatMoney = (amount?: number | null, currency?: string | null) => {
+        if (amount == null) return '금액 미정';
+        if (currency === 'KRW') return `${amount.toLocaleString('ko-KR')}원`;
+        return `${amount.toLocaleString('ko-KR')} ${currency || ''}`.trim();
     };
 
     if (loading) {
@@ -170,6 +259,7 @@ export default function EventDetail({ eventId, onBack, isGuestApplication = fals
     const isFull = event.capacity <= (event.joinedCount || 0);
     const hasJoined = event.currentUserStatus === 'JOINED';
     const isPending = event.currentUserStatus === 'PENDING';
+    const isConsentPending = event.currentUserStatus === 'CONSENT_PENDING';
     const applicationNotOpen = Boolean(
         event.applicationStartsAt
         && new Date(event.applicationStartsAt).getTime() > currentTime,
@@ -301,6 +391,159 @@ export default function EventDetail({ eventId, onBack, isGuestApplication = fals
                         )}
                     </div>
 
+                    {event.paymentRequired && (
+                        <div className="rounded-3xl border border-blue-100 bg-blue-50/70 p-5 shadow-sm">
+                            <div className="flex items-start gap-3">
+                                <Banknote className="mt-0.5 h-5 w-5 shrink-0 text-[#162660]" />
+                                <div className="min-w-0 flex-1">
+                                    <div className="flex items-center justify-between gap-3">
+                                        <h3 className="text-sm font-bold text-zinc-900">참가비 입금 필수</h3>
+                                        <strong className="text-base text-[#162660]">
+                                            {formatMoney(event.participationFee, event.paymentCurrency)}
+                                        </strong>
+                                    </div>
+                                    <p className="mt-1.5 text-xs leading-relaxed text-zinc-500">
+                                        계좌번호와 상세 입금 안내는 동의 및 참가 확정 후 공개됩니다.
+                                    </p>
+                                    {event.paymentDeadlineAt && (
+                                        <p className="mt-2 text-xs font-bold text-blue-900">
+                                            입금 기한 · {formatDate(event.paymentDeadlineAt)}
+                                        </p>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {isConsentPending && consentState && (
+                        <div className="space-y-4 rounded-3xl border border-amber-200 bg-white p-5 shadow-sm">
+                            <div className="flex items-start gap-3">
+                                <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-amber-600" />
+                                <div>
+                                    <h3 className="text-sm font-bold text-zinc-900">참가 등록을 완료해 주세요</h3>
+                                    <p className="mt-1 text-xs leading-relaxed text-zinc-500">
+                                        자리는 임시 확보되었습니다. 모든 항목에 응답하고 필수 항목에 동의해야 확정됩니다.
+                                    </p>
+                                    {consentState.consentDueAt && (
+                                        <p className="mt-2 text-xs font-bold text-amber-700">
+                                            응답 기한 · {formatDate(consentState.consentDueAt)}
+                                        </p>
+                                    )}
+                                </div>
+                            </div>
+
+                            <div className="space-y-3">
+                                {consentState.items.map(item => (
+                                    <div key={item.id} className="rounded-2xl border border-zinc-200 bg-zinc-50/60 p-4">
+                                        <div className="flex items-center gap-2">
+                                            <span className={`rounded-full px-2 py-0.5 text-[10px] font-black ${
+                                                item.required
+                                                    ? 'bg-red-50 text-red-600'
+                                                    : 'bg-zinc-200 text-zinc-600'
+                                            }`}>
+                                                {item.required ? '필수' : '선택'}
+                                            </span>
+                                            <h4 className="text-sm font-bold text-zinc-900">{item.title}</h4>
+                                        </div>
+                                        <p className="mt-2 whitespace-pre-wrap text-xs leading-relaxed text-zinc-600">
+                                            {item.content}
+                                        </p>
+                                        <div className="mt-3 grid grid-cols-2 gap-2">
+                                            {[
+                                                { agreed: true, label: '동의함' },
+                                                { agreed: false, label: '동의하지 않음' },
+                                            ].map(option => (
+                                                <button
+                                                    key={String(option.agreed)}
+                                                    onClick={() => setConsentAnswers(current => ({
+                                                        ...current,
+                                                        [item.id]: option.agreed,
+                                                    }))}
+                                                    className={`h-9 rounded-xl border text-xs font-bold transition ${
+                                                        consentAnswers[item.id] === option.agreed
+                                                            ? option.agreed
+                                                                ? 'border-[#162660] bg-[#162660] text-white'
+                                                                : 'border-zinc-500 bg-zinc-700 text-white'
+                                                            : 'border-zinc-200 bg-white text-zinc-500 hover:bg-zinc-100'
+                                                    }`}
+                                                >
+                                                    {option.label}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+
+                            <Button
+                                variant="primary"
+                                onClick={handleConsentSubmit}
+                                disabled={consentSubmitting}
+                                className="h-11 w-full rounded-xl bg-[#162660] font-bold text-white"
+                            >
+                                {consentSubmitting ? '제출 중...' : '동의서 제출하고 참가 확정'}
+                            </Button>
+                        </div>
+                    )}
+
+                    {hasJoined && paymentInfo?.paymentRequired && (
+                        <div className="space-y-4 rounded-3xl border border-emerald-200 bg-white p-5 shadow-sm">
+                            <div className="flex items-center justify-between gap-3">
+                                <div className="flex items-center gap-2">
+                                    <Banknote className="h-5 w-5 text-emerald-600" />
+                                    <h3 className="text-sm font-bold text-zinc-900">입금 안내</h3>
+                                </div>
+                                <span className="rounded-full bg-amber-50 px-2.5 py-1 text-[10px] font-black text-amber-700">
+                                    입금 확인 대기
+                                </span>
+                            </div>
+                            <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-4">
+                                <p className="text-xs font-semibold text-zinc-500">{paymentInfo.bankName}</p>
+                                <div className="mt-1 flex items-center justify-between gap-3">
+                                    <code className="text-base font-black text-zinc-900">{paymentInfo.bankAccountNumber}</code>
+                                    <button
+                                        onClick={() => navigator.clipboard.writeText(paymentInfo.bankAccountNumber || '')}
+                                        className="rounded-lg border border-zinc-200 bg-white p-2 text-zinc-500 hover:bg-zinc-100"
+                                        aria-label="계좌번호 복사"
+                                    >
+                                        <Copy className="h-4 w-4" />
+                                    </button>
+                                </div>
+                                <p className="mt-1 text-xs text-zinc-500">예금주 {paymentInfo.bankAccountHolder}</p>
+                            </div>
+                            <div className="grid grid-cols-2 gap-3 text-xs">
+                                <div>
+                                    <span className="font-semibold text-zinc-400">입금 금액</span>
+                                    <p className="mt-1 font-black text-zinc-900">
+                                        {formatMoney(paymentInfo.participationFee, paymentInfo.paymentCurrency)}
+                                    </p>
+                                </div>
+                                <div>
+                                    <span className="font-semibold text-zinc-400">입금 기한</span>
+                                    <p className="mt-1 font-black text-zinc-900">
+                                        {paymentInfo.paymentDeadlineAt ? formatDate(paymentInfo.paymentDeadlineAt) : '운영진 문의'}
+                                    </p>
+                                </div>
+                            </div>
+                            {paymentInfo.paymentInstructions && (
+                                <div>
+                                    <h4 className="text-xs font-bold text-zinc-800">입금 주의사항</h4>
+                                    <p className="mt-1 whitespace-pre-wrap text-xs leading-relaxed text-zinc-600">
+                                        {paymentInfo.paymentInstructions}
+                                    </p>
+                                </div>
+                            )}
+                            {paymentInfo.refundPolicy && (
+                                <div className="border-t border-zinc-100 pt-3">
+                                    <h4 className="text-xs font-bold text-zinc-800">환불 정책</h4>
+                                    <p className="mt-1 whitespace-pre-wrap text-xs leading-relaxed text-zinc-500">
+                                        {paymentInfo.refundPolicy}
+                                    </p>
+                                </div>
+                            )}
+                        </div>
+                    )}
+
                     {hasJoined && chatAccess?.chatUrl && (
                         <div className="bg-white p-5 border border-emerald-200 shadow-sm space-y-4 rounded-lg">
                             <div className="flex items-center gap-2">
@@ -353,6 +596,21 @@ export default function EventDetail({ eventId, onBack, isGuestApplication = fals
                             className="w-full h-12 rounded-full font-bold"
                         >
                             참여 취소하기
+                        </Button>
+                    </div>
+                ) : isConsentPending ? (
+                    <div className="flex flex-col gap-2">
+                        <div className="flex items-center justify-center gap-1.5 rounded-2xl border border-amber-100 bg-amber-50 py-2 text-xs font-bold text-amber-700">
+                            <ShieldCheck className="h-4 w-4 shrink-0" />
+                            <span>동의서 작성 대기 · 자리가 임시 확보되었습니다.</span>
+                        </div>
+                        <Button
+                            variant="danger"
+                            onClick={handleCancelAction}
+                            disabled={actionLoading}
+                            className="h-12 w-full rounded-full font-bold"
+                        >
+                            신청 취소하기
                         </Button>
                     </div>
                 ) : isPending ? (

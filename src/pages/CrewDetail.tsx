@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { getCrewInfo, getCrewManagers } from '../services/crew';
 import { getUserInfo } from '../services/user';
 import { CrewDetail as CrewDetailType } from '../types/api';
+import { isCrewManagerRole } from '../constants/crewRole';
 import MemberStats from './MemberStats';
 
 
@@ -41,7 +42,7 @@ export default function CrewDetail({ onBack, onCalendarClick, onMemberClick, onS
 
                     // 4. Check permissions
                     const currentUser = managers.find(m => m.user_id === userData.userId);
-                    if (currentUser && (currentUser.role === 'PRESIDENT' || currentUser.role === 'MANAGER' || currentUser.role === 'ADMIN')) {
+                    if (currentUser && isCrewManagerRole(currentUser.role)) {
                         setIsManager(true);
                     }
                 } else {

@@ -27,8 +27,8 @@ export const getCrewInfo = async (crewId: number): Promise<CrewDetail> => {
             crewName: 'Mock Crew 401',
             name: 'Mock Crew 401',
             univ: 'Mock University',
-            status: 'ACTIVE',
-            role: 'MANAGER',
+            status: 'INACTIVE',
+            role: 'CREW_MANAGER',
             pinCode: '1234',
             crewPin: '1234',
             reservation_day: 'FRIDAY',
@@ -45,7 +45,7 @@ export const getCrewInfo = async (crewId: number): Promise<CrewDetail> => {
             member_count: 12,
             profile_image_url: null,
             isCapacityLimited: true,
-            seasonHouseActive: true,
+            seasonHouseActive: false,
         };
     }
 

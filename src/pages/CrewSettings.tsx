@@ -1,9 +1,11 @@
 import { Button } from '../components/Button';
-import { ChevronLeftIcon, SaveIcon, EyeIcon, EyeOffIcon } from 'lucide-react';
+import { CheckCircle2Icon, ChevronLeftIcon, CopyIcon, EyeIcon, EyeOffIcon, Link2Icon, SaveIcon } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { getCrewInfo, updateCrew } from '../services/crew';
 import { getUserInfo } from '../services/user';
+import { getSchools, type SchoolOption } from '../services/schools';
 import { CrewInfoUpdateRequest } from '../types/api';
+import { isCrewCaptainRole } from '../constants/crewRole';
 import Promote from './Promote';
 
 interface CrewSettingsProps {
@@ -24,7 +26,11 @@ export default function CrewSettings({ onBack }: CrewSettingsProps) {
     const [loading, setLoading] = useState(true);
     const [crewId, setCrewId] = useState<number | null>(null);
     const [showPromote, setShowPromote] = useState(false);
-    const [isPresident, setIsPresident] = useState(false);
+    const [isCaptain, setIsCaptain] = useState(false);
+    const [schools, setSchools] = useState<SchoolOption[]>([]);
+    const [selectedSchoolId, setSelectedSchoolId] = useState('');
+    const [affiliatedSchoolName, setAffiliatedSchoolName] = useState('');
+    const [requestCopied, setRequestCopied] = useState(false);
     const [formData, setFormData] = useState<CrewInfoUpdateRequest>({
         crewName: '',
         crewPIN: 0,
@@ -63,8 +69,18 @@ export default function CrewSettings({ onBack }: CrewSettingsProps) {
                 if (user.crew) {
                     const cId = user.crew.crewId;
                     setCrewId(cId);
-                    setIsPresident(user.role === 'PRESIDENT');
-                    const info = await getCrewInfo(cId);
+                    setIsCaptain(isCrewCaptainRole(user.role));
+                    const [info, schoolOptions] = await Promise.all([
+                        getCrewInfo(cId),
+                        getSchools(),
+                    ]);
+
+                    setSchools(schoolOptions);
+                    if (info.kusbfAssociated && info.univ) {
+                        setAffiliatedSchoolName(info.univ);
+                        const affiliatedSchool = schoolOptions.find((school) => school.name === info.univ);
+                        if (affiliatedSchool) setSelectedSchoolId(String(affiliatedSchool.id));
+                    }
 
                     setFormData({
                         crewName: info.name,
@@ -107,13 +123,13 @@ export default function CrewSettings({ onBack }: CrewSettingsProps) {
         if (!crewId) return;
 
         // Construct payload with possible aliases to handle API strictness
-        // Exclude crewName if not PRESIDENT to avoid AccessDeniedException
+        // Only the crew captain can change the crew name.
         const payload: Partial<CrewInfoUpdateRequest> & { id: number; name?: string } = {
             ...formData,
             id: crewId,
         };
 
-        if (!isPresident) {
+        if (!isCaptain) {
             delete payload.crewName;
         } else {
             payload.name = formData.crewName;
@@ -130,6 +146,27 @@ export default function CrewSettings({ onBack }: CrewSettingsProps) {
         } catch (error) {
             console.error("Failed to update crew", error);
             alert("저장 중 오류가 발생했습니다. (Console을 확인해주세요)");
+        }
+    };
+
+    const handleCopySchoolRequest = async () => {
+        const school = schools.find((option) => String(option.id) === selectedSchoolId);
+        if (!school || !crewId) return;
+
+        const requestText = [
+            '[BoardBuddy 학교 연동 승인 요청]',
+            `크루명: ${formData.crewName}`,
+            `크루 ID: ${crewId}`,
+            `요청 학교: ${school.name}`,
+            '위 크루의 소속 학교 연동 검토 및 승인을 요청드립니다.',
+        ].join('\n');
+
+        try {
+            await navigator.clipboard.writeText(requestText);
+            setRequestCopied(true);
+            window.setTimeout(() => setRequestCopied(false), 2500);
+        } catch {
+            window.prompt('아래 내용을 복사해 개발자 또는 서비스 관리자에게 전달해 주세요.', requestText);
         }
     };
 
@@ -159,8 +196,8 @@ export default function CrewSettings({ onBack }: CrewSettingsProps) {
                             type="text"
                             value={formData.crewName}
                             onChange={(e) => handleChange('crewName', e.target.value)}
-                            disabled={!isPresident}
-                            className={`w-full px-4 py-3 rounded-xl border-none focus:ring-2 focus:ring-black/5 ${!isPresident ? 'bg-zinc-100 text-zinc-500 cursor-not-allowed' : 'bg-zinc-50'
+                            disabled={!isCaptain}
+                            className={`w-full px-4 py-3 rounded-xl border-none focus:ring-2 focus:ring-black/5 ${!isCaptain ? 'bg-zinc-100 text-zinc-500 cursor-not-allowed' : 'bg-zinc-50'
                                 }`}
                         />
                     </div>
@@ -190,6 +227,65 @@ export default function CrewSettings({ onBack }: CrewSettingsProps) {
                             </button>
                         </div>
                     </div>
+
+                    {/* School affiliation */}
+                    <section className="space-y-4 rounded-xl border border-zinc-200 bg-white p-4">
+                        <div className="flex items-start gap-3">
+                            <div className="rounded-lg bg-blue-50 p-2 text-[#162660]">
+                                <Link2Icon className="h-5 w-5" />
+                            </div>
+                            <div className="min-w-0 flex-1">
+                                <div className="flex items-center justify-between gap-2">
+                                    <h2 className="text-sm font-bold text-zinc-900">소속 학교 연동</h2>
+                                    {affiliatedSchoolName && (
+                                        <span className="flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-1 text-[11px] font-bold text-emerald-700">
+                                            <CheckCircle2Icon className="h-3.5 w-3.5" /> 승인 완료
+                                        </span>
+                                    )}
+                                </div>
+                                <p className="mt-1 text-xs leading-5 text-zinc-500">
+                                    크루 생성 후 개발자 또는 서비스 관리자의 승인을 받아 연동됩니다.
+                                </p>
+                            </div>
+                        </div>
+
+                        {affiliatedSchoolName ? (
+                            <div className="rounded-lg bg-zinc-50 px-3 py-3">
+                                <p className="text-xs text-zinc-500">현재 소속 학교</p>
+                                <p className="mt-1 text-sm font-bold text-zinc-900">{affiliatedSchoolName}</p>
+                            </div>
+                        ) : isCaptain ? (
+                            <div className="space-y-3">
+                                <label className="block text-xs font-bold text-zinc-500">
+                                    연동 요청 학교
+                                    <select
+                                        value={selectedSchoolId}
+                                        onChange={(event) => setSelectedSchoolId(event.target.value)}
+                                        className="mt-1.5 w-full rounded-xl border-none bg-zinc-50 px-3 py-3 text-sm text-zinc-900 focus:ring-2 focus:ring-black/5"
+                                    >
+                                        <option value="">학교를 선택해 주세요</option>
+                                        {schools.map((school) => (
+                                            <option key={school.id} value={school.id}>{school.name}</option>
+                                        ))}
+                                    </select>
+                                </label>
+                                <button
+                                    type="button"
+                                    onClick={() => void handleCopySchoolRequest()}
+                                    disabled={!selectedSchoolId}
+                                    className="flex w-full items-center justify-center gap-2 rounded-xl border border-zinc-200 bg-white py-3 text-sm font-bold text-zinc-800 transition-colors hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-40"
+                                >
+                                    {requestCopied ? <CheckCircle2Icon className="h-4 w-4 text-emerald-600" /> : <CopyIcon className="h-4 w-4" />}
+                                    {requestCopied ? '요청 문구가 복사되었습니다' : '승인 요청 문구 복사'}
+                                </button>
+                                <p className="text-[11px] leading-4 text-zinc-400">복사한 요청 내용을 개발자 또는 서비스 관리자에게 전달해 주세요.</p>
+                            </div>
+                        ) : (
+                            <p className="rounded-lg bg-zinc-50 px-3 py-3 text-xs leading-5 text-zinc-500">
+                                학교 연동 요청은 크루 캡틴이 진행할 수 있습니다.
+                            </p>
+                        )}
+                    </section>
 
                     {/* Updated Reservation Scheme */}
                     <div className="p-4 rounded-xl border border-zinc-200 bg-white space-y-4">

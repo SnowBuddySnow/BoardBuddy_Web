@@ -29,11 +29,7 @@ export interface AdminCrewData {
 
 export interface CreateCrewRequest {
     name: string;
-    schoolId: number | null;
     pin: string;
-    dailyCapacity: number;
-    capacityLimited: boolean;
-    reservationPeriodLimitDays: number;
     reservationOpenDay: string | null;
     reservationOpenTime: string | null;
     reservationOpenOffsetDays: number | null;

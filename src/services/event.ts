@@ -1,5 +1,19 @@
 import apiClient from '../lib/axios';
-import { ApiResponse, JoinPolicy, ParticipantStatus, Event, EventChatAccess, EventParticipant, EventPlanningMode, EventStatus, PaymentStatus, VisibilityType } from '../types/api';
+import {
+    ApiResponse,
+    ConsentResponseInput,
+    Event,
+    EventChatAccess,
+    EventParticipant,
+    EventPaymentPolicy,
+    EventPlanningMode,
+    EventStatus,
+    JoinPolicy,
+    ParticipantConsentState,
+    ParticipantStatus,
+    PaymentStatus,
+    VisibilityType,
+} from '../types/api';
 import {
     createDevEvent,
     deleteDevEvent,
@@ -7,8 +21,11 @@ import {
     getDevParties,
     getDevEvent,
     getDevEventChatAccess,
+    getDevEventConsents,
+    getDevEventPaymentInfo,
     isDevMode,
     setDevEventParticipation,
+    submitDevEventConsents,
     updateDevParticipantStatus,
     updateDevParticipantManagement,
     updateDevEvent,
@@ -51,6 +68,30 @@ export const cancelEvent = async (eventId: number): Promise<EventParticipant> =>
 export const getEventChatAccess = async (eventId: number): Promise<EventChatAccess> => {
     if (isDevMode()) return getDevEventChatAccess(eventId);
     const response = await apiClient.get<ApiResponse<EventChatAccess>>(`/events/${eventId}/chat-access`);
+    return response.data.data;
+};
+
+export const getEventConsents = async (eventId: number): Promise<ParticipantConsentState> => {
+    if (isDevMode()) return getDevEventConsents(eventId);
+    const response = await apiClient.get<ApiResponse<ParticipantConsentState>>(`/events/${eventId}/consents`);
+    return response.data.data;
+};
+
+export const submitEventConsents = async (
+    eventId: number,
+    responses: ConsentResponseInput[],
+): Promise<ParticipantConsentState> => {
+    if (isDevMode()) return submitDevEventConsents(eventId, responses);
+    const response = await apiClient.post<ApiResponse<ParticipantConsentState>>(
+        `/events/${eventId}/consents/responses`,
+        { responses },
+    );
+    return response.data.data;
+};
+
+export const getEventPaymentInfo = async (eventId: number): Promise<EventPaymentPolicy> => {
+    if (isDevMode()) return getDevEventPaymentInfo(eventId);
+    const response = await apiClient.get<ApiResponse<EventPaymentPolicy>>(`/events/${eventId}/payment-info`);
     return response.data.data;
 };
 
