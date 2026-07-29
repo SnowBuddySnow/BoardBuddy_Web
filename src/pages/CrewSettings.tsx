@@ -406,7 +406,7 @@ export default function CrewSettings({ onBack }: CrewSettingsProps) {
 
 
                     {/* Manage Managers Button */}
-                    {isPresident && (
+                    {isCaptain && (
                         <button
                             onClick={() => setShowPromote(true)}
                             className="w-full py-4 bg-white border-2 border-zinc-100 text-zinc-900 rounded-2xl font-bold text-lg hover:bg-zinc-50 transition-colors"
