@@ -6,6 +6,7 @@ import {
   ClipboardPenLine,
   Home,
   LayoutDashboard,
+  ShieldCheck,
   Sparkles,
   UsersRound,
 } from 'lucide-react';
@@ -18,11 +19,13 @@ export type DesktopDestination =
   | 'parties'
   | 'my_parties'
   | 'my_page'
-  | 'operations_center';
+  | 'operations_center'
+  | 'crew_admin';
 
 interface DesktopShellProps {
   activeDestination: DesktopDestination;
   canManage: boolean;
+  canReviewCrews: boolean;
   availableEventCount?: number;
   children: ReactNode;
   onNavigate: (destination: DesktopDestination) => void;
@@ -41,6 +44,7 @@ const primaryItems = [
 export default function DesktopShell({
   activeDestination,
   canManage,
+  canReviewCrews,
   availableEventCount = 0,
   children,
   onNavigate,
@@ -100,10 +104,32 @@ export default function DesktopShell({
             </button>
           </div>
         )}
+
+        {canReviewCrews && (
+          <div className="mt-3 border-t border-zinc-100 pt-4">
+            <p className="mb-2 px-3 text-[10px] font-black uppercase tracking-[0.18em] text-zinc-400">
+              Developer
+            </p>
+            <button
+              type="button"
+              onClick={() => onNavigate('crew_admin')}
+              className={`flex w-full items-center gap-3 rounded-xl border px-3 py-2.5 text-left text-sm font-black cursor-pointer ${
+                activeDestination === 'crew_admin'
+                  ? 'border-[#162660] bg-[#162660] text-white'
+                  : 'border-[#162660]/10 bg-[#162660]/5 text-[#162660] hover:bg-[#162660]/10'
+              }`}
+            >
+              <ShieldCheck className="h-4.5 w-4.5" />
+              크루 생성 검토
+            </button>
+          </div>
+        )}
       </aside>
 
       <main className="min-w-0 flex-1 overflow-hidden">
-        <div className="mx-auto h-full w-full max-w-5xl overflow-hidden bg-[#FAF8F3] shadow-[0_0_40px_rgba(24,24,27,0.06)]">
+        <div className={`mx-auto h-full w-full overflow-hidden bg-[#FAF8F3] shadow-[0_0_40px_rgba(24,24,27,0.06)] ${
+          activeDestination === 'crew_admin' ? 'max-w-none' : 'max-w-5xl'
+        }`}>
           {children}
         </div>
       </main>

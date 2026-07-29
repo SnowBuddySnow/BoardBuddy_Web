@@ -37,6 +37,7 @@ import { getAccessToken, hasDevOverride, isAutoLoginEnabled } from './lib/sessio
 import { getOperationsContext, type OperationPermission } from './services/operations';
 import { getUserInfo } from './services/user';
 import { getMyApplications } from './services/crew';
+import { getCrewAdminData } from './services/crewAdmin';
 import { useDesktopViewport } from './hooks/useDesktopViewport';
 import { getOperatingSeason } from './constants/operatingSeason';
 import { listParties } from './services/event';
@@ -129,6 +130,7 @@ function App() {
   const [notificationRefreshKey, setNotificationRefreshKey] = useState(0);
   const [notificationReturnView, setNotificationReturnView] = useState<View>('home');
   const [canManage, setCanManage] = useState(false);
+  const [canReviewCrews, setCanReviewCrews] = useState(false);
   const [operationPermissions, setOperationPermissions] = useState<OperationPermission[]>([]);
   const [managementAccessResolved, setManagementAccessResolved] = useState(false);
   const [availableEventCount, setAvailableEventCount] = useState(0);
@@ -165,6 +167,23 @@ function App() {
     };
 
     void loadCrewAccess();
+    return () => { cancelled = true; };
+  }, [shouldLoadPermissions]);
+
+  useEffect(() => {
+    if (!shouldLoadPermissions) {
+      setCanReviewCrews(false);
+      return;
+    }
+
+    let cancelled = false;
+    getCrewAdminData()
+      .then(data => {
+        if (!cancelled) setCanReviewCrews(data.developerAccess);
+      })
+      .catch(() => {
+        if (!cancelled) setCanReviewCrews(false);
+      });
     return () => { cancelled = true; };
   }, [shouldLoadPermissions]);
 
@@ -249,6 +268,7 @@ function App() {
   const showBottomNav = !viewsWithoutBottomNav.includes(currentView) && !isDashboardView;
 
   const getDesktopDestination = (): DesktopDestination => {
+    if (currentView === 'crew_admin') return 'crew_admin';
     if (currentView === 'operations_center') return 'operations_center';
     if (currentView === 'parties' || currentView === 'event_detail') return 'parties';
     if (currentView === 'my_parties') return 'my_parties';
@@ -476,7 +496,7 @@ function App() {
 
   return (
     <div className="w-full h-screen bg-zinc-100 dark:bg-zinc-900 flex items-center justify-center overflow-hidden">
-      <div className={isDashboardView || usesDesktopShell
+      <div className={isDashboardView || usesDesktopShell || (currentView === 'crew_admin' && canReviewCrews)
         ? "w-full h-full bg-white dark:bg-zinc-950 relative overflow-hidden flex flex-col" 
         : "w-full h-full max-w-md bg-[#FAF8F3] relative shadow-2xl overflow-hidden flex flex-col"
       }>
@@ -484,6 +504,7 @@ function App() {
           <DesktopShell
             activeDestination={getDesktopDestination()}
             canManage={canManage}
+            canReviewCrews={canReviewCrews}
             availableEventCount={availableEventCount}
             onNavigate={handleDesktopNavigate}
           >
@@ -491,7 +512,7 @@ function App() {
           </DesktopShell>
         ) : currentContent}
 
-        {currentView !== 'login' && currentView !== 'user_info' && currentView !== 'user_type' && currentView !== 'notifications' && !isDashboardView && (
+        {currentView !== 'login' && currentView !== 'user_info' && currentView !== 'user_type' && currentView !== 'notifications' && currentView !== 'crew_admin' && !isDashboardView && (
           <NotificationBell refreshKey={notificationRefreshKey} onClick={() => {
             setNotificationReturnView(currentView);
             setCurrentView('notifications');
