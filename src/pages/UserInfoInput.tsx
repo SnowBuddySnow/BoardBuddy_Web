@@ -181,7 +181,7 @@ export default function UserInfoInput({ userType, onBack, onSuccess }: UserInfoI
             setPhoneVerificationSkipped(false);
 
             if (result.resolution === 'LINKED_EXISTING_ACCOUNT' && result.status === 'ACTIVE') {
-                saveAuthTokens(result.accessToken);
+                saveAuthTokens(result.accessToken, result.refreshToken);
                 clearTempAccessToken();
                 alert('기존 계정을 확인했습니다. 새 로그인 수단이 기존 계정에 연결되었습니다.');
                 onSuccess?.();
@@ -301,9 +301,9 @@ export default function UserInfoInput({ userType, onBack, onSuccess }: UserInfoI
                 localStorage.setItem('phone_sharing_consent_preference', phoneConsentPreference);
 
                 // Promote temp token to final token
-                const tempToken = localStorage.getItem('tempAccessToken');
-                if (tempToken) {
-                    saveAuthTokens(tempToken);
+                const completedProfile = response.data.data as { accessToken: string; refreshToken: string };
+                if (completedProfile.accessToken) {
+                    saveAuthTokens(completedProfile.accessToken, completedProfile.refreshToken);
                     clearTempAccessToken();
                 }
 

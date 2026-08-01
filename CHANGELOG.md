@@ -2,7 +2,7 @@
 
 Notable BoardBuddy Web changes are recorded here. Versions follow Semantic Versioning.
 
-## [1.0.0-beta.1] - Unreleased
+## [1.0.0] - 2026-08-01
 
 ### Added
 
@@ -11,6 +11,7 @@ Notable BoardBuddy Web changes are recorded here. Versions follow Semantic Versi
 - Event application opening times, policy views, activity filters, self-organized events, and development sample data.
 - Season-room availability states and season-aware reservation emphasis.
 - Phone verification, user-type onboarding, notifications, and improved pending-crew onboarding.
+- Persistent sessions using backend-issued refresh tokens.
 
 ### Changed
 

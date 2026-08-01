@@ -13,6 +13,7 @@ export interface PhoneVerificationResult {
     status: 'PENDING_PROFILE' | 'ACTIVE' | 'SUSPENDED' | 'DELETED';
     userType: UserType;
     accessToken: string;
+    refreshToken: string;
 }
 
 const authConfig = () => {

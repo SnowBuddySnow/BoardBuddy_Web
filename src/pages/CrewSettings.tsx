@@ -33,7 +33,7 @@ export default function CrewSettings({ onBack }: CrewSettingsProps) {
     const [requestCopied, setRequestCopied] = useState(false);
     const [formData, setFormData] = useState<CrewInfoUpdateRequest>({
         crewName: '',
-        crewPIN: 0,
+        crewPIN: '',
         reservationOpenDay: 'FRIDAY',
         reservationOpenTime: '18:00',
         reservationOpenOffsetDays: 3,
@@ -84,7 +84,7 @@ export default function CrewSettings({ onBack }: CrewSettingsProps) {
 
                     setFormData({
                         crewName: info.name,
-                        crewPIN: 1234, // Default to number, ideally fetch if API exposes or leave blank
+                        crewPIN: '',
                         reservationOpenDay: info.reservationOpenDay,
                         reservationOpenTime: info.reservationOpenTime,
                         reservationOpenOffsetDays: info.reservationOpenOffsetDays || 3, // Default fallback
@@ -113,9 +113,7 @@ export default function CrewSettings({ onBack }: CrewSettingsProps) {
         // Allow numeric characters only (or empty)
         if (/^\d*$/.test(value)) {
             setPinInput(value);
-            // Sync with formData as number
-            const numValue = value === '' ? 0 : parseInt(value, 10);
-            setFormData(prev => ({ ...prev, crewPIN: numValue }));
+            setFormData(prev => ({ ...prev, crewPIN: value }));
         }
     };
 

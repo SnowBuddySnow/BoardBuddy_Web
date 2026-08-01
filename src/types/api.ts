@@ -132,7 +132,7 @@ export interface ReservationDaysPrepareRequest {
 
 export interface CrewInfoUpdateRequest {
     crewName: string;
-    crewPIN: number;
+    crewPIN: string;
     reservationOpenDay: string;
     reservationOpenTime: string;
     reservationOpenOffsetDays: number;
