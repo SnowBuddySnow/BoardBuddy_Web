@@ -1,6 +1,6 @@
 import { Button } from '../components/Button';
 import { ChevronLeftIcon, CheckIcon } from 'lucide-react';
-import { useState, useRef, useEffect } from 'react';
+import { useState } from 'react';
 import { TermsModal } from '../components/TermsModal';
 import apiClient from '../lib/axios';
 import {
@@ -12,11 +12,8 @@ import {
     saveTempAccessToken,
 } from '../lib/session';
 import { confirmPhoneVerification, requestPhoneVerification } from '../services/phoneVerification';
-import { getSchools, type SchoolOption } from '../services/schools';
-import type { SignupUserType } from './UserTypeSelection';
 
 interface UserInfoInputProps {
-    userType: SignupUserType;
     onBack: () => void;
     onSuccess?: () => void;
 }
@@ -47,7 +44,6 @@ const TERMS_CONTENT = {
 
 2. 개인정보 수집 항목
 - 성명 또는 닉네임, 성별, 휴대전화번호, 이메일(선택)
-- KUSBF 회원의 경우 학교, 학번
 
 3. 개인정보 제3자 제공 동의 (휴대전화번호 제공)
 - 시즌방 예약 확인, 공지사항 전달, 비상 연락 및 이용자 안전 등 원활한 모임 운영 및 서비스 제공을 위해, 귀하가 속한 시즌방 운영진 및 모임 관리자(manager users)에게 귀하의 휴대전화번호가 제공될 수 있습니다.
@@ -63,10 +59,8 @@ const TERMS_CONTENT = {
 };
 
 
-export default function UserInfoInput({ userType, onBack, onSuccess }: UserInfoInputProps) {
+export default function UserInfoInput({ onBack, onSuccess }: UserInfoInputProps) {
     const [name, setName] = useState('');
-    const [school, setSchool] = useState('');
-    const [studentId, setStudentId] = useState('');
     const [phoneNumber, setPhoneNumber] = useState('');
     const [phoneChallengeId, setPhoneChallengeId] = useState<string | null>(null);
     const [phoneCode, setPhoneCode] = useState('');
@@ -83,37 +77,6 @@ export default function UserInfoInput({ userType, onBack, onSuccess }: UserInfoI
     const [phoneConsentPreference, setPhoneConsentPreference] = useState<'each_time' | 'always'>('each_time');
     const [activeModal, setActiveModal] = useState<'service' | 'privacy' | null>(null);
     const [isLoading, setIsLoading] = useState(false);
-
-    // School Search State
-    const [schools, setSchools] = useState<SchoolOption[]>([]);
-    const [filteredSchools, setFilteredSchools] = useState<SchoolOption[]>([]);
-    const [showSchoolDropdown, setShowSchoolDropdown] = useState(false);
-    const schoolInputRef = useRef<HTMLDivElement>(null);
-
-    // Close dropdown when clicking outside
-    useEffect(() => {
-        function handleClickOutside(event: MouseEvent) {
-            if (schoolInputRef.current && !schoolInputRef.current.contains(event.target as Node)) {
-                setShowSchoolDropdown(false);
-            }
-        }
-        document.addEventListener('mousedown', handleClickOutside);
-        return () => {
-            document.removeEventListener('mousedown', handleClickOutside);
-        };
-    }, []);
-
-    useEffect(() => {
-        let cancelled = false;
-        getSchools()
-            .then((data) => {
-                if (!cancelled) setSchools(data);
-            })
-            .catch(() => {
-                if (!cancelled) alert('학교 목록을 불러오지 못했습니다. 잠시 후 다시 시도해주세요.');
-            });
-        return () => { cancelled = true; };
-    }, []);
 
     const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const value = e.target.value.replace(/[^0-9]/g, '');
@@ -203,37 +166,9 @@ export default function UserInfoInput({ userType, onBack, onSuccess }: UserInfoI
         setPhoneVerificationSkipped(true);
     };
 
-    const handleSchoolChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const value = e.target.value;
-        setSchool(value);
-
-        if (value.trim() === '') {
-            setFilteredSchools([]);
-            setShowSchoolDropdown(false);
-            return;
-        }
-
-        const lowerValue = value.toLowerCase();
-        const filtered = schools.filter(item =>
-            item.name.toLowerCase().includes(lowerValue) ||
-            (item.aliases || []).some(alias => alias.toLowerCase().includes(lowerValue))
-        );
-
-        setFilteredSchools(filtered);
-        setShowSchoolDropdown(filtered.length > 0);
-    };
-
-    const handleSchoolSelect = (schoolName: string) => {
-        setSchool(schoolName);
-        setFilteredSchools([]);
-        setShowSchoolDropdown(false);
-    };
-
     const handleSubmit = async () => {
         // Granular Validation
-        if (!name.trim()) { alert(userType === 'KUSBF' ? '이름을 입력해주세요.' : '닉네임을 입력해주세요.'); return; }
-        if (userType === 'KUSBF' && !school) { alert('KUSBF 회원은 학교를 입력해주세요.'); return; }
-        if (userType === 'KUSBF' && !studentId) { alert('KUSBF 회원은 학번을 입력해주세요.'); return; }
+        if (!name.trim()) { alert('닉네임을 입력해주세요.'); return; }
         if (!phoneNumber) { alert('전화번호를 입력해주세요.'); return; }
         if (!phoneVerified) { alert('전화번호 인증을 완료해주세요.'); return; }
         if (!gender) { alert('성별을 선택해주세요.'); return; }
@@ -251,12 +186,6 @@ export default function UserInfoInput({ userType, onBack, onSuccess }: UserInfoI
             return;
         }
 
-        const selectedSchool = schools.find((item) => item.name === school);
-        if (userType === 'KUSBF' && !selectedSchool) {
-            alert('검색 결과에서 학교를 선택해주세요.');
-            return;
-        }
-
         setIsLoading(true);
 
         try {
@@ -269,14 +198,9 @@ export default function UserInfoInput({ userType, onBack, onSuccess }: UserInfoI
                 return;
             }
 
-            const schoolId = selectedSchool?.id;
-
             const response = await apiClient.put(`/accounts/${accountId}/profile`, {
-                userType,
                 displayName: name.trim(),
                 email: email.trim() || undefined,
-                schoolId: userType === 'KUSBF' ? schoolId : undefined,
-                studentNumber: userType === 'KUSBF' ? studentId.trim() : undefined,
                 gender: gender === 'male' ? 'MALE' : 'FEMALE',
                 phoneNumber
             }, {
@@ -332,79 +256,29 @@ export default function UserInfoInput({ userType, onBack, onSuccess }: UserInfoI
                     <div className="space-y-6 lg:grid lg:grid-cols-2 lg:gap-x-5 lg:space-y-0 [&>*]:lg:mb-6">
                         {/* Name */}
                         <div className="space-y-2">
-                            <label className="text-sm font-bold text-zinc-800 ml-1">{userType === 'KUSBF' ? '이름' : '닉네임'}</label>
+                            <label className="text-sm font-bold text-zinc-800 ml-1">닉네임</label>
                             <input
                                 type="text"
                                 value={name}
                                 onChange={(e) => setName(e.target.value)}
                                 className="w-full h-12 rounded-[16px] border-none px-4 text-zinc-900 focus:ring-2 focus:ring-blue-400 outline-none shadow-sm bg-white"
-                                placeholder={userType === 'KUSBF' ? '홍길동' : '보드버디'}
+                                placeholder="보드버디"
                             />
-                            {userType === 'KUSBF' && <p className="text-xs text-zinc-600 ml-1">KUSBF 회원 확인에 사용할 이름을 입력해주세요.</p>}
                         </div>
 
                         {/* Email */}
                         <div className="space-y-2">
                             <label className="text-sm font-bold text-zinc-800 ml-1">
-                                {userType === 'KUSBF' ? '학교 이메일 인증' : '이메일'} <span className="font-normal text-zinc-500">(선택)</span>
+                                이메일 <span className="font-normal text-zinc-500">(선택)</span>
                             </label>
                             <input
                                 type="email"
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
                                 className="w-full h-12 rounded-[16px] border-none px-4 text-zinc-900 focus:ring-2 focus:ring-blue-400 outline-none shadow-sm bg-white"
-                                placeholder={userType === 'KUSBF' ? 'student@university.ac.kr' : 'name@example.com'}
-                            />
-                            {userType === 'KUSBF' && <p className="text-xs text-zinc-600 ml-1">학교별 인증 도메인이 등록되면 이 주소로 인증을 진행합니다.</p>}
-                        </div>
-
-                        {userType === 'KUSBF' && <>
-                        {/* School (Dropdown) */}
-                        <div className="space-y-2 relative" ref={schoolInputRef}>
-                            <label className="text-sm font-bold text-zinc-800 ml-1">학교 *</label>
-                            <input
-                                type="text"
-                                value={school}
-                                onChange={handleSchoolChange}
-                                onFocus={() => {
-                                    if (school && filteredSchools.length > 0) {
-                                        setShowSchoolDropdown(true);
-                                    }
-                                }}
-                                className="w-full h-12 rounded-[16px] border-none px-4 text-zinc-900 focus:ring-2 focus:ring-blue-400 outline-none shadow-sm bg-white"
-                                placeholder="학교명을 검색하세요 (예: 홍익대학교, 홍대)"
-                            />
-                            {showSchoolDropdown && (
-                                <div className="absolute top-[80px] left-0 right-0 bg-white rounded-xl shadow-lg border border-zinc-100 max-h-48 overflow-y-auto z-50">
-                                    {filteredSchools.map(item => (
-                                        <button
-                                            key={item.id}
-                                            className="w-full text-left px-4 py-3 hover:bg-zinc-50 text-zinc-900 text-sm border-b border-zinc-50 last:border-none"
-                                            onClick={() => handleSchoolSelect(item.name)}
-                                        >
-                                            <span className="font-bold">{item.name}</span>
-                                            {(item.aliases || []).length > 0 && (
-                                                <span className="text-zinc-400 text-xs ml-2">({item.aliases[0]})</span>
-                                            )}
-                                        </button>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
-
-                        {/* Student ID */}
-                        <div className="space-y-2">
-                            <label className="text-sm font-bold text-zinc-800 ml-1">학번 *</label>
-                            <input
-                                type="text"
-                                value={studentId}
-                                onChange={(e) => setStudentId(e.target.value)}
-                                className="w-full h-12 rounded-[16px] border-none px-4 text-zinc-900 focus:ring-2 focus:ring-blue-400 outline-none shadow-sm bg-white"
-                                placeholder="20230001"
+                                placeholder="name@example.com"
                             />
                         </div>
-
-                        </>}
 
                         {/* Phone */}
                         <div className="space-y-2">

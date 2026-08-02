@@ -7,7 +7,6 @@ import MyReservations from './pages/MyReservations';
 import LoginLanding from './pages/LoginLanding';
 import CrewDetail from './pages/CrewDetail';
 import UserInfoInput from './pages/UserInfoInput';
-import UserTypeSelection, { type SignupUserType } from './pages/UserTypeSelection';
 import CrewMember from './pages/CrewMember';
 import SearchCrew from './pages/SearchCrew';
 import CrewSettings from './pages/CrewSettings';
@@ -53,7 +52,6 @@ type View =
   | 'crew_detail'
   | 'search_crew'
   | 'user_info'
-  | 'user_type'
   | 'crew_member'
   | 'crew_settings'
   | 'guest_reservation'
@@ -104,7 +102,6 @@ const tabViews: Record<Tab, View> = {
 const viewsWithoutBottomNav: View[] = [
   'login',
   'user_info',
-  'user_type',
   'my_page',
   'account_info',
   'crew_create',
@@ -131,7 +128,6 @@ function App() {
   const [guestCrewId, setGuestCrewId] = useState<number | null>(null);
   const [isGuestEventApplication, setIsGuestEventApplication] = useState(false);
   const [selectedGroupId, setSelectedGroupId] = useState<number | null>(null);
-  const [signupUserType, setSignupUserType] = useState<SignupUserType>('GENERAL');
   const [notificationRefreshKey, setNotificationRefreshKey] = useState(0);
   const [notificationReturnView, setNotificationReturnView] = useState<View>('home');
   const [canManage, setCanManage] = useState(false);
@@ -141,7 +137,7 @@ function App() {
   const [availableEventCount, setAvailableEventCount] = useState(0);
   const isDesktop = useDesktopViewport();
   const usedDesktopLanding = useRef(false);
-  const shouldLoadPermissions = !['login', 'user_type', 'user_info'].includes(currentView);
+  const shouldLoadPermissions = !['login', 'user_info'].includes(currentView);
 
   // Check for auto-login on app start
   useEffect(() => {
@@ -334,18 +330,8 @@ function App() {
         return (
           <LoginLanding
             onLogin={() => setCurrentView('home')}
-            onSignupNeeded={() => setCurrentView('user_type')}
-            onDebugUserInfo={() => setCurrentView('user_type')}
-          />
-        );
-      case 'user_type':
-        return (
-          <UserTypeSelection
-            onBack={() => setCurrentView('login')}
-            onSelect={(userType) => {
-              setSignupUserType(userType);
-              setCurrentView('user_info');
-            }}
+            onSignupNeeded={() => setCurrentView('user_info')}
+            onDebugUserInfo={() => setCurrentView('user_info')}
           />
         );
       case 'reservation':
@@ -386,8 +372,7 @@ function App() {
       case 'user_info':
         return (
           <UserInfoInput
-            userType={signupUserType}
-            onBack={() => setCurrentView('user_type')}
+            onBack={() => setCurrentView('login')}
             onSuccess={() => setCurrentView('home')}
           />
         );
@@ -498,7 +483,7 @@ function App() {
 
   const usesDesktopShell = isDesktop
     && !isDashboardView
-    && !['login', 'user_info', 'user_type'].includes(currentView);
+    && !['login', 'user_info'].includes(currentView);
 
   const currentContent = renderCurrentView();
 
@@ -521,7 +506,7 @@ function App() {
           </DesktopShell>
         ) : currentContent}
 
-        {currentView !== 'login' && currentView !== 'user_info' && currentView !== 'user_type' && currentView !== 'notifications' && currentView !== 'crew_create' && currentView !== 'crew_admin' && currentView !== 'school_admin' && !isDashboardView && (
+        {currentView !== 'login' && currentView !== 'user_info' && currentView !== 'notifications' && currentView !== 'crew_create' && currentView !== 'crew_admin' && currentView !== 'school_admin' && !isDashboardView && (
           <NotificationBell refreshKey={notificationRefreshKey} onClick={() => {
             setNotificationReturnView(currentView);
             setCurrentView('notifications');
