@@ -29,7 +29,6 @@ export const getCrewInfo = async (crewId: number): Promise<CrewDetail> => {
             univ: 'Mock University',
             status: 'INACTIVE',
             role: 'CREW_MANAGER',
-            pinCode: '1234',
             crewPin: '1234',
             reservation_day: 'FRIDAY',
             reservation_time: '18:00',
@@ -78,6 +77,14 @@ export const applyToCrew = async (crewId: number, crewPIN: string): Promise<void
 
 export const updateCrew = async (crewId: number, data: Partial<CrewInfoUpdateRequest> & { id?: number; name?: string }): Promise<void> => {
     await apiClient.patch(`/crews/${crewId}/info`, data);
+};
+
+export const resetCrewPin = async (crewId: number): Promise<string> => {
+    if (hasDevOverride()) {
+        return String(Math.floor(Math.random() * 10_000)).padStart(4, '0');
+    }
+    const response = await apiClient.post<ApiResponse<{ crewPin: string }>>(`/crews/${crewId}/pin/reset`);
+    return response.data.data.crewPin;
 };
 
 export const promoteMember = async (crewId: number, userId: number): Promise<void> => {

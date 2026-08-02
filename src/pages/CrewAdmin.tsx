@@ -11,7 +11,7 @@ import {
     ShieldCheck,
     UsersRound,
 } from 'lucide-react';
-import { useEffect, useMemo, useState, type FormEvent } from 'react';
+import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react';
 import { Button } from '../components/Button';
 import {
     affiliateCrewSchool,
@@ -24,20 +24,11 @@ import {
 
 interface CrewAdminProps {
     onBack: () => void;
+    mode?: 'create' | 'review';
 }
 
 type ReviewFilter = 'PENDING' | 'APPROVED' | 'REJECTED' | 'ALL';
 type ReviewDecision = 'APPROVE' | 'REJECT';
-
-const DAYS = [
-    ['MONDAY', '월요일'],
-    ['TUESDAY', '화요일'],
-    ['WEDNESDAY', '수요일'],
-    ['THURSDAY', '목요일'],
-    ['FRIDAY', '금요일'],
-    ['SATURDAY', '토요일'],
-    ['SUNDAY', '일요일'],
-] as const;
 
 const approvalCopy: Record<AdminCrew['approvalStatus'], { label: string; className: string }> = {
     PENDING: { label: '승인 대기', className: 'bg-amber-50 text-amber-700 ring-amber-200' },
@@ -68,18 +59,13 @@ const ApprovalBadge = ({ status }: { status: AdminCrew['approvalStatus'] }) => {
     return <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-black ring-1 ring-inset ${copy.className}`}>{copy.label}</span>;
 };
 
-export default function CrewAdmin({ onBack }: CrewAdminProps) {
+export default function CrewAdmin({ onBack, mode = 'create' }: CrewAdminProps) {
     const [data, setData] = useState<AdminCrewData | null>(null);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [actingCrewId, setActingCrewId] = useState<number | null>(null);
     const [error, setError] = useState('');
     const [name, setName] = useState('');
-    const [pin, setPin] = useState('');
-    const [openingEnabled, setOpeningEnabled] = useState(false);
-    const [openingDay, setOpeningDay] = useState('FRIDAY');
-    const [openingTime, setOpeningTime] = useState('18:00');
-    const [openingOffset, setOpeningOffset] = useState('3');
     const [filter, setFilter] = useState<ReviewFilter>('PENDING');
     const [query, setQuery] = useState('');
     const [reviewTarget, setReviewTarget] = useState<AdminCrew | null>(null);
@@ -87,21 +73,21 @@ export default function CrewAdmin({ onBack }: CrewAdminProps) {
     const [reviewNote, setReviewNote] = useState('');
     const [schoolSelections, setSchoolSelections] = useState<Record<number, string>>({});
 
-    const load = async () => {
+    const load = useCallback(async () => {
         setLoading(true);
         setError('');
         try {
-            setData(await getCrewAdminData());
+            setData(await getCrewAdminData(mode === 'create'));
         } catch (loadError) {
             setError(getErrorMessage(loadError));
         } finally {
             setLoading(false);
         }
-    };
+    }, [mode]);
 
     useEffect(() => {
         void load();
-    }, []);
+    }, [load]);
 
     const updateCrew = (updated: AdminCrew) => {
         setData(current => current ? {
@@ -114,17 +100,12 @@ export default function CrewAdmin({ onBack }: CrewAdminProps) {
 
     const handleSubmit = async (event: FormEvent) => {
         event.preventDefault();
-        if (!/^\d{4}$/.test(pin)) return;
 
         setSaving(true);
         setError('');
         try {
             const crew = await createCrew({
                 name: name.trim(),
-                pin,
-                reservationOpenDay: openingEnabled ? openingDay : null,
-                reservationOpenTime: openingEnabled ? openingTime : null,
-                reservationOpenOffsetDays: openingEnabled ? Number(openingOffset) : null,
                 profileImageUrl: null,
             });
             setData(current => current ? {
@@ -132,7 +113,6 @@ export default function CrewAdmin({ onBack }: CrewAdminProps) {
                 crews: [...current.crews, crew].sort((left, right) => left.name.localeCompare(right.name)),
             } : current);
             setName('');
-            setPin('');
         } catch (saveError) {
             setError(getErrorMessage(saveError));
         } finally {
@@ -192,7 +172,7 @@ export default function CrewAdmin({ onBack }: CrewAdminProps) {
         );
     }
 
-    if (data?.developerAccess) {
+    if (mode === 'review' && data?.developerAccess) {
         const pendingCount = data.crews.filter(crew => crew.approvalStatus === 'PENDING').length;
         const unlinkedCount = data.crews.filter(crew => crew.approvalStatus === 'APPROVED' && !crew.kusbfAssociated).length;
         const approvedCount = data.crews.filter(crew => crew.approvalStatus === 'APPROVED').length;
@@ -420,6 +400,19 @@ export default function CrewAdmin({ onBack }: CrewAdminProps) {
         );
     }
 
+    if (mode === 'review') {
+        return (
+            <div className="flex h-full flex-1 items-center justify-center bg-zinc-50 p-6">
+                <div className="max-w-md rounded-3xl border border-zinc-200 bg-white p-7 text-center shadow-sm">
+                    <ShieldCheck className="mx-auto h-8 w-8 text-zinc-400" />
+                    <h1 className="mt-4 text-xl font-black">검토 권한이 없습니다</h1>
+                    <p className="mt-2 text-sm text-zinc-500">개발자 계정으로 로그인해 주세요.</p>
+                    <button onClick={onBack} className="mt-6 rounded-xl bg-[#162660] px-5 py-3 text-sm font-black text-white">돌아가기</button>
+                </div>
+            </div>
+        );
+    }
+
     const inputClass = 'mt-1 w-full rounded-xl border border-zinc-300 bg-white px-3 py-2.5 text-sm text-zinc-900 outline-none focus:border-zinc-700';
 
     return (
@@ -440,7 +433,7 @@ export default function CrewAdmin({ onBack }: CrewAdminProps) {
                             <PlusIcon className="h-4 w-4" />
                             <div>
                                 <h2 className="font-black">새 크루 생성 요청</h2>
-                                <p className="mt-0.5 text-xs text-zinc-500">개발자 검토 후 크루가 활성화됩니다.</p>
+                                <p className="mt-0.5 text-xs text-zinc-500">가입 PIN은 자동 생성되며 승인 후 크루 설정에서 확인할 수 있습니다.</p>
                             </div>
                         </div>
 
@@ -449,25 +442,9 @@ export default function CrewAdmin({ onBack }: CrewAdminProps) {
                             <input required maxLength={50} value={name} onChange={event => setName(event.target.value)} className={inputClass} />
                         </label>
 
-                        <label className="block text-sm font-bold">
-                            가입 PIN
-                            <input required inputMode="numeric" pattern="\d{4}" maxLength={4} value={pin} onChange={event => setPin(event.target.value.replace(/\D/g, ''))} className={inputClass} placeholder="4자리" />
-                        </label>
-
-                        <label className="flex items-center gap-2 text-sm font-semibold">
-                            <input type="checkbox" checked={openingEnabled} onChange={event => setOpeningEnabled(event.target.checked)} />
-                            예약 오픈 시간 설정
-                        </label>
-
-                        {openingEnabled && (
-                            <div className="grid grid-cols-3 gap-2">
-                                <select value={openingDay} onChange={event => setOpeningDay(event.target.value)} className={inputClass}>
-                                    {DAYS.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
-                                </select>
-                                <input required type="time" value={openingTime} onChange={event => setOpeningTime(event.target.value)} className={inputClass} />
-                                <input required aria-label="예약 오픈 기준 일수" type="number" min={0} max={365} value={openingOffset} onChange={event => setOpeningOffset(event.target.value)} className={inputClass} />
-                            </div>
-                        )}
+                        <div className="rounded-xl bg-blue-50 px-4 py-3 text-xs font-semibold leading-5 text-blue-800">
+                            예약 오픈일과 정원은 크루 승인 후 크루 설정에서 관리합니다.
+                        </div>
 
                         <button disabled={saving || loading} className="w-full rounded-xl bg-zinc-900 py-3 text-sm font-black text-white disabled:cursor-not-allowed disabled:opacity-50">
                             {saving ? '요청 중...' : '생성 요청 보내기'}

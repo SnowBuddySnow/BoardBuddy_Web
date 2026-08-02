@@ -60,6 +60,7 @@ type View =
   | 'guest_access'
   | 'my_page'
   | 'account_info'
+  | 'crew_create'
   | 'crew_admin'
   | 'school_admin'
   | 'crew_permissions'
@@ -106,6 +107,7 @@ const viewsWithoutBottomNav: View[] = [
   'user_type',
   'my_page',
   'account_info',
+  'crew_create',
   'reservation',
   'guest_reservation',
   'crew_admin',
@@ -394,7 +396,9 @@ function App() {
       case 'account_info':
         return <AccountInfo onBack={() => setCurrentView('my_page')} />;
       case 'crew_admin':
-        return <CrewAdmin onBack={() => setCurrentView('home')} />;
+        return <CrewAdmin mode="review" onBack={() => setCurrentView('home')} />;
+      case 'crew_create':
+        return <CrewAdmin mode="create" onBack={() => setCurrentView('home')} />;
       case 'school_admin':
         return <SchoolAdmin onBack={() => setCurrentView('home')} />;
       case 'crew_permissions':
@@ -480,7 +484,7 @@ function App() {
             onCalendarClick={() => setCurrentView('my_reservations')}
             onTeamClick={() => setCurrentView('crew_detail')}
             onSearchClick={() => setCurrentView('search_crew')}
-            onCreateCrewClick={() => setCurrentView('crew_admin')}
+            onCreateCrewClick={() => setCurrentView('crew_create')}
             hasCrew={hasCrew}
             onJoinCrew={() => setHasCrew(true)}
             onEventClick={(id) => openEventDetail(id)}
@@ -517,7 +521,7 @@ function App() {
           </DesktopShell>
         ) : currentContent}
 
-        {currentView !== 'login' && currentView !== 'user_info' && currentView !== 'user_type' && currentView !== 'notifications' && currentView !== 'crew_admin' && currentView !== 'school_admin' && !isDashboardView && (
+        {currentView !== 'login' && currentView !== 'user_info' && currentView !== 'user_type' && currentView !== 'notifications' && currentView !== 'crew_create' && currentView !== 'crew_admin' && currentView !== 'school_admin' && !isDashboardView && (
           <NotificationBell refreshKey={notificationRefreshKey} onClick={() => {
             setNotificationReturnView(currentView);
             setCurrentView('notifications');

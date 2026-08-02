@@ -37,15 +37,13 @@ export interface AdminCrewData {
 
 export interface CreateCrewRequest {
     name: string;
-    pin: string;
-    reservationOpenDay: string | null;
-    reservationOpenTime: string | null;
-    reservationOpenOffsetDays: number | null;
     profileImageUrl: string | null;
 }
 
-export const getCrewAdminData = async (): Promise<AdminCrewData> => {
-    const response = await apiClient.get<ApiResponse<AdminCrewData>>('/admin/crews');
+export const getCrewAdminData = async (mine = false): Promise<AdminCrewData> => {
+    const response = await apiClient.get<ApiResponse<AdminCrewData>>('/admin/crews', {
+        params: mine ? { mine: true } : undefined,
+    });
     return response.data.data;
 };
 

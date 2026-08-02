@@ -1,7 +1,7 @@
 import { Button } from '../components/Button';
-import { CheckCircle2Icon, ChevronLeftIcon, CopyIcon, EyeIcon, EyeOffIcon, Link2Icon, SaveIcon } from 'lucide-react';
+import { CheckCircle2Icon, ChevronLeftIcon, CopyIcon, KeyRoundIcon, Link2Icon, RefreshCwIcon, SaveIcon } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { getCrewInfo, updateCrew } from '../services/crew';
+import { getCrewInfo, resetCrewPin, updateCrew } from '../services/crew';
 import { getUserInfo } from '../services/user';
 import { getSchools, type SchoolOption } from '../services/schools';
 import { CrewInfoUpdateRequest } from '../types/api';
@@ -33,7 +33,6 @@ export default function CrewSettings({ onBack }: CrewSettingsProps) {
     const [requestCopied, setRequestCopied] = useState(false);
     const [formData, setFormData] = useState<CrewInfoUpdateRequest>({
         crewName: '',
-        crewPIN: '',
         reservationOpenDay: 'FRIDAY',
         reservationOpenTime: '18:00',
         reservationOpenOffsetDays: 3,
@@ -42,10 +41,9 @@ export default function CrewSettings({ onBack }: CrewSettingsProps) {
         reservationPeriodLimitDays: 7
     });
 
-    // UI state for PIN to allow string input with leading zeros
-    const [pinInput, setPinInput] = useState('');
-
-    const [showPin, setShowPin] = useState(false);
+    const [crewPin, setCrewPin] = useState('');
+    const [resettingPin, setResettingPin] = useState(false);
+    const [pinCopied, setPinCopied] = useState(false);
 
     // Temp New Scheme State
     // const [targetDay, setTargetDay] = useState('MONDAY');
@@ -84,16 +82,14 @@ export default function CrewSettings({ onBack }: CrewSettingsProps) {
 
                     setFormData({
                         crewName: info.name,
-                        crewPIN: '',
-                        reservationOpenDay: info.reservationOpenDay,
-                        reservationOpenTime: info.reservationOpenTime,
+                        reservationOpenDay: info.reservationOpenDay || 'FRIDAY',
+                        reservationOpenTime: info.reservationOpenTime || '18:00',
                         reservationOpenOffsetDays: info.reservationOpenOffsetDays || 3, // Default fallback
                         dailyCapacity: info.dailyCapacity,
                         isCapacityLimited: info.isCapacityLimited,
                         reservationPeriodLimitDays: info.reservationPeriodLimitDays || 7
                     });
-                    // Initialize UI PIN state (empty by default for security, or dummy if needed)
-                    setPinInput('');
+                    setCrewPin(info.crewPin || '');
                 }
             } catch (error) {
                 console.error("Failed to fetch crew settings", error);
@@ -106,15 +102,6 @@ export default function CrewSettings({ onBack }: CrewSettingsProps) {
 
     const handleChange = (field: keyof CrewInfoUpdateRequest, value: CrewInfoUpdateRequest[keyof CrewInfoUpdateRequest]) => {
         setFormData(prev => ({ ...prev, [field]: value }));
-    };
-
-    const handlePinChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const value = e.target.value;
-        // Allow numeric characters only (or empty)
-        if (/^\d*$/.test(value)) {
-            setPinInput(value);
-            setFormData(prev => ({ ...prev, crewPIN: value }));
-        }
     };
 
     const handleSave = async () => {
@@ -168,6 +155,31 @@ export default function CrewSettings({ onBack }: CrewSettingsProps) {
         }
     };
 
+    const handleCopyPin = async () => {
+        if (!crewPin) return;
+        try {
+            await navigator.clipboard.writeText(crewPin);
+            setPinCopied(true);
+            window.setTimeout(() => setPinCopied(false), 2000);
+        } catch {
+            window.prompt('가입 PIN을 복사해 주세요.', crewPin);
+        }
+    };
+
+    const handleResetPin = async () => {
+        if (!crewId || !window.confirm('가입 PIN을 새로 발급할까요? 기존 PIN은 즉시 사용할 수 없게 됩니다.')) return;
+        setResettingPin(true);
+        try {
+            setCrewPin(await resetCrewPin(crewId));
+            setPinCopied(false);
+        } catch (error) {
+            console.error('Failed to reset crew PIN', error);
+            alert('PIN을 재발급하지 못했습니다.');
+        } finally {
+            setResettingPin(false);
+        }
+    };
+
     if (loading) return <div className="flex-1 flex items-center justify-center">로딩 중...</div>;
 
     if (showPromote && crewId) {
@@ -200,31 +212,28 @@ export default function CrewSettings({ onBack }: CrewSettingsProps) {
                         />
                     </div>
 
-                    {/* Crew PIN */}
-                    <div className="space-y-2">
-                        <label className="text-sm font-bold text-zinc-900">가입 PIN</label>
-                        <div className="relative">
-                            <input
-                                type={showPin ? "text" : "password"}
-                                inputMode="numeric"
-                                pattern="[0-9]*"
-                                value={pinInput}
-                                onChange={handlePinChange}
-                                className="w-full px-4 py-3 rounded-xl bg-zinc-50 border-none focus:ring-2 focus:ring-black/5 pr-12"
-                            />
-                            <button
-                                type="button"
-                                onClick={() => setShowPin(!showPin)}
-                                className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600"
-                            >
-                                {showPin ? (
-                                    <EyeOffIcon className="w-5 h-5" />
-                                ) : (
-                                    <EyeIcon className="w-5 h-5" />
-                                )}
-                            </button>
-                        </div>
-                    </div>
+                    {isCaptain && (
+                        <section className="rounded-2xl border border-blue-100 bg-blue-50 p-4">
+                            <div className="flex items-start gap-3">
+                                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white text-[#162660] shadow-sm">
+                                    <KeyRoundIcon className="h-5 w-5" />
+                                </span>
+                                <div className="min-w-0 flex-1">
+                                    <p className="text-xs font-bold text-blue-700">현재 가입 PIN</p>
+                                    <p className="mt-1 font-mono text-3xl font-black tracking-[0.3em] text-[#162660]">{crewPin || '----'}</p>
+                                    <p className="mt-1 text-xs leading-5 text-blue-700/70">가입할 멤버에게 이 번호를 전달하세요.</p>
+                                </div>
+                            </div>
+                            <div className="mt-4 grid grid-cols-2 gap-2">
+                                <button type="button" onClick={() => void handleCopyPin()} disabled={!crewPin} className="flex items-center justify-center gap-2 rounded-xl bg-white px-3 py-2.5 text-xs font-black text-[#162660] shadow-sm disabled:opacity-40">
+                                    <CopyIcon className="h-4 w-4" /> {pinCopied ? '복사됨' : 'PIN 복사'}
+                                </button>
+                                <button type="button" onClick={() => void handleResetPin()} disabled={resettingPin} className="flex items-center justify-center gap-2 rounded-xl bg-[#162660] px-3 py-2.5 text-xs font-black text-white disabled:opacity-50">
+                                    <RefreshCwIcon className={`h-4 w-4 ${resettingPin ? 'animate-spin' : ''}`} /> {resettingPin ? '재발급 중' : 'PIN 재발급'}
+                                </button>
+                            </div>
+                        </section>
+                    )}
 
                     {/* School affiliation */}
                     <section className="space-y-4 rounded-xl border border-zinc-200 bg-white p-4">

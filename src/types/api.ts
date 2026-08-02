@@ -14,14 +14,13 @@ export interface CrewDetail {
     name: string;
     univ: string;
     role?: string;
-    pinCode?: string;
     crewPin?: string;
     reservation_day?: string;
     reservation_time?: string;
     reservation_offset?: number;
-    reservationOpenDay: string; // e.g., "FRIDAY"
-    reservationOpenTime: string; // e.g., "18:00"
-    reservationOpenOffsetDays: number; // e.g., 3
+    reservationOpenDay: string | null;
+    reservationOpenTime: string | null;
+    reservationOpenOffsetDays: number | null;
     reservationPeriodLimitDays: number; // e.g., 7
     dailyCapacity: number;
     status: string; // "ACTIVE"
@@ -132,7 +131,6 @@ export interface ReservationDaysPrepareRequest {
 
 export interface CrewInfoUpdateRequest {
     crewName: string;
-    crewPIN: string;
     reservationOpenDay: string;
     reservationOpenTime: string;
     reservationOpenOffsetDays: number;
