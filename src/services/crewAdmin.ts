@@ -14,6 +14,7 @@ export interface AdminCrew {
     status: 'ACTIVE' | 'INACTIVE' | 'ARCHIVED';
     approvalStatus: 'PENDING' | 'APPROVED' | 'REJECTED';
     requestedByAccountId: number | null;
+    requestedByName: string | null;
     reviewedByAccountId: number | null;
     reviewedAt: string | null;
     approvalNote: string | null;

@@ -158,7 +158,7 @@ export default function CrewAdmin({ onBack, mode = 'create' }: CrewAdminProps) {
         const normalizedQuery = query.trim().toLocaleLowerCase('ko-KR');
         return (data?.crews || []).filter(crew => (
             (filter === 'ALL' || crew.approvalStatus === filter)
-            && (!normalizedQuery || `${crew.name} ${crew.schoolName || ''} ${crew.requestedByAccountId || ''}`
+            && (!normalizedQuery || `${crew.name} ${crew.schoolName || ''} ${crew.requestedByName || ''}`
                 .toLocaleLowerCase('ko-KR')
                 .includes(normalizedQuery))
         ));
@@ -270,7 +270,7 @@ export default function CrewAdmin({ onBack, mode = 'create' }: CrewAdminProps) {
                                                     <p className="mt-1 text-xs text-zinc-400">#{crew.id} · {formatDate(crew.createdAt)}</p>
                                                 </td>
                                                 <td className="px-5 py-4 font-semibold text-zinc-600">
-                                                    {crew.requestedByAccountId ? `계정 #${crew.requestedByAccountId}` : '시스템 등록'}
+                                                    {crew.requestedByName || '이름 정보 없음'}
                                                 </td>
                                                 <td className="px-5 py-4"><ApprovalBadge status={crew.approvalStatus} /></td>
                                                 <td className="px-5 py-4">
@@ -324,7 +324,7 @@ export default function CrewAdmin({ onBack, mode = 'create' }: CrewAdminProps) {
                                         <div className="flex items-start justify-between gap-3">
                                             <div>
                                                 <h2 className="font-black">{crew.name}</h2>
-                                                <p className="mt-1 text-xs text-zinc-400">요청자 #{crew.requestedByAccountId || '—'} · {formatDate(crew.createdAt)}</p>
+                                                <p className="mt-1 text-xs text-zinc-400">요청자 {crew.requestedByName || '이름 정보 없음'} · {formatDate(crew.createdAt)}</p>
                                             </div>
                                             <ApprovalBadge status={crew.approvalStatus} />
                                         </div>
