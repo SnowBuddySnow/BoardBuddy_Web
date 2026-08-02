@@ -18,6 +18,16 @@ import {
 } from '../types/api';
 import { getDevCrewOverride, hasDevOverride } from '../lib/session';
 
+export interface DiscoverableCrew {
+    crewId: number;
+    crewCode: string;
+    crewName: string;
+    schoolId: number | null;
+    schoolName: string | null;
+    memberCount: number;
+    profileImageUrl: string | null;
+}
+
 // --- Missing / TBD Crew Endpoints ---
 export const getCrewInfo = async (crewId: number): Promise<CrewDetail> => {
     if (hasDevOverride()) {
@@ -73,6 +83,13 @@ export const manageApplicant = async (crewId: number, applicationId: number, dec
 
 export const applyToCrew = async (crewId: number, crewPIN: string): Promise<void> => {
     await apiClient.post(`/crews/${crewId}/applications`, { crewPIN });
+};
+
+export const discoverCrews = async (query = ''): Promise<DiscoverableCrew[]> => {
+    const response = await apiClient.get<ApiResponse<DiscoverableCrew[]>>('/crews/discover', {
+        params: { query },
+    });
+    return response.data.data;
 };
 
 export const updateCrew = async (crewId: number, data: Partial<CrewInfoUpdateRequest> & { id?: number; name?: string }): Promise<void> => {
