@@ -1,5 +1,5 @@
 import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios';
-import { clearAuthSession, getAccessToken, getRefreshToken, saveAuthTokens } from './session';
+import { clearAuthSession, getRefreshToken, getSignupToken, saveAuthTokens } from './session';
 
 const apiClient = axios.create({
     baseURL: import.meta.env.VITE_API_BASE_URL,
@@ -29,7 +29,10 @@ const processQueue = (error: AxiosError | null, token: string | null = null) => 
 
 apiClient.interceptors.request.use(
     (config) => {
-        const token = getAccessToken();
+        // During onboarding there is no permanent access token yet. Use the
+        // temporary signup token so protected setup requests (such as loading
+        // schools and requesting phone verification) stay authenticated.
+        const token = getSignupToken();
         // Some public auth endpoints provide their own bearer token (for example,
         // the Kakao access token used by /auth/social/kakao). Do not replace it
         // with a previously stored BoardBuddy access token.
