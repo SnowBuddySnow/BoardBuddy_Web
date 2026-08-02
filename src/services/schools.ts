@@ -3,7 +3,10 @@ import type { ApiResponse } from '../types/api';
 
 export interface SchoolOption {
     id: number;
+    schoolCode: string;
     name: string;
+    aliases: string[];
+    emailDomains: string[];
 }
 
 export const getSchools = async (): Promise<SchoolOption[]> => {

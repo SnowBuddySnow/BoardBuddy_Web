@@ -21,15 +21,6 @@ interface UserInfoInputProps {
     onSuccess?: () => void;
 }
 
-const SCHOOL_ALIASES: Record<string, string[]> = {
-    '홍익대학교': ['홍대', 'hongik university', 'hongik'],
-    '충남대학교': ['충남대', '충대', 'chungnam national university', 'chungnam', 'cnu'],
-    '카이스트': ['한국과학기술원', 'kaist'],
-    '세종대학교': ['세종대', 'sejong university', 'sejong'],
-    '이화여자대학교': ['이대', 'ewha womans university', 'ewha'],
-    '숙명여자대학교': ['숙대', 'sookmyung womens university', 'sookmyung'],
-};
-
 // DEV PHONE BYPASS: Vite removes this path from production builds because import.meta.env.DEV is false.
 // Delete this constant, the skip handler, and the development-only button to restore verification-only UI.
 const CAN_SKIP_PHONE_VERIFICATION = import.meta.env.DEV;
@@ -225,7 +216,7 @@ export default function UserInfoInput({ userType, onBack, onSuccess }: UserInfoI
         const lowerValue = value.toLowerCase();
         const filtered = schools.filter(item =>
             item.name.toLowerCase().includes(lowerValue) ||
-            (SCHOOL_ALIASES[item.name] || []).some(alias => alias.includes(lowerValue))
+            (item.aliases || []).some(alias => alias.toLowerCase().includes(lowerValue))
         );
 
         setFilteredSchools(filtered);
@@ -385,15 +376,15 @@ export default function UserInfoInput({ userType, onBack, onSuccess }: UserInfoI
                             />
                             {showSchoolDropdown && (
                                 <div className="absolute top-[80px] left-0 right-0 bg-white rounded-xl shadow-lg border border-zinc-100 max-h-48 overflow-y-auto z-50">
-                                    {filteredSchools.map((item, index) => (
+                                    {filteredSchools.map(item => (
                                         <button
-                                            key={index}
+                                            key={item.id}
                                             className="w-full text-left px-4 py-3 hover:bg-zinc-50 text-zinc-900 text-sm border-b border-zinc-50 last:border-none"
                                             onClick={() => handleSchoolSelect(item.name)}
                                         >
                                             <span className="font-bold">{item.name}</span>
-                                            {(SCHOOL_ALIASES[item.name] || []).length > 0 && (
-                                                <span className="text-zinc-400 text-xs ml-2">({SCHOOL_ALIASES[item.name][0]})</span>
+                                            {(item.aliases || []).length > 0 && (
+                                                <span className="text-zinc-400 text-xs ml-2">({item.aliases[0]})</span>
                                             )}
                                         </button>
                                     ))}

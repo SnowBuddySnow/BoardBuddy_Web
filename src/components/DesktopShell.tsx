@@ -7,6 +7,7 @@ import {
   Home,
   LayoutDashboard,
   ShieldCheck,
+  School,
   Sparkles,
   UsersRound,
 } from 'lucide-react';
@@ -20,7 +21,8 @@ export type DesktopDestination =
   | 'my_parties'
   | 'my_page'
   | 'operations_center'
-  | 'crew_admin';
+  | 'crew_admin'
+  | 'school_admin';
 
 interface DesktopShellProps {
   activeDestination: DesktopDestination;
@@ -122,13 +124,25 @@ export default function DesktopShell({
               <ShieldCheck className="h-4.5 w-4.5" />
               크루 생성 검토
             </button>
+            <button
+              type="button"
+              onClick={() => onNavigate('school_admin')}
+              className={`mt-1 flex w-full items-center gap-3 rounded-xl border px-3 py-2.5 text-left text-sm font-black cursor-pointer ${
+                activeDestination === 'school_admin'
+                  ? 'border-[#162660] bg-[#162660] text-white'
+                  : 'border-[#162660]/10 bg-[#162660]/5 text-[#162660] hover:bg-[#162660]/10'
+              }`}
+            >
+              <School className="h-4.5 w-4.5" />
+              학교 카탈로그
+            </button>
           </div>
         )}
       </aside>
 
       <main className="min-w-0 flex-1 overflow-hidden">
         <div className={`mx-auto h-full w-full overflow-hidden bg-[#FAF8F3] shadow-[0_0_40px_rgba(24,24,27,0.06)] ${
-          activeDestination === 'crew_admin' ? 'max-w-none' : 'max-w-5xl'
+          ['crew_admin', 'school_admin'].includes(activeDestination) ? 'max-w-none' : 'max-w-5xl'
         }`}>
           {children}
         </div>

@@ -14,6 +14,7 @@ import CrewSettings from './pages/CrewSettings';
 import MyPage from './pages/MyPage';
 import AccountInfo from './pages/AccountInfo';
 import CrewAdmin from './pages/CrewAdmin';
+import SchoolAdmin from './pages/SchoolAdmin';
 import Notifications from './pages/Notifications';
 import NotificationBell from './components/NotificationBell';
 import DesktopShell, { type DesktopDestination } from './components/DesktopShell';
@@ -60,6 +61,7 @@ type View =
   | 'my_page'
   | 'account_info'
   | 'crew_admin'
+  | 'school_admin'
   | 'crew_permissions'
   | 'notifications'
   | 'parties'
@@ -107,6 +109,7 @@ const viewsWithoutBottomNav: View[] = [
   'reservation',
   'guest_reservation',
   'crew_admin',
+  'school_admin',
   'crew_permissions',
   'notifications',
 ];
@@ -269,6 +272,7 @@ function App() {
 
   const getDesktopDestination = (): DesktopDestination => {
     if (currentView === 'crew_admin') return 'crew_admin';
+    if (currentView === 'school_admin') return 'school_admin';
     if (currentView === 'operations_center') return 'operations_center';
     if (currentView === 'parties' || currentView === 'event_detail') return 'parties';
     if (currentView === 'my_parties') return 'my_parties';
@@ -391,6 +395,8 @@ function App() {
         return <AccountInfo onBack={() => setCurrentView('my_page')} />;
       case 'crew_admin':
         return <CrewAdmin onBack={() => setCurrentView('home')} />;
+      case 'school_admin':
+        return <SchoolAdmin onBack={() => setCurrentView('home')} />;
       case 'crew_permissions':
         return <CrewPermissions onBack={() => setCurrentView('operations_center')} />;
       case 'notifications':
@@ -486,17 +492,20 @@ function App() {
     }
   };
 
+  const isDeveloperAdminView = ['crew_admin', 'school_admin'].includes(currentView);
   const usesDesktopShell = isDesktop
-    && hasCrew
-    && !hasPendingCrewApplication
     && !isDashboardView
-    && !['login', 'user_info', 'user_type'].includes(currentView);
+    && !['login', 'user_info', 'user_type'].includes(currentView)
+    && (
+      (hasCrew && !hasPendingCrewApplication)
+      || (canReviewCrews && isDeveloperAdminView)
+    );
 
   const currentContent = renderCurrentView();
 
   return (
     <div className="w-full h-screen bg-zinc-100 dark:bg-zinc-900 flex items-center justify-center overflow-hidden">
-      <div className={isDashboardView || usesDesktopShell || (currentView === 'crew_admin' && canReviewCrews)
+      <div className={isDashboardView || usesDesktopShell || (['crew_admin', 'school_admin'].includes(currentView) && canReviewCrews)
         ? "w-full h-full bg-white dark:bg-zinc-950 relative overflow-hidden flex flex-col" 
         : "w-full h-full max-w-md bg-[#FAF8F3] relative shadow-2xl overflow-hidden flex flex-col"
       }>
@@ -512,7 +521,7 @@ function App() {
           </DesktopShell>
         ) : currentContent}
 
-        {currentView !== 'login' && currentView !== 'user_info' && currentView !== 'user_type' && currentView !== 'notifications' && currentView !== 'crew_admin' && !isDashboardView && (
+        {currentView !== 'login' && currentView !== 'user_info' && currentView !== 'user_type' && currentView !== 'notifications' && currentView !== 'crew_admin' && currentView !== 'school_admin' && !isDashboardView && (
           <NotificationBell refreshKey={notificationRefreshKey} onClick={() => {
             setNotificationReturnView(currentView);
             setCurrentView('notifications');
@@ -529,7 +538,12 @@ function App() {
           />
         )}
       </div>
-      {import.meta.env.DEV && <DevPanel onOpenCrewAdmin={() => setCurrentView('crew_admin')} />}
+      {import.meta.env.DEV && (
+        <DevPanel
+          onOpenCrewAdmin={() => setCurrentView('crew_admin')}
+          onOpenSchoolAdmin={() => setCurrentView('school_admin')}
+        />
+      )}
     </div>
   );
 }
