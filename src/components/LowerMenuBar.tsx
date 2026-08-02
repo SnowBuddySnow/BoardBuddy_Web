@@ -1,7 +1,6 @@
-import { useState } from 'react';
 import { cn } from '../lib/utils';
-import { Button } from './Button'; // Import Button
-import { Menu, Sparkles, X } from 'lucide-react'; // Import Lucide icons
+import { Button } from './Button';
+import { Sparkles } from 'lucide-react';
 
 type IconProps = React.SVGProps<SVGSVGElement>;
 
@@ -106,6 +105,7 @@ interface LowerMenuBarProps {
   className?: string;
   activeTab?: 'home' | 'events' | 'calendar' | 'edit' | 'heart' | 'user';
   availableEventCount?: number;
+  hasCrew?: boolean;
   onTabChange?: (tab: 'home' | 'events' | 'calendar' | 'edit' | 'heart' | 'user') => void;
 }
 
@@ -113,89 +113,61 @@ export const LowerMenuBar = ({
   className,
   activeTab = 'home',
   availableEventCount = 0,
+  hasCrew = false,
   onTabChange,
 }: LowerMenuBarProps) => {
-  const [isExpanded, setIsExpanded] = useState(false);
-
   const menuItems = [
-    { id: 'home', icon: HomeIcon, label: 'Home' },
-    { id: 'events', icon: Sparkles, label: 'Events' },
-    { id: 'calendar', icon: CalendarIcon, label: 'Reservation Calendar' },
-    { id: 'edit', icon: EditIcon, label: 'Make Reservation' },
-    { id: 'heart', icon: HeartIcon, label: 'My Crew' },
-    { id: 'user', icon: UserIcon, label: 'Profile' },
-  ] as const;
+    { id: 'home', icon: HomeIcon, label: '홈', requiresCrew: false },
+    { id: 'events', icon: Sparkles, label: '이벤트', requiresCrew: false },
+    { id: 'calendar', icon: CalendarIcon, label: '내 예약', requiresCrew: true },
+    { id: 'edit', icon: EditIcon, label: '예약', requiresCrew: true },
+    { id: 'heart', icon: HeartIcon, label: '내 크루', requiresCrew: true },
+    { id: 'user', icon: UserIcon, label: '내 정보', requiresCrew: false },
+  ].filter(item => hasCrew || !item.requiresCrew) as Array<{
+    id: 'home' | 'events' | 'calendar' | 'edit' | 'heart' | 'user';
+    icon: typeof HomeIcon;
+    label: string;
+    requiresCrew: boolean;
+  }>;
 
   return (
-    <>
-      <nav
-        className={cn(
-          'absolute bottom-2 right-20 z-50', // Anchored right, next to the button
-          'flex items-center justify-around',
-          'bg-white dark:bg-zinc-900',
-          'shadow-[0_4px_20px_rgba(0,0,0,0.1)]',
-          'py-2 px-4 h-auto w-auto gap-2', // Auto width, gap for spacing
-          'rounded-[24px]',
-          'transition-all duration-300 ease-in-out origin-bottom-right', // Expand from right
-          isExpanded
-            ? 'opacity-100 scale-100 pointer-events-auto'
-            : 'opacity-0 scale-50 pointer-events-none', // Scale effect
-          className
-        )}
-      >
-        {menuItems.map((item) => {
-          const isActive = activeTab === item.id;
-          const Icon = item.icon;
+    <nav
+      aria-label="하단 메뉴"
+      className={cn(
+        'absolute inset-x-3 bottom-3 z-50 flex h-16 items-stretch justify-around rounded-[22px] border border-zinc-200/80 bg-white/95 px-1.5 py-1.5 shadow-[0_8px_28px_rgba(24,24,27,0.14)] backdrop-blur-md dark:border-zinc-800 dark:bg-zinc-900/95',
+        className
+      )}
+    >
+      {menuItems.map((item) => {
+        const isActive = activeTab === item.id;
+        const Icon = item.icon;
 
-          return (
-            <Button
-              key={item.id}
-              variant="ghost"
-              size="icon"
-              onClick={() => {
-                onTabChange?.(item.id);
-                setIsExpanded(false);
-              }}
-              className={cn(
-                'flex flex-col items-center justify-center transition-colors duration-200 h-10 w-10 p-2 rounded-full',
-                isActive
-                  ? 'bg-zinc-100 dark:bg-zinc-800 text-black dark:text-white' // Active bg
-                  : 'text-zinc-400 hover:text-zinc-600 dark:text-zinc-500 dark:hover:text-zinc-300'
+        return (
+          <Button
+            key={item.id}
+            variant="ghost"
+            onClick={() => onTabChange?.(item.id)}
+            className={cn(
+              'relative h-full min-w-0 flex-1 flex-col gap-0.5 rounded-2xl border-0 px-1 py-1 text-[10px] font-bold',
+              isActive
+                ? 'bg-[#162660] text-white hover:bg-[#162660]'
+                : 'text-zinc-400 hover:bg-zinc-100 hover:text-zinc-700 dark:text-zinc-500 dark:hover:bg-zinc-800'
+            )}
+            aria-current={isActive ? 'page' : undefined}
+          >
+            <span className="relative flex h-6 w-6 items-center justify-center">
+              <Icon className="h-5 w-5" />
+              {item.id === 'events' && availableEventCount > 0 && (
+                <span className="absolute -right-2 -top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-500 px-1 text-[9px] font-black leading-none text-white ring-2 ring-white">
+                  {availableEventCount > 99 ? '99+' : availableEventCount}
+                </span>
               )}
-              aria-label={item.label}
-            >
-              <span className="relative flex h-6 w-6 items-center justify-center">
-                <Icon className="w-6 h-6" />
-                {item.id === 'events' && availableEventCount > 0 && (
-                  <span className="absolute -right-2.5 -top-2 flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-500 px-1 text-[9px] font-black leading-none text-white ring-2 ring-white">
-                    {availableEventCount > 99 ? '99+' : availableEventCount}
-                  </span>
-                )}
-              </span>
-            </Button>
-          );
-        })}
-      </nav>
-
-      <Button
-        variant="primary" // Keeping primary structure but overriding styles via className
-        size="icon"
-        onClick={() => setIsExpanded(!isExpanded)}
-        className={cn(
-          "absolute bottom-2 right-4 z-[60] rounded-full w-[52px] h-[52px]", // Aligned with menu at bottom-2
-          "shadow-[0_4px_20px_rgba(0,0,0,0.1)]", // Same shadow
-          "flex items-center justify-center",
-          "bg-white dark:bg-zinc-900", // Same color as menu
-          "text-zinc-900 dark:text-zinc-100", // Icon color
-          "hover:bg-zinc-50 dark:hover:bg-zinc-800", // Hover state
-          "border border-transparent", // Clean border
-          "transition-all duration-300",
-          isExpanded ? "rotate-90" : "rotate-0"
-        )}
-      >
-        {isExpanded ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-      </Button>
-    </>
+            </span>
+            <span className="w-full truncate">{item.label}</span>
+          </Button>
+        );
+      })}
+    </nav>
   );
 };
 

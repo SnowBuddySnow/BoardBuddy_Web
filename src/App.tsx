@@ -528,6 +528,7 @@ function App() {
           <LowerMenuBar
             activeTab={activeTab}
             availableEventCount={availableEventCount}
+            hasCrew={hasCrew && !hasPendingCrewApplication}
             onTabChange={(tab) => {
               setCurrentView(tabViews[tab]);
             }}
