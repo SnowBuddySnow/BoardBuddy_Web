@@ -316,7 +316,7 @@ export default function UserInfoInput({ userType, onBack, onSuccess }: UserInfoI
         <div className="flex-1 flex flex-col h-full overflow-hidden bg-white dark:bg-zinc-950 relative">
 
             {/* Scrollable Content Wrapper */}
-            <div className="flex-1 overflow-y-auto pb-24">
+            <div className="mx-auto w-full max-w-3xl flex-1 overflow-y-auto pb-24 lg:my-8 lg:flex-none lg:rounded-[2rem] lg:border lg:border-zinc-200 lg:shadow-lg">
                 {/* Top Section - Light Blue */}
                 <div className="bg-[#D6E6F5] px-6 pt-4 pb-10 flex flex-col">
                     {/* Header */}
@@ -329,7 +329,7 @@ export default function UserInfoInput({ userType, onBack, onSuccess }: UserInfoI
                     </header>
 
                     {/* Form Fields */}
-                    <div className="space-y-6">
+                    <div className="space-y-6 lg:grid lg:grid-cols-2 lg:gap-x-5 lg:space-y-0 [&>*]:lg:mb-6">
                         {/* Name */}
                         <div className="space-y-2">
                             <label className="text-sm font-bold text-zinc-800 ml-1">{userType === 'KUSBF' ? '이름' : '닉네임'}</label>

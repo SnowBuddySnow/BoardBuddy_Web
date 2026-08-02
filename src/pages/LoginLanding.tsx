@@ -89,7 +89,7 @@ export default function LoginLanding({ onLogin, onSignupNeeded, /* onDebugUserIn
         });
     };
     return (
-        <div className="min-h-screen bg-white dark:bg-zinc-950 flex flex-col relative overflow-hidden">
+        <div className="min-h-screen bg-white dark:bg-zinc-950 flex flex-col relative overflow-hidden lg:bg-[#F5F4F0]">
             {/* Background Graphic */}
             <div
                 className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[1236px] h-[947px] pointer-events-none opacity-90 rotate-[42deg] scale-50 origin-center"
@@ -104,7 +104,7 @@ export default function LoginLanding({ onLogin, onSignupNeeded, /* onDebugUserIn
             </div>
 
             {/* Content */}
-            <div className="z-10 flex-1 flex flex-col items-center justify-between w-full max-w-md px-8 py-10 mx-auto">
+            <div className="z-10 flex-1 flex flex-col items-center justify-between w-full max-w-md px-8 py-10 mx-auto lg:my-12 lg:flex-none lg:min-h-[calc(100vh-6rem)] lg:rounded-[2rem] lg:border lg:border-zinc-200 lg:bg-white lg:px-12 lg:shadow-xl">
                 <div className="flex-1 flex items-center justify-center">
                     <img src={boardBuddyLogo} alt="BoardBuddy" className="h-20 w-72 object-cover object-center" />
                 </div>

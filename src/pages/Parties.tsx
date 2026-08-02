@@ -163,7 +163,7 @@ export default function Parties({ onBack, onEventClick, onCreateClick, canCreate
                         <p className="text-xs mt-1">새로운 액티비티 모임을 제안하거나 필터를 변경해보세요.</p>
                     </div>
                 ) : (
-                    <div className="space-y-4 pt-1">
+                    <div className="grid gap-4 pt-1 lg:grid-cols-2">
                         {filteredParties.map(event => {
                             const isClosed = event.status === 'CLOSED' || event.status === 'CANCELLED';
                             const isFull = event.capacity <= (event.joinedCount || 0);

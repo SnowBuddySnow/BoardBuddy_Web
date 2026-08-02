@@ -39,3 +39,26 @@ a:hover {
 @theme {
   --color-light-blue: #d4e7fa;
 }
+
+@media (min-width: 1024px) {
+  [data-desktop-page] > :is(div, main) > header {
+    min-height: 72px;
+    padding: 1.125rem 2rem;
+    border-bottom: 1px solid #e4e4e7;
+  }
+
+  [data-desktop-page] > :is(div, main) > header h1 {
+    font-size: 1.25rem;
+  }
+
+  [data-desktop-page] > :is(div, main) > main,
+  [data-desktop-page] > main > section {
+    padding-right: 2rem;
+    padding-left: 2rem;
+    padding-bottom: 2rem;
+  }
+
+  [data-desktop-page] button {
+    cursor: pointer;
+  }
+}

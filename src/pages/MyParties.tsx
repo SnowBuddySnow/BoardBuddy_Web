@@ -71,7 +71,7 @@ export default function MyParties({ onBack, onEventClick }: MyPartiesProps) {
                         <p className="text-xs mt-1">새로운 소모임에 참여하거나 직접 일정을 추가해보세요.</p>
                     </div>
                 ) : (
-                    <div className="space-y-4">
+                    <div className="grid gap-4 lg:grid-cols-2">
                         {joinedParties.map(event => {
                             const isPending = event.currentUserStatus === 'PENDING';
                             const isConsentPending = event.currentUserStatus === 'CONSENT_PENDING';

@@ -28,6 +28,7 @@ interface DesktopShellProps {
   activeDestination: DesktopDestination;
   canManage: boolean;
   canReviewCrews: boolean;
+  hasCrew: boolean;
   availableEventCount?: number;
   children: ReactNode;
   onNavigate: (destination: DesktopDestination) => void;
@@ -47,6 +48,7 @@ export default function DesktopShell({
   activeDestination,
   canManage,
   canReviewCrews,
+  hasCrew,
   availableEventCount = 0,
   children,
   onNavigate,
@@ -64,7 +66,9 @@ export default function DesktopShell({
         </button>
 
         <nav className="flex flex-1 flex-col gap-1" aria-label="주요 메뉴">
-          {primaryItems.map(({ id, label, icon: Icon }) => {
+          {primaryItems.filter(({ id }) => (
+            hasCrew || !['my_reservations', 'reservation', 'crew_detail'].includes(id)
+          )).map(({ id, label, icon: Icon }) => {
             const active = activeDestination === id;
             return (
               <button
@@ -141,8 +145,8 @@ export default function DesktopShell({
       </aside>
 
       <main className="min-w-0 flex-1 overflow-hidden">
-        <div className={`mx-auto h-full w-full overflow-hidden bg-[#FAF8F3] shadow-[0_0_40px_rgba(24,24,27,0.06)] ${
-          ['crew_admin', 'school_admin'].includes(activeDestination) ? 'max-w-none' : 'max-w-5xl'
+        <div data-desktop-page className={`mx-auto h-full w-full overflow-hidden bg-[#FAF8F3] shadow-[0_0_40px_rgba(24,24,27,0.06)] ${
+          ['crew_admin', 'school_admin'].includes(activeDestination) ? 'max-w-none' : 'max-w-6xl'
         }`}>
           {children}
         </div>

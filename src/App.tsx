@@ -492,20 +492,15 @@ function App() {
     }
   };
 
-  const isDeveloperAdminView = ['crew_admin', 'school_admin'].includes(currentView);
   const usesDesktopShell = isDesktop
     && !isDashboardView
-    && !['login', 'user_info', 'user_type'].includes(currentView)
-    && (
-      (hasCrew && !hasPendingCrewApplication)
-      || (canReviewCrews && isDeveloperAdminView)
-    );
+    && !['login', 'user_info', 'user_type'].includes(currentView);
 
   const currentContent = renderCurrentView();
 
   return (
     <div className="w-full h-screen bg-zinc-100 dark:bg-zinc-900 flex items-center justify-center overflow-hidden">
-      <div className={isDashboardView || usesDesktopShell || (['crew_admin', 'school_admin'].includes(currentView) && canReviewCrews)
+      <div className={isDesktop || isDashboardView || usesDesktopShell || (['crew_admin', 'school_admin'].includes(currentView) && canReviewCrews)
         ? "w-full h-full bg-white dark:bg-zinc-950 relative overflow-hidden flex flex-col" 
         : "w-full h-full max-w-md bg-[#FAF8F3] relative shadow-2xl overflow-hidden flex flex-col"
       }>
@@ -514,6 +509,7 @@ function App() {
             activeDestination={getDesktopDestination()}
             canManage={canManage}
             canReviewCrews={canReviewCrews}
+            hasCrew={hasCrew && !hasPendingCrewApplication}
             availableEventCount={availableEventCount}
             onNavigate={handleDesktopNavigate}
           >
