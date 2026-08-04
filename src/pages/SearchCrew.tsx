@@ -143,8 +143,11 @@ export default function SearchCrew({ onBack }: SearchCrewProps) {
             </main>
 
             {selectedCrew && (
-                <div className="absolute inset-0 z-30 flex items-end justify-center bg-zinc-950/40 p-0 backdrop-blur-[2px] sm:items-center sm:p-6">
-                    <form onSubmit={submitApplication} className="w-full rounded-t-3xl bg-white p-6 shadow-2xl sm:max-w-md sm:rounded-3xl">
+                <div className="absolute inset-0 z-[60] flex items-end justify-center bg-zinc-950/40 p-0 backdrop-blur-[2px] sm:items-center sm:p-6">
+                    <form
+                        onSubmit={submitApplication}
+                        className="max-h-[calc(100dvh-1rem)] w-full overflow-y-auto rounded-t-3xl bg-white p-6 shadow-2xl sm:max-h-[calc(100dvh-3rem)] sm:max-w-md sm:rounded-3xl"
+                    >
                         <div className="flex items-start justify-between gap-4">
                             <div>
                                 <p className="text-xs font-bold text-zinc-400">크루 가입 신청</p>
@@ -161,27 +164,30 @@ export default function SearchCrew({ onBack }: SearchCrewProps) {
                         </div>
                         <label className="mt-6 block text-sm font-bold text-zinc-700">
                             4자리 가입 PIN
-                            <input
-                                autoFocus
-                                inputMode="numeric"
-                                autoComplete="one-time-code"
-                                maxLength={4}
-                                value={pin}
-                                onChange={(event) => setPin(event.target.value.replace(/\D/g, '').slice(0, 4))}
-                                placeholder="0000"
-                                className="mt-2 h-14 w-full rounded-2xl border border-zinc-200 px-4 text-center text-2xl font-black tracking-[0.4em] text-zinc-900 outline-none focus:border-[#162660] focus:ring-2 focus:ring-[#162660]/10"
-                            />
+                            <span className="mt-2 flex gap-2">
+                                <input
+                                    autoFocus
+                                    inputMode="numeric"
+                                    enterKeyHint="done"
+                                    autoComplete="one-time-code"
+                                    maxLength={4}
+                                    value={pin}
+                                    onChange={(event) => setPin(event.target.value.replace(/\D/g, '').slice(0, 4))}
+                                    placeholder="0000"
+                                    aria-label="4자리 가입 PIN"
+                                    className="h-14 min-w-0 flex-1 rounded-2xl border border-zinc-200 px-4 text-center text-2xl font-black tracking-[0.4em] text-zinc-900 outline-none focus:border-[#162660] focus:ring-2 focus:ring-[#162660]/10"
+                                />
+                                <Button
+                                    type="submit"
+                                    disabled={pin.length !== 4 || submitting}
+                                    className="h-14 shrink-0 rounded-2xl border-[#162660] bg-[#162660] px-4 text-sm font-black hover:bg-[#0f1b48] sm:px-5"
+                                >
+                                    {submitting ? '신청 중' : '가입 신청'}
+                                </Button>
+                            </span>
                         </label>
                         <p className="mt-2 text-xs text-zinc-500">크루 운영진에게 전달받은 PIN을 입력해 주세요.</p>
                         {error && <p className="mt-3 text-sm font-semibold text-red-600">{error}</p>}
-                        <Button
-                            type="submit"
-                            fullWidth
-                            disabled={pin.length !== 4 || submitting}
-                            className="mt-6 rounded-2xl bg-[#162660] border-[#162660] hover:bg-[#0f1b48]"
-                        >
-                            {submitting ? '신청 중...' : '가입 신청 보내기'}
-                        </Button>
                     </form>
                 </div>
             )}
