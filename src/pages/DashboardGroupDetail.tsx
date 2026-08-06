@@ -3,6 +3,7 @@ import { Button } from '../components/Button';
 import { getOrganizerGroup, listGroupMembers, deleteGroupMember, inviteCrewManager, listGroupInvitations, listOrganizerGroupCrews, revokeOrganizerGroupInvitation } from '../services/organizerGroup';
 import { OrganizerGroup, OrganizerGroupCrew, OrganizerGroupInvitation, OrganizerGroupMembership } from '../types/api';
 import { ChevronLeft, Trash2, UserPlus, Info, Mail, Users, X } from 'lucide-react';
+import { getApiErrorMessage, getApiErrorStatus } from '../lib/apiError';
 
 interface DashboardGroupDetailProps {
     groupId: number;
@@ -71,9 +72,23 @@ export default function DashboardGroupDetail({ groupId, onBack }: DashboardGroup
             setIsAddOpen(false);
             // Reload member list
             await fetchData();
-        } catch (error) {
+        } catch (error: unknown) {
             console.error('Failed to add member:', error);
-            alert('초대에 실패했습니다. 대상 사용자가 활성 크루 운영진인지 확인해 주세요.');
+            const status = getApiErrorStatus(error);
+            const apiMessage = getApiErrorMessage(error);
+            if (status === 404) {
+                alert('해당 계정 코드를 찾을 수 없습니다. 상대방의 계정 관리 화면에서 코드를 다시 확인해 주세요.');
+            } else if (apiMessage?.includes('pending invitation')) {
+                alert('해당 운영진에게 이미 응답 대기 중인 초대가 있습니다.');
+            } else if (apiMessage?.includes('already belongs')) {
+                alert('해당 운영진은 이미 이 그룹에 참여하고 있습니다.');
+            } else if (apiMessage?.includes('owner')) {
+                alert('그룹 OWNER만 새 운영진을 초대할 수 있습니다.');
+            } else if (status === 403) {
+                alert('대상 계정에 활성 크루 매니저·캡틴 또는 이벤트 매니저 권한이 없습니다.');
+            } else {
+                alert(apiMessage ? `초대에 실패했습니다: ${apiMessage}` : '초대에 실패했습니다. 잠시 후 다시 시도해 주세요.');
+            }
         } finally {
             setActionLoading(false);
         }
