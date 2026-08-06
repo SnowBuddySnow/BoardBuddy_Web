@@ -5,6 +5,7 @@ import { APP_VERSION, COPYRIGHT_TEXT } from '../version';
 import kakaoLogin from '../assets/login/kakao.png';
 import boardBuddyLogo from '../assets/boardbuddy-logo.png';
 import apiClient from '../lib/axios';
+import { getApiErrorMessage } from '../lib/apiError';
 import {
     isAutoLoginEnabled,
     saveAuthTokens,
@@ -24,6 +25,7 @@ interface LoginLandingProps {
 
 export default function LoginLanding({ onLogin, onSignupNeeded, /* onDebugUserInfo */ }: LoginLandingProps) {
     const [autoLogin, setAutoLogin] = useState(isAutoLoginEnabled());
+    const [isLoggingIn, setIsLoggingIn] = useState(false);
     useEffect(() => {
         if (window.Kakao && !window.Kakao.isInitialized()) {
             const kakaoKey = import.meta.env.VITE_KAKAO_JAVASCRIPT_KEY;
@@ -39,11 +41,13 @@ export default function LoginLanding({ onLogin, onSignupNeeded, /* onDebugUserIn
     }, []);
 
     const handleKakaoLogin = () => {
+        if (isLoggingIn) return;
         if (!window.Kakao || !window.Kakao.isInitialized()) {
             alert('Kakao SDK not initialized. Please check your Kakao Key.');
             return;
         }
 
+        setIsLoggingIn(true);
         window.Kakao.Auth.login({
             success: async (authObj) => {
                 try {
@@ -76,15 +80,20 @@ export default function LoginLanding({ onLogin, onSignupNeeded, /* onDebugUserIn
                             setAutoLoginPreference(autoLogin);
                             onLogin();
                         }
+                    } else {
+                        setIsLoggingIn(false);
+                        alert('로그인 응답을 확인할 수 없습니다. 다시 시도해주세요.');
                     }
-                } catch (error) {
+                } catch (error: unknown) {
                     console.error('Network Error:', error);
-                    alert('An network error occurred during login.');
+                    setIsLoggingIn(false);
+                    alert(getApiErrorMessage(error) || '로그인 처리 중 네트워크 오류가 발생했습니다.');
                 }
             },
             fail: (err) => {
                 console.error('Kakao Login Failed:', err);
-                alert('Kakao Login Failed');
+                setIsLoggingIn(false);
+                alert('카카오 로그인이 취소되었거나 실패했습니다.');
             },
         });
     };
@@ -124,10 +133,19 @@ export default function LoginLanding({ onLogin, onSignupNeeded, /* onDebugUserIn
 
                     <button
                         onClick={handleKakaoLogin}
-                        className="w-full hover:opacity-90 transition-opacity"
+                        disabled={isLoggingIn}
+                        className="relative w-full hover:opacity-90 transition-opacity disabled:cursor-wait disabled:opacity-70"
                     >
                         <img src={kakaoLogin} alt="Kakao Login" className="w-full h-auto" />
+                        {isLoggingIn && (
+                            <span className="absolute inset-0 flex items-center justify-center rounded-xl bg-[#FEE500]/90 text-sm font-bold text-zinc-900">
+                                로그인 처리 중...
+                            </span>
+                        )}
                     </button>
+                    {isLoggingIn && (
+                        <p className="text-center text-xs text-zinc-500">창을 새로고침하지 말고 잠시 기다려주세요.</p>
+                    )}
 
                     {/* Auto-login checkbox */}
                     <div className="flex items-center justify-center pt-2">

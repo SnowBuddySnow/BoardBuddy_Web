@@ -72,13 +72,35 @@ export default function AccountInfo({ onBack }: AccountInfoProps) {
                     <div className="bg-zinc-50 dark:bg-zinc-900 rounded-lg p-4">
                         <div className="space-y-3">
                             <div>
-                                <div className="text-xs text-zinc-500 mb-1">학교</div>
-                                <div className="text-base font-medium">{userInfo.school}</div>
+                                <div className="text-xs text-zinc-500 mb-1">프로필 유형</div>
+                                <div className="text-base font-medium">{userInfo.userType === 'KUSBF' ? '학생' : '일반'}</div>
                             </div>
                             <div>
-                                <div className="text-xs text-zinc-500 mb-1">학번</div>
-                                <div className="text-base font-medium">{userInfo.studentId}</div>
+                                <div className="text-xs text-zinc-500 mb-1">계정 코드</div>
+                                <div className="flex items-center gap-2">
+                                    <code className="text-base font-semibold">{userInfo.userCode}</code>
+                                    <button
+                                        type="button"
+                                        onClick={() => navigator.clipboard.writeText(userInfo.userCode)}
+                                        className="rounded-full border border-zinc-200 px-2.5 py-1 text-xs font-semibold text-zinc-600"
+                                    >
+                                        복사
+                                    </button>
+                                </div>
+                                <p className="mt-1 text-xs text-zinc-400">소모임 운영진 그룹 초대를 받을 때 이 코드를 공유하세요.</p>
                             </div>
+                            {userInfo.userType === 'KUSBF' && (
+                                <>
+                                    <div>
+                                        <div className="text-xs text-zinc-500 mb-1">학교</div>
+                                        <div className="text-base font-medium">{userInfo.school || '-'}</div>
+                                    </div>
+                                    <div>
+                                        <div className="text-xs text-zinc-500 mb-1">학번</div>
+                                        <div className="text-base font-medium">{userInfo.studentId || '등록하지 않음'}</div>
+                                    </div>
+                                </>
+                            )}
                             <div>
                                 <div className="text-xs text-zinc-500 mb-1">생년월일</div>
                                 <div className="text-base font-medium">{userInfo.birthDate}</div>

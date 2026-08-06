@@ -1,13 +1,14 @@
 import { useState, useEffect } from 'react';
 import { Button } from '../components/Button';
-import { getEventDashboard, updateEvent } from '../services/event';
+import { configureEventConsents, getEventConsentConfiguration, getEventDashboard, updateEvent } from '../services/event';
 import { listOrganizerGroups } from '../services/organizerGroup';
-import { JoinPolicy, OrganizerGroup, EventPlanningMode, EventStatus, VisibilityType } from '../types/api';
+import { ConsentConfigurationInput, JoinPolicy, OrganizerGroup, EventPlanningMode, EventStatus, VisibilityType } from '../types/api';
 import { PlanningModeSelector } from '../components/event/PlanningModeSelector';
 import { EVENT_ACTIVITY_OPTIONS, EventActivityType } from '../constants/eventActivity';
 import { ActivityTypeSelector } from '../components/event/ActivityTypeSelector';
 import { ChevronLeft, Save } from 'lucide-react';
 import { getApiErrorMessage, getApiErrorStatus } from '../lib/apiError';
+import { EventConsentEditor } from '../components/event/EventConsentEditor';
 
 interface DashboardEventEditProps {
     eventId: number;
@@ -38,14 +39,31 @@ export default function DashboardEventEdit({ eventId, onBack, onSuccess }: Dashb
     const [joinPolicy, setJoinPolicy] = useState<JoinPolicy>('INSTANT');
     const [organizerGroupId, setOrganizerGroupId] = useState<number | ''>('');
     const [status, setStatus] = useState<EventStatus>('DRAFT');
+    const [consentConfiguration, setConsentConfiguration] = useState<ConsentConfigurationInput>({
+        consentWindowMinutes: null,
+        items: [],
+    });
 
     useEffect(() => {
         const loadInitData = async () => {
             try {
                 setLoading(true);
                 // 1. Load groups
-                const groupsList = await listOrganizerGroups();
+                const [groupsList, consentData] = await Promise.all([
+                    listOrganizerGroups(),
+                    getEventConsentConfiguration(eventId),
+                ]);
                 setGroups(groupsList);
+                setConsentConfiguration({
+                    consentWindowMinutes: consentData.consentWindowMinutes,
+                    items: consentData.items.map((item, displayOrder) => ({
+                        category: item.category,
+                        title: item.title,
+                        content: item.content,
+                        required: item.required,
+                        displayOrder,
+                    })),
+                });
 
                 // 2. Load event data
                 const eventData = await getEventDashboard(eventId);
@@ -121,8 +139,8 @@ export default function DashboardEventEdit({ eventId, onBack, onSuccess }: Dashb
                 applicationStartsAt: formattedApplicationStartsAt || null,
                 startsAt: formattedStartsAt,
                 endsAt: formattedEndsAt || undefined,
-                locationName,
-                locationAddress,
+                locationName: locationName.trim() || undefined,
+                locationAddress: locationAddress.trim() || undefined,
                 capacity,
                 crewMemberLimit: (visibilityType === 'PUBLIC' || visibilityType === 'CREW_LIMITED') && crewMemberLimitEnabled
                     ? crewMemberLimit
@@ -135,6 +153,7 @@ export default function DashboardEventEdit({ eventId, onBack, onSuccess }: Dashb
             };
 
             await updateEvent(eventId, payload);
+            await configureEventConsents(eventId, consentConfiguration);
             alert('소모임 정보가 성공적으로 수정되었습니다.');
             onSuccess();
         } catch (error: unknown) {
@@ -315,14 +334,13 @@ export default function DashboardEventEdit({ eventId, onBack, onSuccess }: Dashb
                         {/* Location */}
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-1.5">
-                                <label className="text-xs font-bold text-zinc-400 uppercase tracking-wider">장소명 *</label>
+                                <label className="text-xs font-bold text-zinc-400 uppercase tracking-wider">장소명 (선택)</label>
                                 <input
                                     type="text"
-                                    placeholder="장소명"
+                                    placeholder={planningMode === 'MEMBER_PLANNED' ? '참가자와 추후 협의 가능' : '장소명'}
                                     value={locationName}
                                     onChange={e => setLocationName(e.target.value)}
                                     className="w-full px-4 py-2.5 bg-white border border-zinc-200 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-[#162660]/20 text-zinc-800"
-                                    required
                                 />
                             </div>
 
@@ -386,6 +404,8 @@ export default function DashboardEventEdit({ eventId, onBack, onSuccess }: Dashb
                                 선택한 주최자 그룹에 참여 중인 크루만 자동으로 참가할 수 있습니다.
                             </div>
                         )}
+
+                        <EventConsentEditor value={consentConfiguration} onChange={setConsentConfiguration} />
 
                         <div className="flex items-center justify-end gap-3 border-t border-zinc-50 pt-6">
                             <Button

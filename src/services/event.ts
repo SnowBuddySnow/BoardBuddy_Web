@@ -1,6 +1,8 @@
 import apiClient from '../lib/axios';
 import {
     ApiResponse,
+    ConsentConfiguration,
+    ConsentConfigurationInput,
     ConsentResponseInput,
     Event,
     EventChatAccess,
@@ -147,6 +149,41 @@ export const updateEvent = async (eventId: number, payload: UpdateEventPayload):
         return updateDevEvent(eventId, payload);
     }
     const response = await apiClient.patch<ApiResponse<Event>>(`/dashboard/events/${eventId}`, payload);
+    return response.data.data;
+};
+
+export const getEventConsentConfiguration = async (eventId: number): Promise<ConsentConfiguration> => {
+    if (isDevMode()) {
+        const stored = localStorage.getItem(`dev_event_consent_configuration_${eventId}`);
+        return stored ? JSON.parse(stored) : { consentWindowMinutes: null, items: [] };
+    }
+    const response = await apiClient.get<ApiResponse<ConsentConfiguration>>(
+        `/dashboard/events/${eventId}/consents`,
+    );
+    return response.data.data;
+};
+
+export const configureEventConsents = async (
+    eventId: number,
+    payload: ConsentConfigurationInput,
+): Promise<ConsentConfiguration> => {
+    if (isDevMode()) {
+        const configuration: ConsentConfiguration = {
+            consentWindowMinutes: payload.consentWindowMinutes,
+            items: payload.items.map((item, index) => ({
+                ...item,
+                id: index + 1,
+                contentHash: `dev-${eventId}-${index}`,
+                documentVersion: 1,
+            })),
+        };
+        localStorage.setItem(`dev_event_consent_configuration_${eventId}`, JSON.stringify(configuration));
+        return configuration;
+    }
+    const response = await apiClient.put<ApiResponse<ConsentConfiguration>>(
+        `/dashboard/events/${eventId}/consents`,
+        payload,
+    );
     return response.data.data;
 };
 

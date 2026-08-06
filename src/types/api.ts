@@ -41,14 +41,15 @@ export interface CrewSimple {
 
 export interface UserDetail {
     userId: number;
+    userCode: string;
     name: string;
     email: string;
     role: string;
     userType?: UserType;
     universityVerificationStatus?: UniversityVerificationStatus;
     birthDate: string;
-    school: string;
-    studentId: string;
+    school: string | null;
+    studentId: string | null;
     gender: string;
     phoneNumber: string;
     profileImageUrl: string;
@@ -260,8 +261,8 @@ export interface Event {
     applicationStartsAt?: string | null; // ISO LocalDateTime
     startsAt: string; // ISO LocalDateTime
     endsAt?: string; // ISO LocalDateTime
-    locationName: string;
-    locationAddress: string;
+    locationName: string | null;
+    locationAddress: string | null;
     capacity: number;
     crewMemberLimit?: number | null;
     consentWindowMinutes?: number | null;
@@ -316,6 +317,24 @@ export interface ConsentItem {
     documentVersion: number;
 }
 
+export interface ConsentItemInput {
+    category: ConsentCategory;
+    title: string;
+    content: string;
+    required: boolean;
+    displayOrder: number;
+}
+
+export interface ConsentConfiguration {
+    consentWindowMinutes: number | null;
+    items: ConsentItem[];
+}
+
+export interface ConsentConfigurationInput {
+    consentWindowMinutes: number | null;
+    items: ConsentItemInput[];
+}
+
 export interface ConsentAnswer {
     consentItemId: number;
     agreed: boolean;
@@ -353,6 +372,7 @@ export interface EventPaymentPolicy {
 
 export interface OrganizerGroup {
     id: number;
+    groupCode?: string;
     name: string;
 }
 
@@ -374,9 +394,11 @@ export interface OrganizerGroupCrew {
 
 export interface OrganizerGroupInvitation {
     id: number;
+    invitationCode: string;
     groupId: number;
     groupName: string;
     invitedAccountId: number;
+    invitedAccountCode: string;
     invitedCrewId: number;
     invitedCrewName: string;
     invitedByAccountId: number;

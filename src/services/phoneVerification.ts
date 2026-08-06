@@ -5,6 +5,7 @@ import type { ApiResponse, UserType } from '../types/api';
 export interface PhoneVerificationChallenge {
     challengeId: string;
     expiresInSeconds: number;
+    retryAfterSeconds: number;
 }
 
 export interface PhoneVerificationResult {

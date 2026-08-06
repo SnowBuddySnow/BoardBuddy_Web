@@ -36,6 +36,7 @@ export const getDevUser = (): UserDetail => {
 
     return {
         userId: 999,
+        userCode: 'US-DEV999',
         name: 'Mock User (Dev Mode)',
         email: 'dev@boardbuddy.com',
         role: roleOverride === 'admin' ? 'ADMIN' : 'MEMBER',
@@ -584,14 +585,17 @@ export const getDevGroupCrews = (groupId: number): OrganizerGroupCrew[] => {
 
 export const inviteDevCrewManager = (
     groupId: number,
-    userId: number,
+    userCode: string,
     role: 'EVENT_GROUP_MANAGER' | 'EVENT_GROUP_VIEWER',
 ): OrganizerGroupInvitation => {
+    const userId = Math.abs([...userCode].reduce((total, character) => total + character.charCodeAt(0), 0));
     const invitation: OrganizerGroupInvitation = {
         id: Math.floor(Math.random() * 1000) + 500,
+        invitationCode: `OI-DEV${Date.now()}`,
         groupId,
         groupName: getDevOrganizerGroup(groupId).name,
         invitedAccountId: userId,
+        invitedAccountCode: userCode,
         invitedCrewId: userId + 1000,
         invitedCrewName: `Mock Crew ${userId + 1000}`,
         invitedByAccountId: 999,

@@ -19,7 +19,7 @@ export default function DashboardGroupDetail({ groupId, onBack }: DashboardGroup
 
     // Form States
     const [isAddOpen, setIsAddOpen] = useState(false);
-    const [newUserId, setNewUserId] = useState('');
+    const [newUserCode, setNewUserCode] = useState('');
     const [newRole, setNewRole] = useState<'EVENT_GROUP_MANAGER' | 'EVENT_GROUP_VIEWER'>('EVENT_GROUP_MANAGER');
 
     // Get Simulated Role
@@ -57,17 +57,17 @@ export default function DashboardGroupDetail({ groupId, onBack }: DashboardGroup
             return;
         }
 
-        const userIdNum = parseInt(newUserId, 10);
-        if (isNaN(userIdNum)) {
-            alert('올바른 유저 ID(숫자)를 입력하세요.');
+        const normalizedUserCode = newUserCode.trim().toUpperCase();
+        if (!/^US-[A-Z0-9]+$/.test(normalizedUserCode)) {
+            alert('올바른 계정 코드를 입력하세요. (예: US-ABC123)');
             return;
         }
 
         try {
             setActionLoading(true);
-            await inviteCrewManager(groupId, userIdNum, newRole);
+            await inviteCrewManager(groupId, normalizedUserCode, newRole);
             alert('크루 운영진에게 초대를 보냈습니다.');
-            setNewUserId('');
+            setNewUserCode('');
             setIsAddOpen(false);
             // Reload member list
             await fetchData();
@@ -200,7 +200,7 @@ export default function DashboardGroupDetail({ groupId, onBack }: DashboardGroup
                         </div>
                         {invitations.filter(invitation => invitation.status === 'PENDING').map(invitation => (
                             <div key={invitation.id} className="flex items-center justify-between text-sm">
-                                <span className="font-semibold text-zinc-700">User {invitation.invitedAccountId} · {invitation.invitedCrewName}</span>
+                                <span className="font-semibold text-zinc-700">{invitation.invitedAccountCode} · {invitation.invitedCrewName}</span>
                                 <div className="flex items-center gap-2">
                                     <span className="text-xs font-bold text-amber-700">{invitation.proposedRole} · 대기 중</span>
                                     {!isViewer && (
@@ -279,15 +279,18 @@ export default function DashboardGroupDetail({ groupId, onBack }: DashboardGroup
 
                         <form onSubmit={handleAddMember} className="space-y-4">
                             <div className="space-y-1.5">
-                                <label className="text-xs font-bold text-zinc-500 uppercase tracking-wider">운영진 유저 ID</label>
+                                <label className="text-xs font-bold text-zinc-500 uppercase tracking-wider">운영진 계정 코드</label>
                                 <input
                                     type="text"
                                     required
-                                    value={newUserId}
-                                    onChange={(e) => setNewUserId(e.target.value)}
-                                    placeholder="예: 12"
+                                    value={newUserCode}
+                                    onChange={(e) => setNewUserCode(e.target.value.toUpperCase())}
+                                    placeholder="예: US-ABC123"
                                     className="w-full px-4 py-2.5 rounded-2xl bg-zinc-50 border border-zinc-200/80 focus:border-[#162660] focus:ring-1 focus:ring-[#162660] focus:bg-white text-sm outline-none font-medium"
                                 />
+                                <p className="px-1 text-[11px] leading-relaxed text-zinc-400">
+                                    상대방이 계정 관리 화면의 계정 코드를 공유하면 내부 숫자 ID를 찾지 않고 안전하게 초대할 수 있습니다.
+                                </p>
                             </div>
 
                             <div className="space-y-1.5">

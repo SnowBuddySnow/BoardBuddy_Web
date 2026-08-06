@@ -54,13 +54,13 @@ export const listOrganizerGroupCrews = async (groupId: number): Promise<Organize
 
 export const inviteCrewManager = async (
     groupId: number,
-    userId: number,
+    userCode: string,
     role: 'EVENT_GROUP_MANAGER' | 'EVENT_GROUP_VIEWER',
 ): Promise<OrganizerGroupInvitation> => {
-    if (isDevMode()) return inviteDevCrewManager(groupId, userId, role);
+    if (isDevMode()) return inviteDevCrewManager(groupId, userCode, role);
     const response = await apiClient.post<ApiResponse<OrganizerGroupInvitation>>(
         `/dashboard/organizer-groups/${groupId}/invitations`,
-        { userId, role },
+        { userCode, role },
     );
     return response.data.data;
 };

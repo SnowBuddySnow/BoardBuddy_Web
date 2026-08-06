@@ -123,15 +123,16 @@ export default function MyPage({ onBack, onAccountInfoClick }: MyPageProps) {
                         </div>
 
                         {/* School / Crew Info */}
-                        <div className="flex items-center gap-2">
-                            <span className="text-zinc-600 dark:text-zinc-400 text-sm">
-                                {userInfo.school}
-                                {userInfo.crew && ` / ${userInfo.crew.crewName}`}
-                            </span>
-                            <button className="w-4 h-4 flex items-center justify-center">
-                                <ExternalLink className="w-3.5 h-3.5 text-zinc-400" />
-                            </button>
-                        </div>
+                        {(userInfo.school || userInfo.crew) && (
+                            <div className="flex items-center gap-2">
+                                <span className="text-zinc-600 dark:text-zinc-400 text-sm">
+                                    {[userInfo.school, userInfo.crew?.crewName].filter(Boolean).join(' / ')}
+                                </span>
+                                <button className="w-4 h-4 flex items-center justify-center">
+                                    <ExternalLink className="w-3.5 h-3.5 text-zinc-400" />
+                                </button>
+                            </div>
+                        )}
                     </div>
                 </div>
 
