@@ -1,7 +1,14 @@
 import { useEffect, useState } from 'react';
 import { ChevronLeft, ShieldCheck, UserRound } from 'lucide-react';
 import { getUserInfo } from '../services/user';
-import { grantEventManager, listCrewMemberAccess, revokeEventManager, type CrewMemberAccess } from '../services/crewPermissions';
+import {
+  grantEventManager,
+  grantGeneralAdmin,
+  listCrewMemberAccess,
+  revokeEventManager,
+  revokeGeneralAdmin,
+  type CrewMemberAccess,
+} from '../services/crewPermissions';
 
 interface CrewPermissionsProps {
   onBack: () => void;
@@ -43,7 +50,7 @@ export default function CrewPermissions({ onBack }: CrewPermissionsProps) {
   }, []);
 
   const toggleEventManager = async (member: CrewMemberAccess) => {
-    if (crewId == null) return;
+    if (crewId == null || member.crewRole === 'CREW_CAPTAIN') return;
     setChangingAccountId(member.accountId);
     setError('');
     try {
@@ -62,6 +69,29 @@ export default function CrewPermissions({ onBack }: CrewPermissionsProps) {
     }
   };
 
+  const toggleGeneralAdmin = async (member: CrewMemberAccess) => {
+    if (crewId == null || member.crewRole === 'CREW_CAPTAIN') return;
+    setChangingAccountId(member.accountId);
+    setError('');
+    try {
+      if (member.crewRole === 'CREW_MANAGER') {
+        await revokeGeneralAdmin(crewId, member.accountId);
+      } else {
+        await grantGeneralAdmin(crewId, member.accountId);
+      }
+      setMembers((current) => current.map((item) => item.accountId === member.accountId
+        ? {
+            ...item,
+            crewRole: item.crewRole === 'CREW_MANAGER' ? 'CREW_MEMBER' : 'CREW_MANAGER',
+          }
+        : item));
+    } catch {
+      setError('일반 관리자 권한을 변경하지 못했습니다. CREW CAPTAIN 권한을 확인해 주세요.');
+    } finally {
+      setChangingAccountId(null);
+    }
+  };
+
   return (
     <div className="flex h-full flex-1 flex-col overflow-hidden bg-[#FAF8F3]">
       <header className="flex items-center gap-3 border-b border-zinc-200 bg-white px-6 py-4">
@@ -70,7 +100,7 @@ export default function CrewPermissions({ onBack }: CrewPermissionsProps) {
         </button>
         <div>
           <h1 className="text-lg font-black text-zinc-900">크루 권한</h1>
-          <p className="text-xs text-zinc-500">CREW CAPTAIN이 소모임 관리자를 지정합니다.</p>
+          <p className="text-xs text-zinc-500">CREW CAPTAIN이 일반 관리자와 이벤트 그룹 관리자를 각각 지정합니다.</p>
         </div>
       </header>
 
@@ -81,27 +111,46 @@ export default function CrewPermissions({ onBack }: CrewPermissionsProps) {
         ) : (
           <div className="overflow-hidden rounded-lg border border-zinc-200 bg-white">
             {members.map((member) => (
-              <div key={member.accountId} className="flex items-center justify-between gap-4 border-b border-zinc-100 px-5 py-4 last:border-b-0">
+              <div key={member.accountId} className="flex flex-col gap-4 border-b border-zinc-100 px-5 py-4 last:border-b-0 sm:flex-row sm:items-center sm:justify-between">
                 <div className="min-w-0">
                   <div className="flex items-center gap-2">
                     <UserRound className="h-4 w-4 shrink-0 text-zinc-400" />
                     <p className="truncate text-sm font-bold text-zinc-900">{member.displayName || `User ${member.accountId}`}</p>
                   </div>
-                  <p className="mt-1 text-xs font-semibold text-zinc-500">{roleLabel[member.crewRole]}</p>
+                  <p className="mt-1 text-xs font-semibold text-zinc-500">
+                    {roleLabel[member.crewRole]}
+                    {member.crewRole === 'CREW_CAPTAIN' && (
+                      <span className="ml-2 text-[#162660]">· 두 권한 기본 보유</span>
+                    )}
+                  </p>
                 </div>
-                <button
-                  type="button"
-                  disabled={changingAccountId === member.accountId}
-                  onClick={() => void toggleEventManager(member)}
-                  className={`shrink-0 rounded-lg border px-3 py-2 text-xs font-black transition-colors cursor-pointer disabled:cursor-wait ${
-                    member.eventManager
-                      ? 'border-[#162660] bg-[#162660] text-white hover:bg-[#0f1b48]'
-                      : 'border-zinc-200 bg-white text-zinc-600 hover:bg-zinc-50'
-                  }`}
-                >
-                  <ShieldCheck className="mr-1 inline h-3.5 w-3.5" />
-                  {member.eventManager ? 'EVENT MANAGER' : '관리자 지정'}
-                </button>
+                <div className="grid w-full grid-cols-2 gap-2 sm:w-auto">
+                  <button
+                    type="button"
+                    disabled={member.crewRole === 'CREW_CAPTAIN' || changingAccountId === member.accountId}
+                    onClick={() => void toggleGeneralAdmin(member)}
+                    className={`rounded-lg border px-3 py-2 text-xs font-black transition-colors cursor-pointer disabled:cursor-default ${
+                      member.crewRole === 'CREW_MANAGER' || member.crewRole === 'CREW_CAPTAIN'
+                        ? 'border-zinc-700 bg-zinc-800 text-white'
+                        : 'border-zinc-200 bg-white text-zinc-600 hover:bg-zinc-50'
+                    }`}
+                  >
+                    일반 관리자
+                  </button>
+                  <button
+                    type="button"
+                    disabled={member.crewRole === 'CREW_CAPTAIN' || changingAccountId === member.accountId}
+                    onClick={() => void toggleEventManager(member)}
+                    className={`rounded-lg border px-3 py-2 text-xs font-black transition-colors cursor-pointer disabled:cursor-default ${
+                      member.eventManager
+                        ? 'border-[#162660] bg-[#162660] text-white'
+                        : 'border-zinc-200 bg-white text-zinc-600 hover:bg-zinc-50'
+                    }`}
+                  >
+                    <ShieldCheck className="mr-1 inline h-3.5 w-3.5" />
+                    이벤트 그룹 관리자
+                  </button>
+                </div>
               </div>
             ))}
           </div>

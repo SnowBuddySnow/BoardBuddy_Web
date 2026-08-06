@@ -19,9 +19,11 @@ interface OrganizerInviteAcceptProps {
 }
 
 const eligibilityText = (reason: string) => {
+    if (reason.includes('Eligible as a crew captain')) return 'CREW CAPTAIN의 이벤트 그룹 관리자 자격이 확인되었습니다.';
     if (reason.includes('Eligible as an assigned event manager')) return '지정 이벤트 매니저 자격이 확인되었습니다.';
     if (reason.includes('Eligible as a crew manager or captain')) return '크루 매니저·캡틴 자격이 확인되었습니다.';
     if (reason.includes('Eligible in simulated mode')) return '테스트 계정의 참여 자격이 확인되었습니다.';
+    if (reason.includes('crew captain or assigned event manager')) return 'CREW CAPTAIN 또는 지정 이벤트 그룹 관리자만 수락할 수 있습니다.';
     if (reason.includes('assigned event manager')) return '이 링크는 크루에서 지정된 이벤트 매니저만 수락할 수 있습니다.';
     if (reason.includes('crew manager, captain')) return '크루 매니저·캡틴 또는 지정 이벤트 매니저만 수락할 수 있습니다.';
     if (reason.includes('active crew membership')) return '활성 크루 가입 정보가 필요합니다.';
@@ -129,7 +131,7 @@ export default function OrganizerInviteAccept({
                                     <p className="text-xs text-zinc-400">수락 자격</p>
                                     <p className="mt-1 text-sm font-bold text-zinc-800">
                                         {preview.eligibilityPolicy === 'ASSIGNED_EVENT_MANAGER_ONLY'
-                                            ? '지정 이벤트 매니저'
+                                            ? '이벤트 그룹 관리자·캡틴'
                                             : '크루 매니저·캡틴 포함'}
                                     </p>
                                 </div>

@@ -235,7 +235,7 @@ export default function DashboardGroupDetail({ groupId, onBack }: DashboardGroup
                                         {link.proposedRole === 'EVENT_GROUP_MANAGER' ? 'Manager' : 'Viewer'}
                                         {' · '}
                                         {link.eligibilityPolicy === 'ASSIGNED_EVENT_MANAGER_ONLY'
-                                            ? '지정 이벤트 매니저'
+                                            ? '이벤트 그룹 관리자·캡틴'
                                             : '크루 매니저·캡틴 포함'}
                                     </p>
                                     <p className="mt-1 text-xs text-zinc-400">
@@ -360,7 +360,7 @@ export default function DashboardGroupDetail({ groupId, onBack }: DashboardGroup
                                     )}
                                     className="w-full px-4 py-2.5 rounded-2xl bg-zinc-50 border border-zinc-200 text-sm outline-none"
                                 >
-                                    <option value="ASSIGNED_EVENT_MANAGER_ONLY">지정된 이벤트 매니저만 · 권장</option>
+                                    <option value="ASSIGNED_EVENT_MANAGER_ONLY">이벤트 그룹 관리자·캡틴 · 권장</option>
                                     <option value="CREW_LEADERS_OR_EVENT_MANAGERS">크루 매니저·캡틴도 포함</option>
                                 </select>
                                 <p className="px-1 text-[11px] leading-relaxed text-zinc-400">
