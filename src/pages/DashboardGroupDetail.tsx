@@ -1,9 +1,23 @@
 import { useState, useEffect } from 'react';
 import { Button } from '../components/Button';
-import { getOrganizerGroup, listGroupMembers, deleteGroupMember, inviteCrewManager, listGroupInvitations, listOrganizerGroupCrews, revokeOrganizerGroupInvitation } from '../services/organizerGroup';
-import { OrganizerGroup, OrganizerGroupCrew, OrganizerGroupInvitation, OrganizerGroupMembership } from '../types/api';
-import { ChevronLeft, Trash2, UserPlus, Info, Mail, Users, X } from 'lucide-react';
-import { getApiErrorMessage, getApiErrorStatus } from '../lib/apiError';
+import {
+    createOrganizerInviteLink,
+    deleteGroupMember,
+    getOrganizerGroup,
+    listGroupMembers,
+    listOrganizerGroupCrews,
+    listOrganizerInviteLinks,
+    revokeOrganizerInviteLink,
+} from '../services/organizerGroup';
+import {
+    OrganizerGroup,
+    OrganizerGroupCrew,
+    OrganizerGroupInviteLink,
+    OrganizerGroupMembership,
+    OrganizerInviteEligibilityPolicy,
+} from '../types/api';
+import { ChevronLeft, Copy, Info, Link2, Trash2, UserPlus, Users, X } from 'lucide-react';
+import { getApiErrorMessage } from '../lib/apiError';
 
 interface DashboardGroupDetailProps {
     groupId: number;
@@ -14,14 +28,20 @@ export default function DashboardGroupDetail({ groupId, onBack }: DashboardGroup
     const [group, setGroup] = useState<OrganizerGroup | null>(null);
     const [members, setMembers] = useState<OrganizerGroupMembership[]>([]);
     const [crews, setCrews] = useState<OrganizerGroupCrew[]>([]);
-    const [invitations, setInvitations] = useState<OrganizerGroupInvitation[]>([]);
+    const [inviteLinks, setInviteLinks] = useState<OrganizerGroupInviteLink[]>([]);
     const [loading, setLoading] = useState(true);
     const [actionLoading, setActionLoading] = useState(false);
 
     // Form States
     const [isAddOpen, setIsAddOpen] = useState(false);
-    const [newUserCode, setNewUserCode] = useState('');
     const [newRole, setNewRole] = useState<'EVENT_GROUP_MANAGER' | 'EVENT_GROUP_VIEWER'>('EVENT_GROUP_MANAGER');
+    const [eligibilityPolicy, setEligibilityPolicy] = useState<OrganizerInviteEligibilityPolicy>(
+        'ASSIGNED_EVENT_MANAGER_ONLY',
+    );
+    const [expiresInHours, setExpiresInHours] = useState(168);
+    const [maxUses, setMaxUses] = useState<number | null>(1);
+    const [generatedInviteUrl, setGeneratedInviteUrl] = useState('');
+    const [copyComplete, setCopyComplete] = useState(false);
 
     // Get Simulated Role
     const roleOverride = localStorage.getItem('dev_role_override') || 'server';
@@ -32,14 +52,14 @@ export default function DashboardGroupDetail({ groupId, onBack }: DashboardGroup
             setLoading(true);
             const groupData = await getOrganizerGroup(groupId);
             setGroup(groupData);
-            const [membersList, crewList, invitationList] = await Promise.all([
+            const [membersList, crewList, links] = await Promise.all([
                 listGroupMembers(groupId),
                 listOrganizerGroupCrews(groupId),
-                listGroupInvitations(groupId),
+                listOrganizerInviteLinks(groupId),
             ]);
             setMembers(membersList);
             setCrews(crewList);
-            setInvitations(invitationList);
+            setInviteLinks(links);
         } catch (error) {
             console.error('Failed to fetch group details:', error);
         } finally {
@@ -51,43 +71,33 @@ export default function DashboardGroupDetail({ groupId, onBack }: DashboardGroup
         fetchData();
     }, [groupId]);
 
-    const handleAddMember = async (e: React.FormEvent) => {
+    const handleCreateInviteLink = async (e: React.FormEvent) => {
         e.preventDefault();
         if (isViewer) {
             alert('이 그룹의 멤버를 편집할 권한이 없습니다.');
             return;
         }
 
-        const normalizedUserCode = newUserCode.trim().toUpperCase();
-        if (!/^US-[A-Z0-9]+$/.test(normalizedUserCode)) {
-            alert('올바른 계정 코드를 입력하세요. (예: US-ABC123)');
-            return;
-        }
-
         try {
             setActionLoading(true);
-            await inviteCrewManager(groupId, normalizedUserCode, newRole);
-            alert('크루 운영진에게 초대를 보냈습니다.');
-            setNewUserCode('');
-            setIsAddOpen(false);
-            // Reload member list
-            await fetchData();
+            const created = await createOrganizerInviteLink(groupId, {
+                role: newRole,
+                eligibilityPolicy,
+                expiresInHours,
+                maxUses,
+            });
+            const url = new URL(window.location.origin);
+            url.searchParams.set('organizerInvite', created.token);
+            setGeneratedInviteUrl(url.toString());
+            setCopyComplete(false);
+            setInviteLinks((current) => [created.inviteLink, ...current]);
         } catch (error: unknown) {
-            console.error('Failed to add member:', error);
-            const status = getApiErrorStatus(error);
+            console.error('Failed to create organizer invite link:', error);
             const apiMessage = getApiErrorMessage(error);
-            if (status === 404) {
-                alert('해당 계정 코드를 찾을 수 없습니다. 상대방의 계정 관리 화면에서 코드를 다시 확인해 주세요.');
-            } else if (apiMessage?.includes('pending invitation')) {
-                alert('해당 운영진에게 이미 응답 대기 중인 초대가 있습니다.');
-            } else if (apiMessage?.includes('already belongs')) {
-                alert('해당 운영진은 이미 이 그룹에 참여하고 있습니다.');
-            } else if (apiMessage?.includes('owner')) {
+            if (apiMessage?.includes('owner')) {
                 alert('그룹 OWNER만 새 운영진을 초대할 수 있습니다.');
-            } else if (status === 403) {
-                alert('대상 계정에 활성 크루 매니저·캡틴 또는 이벤트 매니저 권한이 없습니다.');
             } else {
-                alert(apiMessage ? `초대에 실패했습니다: ${apiMessage}` : '초대에 실패했습니다. 잠시 후 다시 시도해 주세요.');
+                alert(apiMessage ? `링크 생성에 실패했습니다: ${apiMessage}` : '초대 링크 생성에 실패했습니다.');
             }
         } finally {
             setActionLoading(false);
@@ -118,10 +128,10 @@ export default function DashboardGroupDetail({ groupId, onBack }: DashboardGroup
         }
     };
 
-    const handleRevokeInvitation = async (invitationId: number) => {
+    const handleRevokeInviteLink = async (inviteLinkId: number) => {
         try {
             setActionLoading(true);
-            await revokeOrganizerGroupInvitation(groupId, invitationId);
+            await revokeOrganizerInviteLink(groupId, inviteLinkId);
             await fetchData();
         } catch (error) {
             console.error('Failed to revoke invitation:', error);
@@ -129,6 +139,11 @@ export default function DashboardGroupDetail({ groupId, onBack }: DashboardGroup
         } finally {
             setActionLoading(false);
         }
+    };
+
+    const handleCopyInviteUrl = async () => {
+        await navigator.clipboard.writeText(generatedInviteUrl);
+        setCopyComplete(true);
     };
 
     const getRoleBadgeStyle = (role: string) => {
@@ -179,7 +194,7 @@ export default function DashboardGroupDetail({ groupId, onBack }: DashboardGroup
                         className="bg-[#162660] hover:bg-[#1e3a8a] text-white border-none rounded-full h-10 py-0 font-bold flex items-center gap-1.5 shadow-sm"
                     >
                         <UserPlus className="w-4 h-4" />
-                        운영진 초대
+                        초대 링크 만들기
                     </Button>
                 )}
             </header>
@@ -207,23 +222,40 @@ export default function DashboardGroupDetail({ groupId, onBack }: DashboardGroup
                     </div>
                 </section>
 
-                {invitations.some(invitation => invitation.status === 'PENDING') && (
+                {inviteLinks.length > 0 && (
                     <section className="border-y border-zinc-200 bg-white px-5 py-4 space-y-3">
                         <div className="flex items-center gap-2">
-                            <Mail className="w-4 h-4 text-zinc-500" />
-                            <h2 className="text-sm font-bold text-zinc-900">응답 대기 초대</h2>
+                            <Link2 className="w-4 h-4 text-zinc-500" />
+                            <h2 className="text-sm font-bold text-zinc-900">운영진 초대 링크</h2>
                         </div>
-                        {invitations.filter(invitation => invitation.status === 'PENDING').map(invitation => (
-                            <div key={invitation.id} className="flex items-center justify-between text-sm">
-                                <span className="font-semibold text-zinc-700">{invitation.invitedAccountCode} · {invitation.invitedCrewName}</span>
+                        {inviteLinks.map(link => (
+                            <div key={link.id} className="flex items-center justify-between gap-4 border-t border-zinc-100 pt-3 first:border-0 first:pt-0 text-sm">
+                                <div className="min-w-0">
+                                    <p className="font-semibold text-zinc-700">
+                                        {link.proposedRole === 'EVENT_GROUP_MANAGER' ? 'Manager' : 'Viewer'}
+                                        {' · '}
+                                        {link.eligibilityPolicy === 'ASSIGNED_EVENT_MANAGER_ONLY'
+                                            ? '지정 이벤트 매니저'
+                                            : '크루 매니저·캡틴 포함'}
+                                    </p>
+                                    <p className="mt-1 text-xs text-zinc-400">
+                                        {new Date(link.expiresAt).toLocaleString('ko-KR')} 만료
+                                        {' · '}
+                                        {link.usedCount}/{link.maxUses ?? '∞'}회 사용
+                                    </p>
+                                </div>
                                 <div className="flex items-center gap-2">
-                                    <span className="text-xs font-bold text-amber-700">{invitation.proposedRole} · 대기 중</span>
-                                    {!isViewer && (
+                                    <span className={`text-xs font-bold ${
+                                        link.status === 'ACTIVE' ? 'text-emerald-700' : 'text-zinc-400'
+                                    }`}>
+                                        {link.status}
+                                    </span>
+                                    {!isViewer && link.status === 'ACTIVE' && (
                                         <button
-                                            onClick={() => handleRevokeInvitation(invitation.id)}
+                                            onClick={() => handleRevokeInviteLink(link.id)}
                                             disabled={actionLoading}
                                             className="w-7 h-7 border border-zinc-200 rounded-full flex items-center justify-center text-zinc-400 hover:text-red-600 hover:bg-red-50"
-                                            title="초대 취소"
+                                            title="링크 폐기"
                                         >
                                             <X className="w-3.5 h-3.5" />
                                         </button>
@@ -278,36 +310,27 @@ export default function DashboardGroupDetail({ groupId, onBack }: DashboardGroup
                 </div>
             </main>
 
-            {/* Add Member Drawer Overlay */}
+            {/* Invite Link Drawer Overlay */}
             {isAddOpen && (
                 <div className="fixed inset-0 bg-black/30 backdrop-blur-sm z-[9999] flex items-center justify-center p-4">
                     <div className="bg-white border border-zinc-100 rounded-3xl w-full max-w-md p-6 shadow-2xl animate-in zoom-in-95 duration-150">
                         <div className="flex items-center justify-between border-b border-zinc-100 pb-3 mb-4">
-                            <h3 className="text-base font-bold text-zinc-900">크루 운영진 초대</h3>
+                            <div>
+                                <h3 className="text-base font-bold text-zinc-900">운영진 초대 링크</h3>
+                                <p className="mt-1 text-xs text-zinc-400">링크를 받은 운영진이 로그인 후 직접 참여합니다.</p>
+                            </div>
                             <button
-                                onClick={() => setIsAddOpen(false)}
+                                onClick={() => {
+                                    setIsAddOpen(false);
+                                    setGeneratedInviteUrl('');
+                                }}
                                 className="p-1 rounded-full text-zinc-400 hover:bg-zinc-100 cursor-pointer border-none bg-transparent"
                             >
                                 <X className="w-5 h-5" />
                             </button>
                         </div>
 
-                        <form onSubmit={handleAddMember} className="space-y-4">
-                            <div className="space-y-1.5">
-                                <label className="text-xs font-bold text-zinc-500 uppercase tracking-wider">운영진 계정 코드</label>
-                                <input
-                                    type="text"
-                                    required
-                                    value={newUserCode}
-                                    onChange={(e) => setNewUserCode(e.target.value.toUpperCase())}
-                                    placeholder="예: US-ABC123"
-                                    className="w-full px-4 py-2.5 rounded-2xl bg-zinc-50 border border-zinc-200/80 focus:border-[#162660] focus:ring-1 focus:ring-[#162660] focus:bg-white text-sm outline-none font-medium"
-                                />
-                                <p className="px-1 text-[11px] leading-relaxed text-zinc-400">
-                                    상대방이 계정 관리 화면의 계정 코드를 공유하면 내부 숫자 ID를 찾지 않고 안전하게 초대할 수 있습니다.
-                                </p>
-                            </div>
-
+                        <form onSubmit={handleCreateInviteLink} className="space-y-4">
                             <div className="space-y-1.5">
                                 <label className="text-xs font-bold text-zinc-500 uppercase tracking-wider">수락 후 역할</label>
                                 <div className="grid grid-cols-2 gap-2">
@@ -328,11 +351,82 @@ export default function DashboardGroupDetail({ groupId, onBack }: DashboardGroup
                                 </div>
                             </div>
 
+                            <div className="space-y-1.5">
+                                <label className="text-xs font-bold text-zinc-500 uppercase tracking-wider">수락 자격</label>
+                                <select
+                                    value={eligibilityPolicy}
+                                    onChange={(event) => setEligibilityPolicy(
+                                        event.target.value as OrganizerInviteEligibilityPolicy,
+                                    )}
+                                    className="w-full px-4 py-2.5 rounded-2xl bg-zinc-50 border border-zinc-200 text-sm outline-none"
+                                >
+                                    <option value="ASSIGNED_EVENT_MANAGER_ONLY">지정된 이벤트 매니저만 · 권장</option>
+                                    <option value="CREW_LEADERS_OR_EVENT_MANAGERS">크루 매니저·캡틴도 포함</option>
+                                </select>
+                                <p className="px-1 text-[11px] leading-relaxed text-zinc-400">
+                                    이 설정은 현재 생성하는 링크에만 적용되어 크루별 운영 정책을 유지할 수 있습니다.
+                                </p>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-3">
+                                <label className="space-y-1.5">
+                                    <span className="text-xs font-bold text-zinc-500 uppercase tracking-wider">링크 만료</span>
+                                    <select
+                                        value={expiresInHours}
+                                        onChange={(event) => setExpiresInHours(Number(event.target.value))}
+                                        className="w-full px-3 py-2.5 rounded-2xl bg-zinc-50 border border-zinc-200 text-sm outline-none"
+                                    >
+                                        <option value={24}>24시간</option>
+                                        <option value={168}>7일</option>
+                                        <option value={720}>30일</option>
+                                    </select>
+                                </label>
+                                <label className="space-y-1.5">
+                                    <span className="text-xs font-bold text-zinc-500 uppercase tracking-wider">사용 횟수</span>
+                                    <select
+                                        value={maxUses == null ? 'unlimited' : maxUses}
+                                        onChange={(event) => setMaxUses(
+                                            event.target.value === 'unlimited' ? null : Number(event.target.value),
+                                        )}
+                                        className="w-full px-3 py-2.5 rounded-2xl bg-zinc-50 border border-zinc-200 text-sm outline-none"
+                                    >
+                                        <option value={1}>1회</option>
+                                        <option value={5}>5회</option>
+                                        <option value="unlimited">제한 없음</option>
+                                    </select>
+                                </label>
+                            </div>
+
+                            {generatedInviteUrl && (
+                                <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-3">
+                                    <p className="text-xs font-bold text-emerald-800">링크가 생성되었습니다</p>
+                                    <div className="mt-2 flex gap-2">
+                                        <input
+                                            readOnly
+                                            value={generatedInviteUrl}
+                                            className="min-w-0 flex-1 rounded-xl border border-emerald-200 bg-white px-3 py-2 text-xs text-zinc-700"
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={handleCopyInviteUrl}
+                                            className="flex items-center gap-1 rounded-xl border border-emerald-300 bg-white px-3 text-xs font-bold text-emerald-800"
+                                        >
+                                            <Copy className="h-3.5 w-3.5" />
+                                            {copyComplete ? '복사됨' : '복사'}
+                                        </button>
+                                    </div>
+                                    <p className="mt-2 text-[11px] text-emerald-700">보안을 위해 이 링크는 지금만 다시 복사할 수 있습니다.</p>
+                                </div>
+                            )}
+
                             <div className="pt-2 flex gap-3">
                                 <Button
                                     variant="outline"
                                     type="button"
-                                    onClick={() => setIsAddOpen(false)}
+                                    onClick={() => {
+                                        setIsAddOpen(false);
+                                        setGeneratedInviteUrl('');
+                                    }}
                                     className="flex-1 rounded-full h-11 border-zinc-200 text-zinc-600"
                                 >
                                     취소
@@ -343,7 +437,7 @@ export default function DashboardGroupDetail({ groupId, onBack }: DashboardGroup
                                     disabled={actionLoading}
                                     className="flex-1 bg-[#162660] hover:bg-blue-900 border-none text-white font-bold rounded-full h-11"
                                 >
-                                    초대 보내기
+                                    {generatedInviteUrl ? '새 링크 만들기' : '안전한 링크 생성'}
                                 </Button>
                             </div>
                         </form>

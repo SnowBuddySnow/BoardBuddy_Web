@@ -32,6 +32,7 @@ import DashboardGroupDetail from './pages/DashboardGroupDetail';
 import OperationsCenter from './pages/OperationsCenter';
 import CrewPermissions from './pages/CrewPermissions';
 import GuestAccess from './pages/GuestAccess';
+import OrganizerInviteAccept from './pages/OrganizerInviteAccept';
 import DevPanel from './components/DevPanel';
 import { getAccessToken, hasDevOverride, isAutoLoginEnabled } from './lib/session';
 import { getOperationsContext, type OperationPermission } from './services/operations';
@@ -72,7 +73,8 @@ type View =
   | 'dashboard_event_detail'
   | 'dashboard_event_edit'
   | 'dashboard_groups'
-  | 'dashboard_group_detail';
+  | 'dashboard_group_detail'
+  | 'organizer_invite';
 
 const viewTabs: Partial<Record<View, Tab>> = {
   home: 'home',
@@ -111,13 +113,18 @@ const viewsWithoutBottomNav: View[] = [
   'school_admin',
   'crew_permissions',
   'notifications',
+  'organizer_invite',
 ];
 
 const getInitialView = (): View => {
+  const hasOrganizerInvite = new URLSearchParams(window.location.search).has('organizerInvite');
   if (hasDevOverride()) {
-    return 'home';
+    return hasOrganizerInvite ? 'organizer_invite' : 'home';
   }
-  return getAccessToken() && isAutoLoginEnabled() ? 'home' : 'login';
+  if (getAccessToken() && isAutoLoginEnabled()) {
+    return hasOrganizerInvite ? 'organizer_invite' : 'home';
+  }
+  return 'login';
 };
 
 function App() {
@@ -128,12 +135,16 @@ function App() {
   const [guestCrewId, setGuestCrewId] = useState<number | null>(null);
   const [isGuestEventApplication, setIsGuestEventApplication] = useState(false);
   const [selectedGroupId, setSelectedGroupId] = useState<number | null>(null);
+  const [organizerInviteToken, setOrganizerInviteToken] = useState(
+    () => new URLSearchParams(window.location.search).get('organizerInvite') || '',
+  );
   const [notificationRefreshKey, setNotificationRefreshKey] = useState(0);
   const [notificationReturnView, setNotificationReturnView] = useState<View>('home');
   const [canManage, setCanManage] = useState(false);
   const [canReviewCrews, setCanReviewCrews] = useState(false);
   const [operationPermissions, setOperationPermissions] = useState<OperationPermission[]>([]);
   const [managementAccessResolved, setManagementAccessResolved] = useState(false);
+  const [managementRefreshKey, setManagementRefreshKey] = useState(0);
   const [availableEventCount, setAvailableEventCount] = useState(0);
   const isDesktop = useDesktopViewport();
   const usedDesktopLanding = useRef(false);
@@ -241,7 +252,7 @@ function App() {
     return () => {
       cancelled = true;
     };
-  }, [shouldLoadPermissions]);
+  }, [shouldLoadPermissions, managementRefreshKey]);
 
   useEffect(() => {
     if (!isDesktop) {
@@ -329,7 +340,7 @@ function App() {
       case 'login':
         return (
           <LoginLanding
-            onLogin={() => setCurrentView('home')}
+            onLogin={() => setCurrentView(organizerInviteToken ? 'organizer_invite' : 'home')}
             onSignupNeeded={() => setCurrentView('user_info')}
             onDebugUserInfo={() => setCurrentView('user_info')}
           />
@@ -373,7 +384,23 @@ function App() {
         return (
           <UserInfoInput
             onBack={() => setCurrentView('login')}
-            onSuccess={() => setCurrentView('home')}
+            onSuccess={() => setCurrentView(organizerInviteToken ? 'organizer_invite' : 'home')}
+          />
+        );
+      case 'organizer_invite':
+        return (
+          <OrganizerInviteAccept
+            token={organizerInviteToken}
+            onDone={() => {
+              setOrganizerInviteToken('');
+              setManagementRefreshKey(key => key + 1);
+              setCurrentView('home');
+            }}
+            onCancel={() => {
+              window.history.replaceState({}, '', window.location.pathname);
+              setOrganizerInviteToken('');
+              setCurrentView('home');
+            }}
           />
         );
       case 'my_page':
@@ -483,7 +510,7 @@ function App() {
 
   const usesDesktopShell = isDesktop
     && !isDashboardView
-    && !['login', 'user_info'].includes(currentView);
+    && !['login', 'user_info', 'organizer_invite'].includes(currentView);
 
   const currentContent = renderCurrentView();
 
@@ -506,7 +533,7 @@ function App() {
           </DesktopShell>
         ) : currentContent}
 
-        {currentView !== 'login' && currentView !== 'user_info' && currentView !== 'notifications' && currentView !== 'crew_create' && currentView !== 'crew_admin' && currentView !== 'school_admin' && !isDashboardView && (
+        {currentView !== 'login' && currentView !== 'user_info' && currentView !== 'organizer_invite' && currentView !== 'notifications' && currentView !== 'crew_create' && currentView !== 'crew_admin' && currentView !== 'school_admin' && !isDashboardView && (
           <NotificationBell refreshKey={notificationRefreshKey} onClick={() => {
             setNotificationReturnView(currentView);
             setCurrentView('notifications');

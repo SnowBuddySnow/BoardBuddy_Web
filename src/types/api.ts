@@ -406,3 +406,55 @@ export interface OrganizerGroupInvitation {
     status: 'PENDING' | 'ACCEPTED' | 'DECLINED' | 'REVOKED';
     createdAt: string;
 }
+
+export type OrganizerInviteEligibilityPolicy =
+    | 'ASSIGNED_EVENT_MANAGER_ONLY'
+    | 'CREW_LEADERS_OR_EVENT_MANAGERS';
+
+export type OrganizerGroupInviteLinkStatus =
+    | 'ACTIVE'
+    | 'EXPIRED'
+    | 'EXHAUSTED'
+    | 'REVOKED';
+
+export interface OrganizerGroupInviteLink {
+    id: number;
+    inviteLinkCode: string;
+    groupId: number;
+    groupName: string;
+    proposedRole: 'EVENT_GROUP_MANAGER' | 'EVENT_GROUP_VIEWER';
+    eligibilityPolicy: OrganizerInviteEligibilityPolicy;
+    expiresAt: string;
+    maxUses: number | null;
+    usedCount: number;
+    status: OrganizerGroupInviteLinkStatus;
+    createdAt: string;
+}
+
+export interface CreatedOrganizerGroupInviteLink {
+    inviteLink: OrganizerGroupInviteLink;
+    token: string;
+}
+
+export interface OrganizerGroupInviteLinkPreview {
+    inviteLinkCode: string;
+    groupId: number;
+    groupName: string;
+    proposedRole: 'EVENT_GROUP_MANAGER' | 'EVENT_GROUP_VIEWER';
+    eligibilityPolicy: OrganizerInviteEligibilityPolicy;
+    expiresAt: string;
+    maxUses: number | null;
+    usedCount: number;
+    status: OrganizerGroupInviteLinkStatus;
+    eligible: boolean;
+    eligibilityReason: string;
+}
+
+export interface OrganizerGroupInviteLinkAcceptance {
+    membershipId: number;
+    groupId: number;
+    groupName: string;
+    crewId: number;
+    crewName: string;
+    role: 'EVENT_GROUP_MANAGER' | 'EVENT_GROUP_VIEWER';
+}
