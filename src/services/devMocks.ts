@@ -562,6 +562,31 @@ const addDevGroupMember = (
     return newMember;
 };
 
+export const addDevGroupMemberDirect = (
+    groupId: number,
+    accountId: number,
+    displayName: string,
+    crewId: number,
+    crewName: string,
+    role: OrganizerGroupMembership['role'],
+): OrganizerGroupMembership => {
+    const key = `dev_group_members_${groupId}`;
+    const list = getDevGroupMembers(groupId);
+    const member: OrganizerGroupMembership = {
+        id: Math.floor(Math.random() * 1000) + 1200,
+        groupId,
+        userId: accountId,
+        crewId,
+        crewName,
+        role,
+        userName: displayName,
+    };
+    if (!list.some((current) => current.userId === accountId)) {
+        localStorage.setItem(key, JSON.stringify([...list, member]));
+    }
+    return member;
+};
+
 export const deleteDevGroupMember = (groupId: number, userId: number) => {
     const key = `dev_group_members_${groupId}`;
     localStorage.setItem(key, JSON.stringify(getDevGroupMembers(groupId).filter((member) => member.userId !== userId)));

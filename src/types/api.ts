@@ -392,6 +392,14 @@ export interface OrganizerGroupCrew {
     crewName: string;
 }
 
+export interface OrganizerDirectAddCandidate {
+    accountId: number;
+    displayName: string;
+    crewId: number;
+    crewName: string;
+    crewRole: 'CREW_MEMBER' | 'CREW_MANAGER' | 'CREW_CAPTAIN';
+}
+
 export interface OrganizerGroupInvitation {
     id: number;
     invitationCode: string;

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Button } from '../components/Button';
 import {
+    addOrganizerGroupMemberDirectly,
     createOrganizerInviteLink,
     deleteGroupMember,
     getOrganizerGroup,
@@ -8,14 +9,16 @@ import {
     listOrganizerGroupCrews,
     listOrganizerInviteLinks,
     revokeOrganizerInviteLink,
+    searchOrganizerDirectAddCandidates,
 } from '../services/organizerGroup';
 import {
+    OrganizerDirectAddCandidate,
     OrganizerGroup,
     OrganizerGroupCrew,
     OrganizerGroupInviteLink,
     OrganizerGroupMembership,
 } from '../types/api';
-import { ChevronLeft, Copy, Info, Link2, Trash2, UserPlus, Users, X } from 'lucide-react';
+import { ChevronLeft, Copy, Info, Link2, Search, Trash2, UserPlus, Users, X } from 'lucide-react';
 import { getApiErrorMessage } from '../lib/apiError';
 
 interface DashboardGroupDetailProps {
@@ -33,11 +36,16 @@ export default function DashboardGroupDetail({ groupId, onBack }: DashboardGroup
 
     // Form States
     const [isAddOpen, setIsAddOpen] = useState(false);
+    const [addMode, setAddMode] = useState<'link' | 'direct'>('link');
     const [newRole, setNewRole] = useState<'EVENT_GROUP_MANAGER' | 'EVENT_GROUP_VIEWER'>('EVENT_GROUP_MANAGER');
     const [expiresInHours, setExpiresInHours] = useState(168);
     const [maxUses, setMaxUses] = useState<number | null>(1);
     const [generatedInviteUrl, setGeneratedInviteUrl] = useState('');
     const [copyComplete, setCopyComplete] = useState(false);
+    const [candidateQuery, setCandidateQuery] = useState('');
+    const [candidates, setCandidates] = useState<OrganizerDirectAddCandidate[]>([]);
+    const [selectedCandidate, setSelectedCandidate] = useState<OrganizerDirectAddCandidate | null>(null);
+    const [candidateLoading, setCandidateLoading] = useState(false);
 
     // Get Simulated Role
     const roleOverride = localStorage.getItem('dev_role_override') || 'server';
@@ -66,6 +74,39 @@ export default function DashboardGroupDetail({ groupId, onBack }: DashboardGroup
     useEffect(() => {
         fetchData();
     }, [groupId]);
+
+    useEffect(() => {
+        if (!isAddOpen || addMode !== 'direct' || candidateQuery.trim().length < 2) {
+            setCandidates([]);
+            setSelectedCandidate(null);
+            return;
+        }
+        let cancelled = false;
+        const timer = window.setTimeout(async () => {
+            try {
+                setCandidateLoading(true);
+                const result = await searchOrganizerDirectAddCandidates(groupId, candidateQuery.trim());
+                if (!cancelled) setCandidates(result);
+            } catch (error) {
+                console.error('Failed to search direct-add candidates:', error);
+                if (!cancelled) setCandidates([]);
+            } finally {
+                if (!cancelled) setCandidateLoading(false);
+            }
+        }, 250);
+        return () => {
+            cancelled = true;
+            window.clearTimeout(timer);
+        };
+    }, [addMode, candidateQuery, groupId, isAddOpen]);
+
+    const closeAddModal = () => {
+        setIsAddOpen(false);
+        setGeneratedInviteUrl('');
+        setCandidateQuery('');
+        setCandidates([]);
+        setSelectedCandidate(null);
+    };
 
     const handleCreateInviteLink = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -118,6 +159,30 @@ export default function DashboardGroupDetail({ groupId, onBack }: DashboardGroup
         } catch (error) {
             console.error('Failed to delete member:', error);
             alert('멤버 삭제에 실패했습니다.');
+        } finally {
+            setActionLoading(false);
+        }
+    };
+
+    const handleDirectAdd = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!selectedCandidate) return;
+        try {
+            setActionLoading(true);
+            const added = await addOrganizerGroupMemberDirectly(groupId, selectedCandidate, newRole);
+            setMembers(current => [...current, added]);
+            setCrews(current => current.some(crew => crew.crewId === selectedCandidate.crewId)
+                ? current
+                : [...current, {
+                    id: Date.now(),
+                    crewId: selectedCandidate.crewId,
+                    crewName: selectedCandidate.crewName,
+                }]);
+            closeAddModal();
+        } catch (error: unknown) {
+            console.error('Failed to add organizer group member directly:', error);
+            const message = getApiErrorMessage(error);
+            alert(message ? `직접 추가에 실패했습니다: ${message}` : '운영진을 직접 추가하지 못했습니다.');
         } finally {
             setActionLoading(false);
         }
@@ -185,11 +250,14 @@ export default function DashboardGroupDetail({ groupId, onBack }: DashboardGroup
                 {!isViewer && (
                     <Button
                         variant="primary"
-                        onClick={() => setIsAddOpen(true)}
+                        onClick={() => {
+                            setAddMode('link');
+                            setIsAddOpen(true);
+                        }}
                         className="bg-[#162660] hover:bg-[#1e3a8a] text-white border-none rounded-full h-10 py-0 font-bold flex items-center gap-1.5 shadow-sm"
                     >
                         <UserPlus className="w-4 h-4" />
-                        초대 링크 만들기
+                        운영진 추가
                     </Button>
                 )}
             </header>
@@ -301,27 +369,51 @@ export default function DashboardGroupDetail({ groupId, onBack }: DashboardGroup
                 </div>
             </main>
 
-            {/* Invite Link Drawer Overlay */}
+            {/* Add organizer overlay */}
             {isAddOpen && (
                 <div className="fixed inset-0 bg-black/30 backdrop-blur-sm z-[9999] flex items-center justify-center p-4">
-                    <div className="bg-white border border-zinc-100 rounded-3xl w-full max-w-md p-6 shadow-2xl animate-in zoom-in-95 duration-150">
+                    <div className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-3xl border border-zinc-100 bg-white p-6 shadow-2xl animate-in zoom-in-95 duration-150">
                         <div className="flex items-center justify-between border-b border-zinc-100 pb-3 mb-4">
                             <div>
-                                <h3 className="text-base font-bold text-zinc-900">운영진 초대 링크</h3>
-                                <p className="mt-1 text-xs text-zinc-400">링크를 받은 운영진이 로그인 후 직접 참여합니다.</p>
+                                <h3 className="text-base font-bold text-zinc-900">운영진 추가</h3>
+                                <p className="mt-1 text-xs text-zinc-400">
+                                    {addMode === 'link' ? '링크를 공유해 참여를 요청합니다.' : '검색한 운영진을 그룹에 바로 추가합니다.'}
+                                </p>
                             </div>
                             <button
-                                onClick={() => {
-                                    setIsAddOpen(false);
-                                    setGeneratedInviteUrl('');
-                                }}
+                                onClick={closeAddModal}
                                 className="p-1 rounded-full text-zinc-400 hover:bg-zinc-100 cursor-pointer border-none bg-transparent"
+                                aria-label="닫기"
                             >
                                 <X className="w-5 h-5" />
                             </button>
                         </div>
 
-                        <form onSubmit={handleCreateInviteLink} className="space-y-4">
+                        <div className="mb-5 grid grid-cols-2 rounded-2xl bg-zinc-100 p-1">
+                            {([
+                                ['link', '초대 링크'],
+                                ['direct', '직접 추가'],
+                            ] as const).map(([mode, label]) => (
+                                <button
+                                    key={mode}
+                                    type="button"
+                                    onClick={() => {
+                                        setAddMode(mode);
+                                        setGeneratedInviteUrl('');
+                                        setCandidateQuery('');
+                                        setSelectedCandidate(null);
+                                    }}
+                                    className={`rounded-xl px-3 py-2 text-xs font-bold transition-colors ${
+                                        addMode === mode ? 'bg-white text-[#162660] shadow-sm' : 'text-zinc-500'
+                                    }`}
+                                >
+                                    {label}
+                                </button>
+                            ))}
+                        </div>
+
+                        {addMode === 'link' ? (
+                          <form onSubmit={handleCreateInviteLink} className="space-y-4">
                             <div className="space-y-1.5">
                                 <label className="text-xs font-bold text-zinc-500 uppercase tracking-wider">수락 후 역할</label>
                                 <div className="grid grid-cols-2 gap-2">
@@ -397,10 +489,7 @@ export default function DashboardGroupDetail({ groupId, onBack }: DashboardGroup
                                 <Button
                                     variant="outline"
                                     type="button"
-                                    onClick={() => {
-                                        setIsAddOpen(false);
-                                        setGeneratedInviteUrl('');
-                                    }}
+                                    onClick={closeAddModal}
                                     className="flex-1 rounded-full h-11 border-zinc-200 text-zinc-600"
                                 >
                                     취소
@@ -414,7 +503,91 @@ export default function DashboardGroupDetail({ groupId, onBack }: DashboardGroup
                                     {generatedInviteUrl ? '새 링크 만들기' : '안전한 링크 생성'}
                                 </Button>
                             </div>
-                        </form>
+                          </form>
+                        ) : (
+                          <form onSubmit={handleDirectAdd} className="space-y-4">
+                            <div className="space-y-1.5">
+                                <label className="text-xs font-bold text-zinc-500 uppercase tracking-wider">운영진 검색</label>
+                                <div className="relative">
+                                    <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
+                                    <input
+                                        value={candidateQuery}
+                                        onChange={event => setCandidateQuery(event.target.value)}
+                                        placeholder="이름 또는 크루명 입력"
+                                        className="w-full rounded-2xl border border-zinc-200 bg-zinc-50 py-2.5 pl-10 pr-4 text-sm outline-none focus:border-[#162660]"
+                                    />
+                                </div>
+                                {candidateQuery.trim().length < 2 && (
+                                    <p className="px-1 text-[11px] text-zinc-400">두 글자 이상 입력해 주세요.</p>
+                                )}
+                            </div>
+
+                            {candidateQuery.trim().length >= 2 && (
+                                <div className="max-h-48 space-y-2 overflow-y-auto rounded-2xl border border-zinc-100 p-2">
+                                    {candidateLoading ? (
+                                        <p className="py-6 text-center text-xs text-zinc-400">검색 중...</p>
+                                    ) : candidates.length === 0 ? (
+                                        <p className="py-6 text-center text-xs text-zinc-400">추가할 수 있는 운영진이 없습니다.</p>
+                                    ) : candidates.map(candidate => (
+                                        <button
+                                            key={candidate.accountId}
+                                            type="button"
+                                            onClick={() => setSelectedCandidate(candidate)}
+                                            className={`w-full rounded-xl border p-3 text-left transition-colors ${
+                                                selectedCandidate?.accountId === candidate.accountId
+                                                    ? 'border-[#162660] bg-blue-50'
+                                                    : 'border-zinc-100 bg-white hover:bg-zinc-50'
+                                            }`}
+                                        >
+                                            <span className="block text-sm font-bold text-zinc-900">{candidate.displayName}</span>
+                                            <span className="mt-1 block text-xs text-zinc-500">
+                                                {candidate.crewName}
+                                                {candidate.crewRole === 'CREW_CAPTAIN' && ' · CAPTAIN'}
+                                            </span>
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
+
+                            <div className="space-y-1.5">
+                                <label className="text-xs font-bold text-zinc-500 uppercase tracking-wider">추가할 역할</label>
+                                <div className="grid grid-cols-2 gap-2">
+                                    {(['EVENT_GROUP_MANAGER', 'EVENT_GROUP_VIEWER'] as const).map(role => (
+                                        <button
+                                            key={role}
+                                            type="button"
+                                            onClick={() => setNewRole(role)}
+                                            className={`rounded-xl border px-3 py-2 text-xs font-bold transition-all ${
+                                                newRole === role
+                                                    ? 'border-[#162660] bg-[#162660] text-white'
+                                                    : 'border-zinc-200 bg-zinc-50 text-zinc-600'
+                                            }`}
+                                        >
+                                            {role === 'EVENT_GROUP_MANAGER' ? 'Manager' : 'Viewer'}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            <div className="rounded-2xl border border-amber-100 bg-amber-50 p-3 text-[11px] leading-relaxed text-amber-800">
+                                선택한 운영진은 별도의 수락 과정 없이 이 그룹에 바로 추가됩니다.
+                            </div>
+
+                            <div className="flex gap-3 pt-2">
+                                <Button variant="outline" type="button" onClick={closeAddModal} className="h-11 flex-1 rounded-full border-zinc-200 text-zinc-600">
+                                    취소
+                                </Button>
+                                <Button
+                                    variant="primary"
+                                    type="submit"
+                                    disabled={!selectedCandidate || actionLoading}
+                                    className="h-11 flex-1 rounded-full border-none bg-[#162660] font-bold text-white disabled:bg-zinc-300"
+                                >
+                                    바로 추가
+                                </Button>
+                            </div>
+                          </form>
+                        )}
                     </div>
                 </div>
             )}

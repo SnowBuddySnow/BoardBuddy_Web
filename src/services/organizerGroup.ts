@@ -8,10 +8,12 @@ import type {
     OrganizerGroupInviteLinkAcceptance,
     OrganizerGroupInviteLinkPreview,
     OrganizerGroupMembership,
+    OrganizerDirectAddCandidate,
     CreatedOrganizerGroupInviteLink,
 } from '../types/api';
 import {
     acceptDevGroupInvitation,
+    addDevGroupMemberDirect,
     createDevOrganizerGroup,
     declineDevGroupInvitation,
     deleteDevGroupMember,
@@ -60,6 +62,54 @@ export const getOrganizerGroup = async (groupId: number): Promise<OrganizerGroup
 export const listGroupMembers = async (groupId: number): Promise<OrganizerGroupMembership[]> => {
     if (isDevMode()) return getDevGroupMembers(groupId);
     const response = await apiClient.get<ApiResponse<OrganizerGroupMembership[]>>(`/dashboard/organizer-groups/${groupId}/members`);
+    return response.data.data;
+};
+
+const devDirectAddCandidates: OrganizerDirectAddCandidate[] = [
+    { accountId: 31, displayName: '김보드', crewId: 403, crewName: '한강 웨이크 크루', crewRole: 'CREW_MANAGER' },
+    { accountId: 32, displayName: '이웨이크', crewId: 404, crewName: '서울 수상스포츠', crewRole: 'CREW_CAPTAIN' },
+    { accountId: 33, displayName: '박버디', crewId: 405, crewName: '대학 연합 보드팀', crewRole: 'CREW_MEMBER' },
+];
+
+export const searchOrganizerDirectAddCandidates = async (
+    groupId: number,
+    query: string,
+): Promise<OrganizerDirectAddCandidate[]> => {
+    if (isDevMode()) {
+        const normalized = query.trim().toLocaleLowerCase('ko-KR');
+        if (normalized.length < 2) return [];
+        const memberIds = new Set(getDevGroupMembers(groupId).map(member => member.userId));
+        return devDirectAddCandidates.filter(candidate => !memberIds.has(candidate.accountId) && (
+            candidate.displayName.toLocaleLowerCase('ko-KR').includes(normalized)
+            || candidate.crewName.toLocaleLowerCase('ko-KR').includes(normalized)
+        ));
+    }
+    const response = await apiClient.get<ApiResponse<OrganizerDirectAddCandidate[]>>(
+        `/dashboard/organizer-groups/${groupId}/direct-add-candidates`,
+        { params: { query } },
+    );
+    return response.data.data;
+};
+
+export const addOrganizerGroupMemberDirectly = async (
+    groupId: number,
+    candidate: OrganizerDirectAddCandidate,
+    role: 'EVENT_GROUP_MANAGER' | 'EVENT_GROUP_VIEWER',
+): Promise<OrganizerGroupMembership> => {
+    if (isDevMode()) {
+        return addDevGroupMemberDirect(
+            groupId,
+            candidate.accountId,
+            candidate.displayName,
+            candidate.crewId,
+            candidate.crewName,
+            role,
+        );
+    }
+    const response = await apiClient.post<ApiResponse<OrganizerGroupMembership>>(
+        `/dashboard/organizer-groups/${groupId}/members`,
+        { accountId: candidate.accountId, role },
+    );
     return response.data.data;
 };
 
