@@ -486,7 +486,13 @@ function App() {
           />
         );
       case 'dashboard_group_detail':
-        return <DashboardGroupDetail groupId={selectedGroupId || 0} onBack={() => setCurrentView('dashboard_groups')} />;
+        return (
+          <DashboardGroupDetail
+            groupId={selectedGroupId || 0}
+            developerAccess={canReviewCrews}
+            onBack={() => setCurrentView('dashboard_groups')}
+          />
+        );
       case 'home':
       default:
         return (

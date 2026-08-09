@@ -23,10 +23,11 @@ import { getApiErrorMessage } from '../lib/apiError';
 
 interface DashboardGroupDetailProps {
     groupId: number;
+    developerAccess: boolean;
     onBack: () => void;
 }
 
-export default function DashboardGroupDetail({ groupId, onBack }: DashboardGroupDetailProps) {
+export default function DashboardGroupDetail({ groupId, developerAccess, onBack }: DashboardGroupDetailProps) {
     const [group, setGroup] = useState<OrganizerGroup | null>(null);
     const [members, setMembers] = useState<OrganizerGroupMembership[]>([]);
     const [crews, setCrews] = useState<OrganizerGroupCrew[]>([]);
@@ -389,28 +390,30 @@ export default function DashboardGroupDetail({ groupId, onBack }: DashboardGroup
                             </button>
                         </div>
 
-                        <div className="mb-5 grid grid-cols-2 rounded-2xl bg-zinc-100 p-1">
-                            {([
-                                ['link', '초대 링크'],
-                                ['direct', '직접 추가'],
-                            ] as const).map(([mode, label]) => (
-                                <button
-                                    key={mode}
-                                    type="button"
-                                    onClick={() => {
-                                        setAddMode(mode);
-                                        setGeneratedInviteUrl('');
-                                        setCandidateQuery('');
-                                        setSelectedCandidate(null);
-                                    }}
-                                    className={`rounded-xl px-3 py-2 text-xs font-bold transition-colors ${
-                                        addMode === mode ? 'bg-white text-[#162660] shadow-sm' : 'text-zinc-500'
-                                    }`}
-                                >
-                                    {label}
-                                </button>
-                            ))}
-                        </div>
+                        {developerAccess && (
+                            <div className="mb-5 grid grid-cols-2 rounded-2xl bg-zinc-100 p-1">
+                                {([
+                                    ['link', '초대 링크'],
+                                    ['direct', '직접 추가'],
+                                ] as const).map(([mode, label]) => (
+                                    <button
+                                        key={mode}
+                                        type="button"
+                                        onClick={() => {
+                                            setAddMode(mode);
+                                            setGeneratedInviteUrl('');
+                                            setCandidateQuery('');
+                                            setSelectedCandidate(null);
+                                        }}
+                                        className={`rounded-xl px-3 py-2 text-xs font-bold transition-colors ${
+                                            addMode === mode ? 'bg-white text-[#162660] shadow-sm' : 'text-zinc-500'
+                                        }`}
+                                    >
+                                        {label}
+                                    </button>
+                                ))}
+                            </div>
+                        )}
 
                         {addMode === 'link' ? (
                           <form onSubmit={handleCreateInviteLink} className="space-y-4">
