@@ -16,7 +16,7 @@ const DEV_CREW_ACCESS_KEY = 'dev_crew_member_access';
 const initialDevCrewAccess = (): CrewMemberAccess[] => [
   {
     accountId: 999,
-    displayName: 'Mock Captain',
+    displayName: 'CAPTAIN Badge User',
     crewRole: 'CREW_CAPTAIN',
     eventManager: true,
   },

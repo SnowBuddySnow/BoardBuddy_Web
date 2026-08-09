@@ -8,7 +8,6 @@ import type {
     OrganizerGroupInviteLinkAcceptance,
     OrganizerGroupInviteLinkPreview,
     OrganizerGroupMembership,
-    OrganizerInviteEligibilityPolicy,
     CreatedOrganizerGroupInviteLink,
 } from '../types/api';
 import {
@@ -85,7 +84,6 @@ export const inviteCrewManager = async (
 
 export interface CreateOrganizerInviteLinkPayload {
     role: 'EVENT_GROUP_MANAGER' | 'EVENT_GROUP_VIEWER';
-    eligibilityPolicy: OrganizerInviteEligibilityPolicy;
     expiresInHours: number;
     maxUses: number | null;
 }
@@ -104,7 +102,7 @@ export const createOrganizerInviteLink = async (
             groupId,
             groupName: group.name,
             proposedRole: payload.role,
-            eligibilityPolicy: payload.eligibilityPolicy,
+            eligibilityPolicy: 'ASSIGNED_EVENT_MANAGER_ONLY',
             expiresAt: new Date(now.getTime() + payload.expiresInHours * 60 * 60 * 1000).toISOString(),
             maxUses: payload.maxUses,
             usedCount: 0,

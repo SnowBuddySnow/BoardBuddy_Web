@@ -14,7 +14,6 @@ import {
     OrganizerGroupCrew,
     OrganizerGroupInviteLink,
     OrganizerGroupMembership,
-    OrganizerInviteEligibilityPolicy,
 } from '../types/api';
 import { ChevronLeft, Copy, Info, Link2, Trash2, UserPlus, Users, X } from 'lucide-react';
 import { getApiErrorMessage } from '../lib/apiError';
@@ -35,9 +34,6 @@ export default function DashboardGroupDetail({ groupId, onBack }: DashboardGroup
     // Form States
     const [isAddOpen, setIsAddOpen] = useState(false);
     const [newRole, setNewRole] = useState<'EVENT_GROUP_MANAGER' | 'EVENT_GROUP_VIEWER'>('EVENT_GROUP_MANAGER');
-    const [eligibilityPolicy, setEligibilityPolicy] = useState<OrganizerInviteEligibilityPolicy>(
-        'ASSIGNED_EVENT_MANAGER_ONLY',
-    );
     const [expiresInHours, setExpiresInHours] = useState(168);
     const [maxUses, setMaxUses] = useState<number | null>(1);
     const [generatedInviteUrl, setGeneratedInviteUrl] = useState('');
@@ -82,7 +78,6 @@ export default function DashboardGroupDetail({ groupId, onBack }: DashboardGroup
             setActionLoading(true);
             const created = await createOrganizerInviteLink(groupId, {
                 role: newRole,
-                eligibilityPolicy,
                 expiresInHours,
                 maxUses,
             });
@@ -233,10 +228,6 @@ export default function DashboardGroupDetail({ groupId, onBack }: DashboardGroup
                                 <div className="min-w-0">
                                     <p className="font-semibold text-zinc-700">
                                         {link.proposedRole === 'EVENT_GROUP_MANAGER' ? 'Manager' : 'Viewer'}
-                                        {' · '}
-                                        {link.eligibilityPolicy === 'ASSIGNED_EVENT_MANAGER_ONLY'
-                                            ? '이벤트 그룹 관리자·캡틴'
-                                            : '크루 매니저·캡틴 포함'}
                                     </p>
                                     <p className="mt-1 text-xs text-zinc-400">
                                         {new Date(link.expiresAt).toLocaleString('ko-KR')} 만료
@@ -349,23 +340,6 @@ export default function DashboardGroupDetail({ groupId, onBack }: DashboardGroup
                                         </button>
                                     ))}
                                 </div>
-                            </div>
-
-                            <div className="space-y-1.5">
-                                <label className="text-xs font-bold text-zinc-500 uppercase tracking-wider">수락 자격</label>
-                                <select
-                                    value={eligibilityPolicy}
-                                    onChange={(event) => setEligibilityPolicy(
-                                        event.target.value as OrganizerInviteEligibilityPolicy,
-                                    )}
-                                    className="w-full px-4 py-2.5 rounded-2xl bg-zinc-50 border border-zinc-200 text-sm outline-none"
-                                >
-                                    <option value="ASSIGNED_EVENT_MANAGER_ONLY">이벤트 그룹 관리자·캡틴 · 권장</option>
-                                    <option value="CREW_LEADERS_OR_EVENT_MANAGERS">크루 매니저·캡틴도 포함</option>
-                                </select>
-                                <p className="px-1 text-[11px] leading-relaxed text-zinc-400">
-                                    이 설정은 현재 생성하는 링크에만 적용되어 크루별 운영 정책을 유지할 수 있습니다.
-                                </p>
                             </div>
 
                             <div className="grid grid-cols-2 gap-3">

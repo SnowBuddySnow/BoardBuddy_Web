@@ -19,13 +19,10 @@ interface OrganizerInviteAcceptProps {
 }
 
 const eligibilityText = (reason: string) => {
-    if (reason.includes('Eligible as a crew captain')) return 'CREW CAPTAIN의 이벤트 그룹 관리자 자격이 확인되었습니다.';
-    if (reason.includes('Eligible as an assigned event manager')) return '지정 이벤트 매니저 자격이 확인되었습니다.';
-    if (reason.includes('Eligible as a crew manager or captain')) return '크루 매니저·캡틴 자격이 확인되었습니다.';
-    if (reason.includes('Eligible in simulated mode')) return '테스트 계정의 참여 자격이 확인되었습니다.';
-    if (reason.includes('crew captain or assigned event manager')) return 'CREW CAPTAIN 또는 지정 이벤트 그룹 관리자만 수락할 수 있습니다.';
+    if (reason.startsWith('Eligible')) return '현재 계정으로 참여할 수 있습니다.';
+    if (reason.includes('crew captain or assigned event manager')) return '이벤트 그룹 관리 권한이 있는 계정만 수락할 수 있습니다.';
     if (reason.includes('assigned event manager')) return '이 링크는 크루에서 지정된 이벤트 매니저만 수락할 수 있습니다.';
-    if (reason.includes('crew manager, captain')) return '크루 매니저·캡틴 또는 지정 이벤트 매니저만 수락할 수 있습니다.';
+    if (reason.includes('crew manager, captain')) return '이벤트 운영 권한이 있는 계정만 수락할 수 있습니다.';
     if (reason.includes('active crew membership')) return '활성 크루 가입 정보가 필요합니다.';
     if (reason.includes('already belong')) return '이미 이 운영진 그룹에 참여하고 있습니다.';
     if (reason.includes('expired, exhausted, or revoked')) return '만료되었거나 사용이 끝난 초대 링크입니다.';
@@ -126,21 +123,11 @@ export default function OrganizerInviteAccept({
                                 </p>
                             </div>
 
-                            <div className="mt-5 grid gap-3 sm:grid-cols-2">
-                                <div className="rounded-2xl bg-zinc-50 p-4">
-                                    <p className="text-xs text-zinc-400">수락 자격</p>
-                                    <p className="mt-1 text-sm font-bold text-zinc-800">
-                                        {preview.eligibilityPolicy === 'ASSIGNED_EVENT_MANAGER_ONLY'
-                                            ? '이벤트 그룹 관리자·캡틴'
-                                            : '크루 매니저·캡틴 포함'}
-                                    </p>
-                                </div>
-                                <div className="rounded-2xl bg-zinc-50 p-4">
-                                    <p className="text-xs text-zinc-400">링크 만료</p>
-                                    <p className="mt-1 text-sm font-bold text-zinc-800">
-                                        {new Date(preview.expiresAt).toLocaleString('ko-KR')}
-                                    </p>
-                                </div>
+                            <div className="mt-5 rounded-2xl bg-zinc-50 p-4">
+                                <p className="text-xs text-zinc-400">링크 만료</p>
+                                <p className="mt-1 text-sm font-bold text-zinc-800">
+                                    {new Date(preview.expiresAt).toLocaleString('ko-KR')}
+                                </p>
                             </div>
 
                             <div className={`mt-4 rounded-2xl border p-4 ${
@@ -154,9 +141,11 @@ export default function OrganizerInviteAccept({
                                         <p className="text-sm font-bold">
                                             {preview.eligible ? '참여할 수 있습니다' : '현재 계정은 수락할 수 없습니다'}
                                         </p>
-                                        <p className="mt-1 text-xs leading-relaxed">
-                                            {eligibilityText(preview.eligibilityReason)}
-                                        </p>
+                                        {!preview.eligible && (
+                                            <p className="mt-1 text-xs leading-relaxed">
+                                                {eligibilityText(preview.eligibilityReason)}
+                                            </p>
+                                        )}
                                     </div>
                                 </div>
                             </div>

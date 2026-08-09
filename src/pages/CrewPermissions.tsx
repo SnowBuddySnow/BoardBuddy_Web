@@ -17,7 +17,7 @@ interface CrewPermissionsProps {
 const roleLabel: Record<CrewMemberAccess['crewRole'], string> = {
   CREW_MEMBER: 'CREW MEMBER',
   CREW_MANAGER: 'CREW MANAGER',
-  CREW_CAPTAIN: 'CREW CAPTAIN',
+  CREW_CAPTAIN: 'CAPTAIN',
 };
 
 export default function CrewPermissions({ onBack }: CrewPermissionsProps) {
@@ -63,7 +63,7 @@ export default function CrewPermissions({ onBack }: CrewPermissionsProps) {
         ? { ...item, eventManager: !item.eventManager }
         : item));
     } catch {
-      setError('소모임 관리자 권한을 변경하지 못했습니다. CREW CAPTAIN 권한을 확인해 주세요.');
+      setError('이벤트 그룹 관리자 권한을 변경할 수 없습니다. 계정 권한을 확인해 주세요.');
     } finally {
       setChangingAccountId(null);
     }
@@ -86,7 +86,7 @@ export default function CrewPermissions({ onBack }: CrewPermissionsProps) {
           }
         : item));
     } catch {
-      setError('일반 관리자 권한을 변경하지 못했습니다. CREW CAPTAIN 권한을 확인해 주세요.');
+      setError('일반 관리자 권한을 변경할 수 없습니다. 계정 권한을 확인해 주세요.');
     } finally {
       setChangingAccountId(null);
     }
@@ -100,7 +100,7 @@ export default function CrewPermissions({ onBack }: CrewPermissionsProps) {
         </button>
         <div>
           <h1 className="text-lg font-black text-zinc-900">크루 권한</h1>
-          <p className="text-xs text-zinc-500">CREW CAPTAIN이 일반 관리자와 이벤트 그룹 관리자를 각각 지정합니다.</p>
+          <p className="text-xs text-zinc-500">일반 관리자와 이벤트 그룹 관리자 권한을 각각 설정합니다.</p>
         </div>
       </header>
 
