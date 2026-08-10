@@ -11,6 +11,7 @@ import type {
 } from '../types/api';
 import { getApiErrorMessage, getApiErrorStatus } from '../lib/apiError';
 import boardBuddyLogo from '../assets/boardbuddy-logo.png';
+import { eventGroupRoleLabel } from '../constants/displayLabels';
 
 interface OrganizerInviteAcceptProps {
     token: string;
@@ -92,7 +93,7 @@ export default function OrganizerInviteAccept({
                             <p className="mt-2 text-sm text-zinc-500">
                                 {accepted.groupName} · {accepted.crewName}
                             </p>
-                            <p className="mt-1 text-xs font-bold text-[#162660]">{accepted.role}</p>
+                            <p className="mt-1 text-xs font-bold text-[#162660]">{eventGroupRoleLabel[accepted.role]}</p>
                             <Button
                                 variant="primary"
                                 onClick={onDone}
@@ -119,7 +120,7 @@ export default function OrganizerInviteAccept({
                                 </div>
                                 <h1 className="mt-3 text-2xl font-black text-zinc-900">{preview.groupName}</h1>
                                 <p className="mt-2 text-sm text-zinc-500">
-                                    수락하면 {preview.proposedRole === 'EVENT_GROUP_MANAGER' ? 'Manager' : 'Viewer'} 권한으로 참여합니다.
+                                    수락하면 {eventGroupRoleLabel[preview.proposedRole]} 역할로 참여합니다.
                                 </p>
                             </div>
 
@@ -158,7 +159,7 @@ export default function OrganizerInviteAccept({
                             >
                                 {accepting
                                     ? '참여 처리 중...'
-                                    : `${preview.proposedRole === 'EVENT_GROUP_MANAGER' ? 'Manager' : 'Viewer'}로 참여하기`}
+                                    : `${eventGroupRoleLabel[preview.proposedRole]}로 참여하기`}
                             </Button>
                             <Button variant="ghost" onClick={onCancel} className="mt-2 w-full rounded-full text-zinc-500">
                                 나중에 하기

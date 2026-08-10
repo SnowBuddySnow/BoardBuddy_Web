@@ -16,25 +16,25 @@ const DEV_CREW_ACCESS_KEY = 'dev_crew_member_access';
 const initialDevCrewAccess = (): CrewMemberAccess[] => [
   {
     accountId: 999,
-    displayName: 'CAPTAIN Badge User',
+    displayName: 'Captain 샘플',
     crewRole: 'CREW_CAPTAIN',
     eventManager: true,
   },
   {
     accountId: 1001,
-    displayName: 'General Admin',
+    displayName: '크루 매니저 샘플',
     crewRole: 'CREW_MANAGER',
     eventManager: false,
   },
   {
     accountId: 1002,
-    displayName: 'Event Group Manager',
+    displayName: '이벤트 그룹 매니저 샘플',
     crewRole: 'CREW_MEMBER',
     eventManager: true,
   },
   {
     accountId: 1003,
-    displayName: 'Dual Role Manager',
+    displayName: '겸임 매니저 샘플',
     crewRole: 'CREW_MANAGER',
     eventManager: true,
   },

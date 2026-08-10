@@ -4,6 +4,7 @@ import { acceptOrganizerGroupInvitation, createOrganizerGroup, declineOrganizerG
 import { OrganizerGroup, OrganizerGroupInvitation } from '../types/api';
 import { Users, ArrowRight, ShieldAlert, Award, Check, Mail, Plus, X } from 'lucide-react';
 import boardBuddyLogo from '../assets/boardbuddy-logo.png';
+import { eventGroupRoleLabel } from '../constants/displayLabels';
 
 interface DashboardGroupsProps {
     onBackToHomeClick: () => void;
@@ -98,12 +99,18 @@ export default function DashboardGroups({
         }
     };
 
+    const getRoleLabel = (role: ReturnType<typeof getSimulatedRole>) => {
+        if (role === 'ADMIN') return '플랫폼 관리자';
+        if (role === 'MEMBER') return '일반 멤버';
+        return eventGroupRoleLabel[role];
+    };
+
     return (
         <div className="flex-1 flex flex-col h-full bg-[#FAF8F3] overflow-hidden">
             {/* Top Desktop Navigation */}
             <header className="bg-white border-b border-zinc-100 px-6 py-4 flex items-center justify-between">
                 <div className="flex items-center gap-6">
-                    <div className="flex h-8 items-center gap-2"><img src={boardBuddyLogo} alt="BoardBuddy" className="h-8 w-32 object-cover object-center" /><span className="text-sm font-black text-[#162660]">Manager</span></div>
+                    <div className="flex h-8 items-center gap-2"><img src={boardBuddyLogo} alt="BoardBuddy" className="h-8 w-32 object-cover object-center" /><span className="text-sm font-black text-[#162660]">운영</span></div>
                     <span className="h-4 w-px bg-zinc-200"></span>
                     <div className="flex gap-1 bg-zinc-100 p-1 rounded-full text-xs font-bold shrink-0">
                         <button
@@ -150,7 +157,7 @@ export default function DashboardGroups({
                                 <div key={invitation.id} className="flex items-center justify-between gap-4 text-sm">
                                     <div className="min-w-0">
                                         <p className="font-bold text-zinc-800 truncate">{invitation.groupName}</p>
-                                        <p className="text-xs text-zinc-500">{invitation.invitedCrewName} · {invitation.proposedRole}</p>
+                                        <p className="text-xs text-zinc-500">{invitation.invitedCrewName} · {eventGroupRoleLabel[invitation.proposedRole]}</p>
                                     </div>
                                     <div className="flex items-center gap-2 shrink-0">
                                         <button
@@ -207,7 +214,7 @@ export default function DashboardGroups({
                                                     <Users className="w-5 h-5" />
                                                 </div>
                                                 <span className={`text-[10px] uppercase font-black px-2.5 py-1 rounded-full tracking-wider ${getRoleBadgeStyle(role)}`}>
-                                                    {role}
+                                                    {getRoleLabel(role)}
                                                 </span>
                                             </div>
                                             <div>

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ChevronLeftIcon, ChevronRightIcon, UserIcon, Pencil, ExternalLink, Crown } from 'lucide-react';
+import { ChevronLeftIcon, ChevronRightIcon, UserIcon, Pencil, ExternalLink, Crown, Waypoints } from 'lucide-react';
 import { Button } from '../components/Button';
 import { Calendar } from '../components/Calendar';
 import { getUserInfo, getMyReservations } from '../services/user';
@@ -10,9 +10,10 @@ import { isCrewCaptainRole, normalizeCrewRole } from '../constants/crewRole';
 interface MyPageProps {
     onBack: () => void;
     onAccountInfoClick?: () => void;
+    onRoleGuideClick?: () => void;
 }
 
-export default function MyPage({ onBack, onAccountInfoClick }: MyPageProps) {
+export default function MyPage({ onBack, onAccountInfoClick, onRoleGuideClick }: MyPageProps) {
     const [userInfo, setUserInfo] = useState<UserDetail | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [reservations, setReservations] = useState<MyReservation[]>([]);
@@ -208,6 +209,25 @@ export default function MyPage({ onBack, onAccountInfoClick }: MyPageProps) {
                         </div>
                     )}
                 </div>
+
+                {/* Role Guide Menu */}
+                {onRoleGuideClick && (
+                    <div className="px-6 mb-4">
+                        <button
+                            onClick={onRoleGuideClick}
+                            className="w-full bg-[#EDF2FF] rounded-[20px] p-5 flex items-center justify-between hover:bg-blue-100 transition-colors"
+                        >
+                            <div className="flex items-center gap-3">
+                                <Waypoints className="h-5 w-5 text-[#162660]" />
+                                <span className="font-bold text-[#162660]">역할 안내</span>
+                            </div>
+                            <div className="flex items-center gap-1 text-[#162660]/70">
+                                <span className="text-sm font-medium">한눈에 보기</span>
+                                <ChevronRightIcon className="w-5 h-5" />
+                            </div>
+                        </button>
+                    </div>
+                )}
 
                 {/* Account Info Menu */}
                 {onAccountInfoClick && (

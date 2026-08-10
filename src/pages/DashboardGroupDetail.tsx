@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Button } from '../components/Button';
 import {
     addOrganizerGroupMemberDirectly,
@@ -10,6 +10,7 @@ import {
     listOrganizerInviteLinks,
     revokeOrganizerInviteLink,
     searchOrganizerDirectAddCandidates,
+    transferOrganizerGroupOwnership,
 } from '../services/organizerGroup';
 import {
     OrganizerDirectAddCandidate,
@@ -18,8 +19,10 @@ import {
     OrganizerGroupInviteLink,
     OrganizerGroupMembership,
 } from '../types/api';
-import { ChevronLeft, Copy, Info, Link2, Search, Trash2, UserPlus, Users, X } from 'lucide-react';
+import { ChevronLeft, Copy, Crown, Info, Link2, Search, Trash2, UserPlus, Users, X } from 'lucide-react';
 import { getApiErrorMessage } from '../lib/apiError';
+import { getUserInfo } from '../services/user';
+import { crewRoleLabel, eventGroupRoleLabel, inviteLinkStatusLabel } from '../constants/displayLabels';
 
 interface DashboardGroupDetailProps {
     groupId: number;
@@ -34,6 +37,7 @@ export default function DashboardGroupDetail({ groupId, developerAccess, onBack 
     const [inviteLinks, setInviteLinks] = useState<OrganizerGroupInviteLink[]>([]);
     const [loading, setLoading] = useState(true);
     const [actionLoading, setActionLoading] = useState(false);
+    const [currentUserId, setCurrentUserId] = useState<number | null>(null);
 
     // Form States
     const [isAddOpen, setIsAddOpen] = useState(false);
@@ -52,29 +56,35 @@ export default function DashboardGroupDetail({ groupId, developerAccess, onBack 
     const roleOverride = localStorage.getItem('dev_role_override') || 'server';
     const isViewer = roleOverride === 'member' || roleOverride === 'viewer'; // Read-only role checks
 
-    const fetchData = async () => {
+    const fetchData = useCallback(async () => {
         try {
             setLoading(true);
-            const groupData = await getOrganizerGroup(groupId);
+            const [groupData, userData] = await Promise.all([
+                getOrganizerGroup(groupId),
+                getUserInfo(),
+            ]);
             setGroup(groupData);
-            const [membersList, crewList, links] = await Promise.all([
+            setCurrentUserId(userData.userId);
+            const [membersList, crewList] = await Promise.all([
                 listGroupMembers(groupId),
                 listOrganizerGroupCrews(groupId),
-                listOrganizerInviteLinks(groupId),
             ]);
             setMembers(membersList);
             setCrews(crewList);
-            setInviteLinks(links);
+            const ownsGroup = membersList.some(member => (
+                member.userId === userData.userId && member.role === 'EVENT_GROUP_OWNER'
+            ));
+            setInviteLinks(ownsGroup ? await listOrganizerInviteLinks(groupId) : []);
         } catch (error) {
             console.error('Failed to fetch group details:', error);
         } finally {
             setLoading(false);
         }
-    };
+    }, [groupId]);
 
     useEffect(() => {
         fetchData();
-    }, [groupId]);
+    }, [fetchData]);
 
     useEffect(() => {
         if (!isAddOpen || addMode !== 'direct' || candidateQuery.trim().length < 2) {
@@ -141,18 +151,18 @@ export default function DashboardGroupDetail({ groupId, developerAccess, onBack 
         }
     };
 
-    const handleDeleteMember = async (userId: number) => {
+    const handleDeleteMember = async (member: OrganizerGroupMembership) => {
         if (isViewer) {
             alert('이 그룹의 멤버를 편집할 권한이 없습니다.');
             return;
         }
 
-        const confirmDelete = window.confirm(`정말 유저 #${userId} 멤버를 이 주최자 그룹에서 삭제하시겠습니까?`);
+        const confirmDelete = window.confirm(`정말 ${member.userName} 님을 이 주최자 그룹에서 삭제하시겠습니까?`);
         if (!confirmDelete) return;
 
         try {
             setActionLoading(true);
-            await deleteGroupMember(groupId, userId);
+            await deleteGroupMember(groupId, member.userId);
             alert('성공적으로 삭제되었습니다.');
             // Reload member list
             const updatedList = await listGroupMembers(groupId);
@@ -160,6 +170,27 @@ export default function DashboardGroupDetail({ groupId, developerAccess, onBack 
         } catch (error) {
             console.error('Failed to delete member:', error);
             alert('멤버 삭제에 실패했습니다.');
+        } finally {
+            setActionLoading(false);
+        }
+    };
+
+    const handleTransferOwnership = async (member: OrganizerGroupMembership) => {
+        const confirmed = window.confirm(
+            `${member.userName} 님에게 그룹 소유권을 이전하시겠습니까? 이전 후 본인의 역할은 이벤트 그룹 매니저로 변경됩니다.`,
+        );
+        if (!confirmed) return;
+
+        try {
+            setActionLoading(true);
+            await transferOrganizerGroupOwnership(groupId, member.userId);
+            setMembers(await listGroupMembers(groupId));
+            setInviteLinks([]);
+            alert(`${member.userName} 님에게 그룹 소유권을 이전했습니다.`);
+        } catch (error: unknown) {
+            console.error('Failed to transfer organizer group ownership:', error);
+            const message = getApiErrorMessage(error);
+            alert(message ? `소유권 이전에 실패했습니다: ${message}` : '그룹 소유권을 이전하지 못했습니다.');
         } finally {
             setActionLoading(false);
         }
@@ -218,6 +249,9 @@ export default function DashboardGroupDetail({ groupId, developerAccess, onBack 
                 return 'bg-zinc-50 text-zinc-500 border border-zinc-200 font-medium';
         }
     };
+
+    const currentMembership = members.find(member => member.userId === currentUserId);
+    const canTransferOwnership = currentMembership?.role === 'EVENT_GROUP_OWNER';
 
     if (loading) {
         return (
@@ -296,7 +330,7 @@ export default function DashboardGroupDetail({ groupId, developerAccess, onBack 
                             <div key={link.id} className="flex items-center justify-between gap-4 border-t border-zinc-100 pt-3 first:border-0 first:pt-0 text-sm">
                                 <div className="min-w-0">
                                     <p className="font-semibold text-zinc-700">
-                                        {link.proposedRole === 'EVENT_GROUP_MANAGER' ? 'Manager' : 'Viewer'}
+                                        {eventGroupRoleLabel[link.proposedRole]}
                                     </p>
                                     <p className="mt-1 text-xs text-zinc-400">
                                         {new Date(link.expiresAt).toLocaleString('ko-KR')} 만료
@@ -308,7 +342,7 @@ export default function DashboardGroupDetail({ groupId, developerAccess, onBack 
                                     <span className={`text-xs font-bold ${
                                         link.status === 'ACTIVE' ? 'text-emerald-700' : 'text-zinc-400'
                                     }`}>
-                                        {link.status}
+                                        {inviteLinkStatusLabel[link.status]}
                                     </span>
                                     {!isViewer && link.status === 'ACTIVE' && (
                                         <button
@@ -331,7 +365,6 @@ export default function DashboardGroupDetail({ groupId, developerAccess, onBack 
                         <table className="w-full text-left border-collapse">
                             <thead>
                                 <tr className="bg-zinc-50 border-b border-zinc-100 text-xs text-zinc-400 font-bold uppercase tracking-wider">
-                                    <th className="px-6 py-4">User ID</th>
                                     <th className="px-6 py-4">Name</th>
                                     <th className="px-6 py-4">Crew</th>
                                     <th className="px-6 py-4">Group Role</th>
@@ -341,19 +374,30 @@ export default function DashboardGroupDetail({ groupId, developerAccess, onBack 
                             <tbody>
                                 {members.map((member) => (
                                     <tr key={member.id} className="border-b border-zinc-50 text-sm hover:bg-zinc-50/50 transition-colors">
-                                        <td className="px-6 py-4 font-mono text-zinc-500 text-xs">#{member.userId}</td>
-                                        <td className="px-6 py-4 font-bold text-zinc-800">{member.userName || `User ${member.userId}`}</td>
+                                        <td className="px-6 py-4 font-bold text-zinc-800">{member.userName || 'Name unavailable'}</td>
                                         <td className="px-6 py-4 text-xs font-semibold text-zinc-600">{member.crewName || '-'}</td>
                                         <td className="px-6 py-4">
                                             <span className={`text-[10px] uppercase font-black px-2.5 py-1 rounded-full tracking-wider ${getRoleBadgeStyle(member.role)}`}>
-                                                {member.role}
+                                                {eventGroupRoleLabel[member.role]}
                                             </span>
                                         </td>
                                         {!isViewer && (
                                             <td className="px-6 py-4 text-right">
+                                                {canTransferOwnership && member.role === 'EVENT_GROUP_MANAGER' && (
+                                                    <Button
+                                                        variant="ghost"
+                                                        onClick={() => handleTransferOwnership(member)}
+                                                        disabled={actionLoading}
+                                                        className="mr-1 p-2 text-amber-600 hover:text-amber-700 hover:bg-amber-50 rounded-full transition-colors inline-flex border-none cursor-pointer"
+                                                        aria-label={`Transfer ownership to ${member.userName}`}
+                                                        title="소유권 이전"
+                                                    >
+                                                        <Crown className="w-4 h-4" />
+                                                    </Button>
+                                                )}
                                                 <Button
                                                     variant="ghost"
-                                                    onClick={() => handleDeleteMember(member.userId)}
+                                                    onClick={() => handleDeleteMember(member)}
                                                     disabled={actionLoading}
                                                     className="p-2 text-zinc-400 hover:text-red-600 hover:bg-red-50 rounded-full transition-colors inline-flex border-none cursor-pointer"
                                                     aria-label="Remove member"
@@ -431,7 +475,7 @@ export default function DashboardGroupDetail({ groupId, developerAccess, onBack 
                                                     : 'bg-zinc-50 text-zinc-600 border-zinc-200/60 hover:bg-zinc-100'
                                             }`}
                                         >
-                                            {role === 'EVENT_GROUP_MANAGER' ? 'Manager' : 'Viewer'}
+                                            {eventGroupRoleLabel[role]}
                                         </button>
                                     ))}
                                 </div>
@@ -545,7 +589,7 @@ export default function DashboardGroupDetail({ groupId, developerAccess, onBack 
                                             <span className="block text-sm font-bold text-zinc-900">{candidate.displayName}</span>
                                             <span className="mt-1 block text-xs text-zinc-500">
                                                 {candidate.crewName}
-                                                {candidate.crewRole === 'CREW_CAPTAIN' && ' · CAPTAIN'}
+                                                {candidate.crewRole === 'CREW_CAPTAIN' && ` · ${crewRoleLabel.CREW_CAPTAIN}`}
                                             </span>
                                         </button>
                                     ))}
@@ -566,7 +610,7 @@ export default function DashboardGroupDetail({ groupId, developerAccess, onBack 
                                                     : 'border-zinc-200 bg-zinc-50 text-zinc-600'
                                             }`}
                                         >
-                                            {role === 'EVENT_GROUP_MANAGER' ? 'Manager' : 'Viewer'}
+                                            {eventGroupRoleLabel[role]}
                                         </button>
                                     ))}
                                 </div>

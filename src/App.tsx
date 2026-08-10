@@ -31,6 +31,7 @@ import DashboardGroups from './pages/DashboardGroups';
 import DashboardGroupDetail from './pages/DashboardGroupDetail';
 import OperationsCenter from './pages/OperationsCenter';
 import CrewPermissions from './pages/CrewPermissions';
+import RoleGuide from './pages/RoleGuide';
 import GuestAccess from './pages/GuestAccess';
 import OrganizerInviteAccept from './pages/OrganizerInviteAccept';
 import DevPanel from './components/DevPanel';
@@ -63,6 +64,7 @@ type View =
   | 'crew_admin'
   | 'school_admin'
   | 'crew_permissions'
+  | 'role_guide'
   | 'notifications'
   | 'parties'
   | 'event_detail'
@@ -112,6 +114,7 @@ const viewsWithoutBottomNav: View[] = [
   'crew_admin',
   'school_admin',
   'crew_permissions',
+  'role_guide',
   'notifications',
   'organizer_invite',
 ];
@@ -289,7 +292,7 @@ function App() {
     if (currentView === 'reservation' || currentView === 'guest_reservation') return 'reservation';
     if (currentView === 'guest_access') return 'reservation';
     if (['crew_detail', 'crew_settings', 'crew_member', 'stats', 'search_crew'].includes(currentView)) return 'crew_detail';
-    if (currentView === 'my_page' || currentView === 'account_info') return 'my_page';
+    if (currentView === 'my_page' || currentView === 'account_info' || currentView === 'role_guide') return 'my_page';
     return 'home';
   };
 
@@ -404,9 +407,17 @@ function App() {
           />
         );
       case 'my_page':
-        return <MyPage onBack={() => setCurrentView('home')} onAccountInfoClick={() => setCurrentView('account_info')} />;
+        return (
+          <MyPage
+            onBack={() => setCurrentView('home')}
+            onAccountInfoClick={() => setCurrentView('account_info')}
+            onRoleGuideClick={() => setCurrentView('role_guide')}
+          />
+        );
       case 'account_info':
         return <AccountInfo onBack={() => setCurrentView('my_page')} />;
+      case 'role_guide':
+        return <RoleGuide onBack={() => setCurrentView('my_page')} />;
       case 'crew_admin':
         return <CrewAdmin mode="review" onBack={() => setCurrentView('home')} />;
       case 'crew_create':
@@ -539,7 +550,7 @@ function App() {
           </DesktopShell>
         ) : currentContent}
 
-        {currentView !== 'login' && currentView !== 'user_info' && currentView !== 'organizer_invite' && currentView !== 'notifications' && currentView !== 'crew_create' && currentView !== 'crew_admin' && currentView !== 'school_admin' && !isDashboardView && (
+        {currentView !== 'login' && currentView !== 'user_info' && currentView !== 'organizer_invite' && currentView !== 'notifications' && currentView !== 'role_guide' && currentView !== 'crew_create' && currentView !== 'crew_admin' && currentView !== 'school_admin' && !isDashboardView && (
           <NotificationBell refreshKey={notificationRefreshKey} onClick={() => {
             setNotificationReturnView(currentView);
             setCurrentView('notifications');

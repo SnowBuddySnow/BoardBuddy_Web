@@ -9,16 +9,11 @@ import {
   revokeGeneralAdmin,
   type CrewMemberAccess,
 } from '../services/crewPermissions';
+import { crewRoleLabel } from '../constants/displayLabels';
 
 interface CrewPermissionsProps {
   onBack: () => void;
 }
-
-const roleLabel: Record<CrewMemberAccess['crewRole'], string> = {
-  CREW_MEMBER: 'CREW MEMBER',
-  CREW_MANAGER: 'CREW MANAGER',
-  CREW_CAPTAIN: 'CAPTAIN',
-};
 
 export default function CrewPermissions({ onBack }: CrewPermissionsProps) {
   const [crewId, setCrewId] = useState<number | null>(null);
@@ -63,7 +58,7 @@ export default function CrewPermissions({ onBack }: CrewPermissionsProps) {
         ? { ...item, eventManager: !item.eventManager }
         : item));
     } catch {
-      setError('이벤트 그룹 관리자 권한을 변경할 수 없습니다. 계정 권한을 확인해 주세요.');
+      setError('이벤트 그룹 매니저 권한을 변경할 수 없습니다. 계정 권한을 확인해 주세요.');
     } finally {
       setChangingAccountId(null);
     }
@@ -86,7 +81,7 @@ export default function CrewPermissions({ onBack }: CrewPermissionsProps) {
           }
         : item));
     } catch {
-      setError('일반 관리자 권한을 변경할 수 없습니다. 계정 권한을 확인해 주세요.');
+      setError('크루 매니저 권한을 변경할 수 없습니다. 계정 권한을 확인해 주세요.');
     } finally {
       setChangingAccountId(null);
     }
@@ -100,7 +95,7 @@ export default function CrewPermissions({ onBack }: CrewPermissionsProps) {
         </button>
         <div>
           <h1 className="text-lg font-black text-zinc-900">크루 권한</h1>
-          <p className="text-xs text-zinc-500">일반 관리자와 이벤트 그룹 관리자 권한을 각각 설정합니다.</p>
+          <p className="text-xs text-zinc-500">크루 매니저와 이벤트 그룹 매니저 역할을 각각 설정합니다.</p>
         </div>
       </header>
 
@@ -118,7 +113,7 @@ export default function CrewPermissions({ onBack }: CrewPermissionsProps) {
                     <p className="truncate text-sm font-bold text-zinc-900">{member.displayName || `User ${member.accountId}`}</p>
                   </div>
                   <p className="mt-1 text-xs font-semibold text-zinc-500">
-                    {roleLabel[member.crewRole]}
+                    {crewRoleLabel[member.crewRole]}
                     {member.crewRole === 'CREW_CAPTAIN' && (
                       <span className="ml-2 text-[#162660]">· 두 권한 기본 보유</span>
                     )}
@@ -135,7 +130,7 @@ export default function CrewPermissions({ onBack }: CrewPermissionsProps) {
                         : 'border-zinc-200 bg-white text-zinc-600 hover:bg-zinc-50'
                     }`}
                   >
-                    일반 관리자
+                    크루 매니저
                   </button>
                   <button
                     type="button"
@@ -148,7 +143,7 @@ export default function CrewPermissions({ onBack }: CrewPermissionsProps) {
                     }`}
                   >
                     <ShieldCheck className="mr-1 inline h-3.5 w-3.5" />
-                    이벤트 그룹 관리자
+                    이벤트 그룹 매니저
                   </button>
                 </div>
               </div>

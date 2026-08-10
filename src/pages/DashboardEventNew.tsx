@@ -9,6 +9,7 @@ import { ActivityTypeSelector } from '../components/event/ActivityTypeSelector';
 import { ChevronLeft, Save, HelpCircle } from 'lucide-react';
 import { getApiErrorMessage, getApiErrorStatus } from '../lib/apiError';
 import { EventConsentEditor } from '../components/event/EventConsentEditor';
+import { joinPolicyLabel, visibilityTypeLabel } from '../constants/displayLabels';
 
 interface DashboardEventNewProps {
     onBack: () => void;
@@ -368,10 +369,9 @@ export default function DashboardEventNew({ onBack, onSuccess }: DashboardEventN
                                     onChange={e => setVisibilityType(e.target.value as VisibilityType)}
                                     className="w-full px-4 py-2.5 bg-white border border-zinc-200 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-[#162660]/20 text-zinc-800"
                                 >
-                                    <option value="PUBLIC">전체 공개 (PUBLIC)</option>
-                                    <option value="CREW_LIMITED">크루 한정 (CREW_LIMITED)</option>
-                                    <option value="INVITE_ONLY">초대 링크 전용 (INVITE_ONLY)</option>
-                                    <option value="LINK_ONLY">링크 직접 공유 (LINK_ONLY)</option>
+                                    {(['PUBLIC', 'CREW_LIMITED', 'INVITE_ONLY', 'LINK_ONLY'] as const).map(value => (
+                                        <option key={value} value={value}>{visibilityTypeLabel[value]}</option>
+                                    ))}
                                 </select>
                             </div>
 
@@ -382,9 +382,9 @@ export default function DashboardEventNew({ onBack, onSuccess }: DashboardEventN
                                     onChange={e => setJoinPolicy(e.target.value as JoinPolicy)}
                                     className="w-full px-4 py-2.5 bg-white border border-zinc-200 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-[#162660]/20 text-zinc-800"
                                 >
-                                    <option value="INSTANT">즉시 가입 승인 (INSTANT)</option>
-                                    <option value="APPROVAL_REQUIRED">호스트 승인 필요 (APPROVAL_REQUIRED)</option>
-                                    <option value="INVITE_ONLY">초대장 필요 (INVITE_ONLY)</option>
+                                    {(['INSTANT', 'APPROVAL_REQUIRED', 'INVITE_ONLY'] as const).map(value => (
+                                        <option key={value} value={value}>{joinPolicyLabel[value]}</option>
+                                    ))}
                                 </select>
                             </div>
                         </div>

@@ -26,6 +26,7 @@ import {
     inviteDevCrewManager,
     isDevMode,
     revokeDevGroupInvitation,
+    transferDevGroupOwnership,
 } from './devMocks';
 
 const DEV_INVITE_LINKS_KEY = 'dev_organizer_group_invite_links';
@@ -280,4 +281,16 @@ export const deleteGroupMember = async (groupId: number, userId: number): Promis
         return;
     }
     await apiClient.delete<ApiResponse<void>>(`/dashboard/organizer-groups/${groupId}/members/${userId}`);
+};
+
+export const transferOrganizerGroupOwnership = async (
+    groupId: number,
+    targetUserId: number,
+): Promise<OrganizerGroupMembership> => {
+    if (isDevMode()) return transferDevGroupOwnership(groupId, targetUserId);
+    const response = await apiClient.post<ApiResponse<OrganizerGroupMembership>>(
+        `/dashboard/organizer-groups/${groupId}/ownership/transfer`,
+        { targetAccountId: targetUserId },
+    );
+    return response.data.data;
 };

@@ -530,7 +530,7 @@ export const getDevGroupMembers = (groupId: number): OrganizerGroupMembership[] 
     }
 
     const defaultList: OrganizerGroupMembership[] = [
-        { id: 101, groupId, userId: 10, crewId: 401, crewName: 'Mock Crew 401', role: 'EVENT_GROUP_OWNER', userName: 'Jake Kim (Simulated Owner)' },
+        { id: 101, groupId, userId: 999, crewId: 401, crewName: 'Mock Crew 401', role: 'EVENT_GROUP_OWNER', userName: 'Mock User (Dev Mode)' },
         { id: 102, groupId, userId: 11, crewId: 402, crewName: 'Mock Crew 402', role: 'EVENT_GROUP_MANAGER', userName: 'Jane Doe (Simulated Manager)' },
         { id: 103, groupId, userId: 12, crewId: 402, crewName: 'Mock Crew 402', role: 'EVENT_GROUP_VIEWER', userName: 'Bob Smith (Simulated Viewer)' },
     ];
@@ -590,6 +590,23 @@ export const addDevGroupMemberDirect = (
 export const deleteDevGroupMember = (groupId: number, userId: number) => {
     const key = `dev_group_members_${groupId}`;
     localStorage.setItem(key, JSON.stringify(getDevGroupMembers(groupId).filter((member) => member.userId !== userId)));
+};
+
+export const transferDevGroupOwnership = (
+    groupId: number,
+    targetUserId: number,
+): OrganizerGroupMembership => {
+    const key = `dev_group_members_${groupId}`;
+    const members = getDevGroupMembers(groupId);
+    const currentOwner = members.find(member => member.role === 'EVENT_GROUP_OWNER');
+    const targetManager = members.find(member => member.userId === targetUserId);
+    if (!currentOwner || !targetManager || targetManager.role !== 'EVENT_GROUP_MANAGER') {
+        throw new Error('Ownership can only be transferred to an event group manager');
+    }
+    currentOwner.role = 'EVENT_GROUP_MANAGER';
+    targetManager.role = 'EVENT_GROUP_OWNER';
+    localStorage.setItem(key, JSON.stringify(members));
+    return targetManager;
 };
 
 const getAllDevInvitations = (): OrganizerGroupInvitation[] => {

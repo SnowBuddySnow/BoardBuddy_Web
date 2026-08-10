@@ -4,6 +4,7 @@ import { getEventChatAccess, getEventDashboard, updateEvent, listParticipants, u
 import { Event, EventChatAccess, EventParticipant, PaymentStatus } from '../types/api';
 import { ChevronLeft, Play, Power, Clock, Check, Save, X, MessageCircle } from 'lucide-react';
 import { PlanningModeBadge } from '../components/event/PlanningModeBadge';
+import { eventStatusLabel, joinPolicyLabel, participantStatusLabel } from '../constants/displayLabels';
 
 interface DashboardEventDetailProps {
     eventId: number;
@@ -233,13 +234,13 @@ export default function DashboardEventDetail({ eventId, onBack, onEditClick }: D
                                         event.status === 'OPEN' ? 'bg-emerald-100 text-emerald-800' :
                                         'bg-zinc-100 text-zinc-600'
                                     }`}>
-                                        {event.status}
+                                        {eventStatusLabel[event.status]}
                                     </span>
                                 </span>
                             </div>
                             <div>
                                 <span className="text-zinc-400 font-bold block text-xs uppercase">가입 정책</span>
-                                <span className="font-bold text-zinc-800 mt-1 block">{event.joinPolicy}</span>
+                                <span className="font-bold text-zinc-800 mt-1 block">{joinPolicyLabel[event.joinPolicy]}</span>
                             </div>
                         </div>
                     </div>
@@ -260,7 +261,7 @@ export default function DashboardEventDetail({ eventId, onBack, onEditClick }: D
                                     <thead>
                                         <tr className="bg-zinc-50 text-zinc-400 font-bold text-xs uppercase border-b border-zinc-100">
                                             <th className="px-2 py-3">참가자</th>
-                                            <th className="px-2 py-3">Status</th>
+                                            <th className="px-2 py-3">상태</th>
                                             <th className="px-2 py-3">신청 일시</th>
                                             <th className="px-2 py-3">입금 상태</th>
                                             <th className="px-2 py-3">관리자 메모</th>
@@ -276,7 +277,7 @@ export default function DashboardEventDetail({ eventId, onBack, onEditClick }: D
                                             return (
                                                 <tr key={part.id} className="hover:bg-zinc-50/50 transition-colors">
                                                     <td className="px-2 py-3.5 font-bold text-zinc-800 whitespace-nowrap">
-                                                        User {part.userId}
+                                                        {part.userName || '이름 없음'}
                                                     </td>
                                                     <td className="px-2 py-3.5">
                                                         <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-bold ${
@@ -285,7 +286,7 @@ export default function DashboardEventDetail({ eventId, onBack, onEditClick }: D
                                                             part.status === 'REMOVED' ? 'bg-red-50 text-red-700 border border-red-100' :
                                                             'bg-zinc-50 text-zinc-500'
                                                         }`}>
-                                                            {part.status}
+                                                            {participantStatusLabel[part.status]}
                                                         </span>
                                                     </td>
                                                     <td className="px-2 py-3.5 text-zinc-400 text-xs font-semibold whitespace-nowrap">

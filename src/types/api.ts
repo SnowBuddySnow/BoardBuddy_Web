@@ -383,7 +383,7 @@ export interface OrganizerGroupMembership {
     crewId?: number | null;
     crewName?: string | null;
     role: 'EVENT_GROUP_OWNER' | 'EVENT_GROUP_MANAGER' | 'EVENT_GROUP_VIEWER';
-    userName?: string;
+    userName: string;
 }
 
 export interface OrganizerGroupCrew {

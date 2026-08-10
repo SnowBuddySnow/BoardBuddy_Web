@@ -6,6 +6,7 @@ import { Plus, Edit2, Play, Power, Trash2, Users, ShieldAlert } from 'lucide-rea
 import { getApiErrorStatus } from '../lib/apiError';
 import { PlanningModeBadge } from '../components/event/PlanningModeBadge';
 import boardBuddyLogo from '../assets/boardbuddy-logo.png';
+import { eventStatusLabel, joinPolicyLabel, visibilityTypeLabel } from '../constants/displayLabels';
 
 interface DashboardPartiesProps {
     onCreateEventClick: () => void;
@@ -123,7 +124,7 @@ export default function DashboardParties({
             {/* Top Desktop Navigation */}
             <header className="bg-white border-b border-zinc-100 px-6 py-4 flex items-center justify-between">
                 <div className="flex items-center gap-6">
-                    <div className="flex h-8 items-center gap-2"><img src={boardBuddyLogo} alt="BoardBuddy" className="h-8 w-32 object-cover object-center" /><span className="text-sm font-black text-[#162660]">Manager</span></div>
+                    <div className="flex h-8 items-center gap-2"><img src={boardBuddyLogo} alt="BoardBuddy" className="h-8 w-32 object-cover object-center" /><span className="text-sm font-black text-[#162660]">운영</span></div>
                     <span className="h-4 w-px bg-zinc-200"></span>
                     <div className="flex gap-1 bg-zinc-100 p-1 rounded-full text-xs font-bold shrink-0">
                         <button
@@ -188,7 +189,7 @@ export default function DashboardParties({
                                 <thead>
                                     <tr className="bg-zinc-50 border-b border-zinc-100 text-xs text-zinc-400 font-bold uppercase tracking-wider">
                                         <th className="px-6 py-4">소모임 / 그룹</th>
-                                        <th className="px-6 py-4">Status</th>
+                                        <th className="px-6 py-4">상태</th>
                                         <th className="px-6 py-4">시작 일시</th>
                                         <th className="px-6 py-4">공개 / 신청 정책</th>
                                         <th className="px-6 py-4">참여 / 정원</th>
@@ -214,15 +215,15 @@ export default function DashboardParties({
                                                 </td>
                                                 <td className="px-6 py-4.5">
                                                     <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs border ${getStatusStyle(event.status)}`}>
-                                                        {event.status}
+                                                        {eventStatusLabel[event.status]}
                                                     </span>
                                                 </td>
                                                 <td className="px-6 py-4.5 font-medium text-zinc-500">
                                                     {formatDate(event.startsAt)}
                                                 </td>
                                                 <td className="px-6 py-4.5">
-                                                    <div className="font-semibold text-zinc-800">{event.visibilityType}</div>
-                                                    <div className="text-xs text-zinc-400 font-medium mt-0.5">{event.joinPolicy}</div>
+                                                    <div className="font-semibold text-zinc-800">{visibilityTypeLabel[event.visibilityType]}</div>
+                                                    <div className="text-xs text-zinc-400 font-medium mt-0.5">{joinPolicyLabel[event.joinPolicy]}</div>
                                                 </td>
                                                 <td className="px-6 py-4.5">
                                                     <div className="flex items-center gap-2 font-bold text-zinc-800">
