@@ -1,13 +1,13 @@
 import { useState, useEffect } from 'react';
 import { getUserInfo } from '../services/user';
-import { getCrewInfo, getMyApplications, withdrawCrewApplication } from '../services/crew';
+import { getMyApplications, withdrawCrewApplication } from '../services/crew';
 import { listParties } from '../services/event';
 import { listOrganizerGroups } from '../services/organizerGroup';
 import { UserDetail, CrewDetail, MyApplication, Event } from '../types/api';
 import { UserPlus, Sparkles, Users, Calendar as CalendarIcon, ChevronRight, Clock3, ShieldCheck, X, TentTree, CalendarHeart, CloudSun, LockKeyhole } from 'lucide-react';
 import { getWeather, WeatherData } from '../services/weather';
 import { getEventActivityLabel } from '../constants/eventActivity';
-import { getOperatingSeason } from '../constants/operatingSeason';
+import { getOperatingFeatures, OperatingMode } from '../constants/operatingSeason';
 import boardBuddyLogo from '../assets/boardbuddy-logo.png';
 
 interface HomeProps {
@@ -23,6 +23,8 @@ interface HomeProps {
     onSeeAllPartiesClick: () => void;
     onMyPlansClick: () => void;
     onDashboardClick: () => void;
+    operatingMode: OperatingMode;
+    crewDetail: CrewDetail | null;
 }
 
 export default function Home({
@@ -36,10 +38,11 @@ export default function Home({
     onEventClick,
     onSeeAllPartiesClick,
     onMyPlansClick,
-    onDashboardClick
+    onDashboardClick,
+    operatingMode,
+    crewDetail,
 }: HomeProps) {
     const [userInfo, setUserInfo] = useState<UserDetail | null>(null);
-    const [crewDetail, setCrewDetail] = useState<CrewDetail | null>(null);
     const [myApplications, setMyApplications] = useState<MyApplication[]>([]);
     const [hasCrew, setHasCrew] = useState(initialHasCrew);
     const [weather, setWeather] = useState<WeatherData | null>(null);
@@ -51,6 +54,7 @@ export default function Home({
     // Small gathering related states
     const [parties, setParties] = useState<Event[]>([]);
     const [hasOrganizerPermission, setHasOrganizerPermission] = useState(false);
+    const operatingFeatures = getOperatingFeatures(operatingMode);
 
     useEffect(() => {
         const fetchData = async () => {
@@ -59,12 +63,6 @@ export default function Home({
                 setUserInfo(data);
                 if (data.crew) {
                     setHasCrew(true);
-                    try {
-                        const cDetail = await getCrewInfo(data.crew.crewId);
-                        setCrewDetail(cDetail);
-                    } catch (e) {
-                        console.error("Failed to fetch crew detail", e);
-                    }
                 } else {
                     setHasCrew(false);
                     try {
@@ -100,12 +98,14 @@ export default function Home({
         };
 
         fetchData();
-        fetchEventData();
+        if (operatingFeatures.offSeason) fetchEventData();
 
         // Fetch Weather
-        getWeather().then(data => {
-            setWeather(data);
-        }).catch(err => console.error("Weather fetch failed", err));
+        if (operatingFeatures.season) {
+            getWeather().then(data => {
+                setWeather(data);
+            }).catch(err => console.error("Weather fetch failed", err));
+        }
 
         // Set Current Date
         const now = new Date();
@@ -116,7 +116,7 @@ export default function Home({
         const weekday = days[now.getDay()];
         setCurrentDate(`${year}. ${month}. ${day} ${weekday}`);
 
-    }, []);
+    }, [operatingFeatures.offSeason, operatingFeatures.season]);
 
     // Helper to format small gathering date
     const formatEventDate = (dateStr: string) => {
@@ -136,8 +136,8 @@ export default function Home({
         return start > nowTime && applicationStarted && (p.joinedCount || 0) < p.capacity;
     }).sort((a, b) => new Date(a.startsAt).getTime() - new Date(b.startsAt).getTime());
 
-    const isWinter = getOperatingSeason() === 'WINTER';
-    const seasonHouseUnavailable = crewDetail?.seasonHouseActive === false;
+    const seasonHouseUnavailable = operatingFeatures.season && crewDetail?.seasonHouseActive === false;
+    const seasonHouseAvailable = operatingFeatures.season && crewDetail !== null && crewDetail.seasonHouseActive !== false;
     const showCrewUniversity = crewDetail?.kusbfAssociated === true && Boolean(crewDetail.univ);
 
     // Plans user has joined or has pending
@@ -261,8 +261,8 @@ export default function Home({
                             </button>
                             <button type="button" onClick={onGuestReservationClick} className="min-h-[164px] rounded-3xl border border-rose-100 bg-rose-50 p-5 text-left transition-colors hover:bg-rose-100 active:scale-[0.99]">
                                 <span className="mb-4 flex h-11 w-11 -rotate-3 items-center justify-center rounded-2xl border border-rose-100 bg-white text-rose-500 shadow-sm"><CalendarHeart className="h-5 w-5" /></span>
-                                <span className="block text-base font-black text-zinc-900">게스트 예약하기</span>
-                                <span className="mt-1.5 block text-xs leading-4 font-medium text-zinc-500">크루 가입 전에도 게스트로 예약할 수 있어요.</span>
+                                <span className="block text-base font-black text-zinc-900">{operatingFeatures.season ? '게스트 예약하기' : '게스트 이벤트 참여'}</span>
+                                <span className="mt-1.5 block text-xs leading-4 font-medium text-zinc-500">{operatingFeatures.season ? '크루 가입 전에도 게스트로 예약할 수 있어요.' : '초대 코드로 이벤트에 참여할 수 있어요.'}</span>
                             </button>
                         </div>
                     </section>
@@ -294,7 +294,7 @@ export default function Home({
 
                 {hasCrew && (
                     <>
-                        {isWinter && !seasonHouseUnavailable && (
+                        {seasonHouseAvailable && (
                             <section className="px-4">
                                 <button
                                     type="button"
@@ -315,7 +315,7 @@ export default function Home({
                             </section>
                         )}
 
-                        <section className="space-y-2.5 px-4">
+                        {operatingFeatures.offSeason && <section className="space-y-2.5 px-4">
                             <div className="flex items-end justify-between gap-3">
                                 <div>
                                     <p className="text-[11px] font-black text-[#162660]">CREW EVENTS</p>
@@ -372,9 +372,9 @@ export default function Home({
                                     <ChevronRight className="h-4 w-4 shrink-0 text-zinc-300" />
                                 </button>
                             )}
-                        </section>
+                        </section>}
 
-                        {myPlansCount > 0 && (
+                        {operatingFeatures.offSeason && myPlansCount > 0 && (
                             <section className="px-4">
                                 <button
                                     type="button"
@@ -407,30 +407,29 @@ export default function Home({
                             </section>
                         )}
 
-                        {!seasonHouseUnavailable && (
-                            <section className="px-4">
-                                <h2 className="mb-2.5 text-xs font-black text-zinc-500">바로가기</h2>
-                                <div className="grid grid-cols-3 gap-2">
-                                    {[
-                                        { label: '내 예약', icon: CalendarIcon, action: onCalendarClick },
-                                        { label: '게스트 예약', icon: UserPlus, action: onGuestReservationClick },
-                                        { label: '내 크루', icon: Users, action: onTeamClick },
-                                    ].map(({ label, icon: Icon, action }) => (
-                                        <button
-                                            key={label}
-                                            type="button"
-                                            onClick={action}
-                                            className="flex min-h-20 flex-col items-center justify-center gap-2 rounded-2xl border border-zinc-200 bg-white px-2 py-3 text-xs font-black text-zinc-700 transition-colors hover:bg-zinc-50"
-                                        >
-                                            <Icon className="h-5 w-5 text-[#162660]" />
-                                            <span>{label}</span>
-                                        </button>
-                                    ))}
-                                </div>
-                            </section>
-                        )}
+                        <section className="px-4">
+                            <h2 className="mb-2.5 text-xs font-black text-zinc-500">바로가기</h2>
+                            <div className={`grid gap-2 ${seasonHouseAvailable ? 'grid-cols-3' : 'grid-cols-1'}`}>
+                                {seasonHouseAvailable && (
+                                    <button type="button" onClick={onCalendarClick} className="flex min-h-20 flex-col items-center justify-center gap-2 rounded-2xl border border-zinc-200 bg-white px-2 py-3 text-xs font-black text-zinc-700 transition-colors hover:bg-zinc-50">
+                                        <CalendarIcon className="h-5 w-5 text-[#162660]" />
+                                        <span>내 예약</span>
+                                    </button>
+                                )}
+                                {seasonHouseAvailable && (
+                                    <button type="button" onClick={onGuestReservationClick} className="flex min-h-20 flex-col items-center justify-center gap-2 rounded-2xl border border-zinc-200 bg-white px-2 py-3 text-xs font-black text-zinc-700 transition-colors hover:bg-zinc-50">
+                                        <UserPlus className="h-5 w-5 text-[#162660]" />
+                                        <span>게스트 예약</span>
+                                    </button>
+                                )}
+                                <button type="button" onClick={onTeamClick} className="flex min-h-20 flex-col items-center justify-center gap-2 rounded-2xl border border-zinc-200 bg-white px-2 py-3 text-xs font-black text-zinc-700 transition-colors hover:bg-zinc-50">
+                                    <Users className="h-5 w-5 text-[#162660]" />
+                                    <span>내 크루</span>
+                                </button>
+                            </div>
+                        </section>
 
-                        {isWinter && !seasonHouseUnavailable && (
+                        {seasonHouseAvailable && (
                             <section className="px-4">
                                 <div className="flex items-center justify-between rounded-2xl border border-zinc-200 bg-white px-4 py-3">
                                     <span className="flex items-center gap-3">

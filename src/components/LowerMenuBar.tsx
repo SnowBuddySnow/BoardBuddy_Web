@@ -106,6 +106,8 @@ interface LowerMenuBarProps {
   activeTab?: 'home' | 'events' | 'calendar' | 'edit' | 'heart' | 'user';
   availableEventCount?: number;
   hasCrew?: boolean;
+  seasonAvailable?: boolean;
+  offSeasonAvailable?: boolean;
   onTabChange?: (tab: 'home' | 'events' | 'calendar' | 'edit' | 'heart' | 'user') => void;
 }
 
@@ -114,6 +116,8 @@ export const LowerMenuBar = ({
   activeTab = 'home',
   availableEventCount = 0,
   hasCrew = false,
+  seasonAvailable = false,
+  offSeasonAvailable = false,
   onTabChange,
 }: LowerMenuBarProps) => {
   const menuItems = [
@@ -123,7 +127,12 @@ export const LowerMenuBar = ({
     { id: 'edit', icon: EditIcon, label: '예약', requiresCrew: true },
     { id: 'heart', icon: HeartIcon, label: '내 크루', requiresCrew: true },
     { id: 'user', icon: UserIcon, label: '내 정보', requiresCrew: false },
-  ].filter(item => hasCrew || !item.requiresCrew) as Array<{
+  ].filter(item => {
+    if (!hasCrew && item.requiresCrew) return false;
+    if (!seasonAvailable && ['calendar', 'edit'].includes(item.id)) return false;
+    if (!offSeasonAvailable && item.id === 'events') return false;
+    return true;
+  }) as Array<{
     id: 'home' | 'events' | 'calendar' | 'edit' | 'heart' | 'user';
     icon: typeof HomeIcon;
     label: string;

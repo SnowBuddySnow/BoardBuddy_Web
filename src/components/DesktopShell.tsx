@@ -29,6 +29,8 @@ interface DesktopShellProps {
   canManage: boolean;
   canReviewCrews: boolean;
   hasCrew: boolean;
+  seasonAvailable: boolean;
+  offSeasonAvailable: boolean;
   availableEventCount?: number;
   children: ReactNode;
   onNavigate: (destination: DesktopDestination) => void;
@@ -49,6 +51,8 @@ export default function DesktopShell({
   canManage,
   canReviewCrews,
   hasCrew,
+  seasonAvailable,
+  offSeasonAvailable,
   availableEventCount = 0,
   children,
   onNavigate,
@@ -66,9 +70,12 @@ export default function DesktopShell({
         </button>
 
         <nav className="flex flex-1 flex-col gap-1" aria-label="주요 메뉴">
-          {primaryItems.filter(({ id }) => (
-            hasCrew || !['my_reservations', 'reservation', 'crew_detail'].includes(id)
-          )).map(({ id, label, icon: Icon }) => {
+          {primaryItems.filter(({ id }) => {
+            if (!hasCrew && ['my_reservations', 'reservation', 'crew_detail'].includes(id)) return false;
+            if (!seasonAvailable && ['my_reservations', 'reservation'].includes(id)) return false;
+            if (!offSeasonAvailable && ['parties', 'my_parties'].includes(id)) return false;
+            return true;
+          }).map(({ id, label, icon: Icon }) => {
             const active = activeDestination === id;
             return (
               <button

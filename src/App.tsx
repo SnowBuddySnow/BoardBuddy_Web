@@ -38,11 +38,12 @@ import DevPanel from './components/DevPanel';
 import { getAccessToken, hasDevOverride, isAutoLoginEnabled } from './lib/session';
 import { getOperationsContext, type OperationPermission } from './services/operations';
 import { getUserInfo } from './services/user';
-import { getMyApplications } from './services/crew';
+import { getCrewInfo, getMyApplications } from './services/crew';
 import { getCrewAdminData } from './services/crewAdmin';
 import { useDesktopViewport } from './hooks/useDesktopViewport';
-import { getOperatingSeason } from './constants/operatingSeason';
+import { getOperatingFeatures, getOperatingMode } from './constants/operatingSeason';
 import { listParties } from './services/event';
+import type { CrewDetail as CrewDetailData } from './types/api';
 
 type Tab = 'home' | 'events' | 'calendar' | 'edit' | 'heart' | 'user';
 type View =
@@ -130,6 +131,33 @@ const getInitialView = (): View => {
   return 'login';
 };
 
+const seasonMemberViews: View[] = ['reservation', 'stats', 'my_reservations'];
+const offSeasonViews: View[] = [
+  'parties',
+  'event_detail',
+  'my_parties',
+  'dashboard_parties',
+  'dashboard_event_new',
+  'dashboard_event_detail',
+  'dashboard_event_edit',
+  'dashboard_groups',
+  'dashboard_group_detail',
+];
+
+function FeatureUnavailable({ title, description, onBack }: { title: string; description: string; onBack: () => void }) {
+  return (
+    <div className="flex h-full items-center justify-center bg-[#FAF8F3] px-6">
+      <div className="max-w-md rounded-3xl border border-zinc-200 bg-white p-8 text-center shadow-sm">
+        <h1 className="text-xl font-black text-zinc-900">{title}</h1>
+        <p className="mt-2 text-sm leading-6 text-zinc-500">{description}</p>
+        <button type="button" onClick={onBack} className="mt-6 rounded-xl border-0 bg-[#162660] px-5 py-3 text-sm font-bold text-white cursor-pointer">
+          홈으로 돌아가기
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function App() {
   const [currentView, setCurrentView] = useState<View>('login');
   const [hasCrew, setHasCrew] = useState(false);
@@ -149,9 +177,17 @@ function App() {
   const [managementAccessResolved, setManagementAccessResolved] = useState(false);
   const [managementRefreshKey, setManagementRefreshKey] = useState(0);
   const [availableEventCount, setAvailableEventCount] = useState(0);
+  const [crewDetail, setCrewDetail] = useState<CrewDetailData | null>(null);
   const isDesktop = useDesktopViewport();
   const usedDesktopLanding = useRef(false);
   const shouldLoadPermissions = !['login', 'user_info'].includes(currentView);
+  const operatingMode = getOperatingMode();
+  const operatingFeatures = getOperatingFeatures(operatingMode);
+  const seasonHouseAvailable = operatingFeatures.season
+    && hasCrew
+    && !hasPendingCrewApplication
+    && crewDetail !== null
+    && crewDetail.seasonHouseActive !== false;
 
   // Check for auto-login on app start
   useEffect(() => {
@@ -169,14 +205,18 @@ function App() {
         setHasCrew(Boolean(user.crew));
         if (user.crew) {
           setHasPendingCrewApplication(false);
+          const detail = await getCrewInfo(user.crew.crewId);
+          if (!cancelled) setCrewDetail(detail);
           return;
         }
+        setCrewDetail(null);
         const applications = await getMyApplications();
         if (!cancelled) setHasPendingCrewApplication(applications.some(application => application.status === 'PENDING'));
       } catch {
         if (!cancelled) {
           setHasCrew(false);
           setHasPendingCrewApplication(false);
+          setCrewDetail(null);
         }
       }
     };
@@ -203,7 +243,7 @@ function App() {
   }, [shouldLoadPermissions]);
 
   useEffect(() => {
-    if (!shouldLoadPermissions) {
+    if (!shouldLoadPermissions || !operatingFeatures.offSeason) {
       setAvailableEventCount(0);
       return;
     }
@@ -225,7 +265,7 @@ function App() {
       });
 
     return () => { cancelled = true; };
-  }, [currentView, shouldLoadPermissions]);
+  }, [currentView, operatingFeatures.offSeason, shouldLoadPermissions]);
 
   useEffect(() => {
     if (!shouldLoadPermissions) {
@@ -313,6 +353,38 @@ function App() {
   };
 
   const renderCurrentView = () => {
+    if (seasonMemberViews.includes(currentView) && !seasonHouseAvailable) {
+      return (
+        <FeatureUnavailable
+          title="시즌방 예약을 이용할 수 없습니다"
+          description={operatingFeatures.season
+            ? '소속 크루의 시즌방이 아직 오픈되지 않았습니다.'
+            : '현재는 오프시즌 운영 중입니다. 시즌 운영이 시작되면 예약 기능이 열립니다.'}
+          onBack={() => setCurrentView('home')}
+        />
+      );
+    }
+
+    if (currentView === 'guest_reservation' && !operatingFeatures.season) {
+      return (
+        <FeatureUnavailable
+          title="시즌방 예약을 이용할 수 없습니다"
+          description="현재는 오프시즌 운영 중입니다. 이벤트 초대 코드는 게스트 이용 화면에서 계속 사용할 수 있습니다."
+          onBack={() => setCurrentView('home')}
+        />
+      );
+    }
+
+    if (offSeasonViews.includes(currentView) && !operatingFeatures.offSeason) {
+      return (
+        <FeatureUnavailable
+          title="오프시즌 기능을 이용할 수 없습니다"
+          description="현재는 시즌 운영 중입니다. 오프시즌 또는 동시 운영 모드에서 이벤트 기능이 열립니다."
+          onBack={() => setCurrentView('home')}
+        />
+      );
+    }
+
     if (isManagementView && !isDesktop) {
       return <DesktopRequired onBack={() => setCurrentView('home')} />;
     }
@@ -357,6 +429,8 @@ function App() {
           onBack={() => setCurrentView('home')}
           onSeasonHouseAccess={(crewId) => { setGuestCrewId(crewId); setCurrentView('guest_reservation'); }}
           onEventAccess={openGuestEventApplication}
+          seasonAvailable={operatingFeatures.season}
+          offSeasonAvailable={operatingFeatures.offSeason}
         />;
       case 'stats':
         return (
@@ -375,6 +449,7 @@ function App() {
             onCalendarClick={() => setCurrentView('stats')}
             onMemberClick={() => setCurrentView('crew_member')}
             onSettingsClick={() => setCurrentView('crew_settings')}
+            seasonAvailable={seasonHouseAvailable}
           />
         );
       case 'crew_settings':
@@ -445,7 +520,8 @@ function App() {
         return (
           <OperationsCenter
             permissions={operationPermissions}
-            season={getOperatingSeason()}
+            operatingMode={operatingMode}
+            seasonAvailable={seasonHouseAvailable}
             onReservationsClick={() => setCurrentView('stats')}
             onPartiesClick={() => setCurrentView('dashboard_parties')}
             onGroupsClick={() => setCurrentView('dashboard_groups')}
@@ -520,6 +596,8 @@ function App() {
             onSeeAllPartiesClick={() => setCurrentView('parties')}
             onMyPlansClick={() => setCurrentView('my_parties')}
             onDashboardClick={() => setCurrentView('operations_center')}
+            operatingMode={operatingMode}
+            crewDetail={crewDetail}
           />
         );
     }
@@ -543,6 +621,8 @@ function App() {
             canManage={canManage}
             canReviewCrews={canReviewCrews}
             hasCrew={hasCrew && !hasPendingCrewApplication}
+            seasonAvailable={seasonHouseAvailable}
+            offSeasonAvailable={operatingFeatures.offSeason}
             availableEventCount={availableEventCount}
             onNavigate={handleDesktopNavigate}
           >
@@ -562,6 +642,8 @@ function App() {
             activeTab={activeTab}
             availableEventCount={availableEventCount}
             hasCrew={hasCrew && !hasPendingCrewApplication}
+            seasonAvailable={seasonHouseAvailable}
+            offSeasonAvailable={operatingFeatures.offSeason}
             onTabChange={(tab) => {
               setCurrentView(tabViews[tab]);
             }}

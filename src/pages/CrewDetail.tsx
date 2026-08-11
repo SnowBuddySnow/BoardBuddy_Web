@@ -13,9 +13,10 @@ interface CrewDetailProps {
     onCalendarClick: () => void;
     onMemberClick: () => void;
     onSettingsClick: () => void;
+    seasonAvailable: boolean;
 }
 
-export default function CrewDetail({ onBack, onCalendarClick, onMemberClick, onSettingsClick }: CrewDetailProps) {
+export default function CrewDetail({ onBack, onCalendarClick, onMemberClick, onSettingsClick, seasonAvailable }: CrewDetailProps) {
     const [crewInfo, setCrewInfo] = useState<CrewDetailType | null>(null);
     const [loading, setLoading] = useState(true);
     const [isManager, setIsManager] = useState(false);
@@ -139,28 +140,32 @@ export default function CrewDetail({ onBack, onCalendarClick, onMemberClick, onS
                     )}
                 </div>
 
-                {/* Action Row */}
-                <button
-                    onClick={onCalendarClick}
-                    className="w-full bg-zinc-100 dark:bg-zinc-800 rounded-[20px] p-5 flex items-center justify-between hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors mb-4"
-                >
-                    <span className="font-bold text-zinc-600 dark:text-zinc-300">크루 달력</span>
-                    <div className="flex items-center gap-1 text-zinc-500 dark:text-zinc-400">
-                        <span className="text-sm font-medium">확인하기</span>
-                        <ChevronRightIcon className="w-5 h-5" />
-                    </div>
-                </button>
+                {/* Season-only actions */}
+                {seasonAvailable && (
+                    <>
+                        <button
+                            onClick={onCalendarClick}
+                            className="w-full bg-zinc-100 dark:bg-zinc-800 rounded-[20px] p-5 flex items-center justify-between hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors mb-4"
+                        >
+                            <span className="font-bold text-zinc-600 dark:text-zinc-300">크루 달력</span>
+                            <div className="flex items-center gap-1 text-zinc-500 dark:text-zinc-400">
+                                <span className="text-sm font-medium">확인하기</span>
+                                <ChevronRightIcon className="w-5 h-5" />
+                            </div>
+                        </button>
 
-                <button
-                    onClick={() => setShowStats(true)}
-                    className="w-full bg-zinc-100 dark:bg-zinc-800 rounded-[20px] p-5 flex items-center justify-between hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors mb-auto"
-                >
-                    <span className="font-bold text-zinc-600 dark:text-zinc-300">시즌방 사용 기록</span>
-                    <div className="flex items-center gap-1 text-zinc-500 dark:text-zinc-400">
-                        <span className="text-sm font-medium">확인하기</span>
-                        <ChevronRightIcon className="w-5 h-5" />
-                    </div>
-                </button>
+                        <button
+                            onClick={() => setShowStats(true)}
+                            className="w-full bg-zinc-100 dark:bg-zinc-800 rounded-[20px] p-5 flex items-center justify-between hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors mb-auto"
+                        >
+                            <span className="font-bold text-zinc-600 dark:text-zinc-300">시즌방 사용 기록</span>
+                            <div className="flex items-center gap-1 text-zinc-500 dark:text-zinc-400">
+                                <span className="text-sm font-medium">확인하기</span>
+                                <ChevronRightIcon className="w-5 h-5" />
+                            </div>
+                        </button>
+                    </>
+                )}
 
                 {/* Footer Text */}
                 {/* <div className="mb-8 text-center">

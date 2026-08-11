@@ -1,10 +1,11 @@
 import { CalendarDays, Sparkles, ShieldCheck, UsersRound } from 'lucide-react';
 import type { OperationPermission } from '../services/operations';
-import { OperatingSeason, seasonCopy } from '../constants/operatingSeason';
+import { getOperatingFeatures, OperatingMode, operatingModeCopy } from '../constants/operatingSeason';
 
 interface OperationsCenterProps {
   permissions: OperationPermission[];
-  season: OperatingSeason;
+  operatingMode: OperatingMode;
+  seasonAvailable: boolean;
   onReservationsClick: () => void;
   onPartiesClick: () => void;
   onGroupsClick: () => void;
@@ -16,35 +17,37 @@ const hasAny = (permissions: OperationPermission[], required: OperationPermissio
 
 export default function OperationsCenter({
   permissions,
-  season,
+  operatingMode,
+  seasonAvailable,
   onReservationsClick,
   onPartiesClick,
   onGroupsClick,
   onCrewClick,
 }: OperationsCenterProps) {
+  const features = getOperatingFeatures(operatingMode);
   const canManageReservations = hasAny(permissions, ['RESERVATIONS_MANAGE']);
   const canManageParties = hasAny(permissions, ['PARTIES_CREATE', 'PARTIES_MANAGE']);
   const canManageGroups = hasAny(permissions, ['EVENT_GROUPS_CREATE', 'EVENT_GROUPS_MANAGE', 'EVENT_GROUPS_VIEW']);
   const canManageCrew = hasAny(permissions, ['CREW_MEMBERS_MANAGE', 'CREW_EVENT_MANAGERS_ASSIGN']);
 
   const modules = [
-    canManageReservations && {
+    features.season && seasonAvailable && canManageReservations && {
       id: 'reservations',
       title: '예약 관리',
       description: '예약 현황과 참가자 정보를 관리합니다.',
       icon: CalendarDays,
       onClick: onReservationsClick,
-      priority: season === 'WINTER',
+      priority: operatingMode === 'SEASON',
     },
-    canManageParties && {
+    features.offSeason && canManageParties && {
       id: 'parties',
       title: '소모임 관리',
       description: '소모임을 만들고 참가자를 운영합니다.',
       icon: Sparkles,
       onClick: onPartiesClick,
-      priority: season === 'OFF_SEASON',
+      priority: operatingMode === 'OFF_SEASON',
     },
-    canManageGroups && {
+    features.offSeason && canManageGroups && {
       id: 'groups',
       title: '소모임 그룹',
       description: '참여 크루와 운영 권한을 관리합니다.',
@@ -74,9 +77,9 @@ export default function OperationsCenter({
   return (
     <div className="flex h-full flex-1 flex-col overflow-hidden bg-[#FAF8F3] text-zinc-900">
       <header className="border-b border-zinc-200 bg-white px-6 py-5">
-        <p className="text-xs font-bold text-zinc-500">{seasonCopy[season].label}</p>
+        <p className="text-xs font-bold text-zinc-500">{operatingModeCopy[operatingMode].label}</p>
         <h1 className="mt-1 text-2xl font-black">운영 센터</h1>
-        <p className="mt-1 text-sm text-zinc-500">{seasonCopy[season].description} 모든 운영 기능은 계속 사용할 수 있습니다.</p>
+        <p className="mt-1 text-sm text-zinc-500">{operatingModeCopy[operatingMode].description}</p>
       </header>
 
       <main className="flex-1 overflow-y-auto p-6">

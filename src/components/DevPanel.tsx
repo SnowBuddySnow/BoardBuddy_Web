@@ -42,8 +42,22 @@ export default function DevPanel({ onOpenCrewAdmin, onOpenSchoolAdmin }: DevPane
     const [crewOverride, setCrewOverride] = useState(localStorage.getItem('dev_crew_override') || 'server');
     const [roleOverride, setRoleOverride] = useState(localStorage.getItem('dev_role_override') || 'server');
     const [eventDataMode, setEventDataMode] = useState(localStorage.getItem('dev_event_data_mode') || 'server');
+    const [operatingMode, setOperatingMode] = useState(localStorage.getItem('dev_operating_mode') || 'server');
 
     const sections: SimulationSection[] = useMemo(() => [
+        {
+            id: 'operating-mode',
+            label: '운영 모드',
+            value: operatingMode,
+            setValue: setOperatingMode,
+            storageKey: 'dev_operating_mode',
+            options: [
+                { id: 'server', label: '일정에 따라 자동' },
+                { id: 'SEASON', label: '시즌', description: '시즌방 · 예약만 표시' },
+                { id: 'OFF_SEASON', label: '오프시즌', description: '이벤트 · 소모임만 표시' },
+                { id: 'BOTH', label: '둘 다', description: '시즌과 오프시즌 기능 동시 표시' },
+            ],
+        },
         {
             id: 'crew',
             label: '크루 상태',
@@ -87,7 +101,7 @@ export default function DevPanel({ onOpenCrewAdmin, onOpenSchoolAdmin }: DevPane
                 },
             ],
         },
-    ], [crewOverride, eventDataMode, roleOverride]);
+    ], [crewOverride, eventDataMode, operatingMode, roleOverride]);
 
     const normalizedQuery = query.trim().toLocaleLowerCase('ko-KR');
     const visibleSections = sections
