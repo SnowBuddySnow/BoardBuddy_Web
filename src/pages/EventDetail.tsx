@@ -35,6 +35,11 @@ interface EventDetailProps {
     isGuestApplication?: boolean;
 }
 
+interface ConsentDraft {
+    agreed?: boolean;
+    responseText?: string;
+}
+
 export default function EventDetail({ eventId, onBack, isGuestApplication = false }: EventDetailProps) {
     const [event, setEvent] = useState<Event | null>(null);
     const [loading, setLoading] = useState(true);
@@ -43,7 +48,7 @@ export default function EventDetail({ eventId, onBack, isGuestApplication = fals
     const [showPhoneConsentModal, setShowPhoneConsentModal] = useState(false);
     const [chatAccess, setChatAccess] = useState<EventChatAccess | null>(null);
     const [consentState, setConsentState] = useState<ParticipantConsentState | null>(null);
-    const [consentAnswers, setConsentAnswers] = useState<Record<number, boolean | undefined>>({});
+    const [consentAnswers, setConsentAnswers] = useState<Record<number, ConsentDraft>>({});
     const [paymentInfo, setPaymentInfo] = useState<EventPaymentPolicy | null>(null);
     const [consentSubmitting, setConsentSubmitting] = useState(false);
     const [currentTime, setCurrentTime] = useState(Date.now());
@@ -76,9 +81,13 @@ export default function EventDetail({ eventId, onBack, isGuestApplication = fals
                 try {
                     const consentData = await getEventConsents(eventId);
                     setConsentState(consentData);
-                    setConsentAnswers(Object.fromEntries(
-                        consentData.responses.map(response => [response.consentItemId, response.agreed]),
-                    ));
+                    setConsentAnswers(Object.fromEntries(consentData.responses.map(response => [
+                        response.consentItemId,
+                        {
+                            agreed: response.agreed ?? undefined,
+                            responseText: response.responseText ?? undefined,
+                        },
+                    ])));
                 } catch (consentError) {
                     console.error('Failed to fetch event consents:', consentError);
                     setConsentState(null);
@@ -184,14 +193,16 @@ export default function EventDetail({ eventId, onBack, isGuestApplication = fals
 
     const handleConsentSubmit = async () => {
         if (!event || !consentState) return;
-        const hasUnansweredItem = consentState.items.some(item => consentAnswers[item.id] === undefined);
-        if (hasUnansweredItem) {
-            alert('모든 동의 항목에 동의 또는 동의하지 않음을 선택해 주세요.');
-            return;
-        }
-        const refusedRequiredItem = consentState.items.some(item => item.required && consentAnswers[item.id] !== true);
-        if (refusedRequiredItem) {
-            alert('필수 항목에 동의해야 참가 등록을 완료할 수 있습니다.');
+        const incompleteRequiredItem = consentState.items.find(item => {
+            if (!item.required) return false;
+            if (item.responseType === 'CHECKBOX') return consentAnswers[item.id]?.agreed !== true;
+            if (item.responseType === 'TEXT' || item.responseType === 'TEXTAREA') {
+                return !consentAnswers[item.id]?.responseText?.trim();
+            }
+            return false;
+        });
+        if (incompleteRequiredItem) {
+            alert(`필수 항목을 완료해 주세요: ${incompleteRequiredItem.title}`);
             return;
         }
 
@@ -201,9 +212,14 @@ export default function EventDetail({ eventId, onBack, isGuestApplication = fals
                 consentItemId: item.id,
                 documentVersion: item.documentVersion,
                 contentHash: item.contentHash,
-                agreed: consentAnswers[item.id] === true,
+                agreed: item.responseType === 'CHECKBOX'
+                    ? consentAnswers[item.id]?.agreed === true
+                    : null,
+                responseText: item.responseType === 'TEXT' || item.responseType === 'TEXTAREA'
+                    ? consentAnswers[item.id]?.responseText?.trim() || null
+                    : null,
             })));
-            alert('동의서 작성이 완료되어 참가가 확정되었습니다.');
+            alert('응답 시트가 한 번에 제출되어 참가가 확정되었습니다.');
             await fetchEventDetail();
         } catch (error: unknown) {
             console.error('Failed to submit event consents:', error);
@@ -260,6 +276,14 @@ export default function EventDetail({ eventId, onBack, isGuestApplication = fals
     const hasJoined = event.currentUserStatus === 'JOINED';
     const isPending = event.currentUserStatus === 'PENDING';
     const isConsentPending = event.currentUserStatus === 'CONSENT_PENDING';
+    const requiredConsentItems = consentState?.items.filter(item => item.required) || [];
+    const completedRequiredItems = requiredConsentItems.filter(item => {
+        if (item.responseType === 'CHECKBOX') return consentAnswers[item.id]?.agreed === true;
+        if (item.responseType === 'TEXT' || item.responseType === 'TEXTAREA') {
+            return Boolean(consentAnswers[item.id]?.responseText?.trim());
+        }
+        return true;
+    }).length;
     const applicationNotOpen = Boolean(
         event.applicationStartsAt
         && new Date(event.applicationStartsAt).getTime() > currentTime,
@@ -416,73 +440,145 @@ export default function EventDetail({ eventId, onBack, isGuestApplication = fals
                     )}
 
                     {isConsentPending && consentState && (
-                        <div className="space-y-4 rounded-3xl border border-amber-200 bg-white p-5 shadow-sm">
-                            <div className="flex items-start gap-3">
-                                <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-amber-600" />
-                                <div>
-                                    <h3 className="text-sm font-bold text-zinc-900">참가 등록을 완료해 주세요</h3>
-                                    <p className="mt-1 text-xs leading-relaxed text-zinc-500">
-                                        자리는 임시 확보되었습니다. 모든 항목에 응답하고 필수 항목에 동의해야 확정됩니다.
-                                    </p>
-                                    {consentState.consentDueAt && (
-                                        <p className="mt-2 text-xs font-bold text-amber-700">
-                                            응답 기한 · {formatDate(consentState.consentDueAt)}
+                        <div className="overflow-hidden rounded-3xl border border-amber-200 bg-white shadow-sm">
+                            <div className="bg-gradient-to-br from-amber-50 to-orange-50 p-5">
+                                <div className="flex items-start gap-3">
+                                    <div className="rounded-xl bg-amber-500 p-2 text-white shadow-sm">
+                                        <ShieldCheck className="h-5 w-5" />
+                                    </div>
+                                    <div className="min-w-0 flex-1">
+                                        <div className="flex flex-wrap items-center justify-between gap-2">
+                                            <h3 className="text-base font-black text-zinc-900">참가자 응답 시트</h3>
+                                            <span className="rounded-full bg-white/80 px-2.5 py-1 text-[11px] font-black text-amber-700">
+                                                필수 {completedRequiredItems}/{requiredConsentItems.length}
+                                            </span>
+                                        </div>
+                                        <p className="mt-1 text-xs leading-relaxed text-zinc-600">
+                                            아래 항목은 서로 독립적입니다. 필요한 항목만 작성하고 마지막에 한 번에 제출하세요.
                                         </p>
-                                    )}
+                                        {consentState.consentDueAt && (
+                                            <p className="mt-2 flex items-center gap-1.5 text-xs font-black text-amber-700">
+                                                <Clock3 className="h-3.5 w-3.5" />
+                                                {formatDate(consentState.consentDueAt)}까지
+                                            </p>
+                                        )}
+                                    </div>
                                 </div>
                             </div>
 
-                            <div className="space-y-3">
-                                {consentState.items.map(item => (
-                                    <div key={item.id} className="rounded-2xl border border-zinc-200 bg-zinc-50/60 p-4">
-                                        <div className="flex items-center gap-2">
-                                            <span className={`rounded-full px-2 py-0.5 text-[10px] font-black ${
-                                                item.required
-                                                    ? 'bg-red-50 text-red-600'
-                                                    : 'bg-zinc-200 text-zinc-600'
-                                            }`}>
-                                                {item.required ? '필수' : '선택'}
-                                            </span>
-                                            <h4 className="text-sm font-bold text-zinc-900">{item.title}</h4>
-                                        </div>
-                                        <p className="mt-2 whitespace-pre-wrap text-xs leading-relaxed text-zinc-600">
-                                            {item.content}
-                                        </p>
-                                        <div className="mt-3 grid grid-cols-2 gap-2">
-                                            {[
-                                                { agreed: true, label: '동의함' },
-                                                { agreed: false, label: '동의하지 않음' },
-                                            ].map(option => (
-                                                <button
-                                                    key={String(option.agreed)}
-                                                    onClick={() => setConsentAnswers(current => ({
+                            <div className="space-y-3 p-4 sm:p-5">
+                                {consentState.items.map((item, index) => {
+                                    const isInformation = item.responseType === 'INFORMATION';
+                                    const draft = consentAnswers[item.id] || {};
+                                    return (
+                                        <section
+                                            key={item.id}
+                                            className={`rounded-2xl border p-4 ${
+                                                isInformation
+                                                    ? 'border-blue-100 bg-blue-50/60'
+                                                    : 'border-zinc-200 bg-white'
+                                            }`}
+                                        >
+                                            <div className="flex items-start gap-3">
+                                                <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-black ${
+                                                    isInformation
+                                                        ? 'bg-blue-100 text-[#162660]'
+                                                        : 'bg-zinc-100 text-zinc-500'
+                                                }`}>
+                                                    {isInformation ? <Info className="h-3.5 w-3.5" /> : index + 1}
+                                                </span>
+                                                <div className="min-w-0 flex-1">
+                                                    <div className="flex flex-wrap items-center gap-2">
+                                                        <h4 className="text-sm font-black text-zinc-900">{item.title}</h4>
+                                                        <span className={`rounded-full px-2 py-0.5 text-[10px] font-black ${
+                                                            isInformation
+                                                                ? 'bg-blue-100 text-[#162660]'
+                                                                : item.required
+                                                                    ? 'bg-red-50 text-red-600'
+                                                                    : 'bg-zinc-100 text-zinc-500'
+                                                        }`}>
+                                                            {isInformation ? '안내' : item.required ? '필수' : '선택'}
+                                                        </span>
+                                                    </div>
+                                                    <p className="mt-2 whitespace-pre-wrap text-xs leading-relaxed text-zinc-600">
+                                                        {item.content}
+                                                    </p>
+                                                </div>
+                                            </div>
+
+                                            {item.responseType === 'CHECKBOX' && (
+                                                <label className={`mt-4 flex cursor-pointer items-start gap-3 rounded-xl border p-3 transition ${
+                                                    draft.agreed
+                                                        ? 'border-[#162660] bg-blue-50 text-[#162660]'
+                                                        : 'border-zinc-200 bg-zinc-50 text-zinc-600 hover:bg-zinc-100'
+                                                }`}>
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={draft.agreed === true}
+                                                        onChange={(event) => setConsentAnswers(current => ({
+                                                            ...current,
+                                                            [item.id]: { ...current[item.id], agreed: event.target.checked },
+                                                        }))}
+                                                        className="mt-0.5 h-4 w-4 shrink-0 accent-[#162660]"
+                                                    />
+                                                    <span className="text-xs font-bold leading-relaxed">
+                                                        {item.required ? '내용을 확인했으며 동의합니다.' : '이 선택 항목에 동의합니다.'}
+                                                    </span>
+                                                </label>
+                                            )}
+
+                                            {item.responseType === 'TEXT' && (
+                                                <input
+                                                    value={draft.responseText || ''}
+                                                    onChange={(event) => setConsentAnswers(current => ({
                                                         ...current,
-                                                        [item.id]: option.agreed,
+                                                        [item.id]: { ...current[item.id], responseText: event.target.value },
                                                     }))}
-                                                    className={`h-9 rounded-xl border text-xs font-bold transition ${
-                                                        consentAnswers[item.id] === option.agreed
-                                                            ? option.agreed
-                                                                ? 'border-[#162660] bg-[#162660] text-white'
-                                                                : 'border-zinc-500 bg-zinc-700 text-white'
-                                                            : 'border-zinc-200 bg-white text-zinc-500 hover:bg-zinc-100'
-                                                    }`}
-                                                >
-                                                    {option.label}
-                                                </button>
-                                            ))}
-                                        </div>
-                                    </div>
-                                ))}
+                                                    maxLength={5000}
+                                                    placeholder={item.required ? '필수 정보를 입력해 주세요' : '해당하는 경우 입력해 주세요'}
+                                                    className="mt-4 w-full rounded-xl border border-zinc-200 bg-zinc-50 px-3.5 py-3 text-sm outline-none transition focus:border-[#162660] focus:bg-white focus:ring-2 focus:ring-blue-100"
+                                                />
+                                            )}
+
+                                            {item.responseType === 'TEXTAREA' && (
+                                                <div className="mt-4">
+                                                    <textarea
+                                                        value={draft.responseText || ''}
+                                                        onChange={(event) => setConsentAnswers(current => ({
+                                                            ...current,
+                                                            [item.id]: { ...current[item.id], responseText: event.target.value },
+                                                        }))}
+                                                        maxLength={5000}
+                                                        rows={3}
+                                                        placeholder={item.required ? '필수 정보를 입력해 주세요' : '없으면 비워두어도 됩니다'}
+                                                        className="w-full resize-y rounded-xl border border-zinc-200 bg-zinc-50 px-3.5 py-3 text-sm leading-relaxed outline-none transition focus:border-[#162660] focus:bg-white focus:ring-2 focus:ring-blue-100"
+                                                    />
+                                                    <p className="mt-1 text-right text-[10px] text-zinc-400">
+                                                        {(draft.responseText || '').length}/5,000
+                                                    </p>
+                                                </div>
+                                            )}
+                                        </section>
+                                    );
+                                })}
                             </div>
 
-                            <Button
-                                variant="primary"
-                                onClick={handleConsentSubmit}
-                                disabled={consentSubmitting}
-                                className="h-11 w-full rounded-xl bg-[#162660] font-bold text-white"
-                            >
-                                {consentSubmitting ? '제출 중...' : '동의서 제출하고 참가 확정'}
-                            </Button>
+                            <div className="border-t border-zinc-100 bg-zinc-50 p-4 sm:p-5">
+                                <div className="mb-3 flex items-center justify-between gap-3 text-xs">
+                                    <span className="text-zinc-500">{consentState.items.length}개 항목을 한 번에 안전하게 제출합니다.</span>
+                                    <strong className={completedRequiredItems === requiredConsentItems.length ? 'text-emerald-600' : 'text-amber-700'}>
+                                        {completedRequiredItems === requiredConsentItems.length ? '필수 작성 완료' : '필수 항목 확인 필요'}
+                                    </strong>
+                                </div>
+                                <Button
+                                    variant="primary"
+                                    onClick={handleConsentSubmit}
+                                    disabled={consentSubmitting}
+                                    className="h-12 w-full rounded-xl bg-[#162660] font-black text-white shadow-sm"
+                                >
+                                    {consentSubmitting ? '한 번에 제출 중...' : '전체 응답 제출하고 참가 확정'}
+                                </Button>
+                            </div>
                         </div>
                     )}
 

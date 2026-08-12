@@ -248,9 +248,13 @@ export type ConsentCategory =
     | 'PERSONAL_INFORMATION_COLLECTION_USE'
     | 'PERSONAL_INFORMATION_THIRD_PARTY_PROVISION'
     | 'SENSITIVE_INFORMATION'
+    | 'EMERGENCY_CONTACT'
+    | 'MEDICATION_INFORMATION'
+    | 'DIETARY_ACCESSIBILITY'
     | 'MARKETING'
     | 'PHOTO_VIDEO_USE'
     | 'OTHER';
+export type ConsentResponseType = 'CHECKBOX' | 'TEXT' | 'TEXTAREA' | 'INFORMATION';
 
 export interface Event {
     id: number;
@@ -312,6 +316,7 @@ export interface ConsentItem {
     title: string;
     content: string;
     contentHash: string;
+    responseType: ConsentResponseType;
     required: boolean;
     displayOrder: number;
     documentVersion: number;
@@ -321,6 +326,7 @@ export interface ConsentItemInput {
     category: ConsentCategory;
     title: string;
     content: string;
+    responseType: ConsentResponseType;
     required: boolean;
     displayOrder: number;
 }
@@ -337,7 +343,8 @@ export interface ConsentConfigurationInput {
 
 export interface ConsentAnswer {
     consentItemId: number;
-    agreed: boolean;
+    agreed: boolean | null;
+    responseText: string | null;
     documentVersion: number;
     contentHash: string;
     respondedAt: string;
@@ -355,7 +362,8 @@ export interface ConsentResponseInput {
     consentItemId: number;
     documentVersion: number;
     contentHash: string;
-    agreed: boolean;
+    agreed: boolean | null;
+    responseText: string | null;
 }
 
 export interface EventPaymentPolicy {

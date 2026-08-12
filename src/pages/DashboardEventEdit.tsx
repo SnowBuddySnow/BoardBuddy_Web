@@ -61,6 +61,7 @@ export default function DashboardEventEdit({ eventId, onBack, onSuccess }: Dashb
                         category: item.category,
                         title: item.title,
                         content: item.content,
+                        responseType: item.responseType || 'CHECKBOX',
                         required: item.required,
                         displayOrder,
                     })),

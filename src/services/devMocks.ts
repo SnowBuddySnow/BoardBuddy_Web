@@ -376,6 +376,7 @@ const onboardingConsentItems = (): ConsentItem[] => [
         title: '수상 레저 활동 위험 고지',
         content: '수상 레저 활동에는 낙상, 충돌, 익수 등의 위험이 있으며 안전요원의 지시와 보호장비 착용 기준을 준수해야 합니다.',
         contentHash: 'a'.repeat(64),
+        responseType: 'CHECKBOX',
         required: true,
         displayOrder: 0,
         documentVersion: 1,
@@ -386,6 +387,7 @@ const onboardingConsentItems = (): ConsentItem[] => [
         title: '이벤트 운영 개인정보 수집·이용',
         content: '참가 확인과 안전 연락을 위해 이름과 연락처를 이벤트 종료 후 30일까지 이용합니다. 필수 동의를 거부하면 참가할 수 없습니다.',
         contentHash: 'b'.repeat(64),
+        responseType: 'CHECKBOX',
         required: true,
         displayOrder: 1,
         documentVersion: 1,
@@ -396,8 +398,42 @@ const onboardingConsentItems = (): ConsentItem[] => [
         title: '행사 사진·영상 활용',
         content: '행사 기록과 후기 게시를 위한 사진·영상 활용 동의입니다. 동의하지 않아도 참가할 수 있습니다.',
         contentHash: 'c'.repeat(64),
+        responseType: 'CHECKBOX',
         required: false,
         displayOrder: 2,
+        documentVersion: 1,
+    },
+    {
+        id: 21004,
+        category: 'EMERGENCY_CONTACT',
+        title: '긴급 연락처',
+        content: '비상 상황에서 연락할 수 있는 보호자 또는 지인의 이름, 관계와 전화번호를 입력해 주세요.',
+        contentHash: 'd'.repeat(64),
+        responseType: 'TEXT',
+        required: true,
+        displayOrder: 3,
+        documentVersion: 1,
+    },
+    {
+        id: 21005,
+        category: 'MEDICATION_INFORMATION',
+        title: '복용 약물 및 건강 유의사항',
+        content: '현재 복용 중인 약물, 알레르기 또는 현장에서 운영진이 알아야 할 건강 유의사항이 있다면 작성해 주세요.',
+        contentHash: 'e'.repeat(64),
+        responseType: 'TEXTAREA',
+        required: false,
+        displayOrder: 4,
+        documentVersion: 1,
+    },
+    {
+        id: 21006,
+        category: 'OTHER',
+        title: '집결 안내',
+        content: '행사 시작 20분 전까지 안내 데스크에서 출석 확인과 장비 배정을 완료해 주세요.',
+        contentHash: 'f'.repeat(64),
+        responseType: 'INFORMATION',
+        required: false,
+        displayOrder: 5,
         documentVersion: 1,
     },
 ];
@@ -427,8 +463,13 @@ export const submitDevEventConsents = (
         if (!response || response.documentVersion !== item.documentVersion || response.contentHash !== item.contentHash) {
             throw new Error('동의서 버전이 변경되었습니다.');
         }
-        if (item.required && !response.agreed) {
+        if (item.responseType === 'CHECKBOX' && item.required && response.agreed !== true) {
             throw new Error('필수 동의 항목에 동의해야 참가할 수 있습니다.');
+        }
+        if ((item.responseType === 'TEXT' || item.responseType === 'TEXTAREA')
+            && item.required
+            && !response.responseText?.trim()) {
+            throw new Error('필수 입력 항목을 작성해 주세요.');
         }
     }
 
