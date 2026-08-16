@@ -28,6 +28,7 @@ const clearSimulationData = () => {
         if (key && (
             key === 'dev_sample_events_list'
             || key === 'dev_onboarding_events_list'
+            || key === 'dev_response_sheet_events_v2'
             || key.startsWith('dev_event_consent_')
         )) {
             keysToRemove.push(key);
@@ -96,8 +97,8 @@ export default function DevPanel({ onOpenCrewAdmin, onOpenSchoolAdmin }: DevPane
                 { id: 'sample_events', label: '기본 샘플 이벤트' },
                 {
                     id: 'onboarding_simulation',
-                    label: '동의서 + 필수 입금',
-                    description: '신청부터 계좌 안내까지 체험',
+                    label: '최신 응답 시트 + 필수 입금',
+                    description: '독립 체크·연락처·약물·접근성·안내 항목 체험',
                 },
             ],
         },

@@ -21,7 +21,7 @@ const now = () => new Date().toISOString();
 
 const DEV_PARTIES_KEY = 'dev_parties_list';
 const DEV_SAMPLE_EVENTS_KEY = 'dev_sample_events_list';
-const DEV_ONBOARDING_EVENTS_KEY = 'dev_onboarding_events_list';
+const DEV_RESPONSE_SHEET_EVENTS_KEY = 'dev_response_sheet_events_v2';
 const DEV_GROUPS_KEY = 'dev_organizer_groups';
 const DEV_GROUP_INVITATIONS_KEY = 'dev_group_invitations';
 const devChatAccessKey = (eventId: number) => `dev_event_chat_access_${eventId}`;
@@ -160,7 +160,7 @@ const sampleEvents = (): Event[] => [
     },
 ];
 
-const onboardingSimulationEvents = (): Event[] => {
+const responseSheetSimulationEvents = (): Event[] => {
     const startsAt = new Date(Date.now() + 9 * 24 * 60 * 60 * 1000);
     startsAt.setHours(10, 0, 0, 0);
     const endsAt = new Date(startsAt.getTime() + 6 * 60 * 60 * 1000);
@@ -169,8 +169,8 @@ const onboardingSimulationEvents = (): Event[] => {
 
     return [{
         id: 11001,
-        title: '동의서 + 필수 입금 온보딩 체험',
-        description: '참가 신청 후 제한시간 내 동의서를 작성하고, 확정 뒤 계좌이체 안내를 확인하는 개발용 시뮬레이션입니다.',
+        title: '최신 참가자 응답 시트 + 필수 입금 체험',
+        description: '필수·선택 체크, 긴급 연락처, 약물·접근성 입력과 안내문을 한 장에서 제출한 뒤 계좌이체 안내까지 확인하는 개발용 시뮬레이션입니다.',
         activityType: 'WAKE',
         planningMode: 'MANAGER_PLANNED',
         applicationStartsAt: null,
@@ -201,7 +201,7 @@ const onboardingSimulationEvents = (): Event[] => {
 const getDevEventStorageKey = () => {
     const mode = getDevEventDataMode();
     if (mode === 'sample_events') return DEV_SAMPLE_EVENTS_KEY;
-    if (mode === 'onboarding_simulation') return DEV_ONBOARDING_EVENTS_KEY;
+    if (mode === 'onboarding_simulation') return DEV_RESPONSE_SHEET_EVENTS_KEY;
     return DEV_PARTIES_KEY;
 };
 
@@ -214,7 +214,7 @@ export const getDevParties = (): Event[] => {
 
     const mode = getDevEventDataMode();
     const defaultParties: Event[] = mode === 'sample_events' ? sampleEvents()
-        : mode === 'onboarding_simulation' ? onboardingSimulationEvents()
+        : mode === 'onboarding_simulation' ? responseSheetSimulationEvents()
         : [
         {
             id: 1,
@@ -369,7 +369,7 @@ export const setDevEventParticipation = (eventId: number, status: ParticipantSta
     };
 };
 
-const onboardingConsentItems = (): ConsentItem[] => [
+const responseSheetConsentItems = (): ConsentItem[] => [
     {
         id: 21001,
         category: 'RISK_ACKNOWLEDGEMENT',
@@ -427,13 +427,24 @@ const onboardingConsentItems = (): ConsentItem[] => [
     },
     {
         id: 21006,
+        category: 'DIETARY_ACCESSIBILITY',
+        title: '식이 제한 및 접근성 지원 요청',
+        content: '알레르기, 식이 제한, 이동 또는 의사소통 지원 등 운영진이 준비해야 할 사항이 있다면 작성해 주세요.',
+        contentHash: 'f'.repeat(64),
+        responseType: 'TEXTAREA',
+        required: false,
+        displayOrder: 5,
+        documentVersion: 1,
+    },
+    {
+        id: 21007,
         category: 'OTHER',
         title: '집결 안내',
         content: '행사 시작 20분 전까지 안내 데스크에서 출석 확인과 장비 배정을 완료해 주세요.',
-        contentHash: 'f'.repeat(64),
+        contentHash: 'g'.repeat(64),
         responseType: 'INFORMATION',
         required: false,
-        displayOrder: 5,
+        displayOrder: 6,
         documentVersion: 1,
     },
 ];
@@ -445,7 +456,7 @@ export const getDevEventConsents = (eventId: number): ParticipantConsentState =>
         participantStatus: event.currentUserStatus || 'NONE',
         consentDueAt: localStorage.getItem(devConsentDueKey(eventId)),
         consentCompletedAt: storedResponses ? now() : null,
-        items: onboardingConsentItems(),
+        items: responseSheetConsentItems(),
         responses: storedResponses ? JSON.parse(storedResponses) : [],
     };
 };
@@ -454,7 +465,7 @@ export const submitDevEventConsents = (
     eventId: number,
     responses: ConsentResponseInput[],
 ): ParticipantConsentState => {
-    const items = onboardingConsentItems();
+    const items = responseSheetConsentItems();
     if (responses.length !== items.length) {
         throw new Error('모든 동의 항목에 응답해 주세요.');
     }
