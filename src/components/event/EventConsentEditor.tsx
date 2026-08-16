@@ -137,6 +137,32 @@ const templates: ConsentTemplate[] = [
     },
 ];
 
+const sensitiveConsentItem: Omit<ConsentItemInput, 'displayOrder'> = {
+    category: 'SENSITIVE_INFORMATION',
+    title: '안전 운영을 위한 민감정보 수집·이용 동의',
+    content: '복용 약물, 건강 유의사항, 알러지, 식이 및 접근성 지원 정보를 안전한 행사 운영 목적으로 수집·이용하며 행사 종료 후 30일까지 보관 후 삭제합니다. 동의를 거부할 수 있으며, 정보를 작성하지 않아도 참가 신청은 가능합니다.',
+    responseType: 'CHECKBOX',
+    required: false,
+};
+
+const isSensitiveResponseItem = (item: ConsentItemInput) => (
+    item.category === 'MEDICATION_INFORMATION' || item.category === 'DIETARY_ACCESSIBILITY'
+);
+
+const isSensitiveConsentItem = (item: ConsentItemInput) => (
+    item.category === 'SENSITIVE_INFORMATION' && item.responseType === 'CHECKBOX'
+);
+
+const ensureSensitiveConsent = (items: ConsentItemInput[]) => {
+    if (!items.some(isSensitiveResponseItem) || items.some(isSensitiveConsentItem)) return items;
+    const firstSensitiveIndex = items.findIndex(isSensitiveResponseItem);
+    return [
+        ...items.slice(0, firstSensitiveIndex),
+        { ...sensitiveConsentItem, displayOrder: firstSensitiveIndex },
+        ...items.slice(firstSensitiveIndex),
+    ];
+};
+
 const normalizeOrders = (items: ConsentItemInput[]) => (
     items.map((item, displayOrder) => ({ ...item, displayOrder }))
 );
@@ -211,20 +237,26 @@ export function EventConsentEditor({ value, onChange }: EventConsentEditorProps)
     const toggleTemplate = (template: ConsentTemplate) => {
         const isActive = value.items.some(item => matchesTemplate(item, template));
         if (isActive) {
-            replaceItems(value.items.filter(item => !matchesTemplate(item, template)));
+            const withoutTemplate = value.items.filter(item => !matchesTemplate(item, template));
+            const withoutOrphanedSensitiveConsent = withoutTemplate.some(isSensitiveResponseItem)
+                ? withoutTemplate
+                : withoutTemplate.filter(item => !isSensitiveConsentItem(item));
+            replaceItems(withoutOrphanedSensitiveConsent);
             return;
         }
-        replaceItems([...value.items, { ...template.item, displayOrder: value.items.length }]);
+        replaceItems(ensureSensitiveConsent([
+            ...value.items,
+            { ...template.item, displayOrder: value.items.length },
+        ]));
     };
 
     const updateItem = (index: number, patch: Partial<ConsentItemInput>) => {
         const nextPatch = patch.responseType === 'INFORMATION'
             ? { ...patch, required: false }
             : patch;
-        onChange({
-            ...value,
-            items: value.items.map((item, itemIndex) => itemIndex === index ? { ...item, ...nextPatch } : item),
-        });
+        replaceItems(ensureSensitiveConsent(
+            value.items.map((item, itemIndex) => itemIndex === index ? { ...item, ...nextPatch } : item),
+        ));
     };
 
     const addItem = () => {
@@ -399,8 +431,14 @@ export function EventConsentEditor({ value, onChange }: EventConsentEditorProps)
                             </select>
                             <button
                                 type="button"
-                                onClick={() => replaceItems(value.items.filter((_, itemIndex) => itemIndex !== index))}
-                                className="rounded-full p-2 text-zinc-400 hover:bg-red-50 hover:text-red-600"
+                                onClick={() => replaceItems(ensureSensitiveConsent(
+                                    value.items.filter((_, itemIndex) => itemIndex !== index),
+                                ))}
+                                disabled={isSensitiveConsentItem(item) && value.items.some(isSensitiveResponseItem)}
+                                title={isSensitiveConsentItem(item) && value.items.some(isSensitiveResponseItem)
+                                    ? '건강·식이 응답 항목에 필요한 별도 동의입니다.'
+                                    : '항목 삭제'}
+                                className="rounded-full p-2 text-zinc-400 hover:bg-red-50 hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-zinc-400"
                                 aria-label={`${index + 1}번 항목 삭제`}
                             >
                                 <Trash2 className="h-4 w-4" />

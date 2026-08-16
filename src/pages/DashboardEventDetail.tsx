@@ -5,6 +5,7 @@ import { Event, EventChatAccess, EventParticipant, PaymentStatus } from '../type
 import { ChevronLeft, Play, Power, Clock, Check, Save, X, MessageCircle } from 'lucide-react';
 import { PlanningModeBadge } from '../components/event/PlanningModeBadge';
 import { eventStatusLabel, joinPolicyLabel, participantStatusLabel } from '../constants/displayLabels';
+import { ManagerConsentResponseSheet } from '../components/event/ManagerConsentResponseSheet';
 
 interface DashboardEventDetailProps {
     eventId: number;
@@ -458,6 +459,10 @@ export default function DashboardEventDetail({ eventId, onBack, onEditClick }: D
                             <li>모집 정책이 호스트 승인 필요인 경우, 멤버들이 참가 신청을 보내면 좌측 리스트에 <strong>PENDING</strong> 상태로 나타나게 됩니다. Check(승인) 버튼을 눌러 확정처리 하세요.</li>
                         </ul>
                     </div>
+                </div>
+
+                <div className="col-span-3">
+                    <ManagerConsentResponseSheet eventId={eventId} />
                 </div>
             </main>
         </div>

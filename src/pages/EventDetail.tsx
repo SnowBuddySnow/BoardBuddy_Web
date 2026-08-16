@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Button } from '../components/Button';
 import {
     cancelEvent,
@@ -7,21 +7,25 @@ import {
     getEventConsents,
     getEventPaymentInfo,
     joinEvent,
+    saveEventConsentDraft,
+    saveEventConsentDraftKeepalive,
     submitEventConsents,
 } from '../services/event';
-import { Event, EventChatAccess, EventPaymentPolicy, ParticipantConsentState } from '../types/api';
+import { ConsentResponseInput, Event, EventChatAccess, EventPaymentPolicy, ParticipantConsentState } from '../types/api';
 import {
     Banknote,
     Calendar,
     CheckCircle,
     ChevronLeft,
     Clock3,
+    Cloud,
     Copy,
     ExternalLink,
     Info,
     KeyRound,
     MapPin,
     MessageCircle,
+    LoaderCircle,
     ShieldCheck,
     Users,
 } from 'lucide-react';
@@ -53,7 +57,12 @@ export default function EventDetail({ eventId, onBack, isGuestApplication = fals
     const [consentAnswers, setConsentAnswers] = useState<Record<number, ConsentDraft>>({});
     const [paymentInfo, setPaymentInfo] = useState<EventPaymentPolicy | null>(null);
     const [consentSubmitting, setConsentSubmitting] = useState(false);
+    const [draftHydrated, setDraftHydrated] = useState(false);
+    const [draftRestored, setDraftRestored] = useState(false);
+    const [draftSaveState, setDraftSaveState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
     const [currentTime, setCurrentTime] = useState(Date.now());
+    const latestDraftPayloadRef = useRef<ConsentResponseInput[]>([]);
+    const draftSaveQueueRef = useRef<Promise<unknown>>(Promise.resolve());
 
     const fetchEventDetail = async () => {
         try {
@@ -62,6 +71,9 @@ export default function EventDetail({ eventId, onBack, isGuestApplication = fals
             const data = await getEvent(eventId);
             setEvent(data);
             setConsentState(null);
+            setDraftHydrated(false);
+            setDraftRestored(false);
+            setDraftSaveState('idle');
             setPaymentInfo(null);
             if (data.currentUserStatus === 'JOINED') {
                 try {
@@ -83,13 +95,19 @@ export default function EventDetail({ eventId, onBack, isGuestApplication = fals
                 try {
                     const consentData = await getEventConsents(eventId);
                     setConsentState(consentData);
-                    setConsentAnswers(Object.fromEntries(consentData.responses.map(response => [
+                    const restoredEntries = consentData.drafts.length > 0
+                        ? consentData.drafts
+                        : consentData.responses;
+                    setConsentAnswers(Object.fromEntries(restoredEntries.map(response => [
                         response.consentItemId,
                         {
                             agreed: response.agreed ?? undefined,
                             responseText: response.responseText ?? undefined,
                         },
                     ])));
+                    setDraftRestored(consentData.drafts.length > 0);
+                    setDraftHydrated(true);
+                    setDraftSaveState(consentData.drafts.length > 0 ? 'saved' : 'idle');
                 } catch (consentError) {
                     console.error('Failed to fetch event consents:', consentError);
                     setConsentState(null);
@@ -114,6 +132,52 @@ export default function EventDetail({ eventId, onBack, isGuestApplication = fals
     useEffect(() => {
         fetchEventDetail();
     }, [eventId]);
+
+    useEffect(() => {
+        if (!draftHydrated || !consentState || consentState.participantStatus !== 'CONSENT_PENDING') return;
+        const payload = consentState.items.map(item => ({
+            consentItemId: item.id,
+            documentVersion: item.documentVersion,
+            contentHash: item.contentHash,
+            agreed: item.responseType === 'CHECKBOX'
+                ? consentAnswers[item.id]?.agreed ?? null
+                : null,
+            responseText: usesTextResponse(item.responseType)
+                ? consentAnswers[item.id]?.responseText ?? null
+                : null,
+        }));
+        latestDraftPayloadRef.current = payload;
+        setDraftSaveState('saving');
+        const timeoutId = window.setTimeout(() => {
+            draftSaveQueueRef.current = draftSaveQueueRef.current
+                .catch(() => undefined)
+                .then(() => saveEventConsentDraft(eventId, payload))
+                .then(() => setDraftSaveState('saved'))
+                .catch((error) => {
+                    console.error('Failed to save event consent draft:', error);
+                    setDraftSaveState('error');
+                });
+        }, 400);
+        return () => window.clearTimeout(timeoutId);
+    }, [consentAnswers, consentState, draftHydrated, eventId]);
+
+    useEffect(() => {
+        if (!draftHydrated) return;
+        const persistLatestDraft = () => {
+            if (latestDraftPayloadRef.current.length > 0) {
+                saveEventConsentDraftKeepalive(eventId, latestDraftPayloadRef.current);
+            }
+        };
+        const handleVisibilityChange = () => {
+            if (document.visibilityState === 'hidden') persistLatestDraft();
+        };
+        window.addEventListener('pagehide', persistLatestDraft);
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+        return () => {
+            window.removeEventListener('pagehide', persistLatestDraft);
+            document.removeEventListener('visibilitychange', handleVisibilityChange);
+        };
+    }, [draftHydrated, eventId]);
 
     useEffect(() => {
         if (!event?.applicationStartsAt) return;
@@ -202,6 +266,17 @@ export default function EventDetail({ eventId, onBack, isGuestApplication = fals
             alert(responseError);
             return;
         }
+        const hasSensitiveInformation = consentState.items.some(item => (
+            (item.category === 'MEDICATION_INFORMATION' || item.category === 'DIETARY_ACCESSIBILITY')
+            && Boolean(consentAnswers[item.id]?.responseText?.trim())
+        ));
+        const sensitiveConsentItem = consentState.items.find(item => (
+            item.category === 'SENSITIVE_INFORMATION' && item.responseType === 'CHECKBOX'
+        ));
+        if (hasSensitiveInformation && (!sensitiveConsentItem || consentAnswers[sensitiveConsentItem.id]?.agreed !== true)) {
+            alert('건강·식이·접근성 정보를 작성하려면 별도의 민감정보 수집·이용 동의가 필요합니다.');
+            return;
+        }
 
         try {
             setConsentSubmitting(true);
@@ -216,6 +291,8 @@ export default function EventDetail({ eventId, onBack, isGuestApplication = fals
                     ? consentAnswers[item.id]?.responseText?.trim() || null
                     : null,
             })));
+            setDraftHydrated(false);
+            setDraftSaveState('idle');
             alert('응답 시트가 한 번에 제출되어 참가가 확정되었습니다.');
             await fetchEventDetail();
         } catch (error: unknown) {
@@ -513,6 +590,24 @@ export default function EventDetail({ eventId, onBack, isGuestApplication = fals
                             </div>
 
                             <div className="border-t border-zinc-100 bg-zinc-50 p-4 sm:p-5">
+                                <div className={`mb-3 flex items-center gap-2 rounded-xl border px-3 py-2 text-[11px] font-bold ${
+                                    draftSaveState === 'error'
+                                        ? 'border-red-100 bg-red-50 text-red-600'
+                                        : 'border-emerald-100 bg-emerald-50 text-emerald-700'
+                                }`}>
+                                    {draftSaveState === 'saving' ? (
+                                        <LoaderCircle className="h-3.5 w-3.5 animate-spin" />
+                                    ) : (
+                                        <Cloud className="h-3.5 w-3.5" />
+                                    )}
+                                    {draftSaveState === 'error'
+                                        ? '자동 저장에 실패했습니다. 연결을 확인해 주세요.'
+                                        : draftSaveState === 'saving'
+                                            ? '작성 내용을 안전하게 저장하는 중입니다.'
+                                            : draftRestored
+                                                ? '이전에 작성하던 내용을 복원했습니다. 이후 변경도 자동 저장됩니다.'
+                                                : '작성 내용은 자동 저장되어 새로고침하거나 창을 닫아도 이어서 작성할 수 있습니다.'}
+                                </div>
                                 <div className="mb-3 flex items-center justify-between gap-3 text-xs">
                                     <span className="text-zinc-500">{consentState.items.length}개 항목을 한 번에 안전하게 제출합니다.</span>
                                     <strong className={completedRequiredItems === requiredConsentItems.length ? 'text-emerald-600' : 'text-amber-700'}>

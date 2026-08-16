@@ -12,6 +12,7 @@ import {
     ConsentItem,
     ConsentResponseInput,
     ParticipantConsentState,
+    ManagerConsentResponseSheet,
     UserDetail,
 } from '../types/api';
 import { getDevCrewOverride, getDevEventDataMode, getDevRoleOverride, hasDevOverride } from '../lib/session';
@@ -27,6 +28,7 @@ const DEV_GROUP_INVITATIONS_KEY = 'dev_group_invitations';
 const devChatAccessKey = (eventId: number) => `dev_event_chat_access_${eventId}`;
 const devConsentDueKey = (eventId: number) => `dev_event_consent_due_${eventId}`;
 const devConsentResponsesKey = (eventId: number) => `dev_event_consent_responses_${eventId}`;
+const devConsentDraftsKey = (eventId: number) => `dev_event_consent_drafts_${eventId}`;
 
 export const isDevMode = hasDevOverride;
 
@@ -346,6 +348,7 @@ export const setDevEventParticipation = (eventId: number, status: ParticipantSta
             const dueAt = new Date(Date.now() + event.consentWindowMinutes * 60 * 1000).toISOString();
             localStorage.setItem(devConsentDueKey(eventId), dueAt);
             localStorage.removeItem(devConsentResponsesKey(eventId));
+            localStorage.removeItem(devConsentDraftsKey(eventId));
         }
         const isJoined = resolvedStatus === 'JOINED';
         event.currentUserStatus = resolvedStatus;
@@ -353,6 +356,7 @@ export const setDevEventParticipation = (eventId: number, status: ParticipantSta
         if (status === 'NONE') {
             localStorage.removeItem(devConsentDueKey(eventId));
             localStorage.removeItem(devConsentResponsesKey(eventId));
+            localStorage.removeItem(devConsentDraftsKey(eventId));
         }
         saveDevParties(list);
     }
@@ -404,6 +408,17 @@ const responseSheetConsentItems = (): ConsentItem[] => [
         documentVersion: 1,
     },
     {
+        id: 21008,
+        category: 'SENSITIVE_INFORMATION',
+        title: '안전 운영을 위한 민감정보 수집·이용 동의',
+        content: '복용 약물, 건강 유의사항, 알러지, 식이 및 접근성 지원 정보를 안전한 행사 운영 목적으로 수집·이용하며 행사 종료 후 30일까지 보관 후 삭제합니다.',
+        contentHash: 'h'.repeat(64),
+        responseType: 'CHECKBOX',
+        required: false,
+        displayOrder: 3,
+        documentVersion: 1,
+    },
+    {
         id: 21004,
         category: 'EMERGENCY_CONTACT',
         title: '긴급 연락처',
@@ -411,7 +426,7 @@ const responseSheetConsentItems = (): ConsentItem[] => [
         contentHash: 'd'.repeat(64),
         responseType: 'PHONE',
         required: true,
-        displayOrder: 3,
+        displayOrder: 4,
         documentVersion: 1,
     },
     {
@@ -422,7 +437,7 @@ const responseSheetConsentItems = (): ConsentItem[] => [
         contentHash: 'e'.repeat(64),
         responseType: 'TEXTAREA',
         required: false,
-        displayOrder: 4,
+        displayOrder: 5,
         documentVersion: 1,
     },
     {
@@ -433,7 +448,7 @@ const responseSheetConsentItems = (): ConsentItem[] => [
         contentHash: 'f'.repeat(64),
         responseType: 'TEXTAREA',
         required: false,
-        displayOrder: 5,
+        displayOrder: 6,
         documentVersion: 1,
     },
     {
@@ -444,7 +459,7 @@ const responseSheetConsentItems = (): ConsentItem[] => [
         contentHash: 'g'.repeat(64),
         responseType: 'INFORMATION',
         required: false,
-        displayOrder: 6,
+        displayOrder: 7,
         documentVersion: 1,
     },
 ];
@@ -458,6 +473,27 @@ export const getDevEventConsents = (eventId: number): ParticipantConsentState =>
         consentCompletedAt: storedResponses ? now() : null,
         items: responseSheetConsentItems(),
         responses: storedResponses ? JSON.parse(storedResponses) : [],
+        drafts: JSON.parse(localStorage.getItem(devConsentDraftsKey(eventId)) || '[]'),
+    };
+};
+
+export const saveDevEventConsentDraft = (
+    eventId: number,
+    responses: ConsentResponseInput[],
+): ParticipantConsentState => {
+    const items = responseSheetConsentItems();
+    const updatedAt = now();
+    const drafts = responses
+        .filter(response => response.agreed !== null || Boolean(response.responseText?.trim()))
+        .map(response => ({ ...response, updatedAt }));
+    localStorage.setItem(devConsentDraftsKey(eventId), JSON.stringify(drafts));
+    return {
+        participantStatus: 'CONSENT_PENDING',
+        consentDueAt: localStorage.getItem(devConsentDueKey(eventId)),
+        consentCompletedAt: null,
+        items,
+        responses: [],
+        drafts,
     };
 };
 
@@ -491,10 +527,20 @@ export const submitDevEventConsents = (
             }
         }
     }
+    const hasSensitiveInformation = items.some(item => (
+        (item.category === 'MEDICATION_INFORMATION' || item.category === 'DIETARY_ACCESSIBILITY')
+        && Boolean(responses.find(response => response.consentItemId === item.id)?.responseText?.trim())
+    ));
+    const sensitiveConsent = items.find(item => item.category === 'SENSITIVE_INFORMATION');
+    if (hasSensitiveInformation
+        && (!sensitiveConsent || responses.find(response => response.consentItemId === sensitiveConsent.id)?.agreed !== true)) {
+        throw new Error('건강 정보를 작성하려면 민감정보 수집·이용에 동의해 주세요.');
+    }
 
     const respondedAt = now();
     const savedResponses = responses.map(response => ({ ...response, respondedAt }));
     localStorage.setItem(devConsentResponsesKey(eventId), JSON.stringify(savedResponses));
+    localStorage.removeItem(devConsentDraftsKey(eventId));
     localStorage.removeItem(devConsentDueKey(eventId));
 
     const events = getDevParties();
@@ -510,6 +556,74 @@ export const submitDevEventConsents = (
         consentCompletedAt: respondedAt,
         items,
         responses: savedResponses,
+        drafts: [],
+    };
+};
+
+export const getDevManagerConsentResponseSheet = (
+    eventId: number,
+    revealPrivateValues = false,
+): ManagerConsentResponseSheet => {
+    const items = responseSheetConsentItems().map(item => ({
+        id: item.id,
+        title: item.title,
+        category: item.category,
+        responseType: item.responseType,
+        required: item.required,
+        displayOrder: item.displayOrder,
+        privacyLevel: item.category === 'MEDICATION_INFORMATION' || item.category === 'DIETARY_ACCESSIBILITY'
+            ? 'SENSITIVE' as const
+            : item.responseType === 'PHONE' || item.responseType === 'EMAIL'
+                ? 'PERSONAL' as const
+                : 'GENERAL' as const,
+    }));
+    const respondedAt = new Date(Date.now() - 35 * 60 * 1000).toISOString();
+    const rawAnswers = [
+        { consentItemId: 21001, agreed: true, responseText: null, respondedAt },
+        { consentItemId: 21002, agreed: true, responseText: null, respondedAt },
+        { consentItemId: 21003, agreed: false, responseText: null, respondedAt },
+        { consentItemId: 21008, agreed: true, responseText: null, respondedAt },
+        { consentItemId: 21004, agreed: null, responseText: '010-9876-4321', respondedAt },
+        { consentItemId: 21005, agreed: null, responseText: '견과류 알러지, 에피펜 휴대', respondedAt },
+        { consentItemId: 21006, agreed: null, responseText: '땅콩이 포함되지 않은 식사 필요', respondedAt },
+    ];
+    return {
+        eventId,
+        eventTitle: getDevEvent(eventId).title,
+        items,
+        participants: [
+            {
+                participantId: 201,
+                accountId: 10,
+                displayName: 'Jake Kim (Simulated Owner)',
+                status: 'JOINED',
+                consentCompletedAt: respondedAt,
+                answers: rawAnswers.map(answer => {
+                    const item = items.find(candidate => candidate.id === answer.consentItemId)!;
+                    const masked = !revealPrivateValues
+                        && item.privacyLevel !== 'GENERAL'
+                        && answer.responseText !== null;
+                    return {
+                        ...answer,
+                        masked,
+                        responseText: masked
+                            ? item.privacyLevel === 'SENSITIVE' ? null : '•••-••••-4321'
+                            : answer.responseText,
+                    };
+                }),
+            },
+            {
+                participantId: 202,
+                accountId: 11,
+                displayName: 'Jane Doe (Simulated Editor)',
+                status: 'CONSENT_PENDING',
+                consentCompletedAt: null,
+                answers: [],
+            },
+        ],
+        canRevealSensitive: true,
+        canExport: true,
+        privateValuesRevealed: revealPrivateValues,
     };
 };
 
@@ -533,7 +647,7 @@ export const getDevEventPaymentInfo = (eventId: number): EventPaymentPolicy => {
 
 export const getDevParticipants = (eventId: number): EventParticipant[] => [
     { id: 201, eventId, userId: 10, userName: 'Jake Kim (Simulated Owner)', status: 'JOINED', paymentStatus: 'PAID', managerMemo: '입금자명 확인 완료', createdAt: now() },
-    { id: 202, eventId, userId: 11, userName: 'Jane Doe (Simulated Editor)', status: 'JOINED', paymentStatus: 'UNPAID', managerMemo: null, createdAt: now() },
+    { id: 202, eventId, userId: 11, userName: 'Jane Doe (Simulated Editor)', status: 'CONSENT_PENDING', paymentStatus: null, managerMemo: null, consentDueAt: new Date(Date.now() + 8 * 60 * 1000).toISOString(), createdAt: now() },
 ];
 
 export const updateDevParticipantStatus = (eventId: number, userId: number, status: ParticipantStatus): EventParticipant => ({

@@ -1,4 +1,5 @@
 import apiClient from '../lib/axios';
+import { getSignupToken } from '../lib/session';
 import {
     ApiResponse,
     ConsentConfiguration,
@@ -11,6 +12,7 @@ import {
     EventPlanningMode,
     EventStatus,
     JoinPolicy,
+    ManagerConsentResponseSheet,
     ParticipantConsentState,
     ParticipantStatus,
     PaymentStatus,
@@ -25,9 +27,11 @@ import {
     getDevEventChatAccess,
     getDevEventConsents,
     getDevEventPaymentInfo,
+    getDevManagerConsentResponseSheet,
     isDevMode,
     setDevEventParticipation,
     submitDevEventConsents,
+    saveDevEventConsentDraft,
     updateDevParticipantStatus,
     updateDevParticipantManagement,
     updateDevEvent,
@@ -89,6 +93,40 @@ export const submitEventConsents = async (
         { responses },
     );
     return response.data.data;
+};
+
+export const saveEventConsentDraft = async (
+    eventId: number,
+    responses: ConsentResponseInput[],
+): Promise<ParticipantConsentState> => {
+    if (isDevMode()) return saveDevEventConsentDraft(eventId, responses);
+    const response = await apiClient.put<ApiResponse<ParticipantConsentState>>(
+        `/events/${eventId}/consents/draft`,
+        { responses },
+    );
+    return response.data.data;
+};
+
+export const saveEventConsentDraftKeepalive = (
+    eventId: number,
+    responses: ConsentResponseInput[],
+) => {
+    if (isDevMode()) {
+        saveDevEventConsentDraft(eventId, responses);
+        return;
+    }
+    const token = getSignupToken();
+    const baseUrl = import.meta.env.VITE_API_BASE_URL || '/api';
+    void fetch(`${baseUrl}/events/${eventId}/consents/draft`, {
+        method: 'PUT',
+        headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        credentials: 'include',
+        keepalive: true,
+        body: JSON.stringify({ responses }),
+    }).catch(() => undefined);
 };
 
 export const getEventPaymentInfo = async (eventId: number): Promise<EventPaymentPolicy> => {
@@ -201,6 +239,90 @@ export const listParticipants = async (eventId: number): Promise<EventParticipan
     }
     const response = await apiClient.get<ApiResponse<EventParticipant[]>>(`/dashboard/events/${eventId}/participants`);
     return response.data.data;
+};
+
+export const getManagerConsentResponses = async (eventId: number): Promise<ManagerConsentResponseSheet> => {
+    if (isDevMode()) return getDevManagerConsentResponseSheet(eventId);
+    const response = await apiClient.get<ApiResponse<ManagerConsentResponseSheet>>(
+        `/dashboard/events/${eventId}/consent-responses`,
+    );
+    return response.data.data;
+};
+
+export const revealManagerConsentResponses = async (
+    eventId: number,
+    reason: string,
+): Promise<ManagerConsentResponseSheet> => {
+    if (isDevMode()) return getDevManagerConsentResponseSheet(eventId, true);
+    const response = await apiClient.post<ApiResponse<ManagerConsentResponseSheet>>(
+        `/dashboard/events/${eventId}/consent-responses/reveal`,
+        { reason },
+    );
+    return response.data.data;
+};
+
+export const exportManagerConsentResponses = async (
+    eventId: number,
+    request: { reason: string; includeSensitive: boolean; itemIds: number[] },
+): Promise<string> => {
+    if (isDevMode()) {
+        const sheet = getDevManagerConsentResponseSheet(eventId, true);
+        const selectedItems = sheet.items.filter(item => (
+            request.itemIds.includes(item.id)
+            && item.responseType !== 'INFORMATION'
+            && (request.includeSensitive || item.privacyLevel !== 'SENSITIVE')
+        ));
+        const escapeCell = (value: string) => {
+            const safeValue = /^[=+\-@]/.test(value) ? `'${value}` : value;
+            return safeValue.split('\t').join(' ').split('\n').join(' ');
+        };
+        const rows = [
+            ['참가자', '상태', '제출 상태', '제출 일시', ...selectedItems.map(item => item.title)],
+            ...sheet.participants.map(participant => {
+                const answers = new Map(participant.answers.map(answer => [answer.consentItemId, answer]));
+                return [
+                    participant.displayName,
+                    participant.status,
+                    participant.consentCompletedAt ? '제출 완료' : '미제출',
+                    participant.consentCompletedAt || '-',
+                    ...selectedItems.map(item => {
+                        const answer = answers.get(item.id);
+                        if (!answer) return '-';
+                        if (item.responseType === 'CHECKBOX') return answer.agreed ? '동의' : '미동의';
+                        return answer.responseText || '-';
+                    }),
+                ];
+            }),
+        ];
+        const blob = new Blob([
+            '\uFEFF',
+            rows.map(row => row.map(value => escapeCell(String(value))).join('\t')).join('\n'),
+        ], { type: 'text/tab-separated-values;charset=utf-8' });
+        const filename = `event-${eventId}-responses-dev.tsv`;
+        downloadBlob(blob, filename);
+        return filename;
+    }
+    const response = await apiClient.post<Blob>(
+        `/dashboard/events/${eventId}/consent-responses/export`,
+        request,
+        { responseType: 'blob' },
+    );
+    const disposition = response.headers['content-disposition'] as string | undefined;
+    const filename = disposition?.match(/filename="?([^";]+)"?/)?.[1]
+        || `event-${eventId}-responses.xlsx`;
+    downloadBlob(response.data, filename);
+    return filename;
+};
+
+const downloadBlob = (blob: Blob, filename: string) => {
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = filename;
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    URL.revokeObjectURL(url);
 };
 
 export const updateParticipantStatus = async (eventId: number, userId: number, status: ParticipantStatus): Promise<EventParticipant> => {

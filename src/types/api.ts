@@ -360,12 +360,22 @@ export interface ConsentAnswer {
     respondedAt: string;
 }
 
+export interface ConsentDraftAnswer {
+    consentItemId: number;
+    agreed: boolean | null;
+    responseText: string | null;
+    documentVersion: number;
+    contentHash: string;
+    updatedAt: string | null;
+}
+
 export interface ParticipantConsentState {
     participantStatus: ParticipantStatus;
     consentDueAt: string | null;
     consentCompletedAt: string | null;
     items: ConsentItem[];
     responses: ConsentAnswer[];
+    drafts: ConsentDraftAnswer[];
 }
 
 export interface ConsentResponseInput {
@@ -374,6 +384,45 @@ export interface ConsentResponseInput {
     contentHash: string;
     agreed: boolean | null;
     responseText: string | null;
+}
+
+export type ConsentPrivacyLevel = 'GENERAL' | 'PERSONAL' | 'SENSITIVE';
+
+export interface ManagerConsentResponseItem {
+    id: number;
+    title: string;
+    category: ConsentCategory;
+    responseType: ConsentResponseType;
+    required: boolean;
+    displayOrder: number;
+    privacyLevel: ConsentPrivacyLevel;
+}
+
+export interface ManagerConsentResponseAnswer {
+    consentItemId: number;
+    agreed: boolean | null;
+    responseText: string | null;
+    masked: boolean;
+    respondedAt: string;
+}
+
+export interface ManagerConsentResponseParticipant {
+    participantId: number;
+    accountId: number;
+    displayName: string;
+    status: ParticipantStatus;
+    consentCompletedAt: string | null;
+    answers: ManagerConsentResponseAnswer[];
+}
+
+export interface ManagerConsentResponseSheet {
+    eventId: number;
+    eventTitle: string;
+    items: ManagerConsentResponseItem[];
+    participants: ManagerConsentResponseParticipant[];
+    canRevealSensitive: boolean;
+    canExport: boolean;
+    privateValuesRevealed: boolean;
 }
 
 export interface EventPaymentPolicy {
