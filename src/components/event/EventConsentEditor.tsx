@@ -93,7 +93,7 @@ const templates: ConsentTemplate[] = [
         item: {
             category: 'MEDICATION_INFORMATION',
             title: '복용 약물 및 건강 유의사항',
-            content: '안전한 행사 운영을 위해 현재 복용 중인 약물, 알레르기 또는 현장에서 알아야 할 건강 유의사항이 있다면 작성해 주세요.',
+            content: '안전한 행사 운영을 위해 현재 복용 중인 약물, 알러지 또는 현장에서 알아야 할 건강 유의사항이 있다면 작성해 주세요.',
             responseType: 'TEXTAREA',
             required: false,
         },
@@ -106,7 +106,7 @@ const templates: ConsentTemplate[] = [
         item: {
             category: 'DIETARY_ACCESSIBILITY',
             title: '식이 제한 및 접근성 지원 요청',
-            content: '알레르기, 식이 제한, 이동 또는 의사소통 지원 등 운영진이 준비해야 할 사항이 있다면 작성해 주세요.',
+            content: '알러지, 식이 제한, 이동 또는 의사소통 지원 등 운영진이 준비해야 할 사항이 있다면 작성해 주세요.',
             responseType: 'TEXTAREA',
             required: false,
         },
