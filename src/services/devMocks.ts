@@ -29,6 +29,18 @@ const devChatAccessKey = (eventId: number) => `dev_event_chat_access_${eventId}`
 const devConsentDueKey = (eventId: number) => `dev_event_consent_due_${eventId}`;
 const devConsentResponsesKey = (eventId: number) => `dev_event_consent_responses_${eventId}`;
 const devConsentDraftsKey = (eventId: number) => `dev_event_consent_drafts_${eventId}`;
+const RETIRED_EVENT_TERM = String.fromCodePoint(0xc18c, 0xbaa8, 0xc784);
+
+const readMigratedDevStorage = <T>(key: string): T | null => {
+    const stored = localStorage.getItem(key);
+    if (!stored) return null;
+
+    const migrated = stored.split(RETIRED_EVENT_TERM).join('이벤트');
+    if (migrated !== stored) {
+        localStorage.setItem(key, migrated);
+    }
+    return JSON.parse(migrated) as T;
+};
 
 export const isDevMode = hasDevOverride;
 
@@ -91,8 +103,8 @@ const sampleEvents = (): Event[] => [
     },
     {
         id: 10002,
-        title: '소모임#0427',
-        description: '참가자가 함께 장소와 활동을 정하는 자율 소모임입니다.',
+        title: '이벤트#0427',
+        description: '참가자가 함께 장소와 활동을 정하는 자율형 이벤트입니다.',
         activityType: 'OTHER',
         planningMode: 'MEMBER_PLANNED',
         applicationStartsAt: '2026-07-18T12:00:00',
@@ -209,9 +221,9 @@ const getDevEventStorageKey = () => {
 
 export const getDevParties = (): Event[] => {
     const storageKey = getDevEventStorageKey();
-    const stored = localStorage.getItem(storageKey);
+    const stored = readMigratedDevStorage<Event[]>(storageKey);
     if (stored) {
-        return normalizeDevEvents(JSON.parse(stored) as Event[]);
+        return normalizeDevEvents(stored);
     }
 
     const mode = getDevEventDataMode();
@@ -220,7 +232,7 @@ export const getDevParties = (): Event[] => {
         : [
         {
             id: 1,
-            title: '용평 리조트 주말 카풀 & 보딩 소모임',
+            title: '용평 리조트 주말 카풀 & 보딩 이벤트',
             description: '주말 동안 함께 용평에서 카풀하고 보드 타실 분들을 모집합니다.',
             activityType: 'SURF',
             planningMode: 'MANAGER_PLANNED',
@@ -236,7 +248,7 @@ export const getDevParties = (): Event[] => {
             visibilityType: 'PUBLIC',
             joinPolicy: 'INSTANT',
             organizerGroupId: 1,
-            organizerGroupName: '소모임 운영 샘플 그룹',
+            organizerGroupName: '이벤트 운영 샘플 그룹',
             currentUserStatus: 'NONE',
             createdAt: now(),
             updatedAt: now(),
@@ -254,7 +266,7 @@ export const saveDevParties = (parties: Event[]) => {
 export const getDevEvent = (eventId: number): Event => {
     const found = getDevParties().find((event) => event.id === eventId);
     if (!found) {
-        throw new Error('Small gathering not found');
+        throw new Error('Event not found');
     }
     return found;
 };
@@ -304,7 +316,7 @@ export const createDevEvent = (payload: CreateEventPayload): Event => {
         visibilityType: payload.visibilityType,
         joinPolicy: payload.joinPolicy,
         organizerGroupId: payload.organizerGroupId,
-        organizerGroupName: '소모임 운영 샘플 그룹',
+        organizerGroupName: '이벤트 운영 샘플 그룹',
         currentUserStatus: 'JOINED',
         createdAt: now(),
         updatedAt: now(),
@@ -675,9 +687,9 @@ export const updateDevParticipantManagement = (
 export const getDevOrganizerGroups = (): OrganizerGroup[] => {
     const roleOverride = getDevRoleOverride();
     if (roleOverride === 'organizer' || roleOverride === 'admin' || roleOverride === 'viewer') {
-        const stored = localStorage.getItem(DEV_GROUPS_KEY);
-        if (stored) return JSON.parse(stored);
-        const groups = [{ id: 1, name: '소모임 운영 샘플 그룹' }];
+        const stored = readMigratedDevStorage<OrganizerGroup[]>(DEV_GROUPS_KEY);
+        if (stored) return stored;
+        const groups = [{ id: 1, name: '이벤트 운영 샘플 그룹' }];
         localStorage.setItem(DEV_GROUPS_KEY, JSON.stringify(groups));
         return groups;
     }
@@ -693,7 +705,7 @@ export const createDevOrganizerGroup = (name: string): OrganizerGroup => {
 };
 
 export const getDevOrganizerGroup = (groupId: number): OrganizerGroup => (
-    getDevOrganizerGroups().find(group => group.id === groupId) || { id: groupId, name: '소모임 운영 샘플 그룹' }
+    getDevOrganizerGroups().find(group => group.id === groupId) || { id: groupId, name: '이벤트 운영 샘플 그룹' }
 );
 
 export const getDevGroupMembers = (groupId: number): OrganizerGroupMembership[] => {

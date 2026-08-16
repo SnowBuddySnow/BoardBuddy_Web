@@ -51,11 +51,11 @@ export default function DashboardEventDetail({ eventId, onBack, onEditClick }: D
         try {
             setActionLoading(true);
             await updateEvent(eventId, { status: 'OPEN' });
-            alert('소모임이 오픈되었습니다.');
+            alert('이벤트가 오픈되었습니다.');
             fetchDetailData();
         } catch (error) {
             console.error('Failed to open registration:', error);
-            alert('소모임 오픈에 실패했습니다.');
+            alert('이벤트 오픈에 실패했습니다.');
         } finally {
             setActionLoading(false);
         }
@@ -65,11 +65,11 @@ export default function DashboardEventDetail({ eventId, onBack, onEditClick }: D
         try {
             setActionLoading(true);
             await updateEvent(eventId, { status: 'CLOSED' });
-            alert('소모임이 마감되었습니다.');
+            alert('이벤트가 마감되었습니다.');
             fetchDetailData();
         } catch (error) {
             console.error('Failed to close registration:', error);
-            alert('소모임 마감에 실패했습니다.');
+            alert('이벤트 마감에 실패했습니다.');
         } finally {
             setActionLoading(false);
         }

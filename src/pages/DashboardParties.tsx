@@ -47,11 +47,11 @@ export default function DashboardParties({
         try {
             setActionLoadingId(eventId);
             await updateEvent(eventId, { status: 'OPEN' });
-            alert('소모임이 오픈되었습니다! 일반 멤버들의 참여 신청을 받습니다.');
+            alert('이벤트가 오픈되었습니다! 일반 멤버들의 참여 신청을 받습니다.');
             fetchManagedParties();
         } catch (error) {
             console.error('Failed to open registration:', error);
-            alert('소모임 오픈 처리에 실패했습니다.');
+            alert('이벤트 오픈 처리에 실패했습니다.');
         } finally {
             setActionLoadingId(null);
         }
@@ -61,31 +61,31 @@ export default function DashboardParties({
         try {
             setActionLoadingId(eventId);
             await updateEvent(eventId, { status: 'CLOSED' });
-            alert('소모임 모집이 마감되었습니다.');
+            alert('이벤트 모집이 마감되었습니다.');
             fetchManagedParties();
         } catch (error) {
             console.error('Failed to close registration:', error);
-            alert('소모임 마감 처리에 실패했습니다.');
+            alert('이벤트 마감 처리에 실패했습니다.');
         } finally {
             setActionLoadingId(null);
         }
     };
 
     const handleDelete = async (eventId: number) => {
-        const confirmDelete = window.confirm('정말 이 소모임을 삭제하시겠습니까? 삭제된 정보는 복구할 수 없습니다.');
+        const confirmDelete = window.confirm('정말 이 이벤트를 삭제하시겠습니까? 삭제된 정보는 복구할 수 없습니다.');
         if (!confirmDelete) return;
 
         try {
             setActionLoadingId(eventId);
             await deleteEvent(eventId);
-            alert('소모임이 성공적으로 삭제되었습니다.');
+            alert('이벤트가 성공적으로 삭제되었습니다.');
             fetchManagedParties();
         } catch (error: unknown) {
             console.error('Failed to delete event:', error);
             if (getApiErrorStatus(error) === 403) {
-                alert('이 소모임을 관리할 권한이 없습니다.');
+                alert('이 이벤트를 관리할 권한이 없습니다.');
             } else {
-                alert('소모임 삭제에 실패했습니다.');
+                alert('이벤트 삭제에 실패했습니다.');
             }
         } finally {
             setActionLoadingId(null);
@@ -130,7 +130,7 @@ export default function DashboardParties({
                         <button
                             className="px-4 py-1.5 rounded-full bg-[#162660] text-white border-none shadow-sm cursor-default"
                         >
-                            소모임 관리
+                            이벤트 관리
                         </button>
                         <button
                             onClick={onGroupsClick}
@@ -154,7 +154,7 @@ export default function DashboardParties({
                         className="bg-[#162660] hover:bg-[#1e3a8a] text-white border-none rounded-full h-10 py-0 font-bold flex items-center gap-1.5 shadow-sm"
                     >
                         <Plus className="w-4 h-4" />
-                        새 소모임 만들기
+                        새 이벤트 만들기
                     </Button>
                 </div>
             </header>
@@ -164,21 +164,21 @@ export default function DashboardParties({
                 {loading ? (
                     <div className="flex flex-col items-center justify-center py-40 text-zinc-500">
                         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#162660] mb-3"></div>
-                        <p className="text-sm">소모임 관리 데이터를 가져오는 중...</p>
+                        <p className="text-sm">이벤트 관리 데이터를 가져오는 중...</p>
                     </div>
                 ) : parties.length === 0 ? (
                     <div className="bg-white border border-zinc-100 rounded-3xl p-16 text-center text-zinc-400 shadow-sm flex flex-col items-center justify-center max-w-2xl mx-auto mt-12">
                         <ShieldAlert className="w-16 h-16 stroke-[1.2] mb-3 text-zinc-300" />
-                        <h2 className="text-xl font-bold text-zinc-900 mb-1">관리 중인 소모임이 없습니다</h2>
+                        <h2 className="text-xl font-bold text-zinc-900 mb-1">관리 중인 이벤트가 없습니다</h2>
                         <p className="text-sm max-w-md mt-1 mb-6">
-                            주최자 그룹에서 등록한 소모임이 아직 없습니다. 새로운 소모임을 직접 개설해보세요.
+                            주최자 그룹에서 등록한 이벤트가 아직 없습니다. 새로운 이벤트를 직접 개설해보세요.
                         </p>
                         <Button
                             variant="primary"
                             onClick={onCreateEventClick}
                             className="bg-[#162660] rounded-full font-bold px-6"
                         >
-                            첫 번째 소모임 개설하기
+                            첫 번째 이벤트 개설하기
                         </Button>
                     </div>
                 ) : (
@@ -188,7 +188,7 @@ export default function DashboardParties({
                             <table className="w-full text-left border-collapse">
                                 <thead>
                                     <tr className="bg-zinc-50 border-b border-zinc-100 text-xs text-zinc-400 font-bold uppercase tracking-wider">
-                                        <th className="px-6 py-4">소모임 / 그룹</th>
+                                        <th className="px-6 py-4">이벤트 / 그룹</th>
                                         <th className="px-6 py-4">상태</th>
                                         <th className="px-6 py-4">시작 일시</th>
                                         <th className="px-6 py-4">공개 / 신청 정책</th>

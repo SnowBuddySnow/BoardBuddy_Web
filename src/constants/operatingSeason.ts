@@ -41,7 +41,7 @@ export const operatingModeCopy: Record<OperatingMode, { label: string; descripti
   },
   OFF_SEASON: {
     label: '오프시즌 운영',
-    description: '이벤트와 소모임 기능만 운영 중입니다.',
+    description: '이벤트 기능만 운영 중입니다.',
   },
   BOTH: {
     label: '시즌 · 오프시즌 동시 운영',

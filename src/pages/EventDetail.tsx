@@ -118,9 +118,9 @@ export default function EventDetail({ eventId, onBack, isGuestApplication = fals
         } catch (error: unknown) {
             console.error('Failed to fetch event detail:', error);
             if (getApiErrorStatus(error) === 403) {
-                setErrorMsg('이 소모임을 볼 권한이 없습니다.');
+                setErrorMsg('이 이벤트를 볼 권한이 없습니다.');
             } else if (getApiErrorStatus(error) === 404) {
-                setErrorMsg('소모임을 찾을 수 없거나 현재 이용할 수 없습니다.');
+                setErrorMsg('이벤트를 찾을 수 없거나 현재 이용할 수 없습니다.');
             } else {
                 setErrorMsg('이벤트를 불러오는 도중 오류가 발생했습니다.');
             }
@@ -215,7 +215,7 @@ export default function EventDetail({ eventId, onBack, isGuestApplication = fals
             console.error('Failed to join:', error);
             const apiMessage = getApiErrorMessage(error);
             if (getApiErrorStatus(error) === 403) {
-                alert('이 소모임에 참여할 권한이 없습니다.');
+                alert('이 이벤트에 참여할 권한이 없습니다.');
             } else if (apiMessage) {
                 alert(apiMessage);
             } else {
@@ -797,7 +797,7 @@ export default function EventDetail({ eventId, onBack, isGuestApplication = fals
                             전화번호 제공 동의
                         </h3>
                         <p className="text-sm text-zinc-600 dark:text-zinc-400 mb-6 text-center leading-relaxed">
-                            예약 확인, 안내 및 안전 연락 등 원활한 모임 운영을 위해 소모임 관리자(호스트)에게 본인의 전화번호를 제공하시겠습니까?
+                            예약 확인, 안내 및 안전 연락 등 원활한 이벤트 운영을 위해 이벤트 관리자(호스트)에게 본인의 전화번호를 제공하시겠습니까?
                             <br />
                             <span className="text-xs text-zinc-400 dark:text-zinc-500 block mt-2.5 leading-normal">
                                 * '항상 동의' 선택 시 마이페이지 계정 관리에서 설정을 변경하기 전까지 더 이상 동의 여부를 묻지 않습니다.

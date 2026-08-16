@@ -55,7 +55,7 @@ export default function DevPanel({ onOpenCrewAdmin, onOpenSchoolAdmin }: DevPane
             options: [
                 { id: 'server', label: '일정에 따라 자동' },
                 { id: 'SEASON', label: '시즌', description: '시즌방 · 예약만 표시' },
-                { id: 'OFF_SEASON', label: '오프시즌', description: '이벤트 · 소모임만 표시' },
+                { id: 'OFF_SEASON', label: '오프시즌', description: '이벤트만 표시' },
                 { id: 'BOTH', label: '둘 다', description: '시즌과 오프시즌 기능 동시 표시' },
             ],
         },

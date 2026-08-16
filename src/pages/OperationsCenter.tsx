@@ -41,15 +41,15 @@ export default function OperationsCenter({
     },
     features.offSeason && canManageParties && {
       id: 'parties',
-      title: '소모임 관리',
-      description: '소모임을 만들고 참가자를 운영합니다.',
+      title: '이벤트 관리',
+      description: '이벤트를 만들고 참가자를 운영합니다.',
       icon: Sparkles,
       onClick: onPartiesClick,
       priority: operatingMode === 'OFF_SEASON',
     },
     features.offSeason && canManageGroups && {
       id: 'groups',
-      title: '소모임 그룹',
+      title: '이벤트 주최자 그룹',
       description: '참여 크루와 운영 권한을 관리합니다.',
       icon: ShieldCheck,
       onClick: onGroupsClick,
@@ -58,7 +58,7 @@ export default function OperationsCenter({
     canManageCrew && {
       id: 'crew',
       title: '크루 관리',
-      description: '크루 운영과 소모임 관리자 지정을 확인합니다.',
+      description: '크루 운영과 이벤트 관리자 지정을 확인합니다.',
       icon: UsersRound,
       onClick: onCrewClick,
       priority: false,

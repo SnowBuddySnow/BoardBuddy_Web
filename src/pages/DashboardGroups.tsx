@@ -117,7 +117,7 @@ export default function DashboardGroups({
                             onClick={onPartiesClick}
                             className="px-4 py-1.5 rounded-full text-zinc-500 hover:text-zinc-800 bg-transparent border-none cursor-pointer font-bold"
                         >
-                            소모임 관리
+                            이벤트 관리
                         </button>
                         <button
                             className="px-4 py-1.5 rounded-full bg-[#162660] text-white border-none shadow-sm cursor-default"
@@ -183,7 +183,7 @@ export default function DashboardGroups({
                     )}
                     <div>
                         <h2 className="text-2xl font-black text-zinc-950">주최자 그룹 설정</h2>
-                        <p className="text-sm text-zinc-500 mt-1">내가 가입되어 있고 소모임을 주최할 권한이 있는 그룹 목록입니다.</p>
+                        <p className="text-sm text-zinc-500 mt-1">내가 가입되어 있고 이벤트를 주최할 권한이 있는 그룹 목록입니다.</p>
                     </div>
 
                     {loading ? (
@@ -196,7 +196,7 @@ export default function DashboardGroups({
                             <ShieldAlert className="w-16 h-16 stroke-[1.2] mb-3 text-zinc-300" />
                             <h2 className="text-xl font-bold text-zinc-900 mb-1">가입된 그룹이 없습니다</h2>
                             <p className="text-sm max-w-md mt-1 mb-6">
-                                현재 소모임을 생성하거나 멤버 관리를 수행할 수 있는 권한 그룹이 존재하지 않습니다.
+                                현재 이벤트를 생성하거나 멤버 관리를 수행할 수 있는 권한 그룹이 존재하지 않습니다.
                             </p>
                         </div>
                     ) : (

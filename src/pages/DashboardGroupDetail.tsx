@@ -302,7 +302,7 @@ export default function DashboardGroupDetail({ groupId, developerAccess, onBack 
                 {isViewer && (
                     <div className="bg-zinc-50 border border-zinc-200 rounded-2xl p-4 flex items-start gap-3 text-xs text-zinc-600">
                         <Info className="w-4 h-4 text-zinc-400 shrink-0 mt-0.5" />
-                        <span>귀하는 이 소모임 그룹의 <strong>VIEWER(뷰어)</strong> 권한이므로 멤버 추가 및 삭제 같은 쓰기 작업이 제한됩니다.</span>
+                        <span>귀하는 이 이벤트 주최자 그룹의 <strong>VIEWER(뷰어)</strong> 권한이므로 멤버 추가 및 삭제 같은 쓰기 작업이 제한됩니다.</span>
                     </div>
                 )}
 

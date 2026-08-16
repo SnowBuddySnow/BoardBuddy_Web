@@ -115,10 +115,10 @@ export default function GuestAccess({ onBack, onSeasonHouseAccess, onEventAccess
                     <h2 className="text-xl font-black">초대 코드를 스캔하세요</h2>
                     <p className="mt-2 text-sm leading-6 text-blue-100">
                         {seasonAvailable && offSeasonAvailable
-                            ? '초대장 QR을 읽으면 시즌방 게스트 예약 또는 소모임 게스트 신청으로 바로 안내합니다.'
+                            ? '초대장 QR을 읽으면 시즌방 게스트 예약 또는 이벤트 게스트 신청으로 바로 안내합니다.'
                             : seasonAvailable
                                 ? '초대장 QR을 읽으면 시즌방 게스트 예약으로 바로 안내합니다.'
-                                : '초대장 QR을 읽으면 소모임 게스트 신청으로 바로 안내합니다.'}
+                                : '초대장 QR을 읽으면 이벤트 게스트 신청으로 바로 안내합니다.'}
                     </p>
                 </div>
 
@@ -144,7 +144,7 @@ export default function GuestAccess({ onBack, onSeasonHouseAccess, onEventAccess
                     <p className="mt-3 text-xs leading-5 text-zinc-400">
                         {seasonAvailable && <span>시즌방: <strong>BB:SEASON:크루번호</strong></span>}
                         {seasonAvailable && offSeasonAvailable && <span> · </span>}
-                        {offSeasonAvailable && <span>소모임: <strong>BB:EVENT:모임번호</strong></span>}
+                        {offSeasonAvailable && <span>이벤트: <strong>BB:EVENT:이벤트번호</strong></span>}
                     </p>
                 </div>
             </main>

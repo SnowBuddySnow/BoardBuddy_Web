@@ -16,7 +16,7 @@ interface DashboardEventNewProps {
     onSuccess: (eventId: number) => void;
 }
 
-const createAnonymousEventTitle = () => `소모임#${String(Math.floor(Math.random() * 10_000)).padStart(4, '0')}`;
+const createAnonymousEventTitle = () => `이벤트#${String(Math.floor(Math.random() * 10_000)).padStart(4, '0')}`;
 
 export default function DashboardEventNew({ onBack, onSuccess }: DashboardEventNewProps) {
     const [groups, setGroups] = useState<OrganizerGroup[]>([]);
@@ -133,17 +133,17 @@ export default function DashboardEventNew({ onBack, onSuccess }: DashboardEventN
 
             const newEvent = await createEvent(payload);
             await configureEventConsents(newEvent.id, consentConfiguration);
-            alert('소모임이 DRAFT 상태로 정상 개설되었습니다. 등록을 진행하려면 목록이나 상세조회에서 "오픈"을 클릭하세요.');
+            alert('이벤트가 DRAFT 상태로 정상 개설되었습니다. 등록을 진행하려면 목록이나 상세조회에서 "오픈"을 클릭하세요.');
             onSuccess(newEvent.id);
         } catch (error: unknown) {
             console.error('Failed to create event:', error);
             const apiMessage = getApiErrorMessage(error);
             if (getApiErrorStatus(error) === 403) {
-                alert('이 소모임을 관리할 권한이 없습니다.');
+                alert('이 이벤트를 관리할 권한이 없습니다.');
             } else if (apiMessage) {
                 alert(apiMessage);
             } else {
-                alert('소모임 등록에 실패했습니다.');
+                alert('이벤트 등록에 실패했습니다.');
             }
         } finally {
             setSubmitLoading(false);
@@ -158,7 +158,7 @@ export default function DashboardEventNew({ onBack, onSuccess }: DashboardEventN
                     <Button variant="ghost" onClick={onBack} className="-ml-2 gap-1 text-zinc-600 hover:bg-transparent">
                         <ChevronLeft className="w-5 h-5" />
                     </Button>
-                    <h1 className="text-lg font-bold text-zinc-900">새 소모임 만들기</h1>
+                    <h1 className="text-lg font-bold text-zinc-900">새 이벤트 만들기</h1>
                 </div>
                 <div></div>
             </header>
@@ -175,7 +175,7 @@ export default function DashboardEventNew({ onBack, onSuccess }: DashboardEventN
                         <HelpCircle className="w-12 h-12 stroke-[1.5] text-zinc-300 mx-auto mb-2" />
                         <h3 className="text-base font-bold text-zinc-900">주최 권한이 없습니다</h3>
                         <p className="text-xs mt-1 leading-relaxed">
-                            소모임을 생성하려면 소모임 그룹에서 OWNER 또는 MANAGER 역할을 받아야 합니다.
+                            이벤트를 생성하려면 이벤트 주최자 그룹에서 OWNER 또는 MANAGER 역할을 받아야 합니다.
                         </p>
                         <Button variant="primary" onClick={onBack} className="rounded-full mt-4">
                             돌아가기
@@ -203,7 +203,7 @@ export default function DashboardEventNew({ onBack, onSuccess }: DashboardEventN
                         {/* Title */}
                         <div className="space-y-1.5">
                             <div className="flex items-center justify-between gap-3">
-                                <label className="text-xs font-bold text-zinc-400 uppercase tracking-wider">소모임 제목 *</label>
+                                <label className="text-xs font-bold text-zinc-400 uppercase tracking-wider">이벤트 제목 *</label>
                                 {planningMode === 'MEMBER_PLANNED' && (
                                     <label className="flex cursor-pointer items-center gap-2 text-xs font-bold text-zinc-600">
                                         <input
@@ -212,13 +212,13 @@ export default function DashboardEventNew({ onBack, onSuccess }: DashboardEventN
                                             onChange={event => handleAnonymousEventChange(event.target.checked)}
                                             className="h-4 w-4 accent-[#162660]"
                                         />
-                                        이름없는소모임생성
+                                        이름없는이벤트생성
                                     </label>
                                 )}
                             </div>
                             <input
                                 type="text"
-                                placeholder={anonymousEvent ? '소모임#0000' : '예: Summer Beach Skate & Surf'}
+                                placeholder={anonymousEvent ? '이벤트#0000' : '예: Summer Beach Skate & Surf'}
                                 value={title}
                                 onChange={e => setTitle(e.target.value)}
                                 readOnly={anonymousEvent}
@@ -357,8 +357,8 @@ export default function DashboardEventNew({ onBack, onSuccess }: DashboardEventN
                                     onChange={e => setKusbfAssociated(e.target.value === 'KUSBF')}
                                     className="w-full px-4 py-2.5 bg-white border border-zinc-200 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-[#162660]/20 text-zinc-800"
                                 >
-                                    <option value="KUSBF">KUSBF 연계 소모임</option>
-                                    <option value="GENERAL">일반 소모임</option>
+                                    <option value="KUSBF">KUSBF 연계 이벤트</option>
+                                    <option value="GENERAL">일반 이벤트</option>
                                 </select>
                             </div>
 

@@ -99,7 +99,7 @@ export default function DashboardEventEdit({ eventId, onBack, onSuccess }: Dashb
                 setStatus(eventData.status);
             } catch (error) {
                 console.error('Failed to load event edit data:', error);
-                alert('소모임 정보를 불러오는 도중 오류가 발생했습니다.');
+                alert('이벤트 정보를 불러오는 도중 오류가 발생했습니다.');
                 onBack();
             } finally {
                 setLoading(false);
@@ -156,17 +156,17 @@ export default function DashboardEventEdit({ eventId, onBack, onSuccess }: Dashb
 
             await updateEvent(eventId, payload);
             await configureEventConsents(eventId, consentConfiguration);
-            alert('소모임 정보가 성공적으로 수정되었습니다.');
+            alert('이벤트 정보가 성공적으로 수정되었습니다.');
             onSuccess();
         } catch (error: unknown) {
             console.error('Failed to update event:', error);
             const apiMessage = getApiErrorMessage(error);
             if (getApiErrorStatus(error) === 403) {
-                alert('이 소모임을 관리할 권한이 없습니다.');
+                alert('이 이벤트를 관리할 권한이 없습니다.');
             } else if (apiMessage) {
                 alert(apiMessage);
             } else {
-                alert('소모임 정보 수정에 실패했습니다.');
+                alert('이벤트 정보 수정에 실패했습니다.');
             }
         } finally {
             setSubmitLoading(false);
@@ -181,7 +181,7 @@ export default function DashboardEventEdit({ eventId, onBack, onSuccess }: Dashb
                     <Button variant="ghost" onClick={onBack} className="-ml-2 gap-1 text-zinc-600 hover:bg-transparent">
                         <ChevronLeft className="w-5 h-5" />
                     </Button>
-                    <h1 className="text-lg font-bold text-zinc-900">소모임 정보 수정</h1>
+                    <h1 className="text-lg font-bold text-zinc-900">이벤트 정보 수정</h1>
                 </div>
                 <div></div>
             </header>
@@ -214,7 +214,7 @@ export default function DashboardEventEdit({ eventId, onBack, onSuccess }: Dashb
 
                         {/* Title */}
                         <div className="space-y-1.5">
-                            <label className="text-xs font-bold text-zinc-400 uppercase tracking-wider">소모임 제목 *</label>
+                            <label className="text-xs font-bold text-zinc-400 uppercase tracking-wider">이벤트 제목 *</label>
                             <input
                                 type="text"
                                 placeholder="예: Summer Beach Skate & Surf"
@@ -366,8 +366,8 @@ export default function DashboardEventEdit({ eventId, onBack, onSuccess }: Dashb
                                     onChange={e => setKusbfAssociated(e.target.value === 'KUSBF')}
                                     className="w-full px-4 py-2.5 bg-white border border-zinc-200 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-[#162660]/20 text-zinc-800"
                                 >
-                                    <option value="KUSBF">KUSBF 연계 소모임</option>
-                                    <option value="GENERAL">일반 소모임</option>
+                                    <option value="KUSBF">KUSBF 연계 이벤트</option>
+                                    <option value="GENERAL">일반 이벤트</option>
                                 </select>
                             </div>
 

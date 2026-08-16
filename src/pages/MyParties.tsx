@@ -53,7 +53,7 @@ export default function MyParties({ onBack, onEventClick }: MyPartiesProps) {
                 <Button variant="ghost" onClick={onBack} className="-ml-2 gap-1 text-zinc-800 hover:bg-transparent">
                     <ChevronLeft className="w-6 h-6" />
                 </Button>
-                <h1 className="text-lg font-bold text-zinc-900">나의 소모임</h1>
+                <h1 className="text-lg font-bold text-zinc-900">나의 이벤트</h1>
                 <div className="w-10"></div>
             </header>
 
@@ -68,7 +68,7 @@ export default function MyParties({ onBack, onEventClick }: MyPartiesProps) {
                     <div className="flex flex-col items-center justify-center py-20 text-center text-zinc-400">
                         <Heart className="w-12 h-12 stroke-[1.5] mb-2 text-zinc-300" />
                         <p className="text-base font-bold">참여 예정인 모임이 없습니다</p>
-                        <p className="text-xs mt-1">새로운 소모임에 참여하거나 직접 일정을 추가해보세요.</p>
+                        <p className="text-xs mt-1">새로운 이벤트에 참여하거나 직접 일정을 추가해보세요.</p>
                     </div>
                 ) : (
                     <div className="grid gap-4 lg:grid-cols-2">

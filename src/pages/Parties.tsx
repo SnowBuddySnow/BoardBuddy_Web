@@ -47,17 +47,17 @@ export default function Parties({ onBack, onEventClick, onCreateClick, canCreate
         try {
             setJoiningIds(prev => [...prev, eventId]);
             await joinEvent(eventId);
-            alert('소모임 신청이 완료되었습니다!');
+            alert('이벤트 신청이 완료되었습니다!');
             fetchAllParties(); // Refresh details
         } catch (error: unknown) {
             console.error('Failed to join event:', error);
             const apiMessage = getApiErrorMessage(error);
             if (getApiErrorStatus(error) === 403) {
-                alert('이 소모임에 참여할 권한이 없습니다.');
+                alert('이 이벤트에 참여할 권한이 없습니다.');
             } else if (apiMessage) {
                 alert(apiMessage);
             } else {
-                alert('소모임 참여 신청에 실패했습니다.');
+                alert('이벤트 참여 신청에 실패했습니다.');
             }
         } finally {
             setJoiningIds(prev => prev.filter(id => id !== eventId));
@@ -124,7 +124,7 @@ export default function Parties({ onBack, onEventClick, onCreateClick, canCreate
                     <Search className="absolute left-3 w-5 h-5 text-zinc-400" />
                     <input
                         type="text"
-                        placeholder="소모임, 활동, 장소 검색..."
+                        placeholder="이벤트, 활동, 장소 검색..."
                         value={searchQuery}
                         onChange={e => setSearchQuery(e.target.value)}
                         className="w-full pl-10 pr-4 py-2.5 bg-white border border-zinc-200 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-[#162660]/20 transition-all text-zinc-800 placeholder-zinc-400"
@@ -154,12 +154,12 @@ export default function Parties({ onBack, onEventClick, onCreateClick, canCreate
                 {loading ? (
                     <div className="flex flex-col items-center justify-center py-20 text-zinc-400">
                         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#162660] mb-3"></div>
-                        <p className="text-sm">소모임 정보를 불러오는 중...</p>
+                        <p className="text-sm">이벤트 정보를 불러오는 중...</p>
                     </div>
                 ) : filteredParties.length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-20 text-center text-zinc-400">
                         <AlertCircle className="w-12 h-12 stroke-[1.5] mb-2 text-zinc-300" />
-                        <p className="text-base font-bold">등록된 소모임이 없습니다</p>
+                        <p className="text-base font-bold">등록된 이벤트가 없습니다</p>
                         <p className="text-xs mt-1">새로운 액티비티 모임을 제안하거나 필터를 변경해보세요.</p>
                     </div>
                 ) : (
