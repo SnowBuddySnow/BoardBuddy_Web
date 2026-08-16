@@ -1,8 +1,10 @@
+import { useState } from 'react';
 import {
     AlertTriangle,
     Camera,
     Check,
     ContactRound,
+    Eye,
     FileCheck2,
     Info,
     NotepadText,
@@ -18,6 +20,7 @@ import type {
     ConsentItemInput,
     ConsentResponseType,
 } from '../../types/api';
+import { EventConsentPreview } from './EventConsentPreview';
 
 interface EventConsentEditorProps {
     value: ConsentConfigurationInput;
@@ -85,8 +88,8 @@ const templates: ConsentTemplate[] = [
         item: {
             category: 'EMERGENCY_CONTACT',
             title: '긴급 연락처',
-            content: '비상 상황에서 연락할 수 있는 보호자 또는 지인의 이름, 관계와 전화번호를 입력해 주세요.',
-            responseType: 'TEXT',
+            content: '비상 상황에서 연락할 수 있는 보호자 또는 지인의 전화번호를 입력해 주세요.',
+            responseType: 'PHONE',
             required: true,
         },
     },
@@ -143,12 +146,42 @@ const matchesTemplate = (item: ConsentItemInput, template: ConsentTemplate) => (
     && item.responseType === template.item.responseType
 );
 
-const responseTypeLabels: Record<ConsentResponseType, string> = {
-    CHECKBOX: '체크박스',
-    TEXT: '한 줄 입력',
-    TEXTAREA: '상세 입력',
-    INFORMATION: '안내만 표시',
-};
+const responseTypeGroups: Array<{
+    label: string;
+    options: Array<{ value: ConsentResponseType; label: string }>;
+}> = [
+    {
+        label: '동의·선택',
+        options: [{ value: 'CHECKBOX', label: '동의 체크박스' }],
+    },
+    {
+        label: '텍스트',
+        options: [
+            { value: 'TEXT', label: '짧은 답변' },
+            { value: 'TEXTAREA', label: '장문형 답변' },
+        ],
+    },
+    {
+        label: '연락처·링크',
+        options: [
+            { value: 'PHONE', label: '전화번호' },
+            { value: 'EMAIL', label: '이메일' },
+            { value: 'URL', label: '웹 주소' },
+        ],
+    },
+    {
+        label: '숫자·일정',
+        options: [
+            { value: 'NUMBER', label: '숫자' },
+            { value: 'DATE', label: '날짜' },
+            { value: 'TIME', label: '시간' },
+        ],
+    },
+    {
+        label: '표시',
+        options: [{ value: 'INFORMATION', label: '안내만 표시' }],
+    },
+];
 
 const templateGroups = [
     {
@@ -166,6 +199,7 @@ const templateGroups = [
 ];
 
 export function EventConsentEditor({ value, onChange }: EventConsentEditorProps) {
+    const [previewOpen, setPreviewOpen] = useState(false);
     const replaceItems = (items: ConsentItemInput[]) => {
         const normalizedItems = normalizeOrders(items);
         onChange({
@@ -213,11 +247,21 @@ export function EventConsentEditor({ value, onChange }: EventConsentEditorProps)
                 <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center justify-between gap-2">
                         <h2 className="text-sm font-black text-zinc-900">참가자 응답 시트</h2>
-                        {value.items.length > 0 && (
-                            <span className="rounded-full bg-blue-100 px-2.5 py-1 text-[11px] font-black text-[#162660]">
-                                {value.items.length}개 항목
-                            </span>
-                        )}
+                        <div className="flex items-center gap-2">
+                            {value.items.length > 0 && (
+                                <span className="rounded-full bg-blue-100 px-2.5 py-1 text-[11px] font-black text-[#162660]">
+                                    {value.items.length}개 항목
+                                </span>
+                            )}
+                            <button
+                                type="button"
+                                onClick={() => setPreviewOpen(true)}
+                                className="flex items-center gap-1.5 rounded-xl border border-blue-200 bg-white px-2.5 py-1.5 text-[11px] font-black text-[#162660] shadow-sm hover:bg-blue-50"
+                            >
+                                <Eye className="h-3.5 w-3.5" />
+                                미리보기
+                            </button>
+                        </div>
                     </div>
                     <p className="mt-1 text-xs leading-relaxed text-zinc-500">
                         필요한 템플릿을 각각 선택해 한 장의 시트를 만드세요. 템플릿 문구는 행사 요건에 맞게 검토해 주세요.
@@ -371,8 +415,12 @@ export function EventConsentEditor({ value, onChange }: EventConsentEditorProps)
                                     onChange={(event) => updateItem(index, { responseType: event.target.value as ConsentResponseType })}
                                     className="w-full rounded-xl border border-zinc-200 px-3 py-2 text-xs font-semibold"
                                 >
-                                    {Object.entries(responseTypeLabels).map(([responseType, label]) => (
-                                        <option key={responseType} value={responseType}>{label}</option>
+                                    {responseTypeGroups.map(group => (
+                                        <optgroup key={group.label} label={group.label}>
+                                            {group.options.map(option => (
+                                                <option key={option.value} value={option.value}>{option.label}</option>
+                                            ))}
+                                        </optgroup>
                                     ))}
                                 </select>
                             </label>
@@ -426,6 +474,13 @@ export function EventConsentEditor({ value, onChange }: EventConsentEditorProps)
                     템플릿을 선택하거나 맞춤 항목을 추가하면 참가자 응답 시트가 생성됩니다.
                 </div>
             )}
+
+            <EventConsentPreview
+                items={value.items}
+                consentWindowMinutes={value.consentWindowMinutes}
+                open={previewOpen}
+                onClose={() => setPreviewOpen(false)}
+            />
         </section>
     );
 }

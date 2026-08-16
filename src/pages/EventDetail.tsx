@@ -28,16 +28,18 @@ import {
 import { getApiErrorMessage, getApiErrorStatus } from '../lib/apiError';
 import { PlanningModeBadge } from '../components/event/PlanningModeBadge';
 import { getEventActivityLabel } from '../constants/eventActivity';
+import { ConsentResponseField } from '../components/event/ConsentResponseField';
+import {
+    getConsentResponseError,
+    isConsentItemComplete,
+    usesTextResponse,
+    type ConsentDraft,
+} from '../lib/consentResponse';
 
 interface EventDetailProps {
     eventId: number;
     onBack: () => void;
     isGuestApplication?: boolean;
-}
-
-interface ConsentDraft {
-    agreed?: boolean;
-    responseText?: string;
 }
 
 export default function EventDetail({ eventId, onBack, isGuestApplication = false }: EventDetailProps) {
@@ -193,16 +195,11 @@ export default function EventDetail({ eventId, onBack, isGuestApplication = fals
 
     const handleConsentSubmit = async () => {
         if (!event || !consentState) return;
-        const incompleteRequiredItem = consentState.items.find(item => {
-            if (!item.required) return false;
-            if (item.responseType === 'CHECKBOX') return consentAnswers[item.id]?.agreed !== true;
-            if (item.responseType === 'TEXT' || item.responseType === 'TEXTAREA') {
-                return !consentAnswers[item.id]?.responseText?.trim();
-            }
-            return false;
-        });
-        if (incompleteRequiredItem) {
-            alert(`필수 항목을 완료해 주세요: ${incompleteRequiredItem.title}`);
+        const responseError = consentState.items
+            .map(item => getConsentResponseError(item, consentAnswers[item.id]))
+            .find((message): message is string => Boolean(message));
+        if (responseError) {
+            alert(responseError);
             return;
         }
 
@@ -215,7 +212,7 @@ export default function EventDetail({ eventId, onBack, isGuestApplication = fals
                 agreed: item.responseType === 'CHECKBOX'
                     ? consentAnswers[item.id]?.agreed === true
                     : null,
-                responseText: item.responseType === 'TEXT' || item.responseType === 'TEXTAREA'
+                responseText: usesTextResponse(item.responseType)
                     ? consentAnswers[item.id]?.responseText?.trim() || null
                     : null,
             })));
@@ -277,13 +274,9 @@ export default function EventDetail({ eventId, onBack, isGuestApplication = fals
     const isPending = event.currentUserStatus === 'PENDING';
     const isConsentPending = event.currentUserStatus === 'CONSENT_PENDING';
     const requiredConsentItems = consentState?.items.filter(item => item.required) || [];
-    const completedRequiredItems = requiredConsentItems.filter(item => {
-        if (item.responseType === 'CHECKBOX') return consentAnswers[item.id]?.agreed === true;
-        if (item.responseType === 'TEXT' || item.responseType === 'TEXTAREA') {
-            return Boolean(consentAnswers[item.id]?.responseText?.trim());
-        }
-        return true;
-    }).length;
+    const completedRequiredItems = requiredConsentItems.filter(item => (
+        isConsentItemComplete(item, consentAnswers[item.id])
+    )).length;
     const applicationNotOpen = Boolean(
         event.applicationStartsAt
         && new Date(event.applicationStartsAt).getTime() > currentTime,
@@ -506,58 +499,14 @@ export default function EventDetail({ eventId, onBack, isGuestApplication = fals
                                                 </div>
                                             </div>
 
-                                            {item.responseType === 'CHECKBOX' && (
-                                                <label className={`mt-4 flex cursor-pointer items-start gap-3 rounded-xl border p-3 transition ${
-                                                    draft.agreed
-                                                        ? 'border-[#162660] bg-blue-50 text-[#162660]'
-                                                        : 'border-zinc-200 bg-zinc-50 text-zinc-600 hover:bg-zinc-100'
-                                                }`}>
-                                                    <input
-                                                        type="checkbox"
-                                                        checked={draft.agreed === true}
-                                                        onChange={(event) => setConsentAnswers(current => ({
-                                                            ...current,
-                                                            [item.id]: { ...current[item.id], agreed: event.target.checked },
-                                                        }))}
-                                                        className="mt-0.5 h-4 w-4 shrink-0 accent-[#162660]"
-                                                    />
-                                                    <span className="text-xs font-bold leading-relaxed">
-                                                        {item.required ? '내용을 확인했으며 동의합니다.' : '이 선택 항목에 동의합니다.'}
-                                                    </span>
-                                                </label>
-                                            )}
-
-                                            {item.responseType === 'TEXT' && (
-                                                <input
-                                                    value={draft.responseText || ''}
-                                                    onChange={(event) => setConsentAnswers(current => ({
-                                                        ...current,
-                                                        [item.id]: { ...current[item.id], responseText: event.target.value },
-                                                    }))}
-                                                    maxLength={5000}
-                                                    placeholder={item.required ? '필수 정보를 입력해 주세요' : '해당하는 경우 입력해 주세요'}
-                                                    className="mt-4 w-full rounded-xl border border-zinc-200 bg-zinc-50 px-3.5 py-3 text-sm outline-none transition focus:border-[#162660] focus:bg-white focus:ring-2 focus:ring-blue-100"
-                                                />
-                                            )}
-
-                                            {item.responseType === 'TEXTAREA' && (
-                                                <div className="mt-4">
-                                                    <textarea
-                                                        value={draft.responseText || ''}
-                                                        onChange={(event) => setConsentAnswers(current => ({
-                                                            ...current,
-                                                            [item.id]: { ...current[item.id], responseText: event.target.value },
-                                                        }))}
-                                                        maxLength={5000}
-                                                        rows={3}
-                                                        placeholder={item.required ? '필수 정보를 입력해 주세요' : '없으면 비워두어도 됩니다'}
-                                                        className="w-full resize-y rounded-xl border border-zinc-200 bg-zinc-50 px-3.5 py-3 text-sm leading-relaxed outline-none transition focus:border-[#162660] focus:bg-white focus:ring-2 focus:ring-blue-100"
-                                                    />
-                                                    <p className="mt-1 text-right text-[10px] text-zinc-400">
-                                                        {(draft.responseText || '').length}/5,000
-                                                    </p>
-                                                </div>
-                                            )}
+                                            <ConsentResponseField
+                                                item={item}
+                                                draft={draft}
+                                                onChange={(nextDraft) => setConsentAnswers(current => ({
+                                                    ...current,
+                                                    [item.id]: nextDraft,
+                                                }))}
+                                            />
                                         </section>
                                     );
                                 })}

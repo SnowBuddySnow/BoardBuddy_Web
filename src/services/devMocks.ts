@@ -407,9 +407,9 @@ const responseSheetConsentItems = (): ConsentItem[] => [
         id: 21004,
         category: 'EMERGENCY_CONTACT',
         title: '긴급 연락처',
-        content: '비상 상황에서 연락할 수 있는 보호자 또는 지인의 이름, 관계와 전화번호를 입력해 주세요.',
+        content: '비상 상황에서 연락할 수 있는 보호자 또는 지인의 전화번호를 입력해 주세요.',
         contentHash: 'd'.repeat(64),
-        responseType: 'TEXT',
+        responseType: 'PHONE',
         required: true,
         displayOrder: 3,
         documentVersion: 1,
@@ -477,10 +477,18 @@ export const submitDevEventConsents = (
         if (item.responseType === 'CHECKBOX' && item.required && response.agreed !== true) {
             throw new Error('필수 동의 항목에 동의해야 참가할 수 있습니다.');
         }
-        if ((item.responseType === 'TEXT' || item.responseType === 'TEXTAREA')
+        if (item.responseType !== 'CHECKBOX'
+            && item.responseType !== 'INFORMATION'
             && item.required
             && !response.responseText?.trim()) {
             throw new Error('필수 입력 항목을 작성해 주세요.');
+        }
+        if (item.responseType === 'PHONE' && response.responseText) {
+            const value = response.responseText.trim();
+            const digitCount = (value.match(/\d/g) || []).length;
+            if (!/^[0-9+() .-]+$/.test(value) || digitCount < 7 || digitCount > 15) {
+                throw new Error('올바른 전화번호를 입력해 주세요.');
+            }
         }
     }
 

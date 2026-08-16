@@ -254,7 +254,17 @@ export type ConsentCategory =
     | 'MARKETING'
     | 'PHOTO_VIDEO_USE'
     | 'OTHER';
-export type ConsentResponseType = 'CHECKBOX' | 'TEXT' | 'TEXTAREA' | 'INFORMATION';
+export type ConsentResponseType =
+    | 'CHECKBOX'
+    | 'TEXT'
+    | 'TEXTAREA'
+    | 'EMAIL'
+    | 'PHONE'
+    | 'NUMBER'
+    | 'DATE'
+    | 'TIME'
+    | 'URL'
+    | 'INFORMATION';
 
 export interface Event {
     id: number;
