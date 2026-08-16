@@ -49,7 +49,7 @@ export default function OperationsCenter({
     },
     features.offSeason && canManageGroups && {
       id: 'groups',
-      title: '이벤트 주최자 그룹',
+      title: '호스트 그룹',
       description: '참여 크루와 운영 권한을 관리합니다.',
       icon: ShieldCheck,
       onClick: onGroupsClick,
@@ -58,7 +58,7 @@ export default function OperationsCenter({
     canManageCrew && {
       id: 'crew',
       title: '크루 관리',
-      description: '크루 운영과 이벤트 관리자 지정을 확인합니다.',
+      description: '크루 운영과 이벤트 호스트 지정을 확인합니다.',
       icon: UsersRound,
       onClick: onCrewClick,
       priority: false,

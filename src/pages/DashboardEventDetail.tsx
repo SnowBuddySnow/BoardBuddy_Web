@@ -265,7 +265,7 @@ export default function DashboardEventDetail({ eventId, onBack, onEditClick }: D
                                             <th className="px-2 py-3">상태</th>
                                             <th className="px-2 py-3">신청 일시</th>
                                             <th className="px-2 py-3">입금 상태</th>
-                                            <th className="px-2 py-3">관리자 메모</th>
+                                            <th className="px-2 py-3">호스트 메모</th>
                                             <th className="px-2 py-3 text-right">관리</th>
                                         </tr>
                                     </thead>
@@ -312,10 +312,10 @@ export default function DashboardEventDetail({ eventId, onBack, onEditClick }: D
                                                             type="text"
                                                             value={part.managerMemo ?? ''}
                                                             onChange={event => updateParticipantDraft(part.id, { managerMemo: event.target.value })}
-                                                            placeholder="운영진만 보는 메모"
+                                                            placeholder="호스트만 보는 메모"
                                                             maxLength={1000}
                                                             className="w-36 px-2.5 py-2 bg-white border border-zinc-200 rounded-lg text-xs text-zinc-700 focus:outline-none focus:ring-2 focus:ring-[#162660]/20"
-                                                            aria-label={`User ${part.userId} 관리자 메모`}
+                                                            aria-label={`User ${part.userId} 호스트 메모`}
                                                         />
                                                     </td>
                                                     <td className="px-2 py-3.5 text-right">

@@ -142,7 +142,7 @@ export default function DashboardGroupDetail({ groupId, developerAccess, onBack 
             console.error('Failed to create organizer invite link:', error);
             const apiMessage = getApiErrorMessage(error);
             if (apiMessage?.includes('owner')) {
-                alert('그룹 OWNER만 새 운영진을 초대할 수 있습니다.');
+                alert('호스트 그룹 OWNER만 새 호스트를 초대할 수 있습니다.');
             } else {
                 alert(apiMessage ? `링크 생성에 실패했습니다: ${apiMessage}` : '초대 링크 생성에 실패했습니다.');
             }
@@ -157,7 +157,7 @@ export default function DashboardGroupDetail({ groupId, developerAccess, onBack 
             return;
         }
 
-        const confirmDelete = window.confirm(`정말 ${member.userName} 님을 이 주최자 그룹에서 삭제하시겠습니까?`);
+        const confirmDelete = window.confirm(`정말 ${member.userName} 님을 이 호스트 그룹에서 삭제하시겠습니까?`);
         if (!confirmDelete) return;
 
         try {
@@ -214,7 +214,7 @@ export default function DashboardGroupDetail({ groupId, developerAccess, onBack 
         } catch (error: unknown) {
             console.error('Failed to add organizer group member directly:', error);
             const message = getApiErrorMessage(error);
-            alert(message ? `직접 추가에 실패했습니다: ${message}` : '운영진을 직접 추가하지 못했습니다.');
+            alert(message ? `직접 추가에 실패했습니다: ${message}` : '호스트를 직접 추가하지 못했습니다.');
         } finally {
             setActionLoading(false);
         }
@@ -278,7 +278,7 @@ export default function DashboardGroupDetail({ groupId, developerAccess, onBack 
                     </Button>
                     <div>
                         <h1 className="text-lg font-black text-zinc-900 leading-snug">{group.name}</h1>
-                        <p className="text-xs text-zinc-400">연합 크루 및 인증 운영진 관리</p>
+                        <p className="text-xs text-zinc-400">연합 크루 및 호스트 관리</p>
                     </div>
                 </div>
 
@@ -292,7 +292,7 @@ export default function DashboardGroupDetail({ groupId, developerAccess, onBack 
                         className="bg-[#162660] hover:bg-[#1e3a8a] text-white border-none rounded-full h-10 py-0 font-bold flex items-center gap-1.5 shadow-sm"
                     >
                         <UserPlus className="w-4 h-4" />
-                        운영진 추가
+                        호스트 추가
                     </Button>
                 )}
             </header>
@@ -302,7 +302,7 @@ export default function DashboardGroupDetail({ groupId, developerAccess, onBack 
                 {isViewer && (
                     <div className="bg-zinc-50 border border-zinc-200 rounded-2xl p-4 flex items-start gap-3 text-xs text-zinc-600">
                         <Info className="w-4 h-4 text-zinc-400 shrink-0 mt-0.5" />
-                        <span>귀하는 이 이벤트 주최자 그룹의 <strong>VIEWER(뷰어)</strong> 권한이므로 멤버 추가 및 삭제 같은 쓰기 작업이 제한됩니다.</span>
+                        <span>귀하는 이 호스트 그룹의 <strong>VIEWER(뷰어)</strong> 권한이므로 멤버 추가 및 삭제 같은 쓰기 작업이 제한됩니다.</span>
                     </div>
                 )}
 
@@ -324,7 +324,7 @@ export default function DashboardGroupDetail({ groupId, developerAccess, onBack 
                     <section className="border-y border-zinc-200 bg-white px-5 py-4 space-y-3">
                         <div className="flex items-center gap-2">
                             <Link2 className="w-4 h-4 text-zinc-500" />
-                            <h2 className="text-sm font-bold text-zinc-900">운영진 초대 링크</h2>
+                            <h2 className="text-sm font-bold text-zinc-900">호스트 초대 링크</h2>
                         </div>
                         {inviteLinks.map(link => (
                             <div key={link.id} className="flex items-center justify-between gap-4 border-t border-zinc-100 pt-3 first:border-0 first:pt-0 text-sm">
@@ -420,9 +420,9 @@ export default function DashboardGroupDetail({ groupId, developerAccess, onBack 
                     <div className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-3xl border border-zinc-100 bg-white p-6 shadow-2xl animate-in zoom-in-95 duration-150">
                         <div className="flex items-center justify-between border-b border-zinc-100 pb-3 mb-4">
                             <div>
-                                <h3 className="text-base font-bold text-zinc-900">운영진 추가</h3>
+                                <h3 className="text-base font-bold text-zinc-900">호스트 추가</h3>
                                 <p className="mt-1 text-xs text-zinc-400">
-                                    {addMode === 'link' ? '링크를 공유해 참여를 요청합니다.' : '검색한 운영진을 그룹에 바로 추가합니다.'}
+                                    {addMode === 'link' ? '링크를 공유해 참여를 요청합니다.' : '검색한 호스트를 그룹에 바로 추가합니다.'}
                                 </p>
                             </div>
                             <button
@@ -554,7 +554,7 @@ export default function DashboardGroupDetail({ groupId, developerAccess, onBack 
                         ) : (
                           <form onSubmit={handleDirectAdd} className="space-y-4">
                             <div className="space-y-1.5">
-                                <label className="text-xs font-bold text-zinc-500 uppercase tracking-wider">운영진 검색</label>
+                                <label className="text-xs font-bold text-zinc-500 uppercase tracking-wider">호스트 검색</label>
                                 <div className="relative">
                                     <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
                                     <input
@@ -574,7 +574,7 @@ export default function DashboardGroupDetail({ groupId, developerAccess, onBack 
                                     {candidateLoading ? (
                                         <p className="py-6 text-center text-xs text-zinc-400">검색 중...</p>
                                     ) : candidates.length === 0 ? (
-                                        <p className="py-6 text-center text-xs text-zinc-400">추가할 수 있는 운영진이 없습니다.</p>
+                                        <p className="py-6 text-center text-xs text-zinc-400">추가할 수 있는 호스트가 없습니다.</p>
                                     ) : candidates.map(candidate => (
                                         <button
                                             key={candidate.accountId}
@@ -617,7 +617,7 @@ export default function DashboardGroupDetail({ groupId, developerAccess, onBack 
                             </div>
 
                             <div className="rounded-2xl border border-amber-100 bg-amber-50 p-3 text-[11px] leading-relaxed text-amber-800">
-                                선택한 운영진은 별도의 수락 과정 없이 이 그룹에 바로 추가됩니다.
+                                선택한 호스트는 별도의 수락 과정 없이 이 그룹에 바로 추가됩니다.
                             </div>
 
                             <div className="flex gap-3 pt-2">

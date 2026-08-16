@@ -194,7 +194,7 @@ export default function Parties({ onBack, onEventClick, onCreateClick, canCreate
                                             </div>
                                             {event.organizerGroupName && (
                                                 <span className="max-w-24 truncate text-right text-xs text-zinc-400 font-medium">
-                                                    주최 {event.organizerGroupName}
+                                                    호스트 {event.organizerGroupName}
                                                 </span>
                                             )}
                                         </div>

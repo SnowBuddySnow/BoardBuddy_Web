@@ -458,7 +458,7 @@ export default function EventDetail({ eventId, onBack, isGuestApplication = fals
 
                         {event.organizerGroupName && (
                             <div className="flex items-center justify-between text-sm">
-                                <span className="text-zinc-500 font-medium">주최 그룹</span>
+                                <span className="text-zinc-500 font-medium">호스트 그룹</span>
                                 <span className="font-bold text-zinc-800">{event.organizerGroupName}</span>
                             </div>
                         )}
@@ -466,7 +466,7 @@ export default function EventDetail({ eventId, onBack, isGuestApplication = fals
                         <div className="flex items-center justify-between text-sm">
                             <span className="text-zinc-500 font-medium">참가 승인 정책</span>
                             <span className="font-bold text-zinc-800">
-                                {event.joinPolicy === 'INSTANT' ? '즉시 승인' : '운영진 승인 필요'}
+                                {event.joinPolicy === 'INSTANT' ? '즉시 승인' : '호스트 승인 필요'}
                             </span>
                         </div>
 
@@ -661,7 +661,7 @@ export default function EventDetail({ eventId, onBack, isGuestApplication = fals
                                 <div>
                                     <span className="font-semibold text-zinc-400">입금 기한</span>
                                     <p className="mt-1 font-black text-zinc-900">
-                                        {paymentInfo.paymentDeadlineAt ? formatDate(paymentInfo.paymentDeadlineAt) : '운영진 문의'}
+                                        {paymentInfo.paymentDeadlineAt ? formatDate(paymentInfo.paymentDeadlineAt) : '호스트 문의'}
                                     </p>
                                 </div>
                             </div>
@@ -797,7 +797,7 @@ export default function EventDetail({ eventId, onBack, isGuestApplication = fals
                             전화번호 제공 동의
                         </h3>
                         <p className="text-sm text-zinc-600 dark:text-zinc-400 mb-6 text-center leading-relaxed">
-                            예약 확인, 안내 및 안전 연락 등 원활한 이벤트 운영을 위해 이벤트 관리자(호스트)에게 본인의 전화번호를 제공하시겠습니까?
+                            예약 확인, 안내 및 안전 연락 등 원활한 이벤트 운영을 위해 호스트에게 본인의 전화번호를 제공하시겠습니까?
                             <br />
                             <span className="text-xs text-zinc-400 dark:text-zinc-500 block mt-2.5 leading-normal">
                                 * '항상 동의' 선택 시 마이페이지 계정 관리에서 설정을 변경하기 전까지 더 이상 동의 여부를 묻지 않습니다.

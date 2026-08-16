@@ -122,7 +122,7 @@ export default function DashboardEventEdit({ eventId, onBack, onSuccess }: Dashb
             && (crewMemberLimit < 1 || crewMemberLimit > capacity)) {
             return alert('크루별 참가 인원은 1명 이상, 전체 정원 이하여야 합니다.');
         }
-        if (!organizerGroupId) return alert('주최 그룹을 선택해 주세요.');
+        if (!organizerGroupId) return alert('호스트 그룹을 선택해 주세요.');
 
         // Format dates correctly (LocalDateTime format like YYYY-MM-DDTHH:MM:SS)
         const formattedStartsAt = startsAt.includes(':') && startsAt.split(':').length === 2 ? `${startsAt}:00` : startsAt;
@@ -198,7 +198,7 @@ export default function DashboardEventEdit({ eventId, onBack, onSuccess }: Dashb
                         <PlanningModeSelector value={planningMode} onChange={setPlanningMode} />
                         {/* Organizer Group Selection */}
                         <div className="space-y-1.5">
-                            <label className="text-xs font-bold text-zinc-400 uppercase tracking-wider">주최 그룹 *</label>
+                            <label className="text-xs font-bold text-zinc-400 uppercase tracking-wider">호스트 그룹 *</label>
                             <select
                                 value={organizerGroupId}
                                 onChange={e => setOrganizerGroupId(Number(e.target.value))}
@@ -401,7 +401,7 @@ export default function DashboardEventEdit({ eventId, onBack, onSuccess }: Dashb
                         {/* Crew access is inherited from the organizer group. */}
                         {visibilityType === 'CREW_LIMITED' && (
                             <div className="bg-blue-50 border border-blue-100 rounded-2xl px-4 py-3 text-sm text-blue-800">
-                                선택한 주최자 그룹에 참여 중인 크루만 자동으로 참가할 수 있습니다.
+                                선택한 호스트 그룹에 참여 중인 크루만 자동으로 참가할 수 있습니다.
                             </div>
                         )}
 

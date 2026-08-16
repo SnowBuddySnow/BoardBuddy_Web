@@ -402,7 +402,7 @@ function App() {
         <div className="flex h-full items-center justify-center bg-[#FAF8F3] px-6">
           <div className="max-w-md rounded-3xl border border-zinc-200 bg-white p-8 text-center shadow-sm">
             <h1 className="text-xl font-black text-zinc-900">관리 권한이 없습니다</h1>
-            <p className="mt-2 text-sm text-zinc-500">관리자 그룹에 속한 계정으로 다시 시도해 주세요.</p>
+            <p className="mt-2 text-sm text-zinc-500">호스트 그룹에 속한 계정으로 다시 시도해 주세요.</p>
             <button onClick={() => setCurrentView('home')} className="mt-6 rounded-xl border-0 bg-[#162660] px-5 py-3 text-sm font-bold text-white cursor-pointer">
               홈으로 돌아가기
             </button>

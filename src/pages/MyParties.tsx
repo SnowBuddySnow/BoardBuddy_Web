@@ -119,7 +119,7 @@ export default function MyParties({ onBack, onEventClick }: MyPartiesProps) {
                                     </div>
 
                                     <div className="flex items-center justify-between border-t border-zinc-50 pt-3 mt-2 text-xs text-zinc-400 font-medium">
-                                        <span>주최 {event.organizerGroupName}</span>
+                                        <span>호스트 {event.organizerGroupName}</span>
                                         <div className="flex items-center gap-1 font-bold text-zinc-700">
                                             <Users className="w-4 h-4 text-zinc-400" />
                                             <span>

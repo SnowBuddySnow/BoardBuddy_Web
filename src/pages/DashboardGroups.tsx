@@ -55,7 +55,7 @@ export default function DashboardGroups({
             setIsCreateOpen(false);
         } catch (error) {
             console.error('Failed to create organizer group:', error);
-            alert('활성 크루 운영진만 주최자 그룹을 만들 수 있습니다.');
+            alert('활성 크루 운영진만 호스트 그룹을 만들 수 있습니다.');
         } finally {
             setActionLoading(false);
         }
@@ -151,7 +151,7 @@ export default function DashboardGroups({
                         <section className="border-y border-zinc-200 bg-white px-5 py-4 space-y-3">
                             <div className="flex items-center gap-2">
                                 <Mail className="w-4 h-4 text-[#162660]" />
-                                <h2 className="text-sm font-bold text-zinc-900">받은 운영진 초대</h2>
+                                <h2 className="text-sm font-bold text-zinc-900">받은 호스트 그룹 초대</h2>
                             </div>
                             {invitations.map(invitation => (
                                 <div key={invitation.id} className="flex items-center justify-between gap-4 text-sm">
@@ -182,8 +182,8 @@ export default function DashboardGroups({
                         </section>
                     )}
                     <div>
-                        <h2 className="text-2xl font-black text-zinc-950">주최자 그룹 설정</h2>
-                        <p className="text-sm text-zinc-500 mt-1">내가 가입되어 있고 이벤트를 주최할 권한이 있는 그룹 목록입니다.</p>
+                        <h2 className="text-2xl font-black text-zinc-950">호스트 그룹 설정</h2>
+                        <p className="text-sm text-zinc-500 mt-1">내가 가입되어 있고 이벤트 호스트 권한이 있는 그룹 목록입니다.</p>
                     </div>
 
                     {loading ? (
@@ -226,7 +226,7 @@ export default function DashboardGroups({
                                         <div className="border-t border-zinc-50 pt-4 flex items-center justify-between">
                                             <div className="flex items-center gap-1 text-[11px] font-bold text-zinc-400">
                                                 <Award className="w-3.5 h-3.5 text-zinc-400" />
-                                                <span>운영진 관리 가능</span>
+                                                <span>호스트 관리 가능</span>
                                             </div>
                                             <Button 
                                                 variant="ghost" 
@@ -249,7 +249,7 @@ export default function DashboardGroups({
                 <div className="fixed inset-0 bg-black/30 z-[9999] flex items-center justify-center p-4">
                     <form onSubmit={handleCreateGroup} className="bg-white border border-zinc-200 rounded-2xl w-full max-w-md p-6 shadow-2xl space-y-5">
                         <div className="flex items-center justify-between">
-                            <h2 className="text-base font-bold text-zinc-900">주최자 그룹 만들기</h2>
+                            <h2 className="text-base font-bold text-zinc-900">호스트 그룹 만들기</h2>
                             <button type="button" onClick={() => setIsCreateOpen(false)} className="p-1 text-zinc-400 hover:text-zinc-700" title="닫기">
                                 <X className="w-5 h-5" />
                             </button>
@@ -261,7 +261,7 @@ export default function DashboardGroups({
                                 onChange={event => setNewGroupName(event.target.value)}
                                 maxLength={100}
                                 required
-                                placeholder="예: 수도권 연합 운영진"
+                                placeholder="예: 수도권 연합 호스트"
                                 className="w-full px-4 py-2.5 border border-zinc-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#162660]/20"
                             />
                         </div>

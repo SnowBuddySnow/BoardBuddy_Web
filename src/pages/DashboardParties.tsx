@@ -171,7 +171,7 @@ export default function DashboardParties({
                         <ShieldAlert className="w-16 h-16 stroke-[1.2] mb-3 text-zinc-300" />
                         <h2 className="text-xl font-bold text-zinc-900 mb-1">관리 중인 이벤트가 없습니다</h2>
                         <p className="text-sm max-w-md mt-1 mb-6">
-                            주최자 그룹에서 등록한 이벤트가 아직 없습니다. 새로운 이벤트를 직접 개설해보세요.
+                            호스트 그룹에서 등록한 이벤트가 아직 없습니다. 새로운 이벤트를 직접 개설해보세요.
                         </p>
                         <Button
                             variant="primary"

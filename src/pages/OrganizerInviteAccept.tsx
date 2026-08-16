@@ -25,7 +25,7 @@ const eligibilityText = (reason: string) => {
     if (reason.includes('assigned event manager')) return '이 링크는 크루에서 지정된 이벤트 매니저만 수락할 수 있습니다.';
     if (reason.includes('crew manager, captain')) return '이벤트 운영 권한이 있는 계정만 수락할 수 있습니다.';
     if (reason.includes('active crew membership')) return '활성 크루 가입 정보가 필요합니다.';
-    if (reason.includes('already belong')) return '이미 이 운영진 그룹에 참여하고 있습니다.';
+    if (reason.includes('already belong')) return '이미 이 호스트 그룹에 참여하고 있습니다.';
     if (reason.includes('expired, exhausted, or revoked')) return '만료되었거나 사용이 끝난 초대 링크입니다.';
     return reason;
 };
@@ -89,7 +89,7 @@ export default function OrganizerInviteAccept({
                     ) : accepted ? (
                         <div className="text-center">
                             <CheckCircle2 className="mx-auto h-12 w-12 text-emerald-600" />
-                            <h1 className="mt-4 text-xl font-black text-zinc-900">운영진 그룹에 참여했습니다</h1>
+                            <h1 className="mt-4 text-xl font-black text-zinc-900">호스트 그룹에 참여했습니다</h1>
                             <p className="mt-2 text-sm text-zinc-500">
                                 {accepted.groupName} · {accepted.crewName}
                             </p>
@@ -116,7 +116,7 @@ export default function OrganizerInviteAccept({
                             <div className="border-b border-zinc-100 pb-5">
                                 <div className="flex items-center gap-2 text-xs font-bold text-[#162660]">
                                     <Link2 className="h-4 w-4" />
-                                    운영진 초대
+                                    호스트 초대
                                 </div>
                                 <h1 className="mt-3 text-2xl font-black text-zinc-900">{preview.groupName}</h1>
                                 <p className="mt-2 text-sm text-zinc-500">

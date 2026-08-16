@@ -46,7 +46,7 @@ const templates: ConsentTemplate[] = [
         item: {
             category: 'RISK_ACKNOWLEDGEMENT',
             title: '활동 위험 확인 및 안전수칙 동의',
-            content: '활동 중 발생할 수 있는 위험과 주최자가 안내한 안전수칙을 확인했으며, 안전 장비 착용 및 현장 안내를 준수합니다.',
+            content: '활동 중 발생할 수 있는 위험과 호스트가 안내한 안전수칙을 확인했으며, 안전 장비 착용 및 현장 안내를 준수합니다.',
             responseType: 'CHECKBOX',
             required: true,
         },
@@ -97,7 +97,7 @@ const templates: ConsentTemplate[] = [
         key: 'MEDICATION',
         group: 'PARTICIPANT_INFO',
         label: '복용 약물·건강 정보',
-        description: '운영진이 알아야 할 건강 정보를 선택 입력받습니다.',
+        description: '호스트가 알아야 할 건강 정보를 선택 입력받습니다.',
         icon: Pill,
         item: {
             category: 'MEDICATION_INFORMATION',
@@ -116,7 +116,7 @@ const templates: ConsentTemplate[] = [
         item: {
             category: 'DIETARY_ACCESSIBILITY',
             title: '식이 제한 및 접근성 지원 요청',
-            content: '알러지, 식이 제한, 이동 또는 의사소통 지원 등 운영진이 준비해야 할 사항이 있다면 작성해 주세요.',
+            content: '알러지, 식이 제한, 이동 또는 의사소통 지원 등 호스트가 준비해야 할 사항이 있다면 작성해 주세요.',
             responseType: 'TEXTAREA',
             required: false,
         },

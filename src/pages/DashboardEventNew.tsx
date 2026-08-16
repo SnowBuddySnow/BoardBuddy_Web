@@ -99,7 +99,7 @@ export default function DashboardEventNew({ onBack, onSuccess }: DashboardEventN
             && (crewMemberLimit < 1 || crewMemberLimit > capacity)) {
             return alert('크루별 참가 인원은 1명 이상, 전체 정원 이하여야 합니다.');
         }
-        if (!organizerGroupId) return alert('주최 그룹을 선택해 주세요.');
+        if (!organizerGroupId) return alert('호스트 그룹을 선택해 주세요.');
 
         // Format dates correctly (backend requires LocalDateTime format like YYYY-MM-DDTHH:MM:SS)
         // input datetime-local returns YYYY-MM-DDTHH:MM. We need to add :00 seconds
@@ -173,9 +173,9 @@ export default function DashboardEventNew({ onBack, onSuccess }: DashboardEventN
                 ) : groups.length === 0 ? (
                     <div className="bg-white rounded-3xl p-10 border border-zinc-100 text-center text-zinc-500 shadow-sm">
                         <HelpCircle className="w-12 h-12 stroke-[1.5] text-zinc-300 mx-auto mb-2" />
-                        <h3 className="text-base font-bold text-zinc-900">주최 권한이 없습니다</h3>
+                        <h3 className="text-base font-bold text-zinc-900">호스트 권한이 없습니다</h3>
                         <p className="text-xs mt-1 leading-relaxed">
-                            이벤트를 생성하려면 이벤트 주최자 그룹에서 OWNER 또는 MANAGER 역할을 받아야 합니다.
+                            이벤트를 생성하려면 호스트 그룹에서 OWNER 또는 MANAGER 역할을 받아야 합니다.
                         </p>
                         <Button variant="primary" onClick={onBack} className="rounded-full mt-4">
                             돌아가기
@@ -186,7 +186,7 @@ export default function DashboardEventNew({ onBack, onSuccess }: DashboardEventN
                         <PlanningModeSelector value={planningMode} onChange={handlePlanningModeChange} />
                         {/* Organizer Group Selection */}
                         <div className="space-y-1.5">
-                            <label className="text-xs font-bold text-zinc-400 uppercase tracking-wider">주최 그룹 *</label>
+                            <label className="text-xs font-bold text-zinc-400 uppercase tracking-wider">호스트 그룹 *</label>
                             <select
                                 value={organizerGroupId}
                                 onChange={e => setOrganizerGroupId(Number(e.target.value))}
@@ -212,7 +212,7 @@ export default function DashboardEventNew({ onBack, onSuccess }: DashboardEventN
                                             onChange={event => handleAnonymousEventChange(event.target.checked)}
                                             className="h-4 w-4 accent-[#162660]"
                                         />
-                                        이름없는이벤트생성
+                                        자동 제목 사용
                                     </label>
                                 )}
                             </div>
@@ -392,7 +392,7 @@ export default function DashboardEventNew({ onBack, onSuccess }: DashboardEventN
                         {/* Crew access is inherited from the organizer group. */}
                         {visibilityType === 'CREW_LIMITED' && (
                             <div className="bg-blue-50 border border-blue-100 rounded-2xl px-4 py-3 text-sm text-blue-800">
-                                선택한 주최자 그룹에 참여 중인 크루만 자동으로 참가할 수 있습니다.
+                                선택한 호스트 그룹에 참여 중인 크루만 자동으로 참가할 수 있습니다.
                             </div>
                         )}
 

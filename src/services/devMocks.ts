@@ -30,12 +30,20 @@ const devConsentDueKey = (eventId: number) => `dev_event_consent_due_${eventId}`
 const devConsentResponsesKey = (eventId: number) => `dev_event_consent_responses_${eventId}`;
 const devConsentDraftsKey = (eventId: number) => `dev_event_consent_drafts_${eventId}`;
 const RETIRED_EVENT_TERM = String.fromCodePoint(0xc18c, 0xbaa8, 0xc784);
+const DEV_HOST_LABEL_MIGRATIONS = [
+    ['이벤트 운영 샘플 그룹', '호스트 샘플 그룹'],
+    ['여름 수상 스포츠 운영진', '여름 수상 스포츠 호스트팀'],
+] as const;
 
 const readMigratedDevStorage = <T>(key: string): T | null => {
     const stored = localStorage.getItem(key);
     if (!stored) return null;
 
-    const migrated = stored.split(RETIRED_EVENT_TERM).join('이벤트');
+    const eventTerminologyMigrated = stored.split(RETIRED_EVENT_TERM).join('이벤트');
+    const migrated = DEV_HOST_LABEL_MIGRATIONS.reduce(
+        (value, [previousLabel, nextLabel]) => value.split(previousLabel).join(nextLabel),
+        eventTerminologyMigrated,
+    );
     if (migrated !== stored) {
         localStorage.setItem(key, migrated);
     }
@@ -80,7 +88,7 @@ const sampleEvents = (): Event[] => [
     {
         id: 10001,
         title: '한강 웨이크보드 체험 데이',
-        description: '장비 안내와 초보자 세션을 포함한 운영진 진행 행사입니다.',
+        description: '장비 안내와 초보자 세션을 포함한 호스트 진행 이벤트입니다.',
         activityType: 'WAKE',
         planningMode: 'MANAGER_PLANNED',
         applicationStartsAt: '2026-07-16T18:00:00',
@@ -96,7 +104,7 @@ const sampleEvents = (): Event[] => [
         visibilityType: 'CREW_LIMITED',
         joinPolicy: 'APPROVAL_REQUIRED',
         organizerGroupId: 1,
-        organizerGroupName: '여름 수상 스포츠 운영진',
+        organizerGroupName: '여름 수상 스포츠 호스트팀',
         currentUserStatus: 'JOINED',
         createdAt: '2026-07-01T10:00:00',
         updatedAt: '2026-07-01T10:00:00',
@@ -119,7 +127,7 @@ const sampleEvents = (): Event[] => [
         visibilityType: 'PUBLIC',
         joinPolicy: 'INSTANT',
         organizerGroupId: 1,
-        organizerGroupName: '여름 수상 스포츠 운영진',
+        organizerGroupName: '여름 수상 스포츠 호스트팀',
         currentUserStatus: 'NONE',
         createdAt: '2026-07-03T10:00:00',
         updatedAt: '2026-07-03T10:00:00',
@@ -143,7 +151,7 @@ const sampleEvents = (): Event[] => [
         visibilityType: 'CREW_LIMITED',
         joinPolicy: 'INSTANT',
         organizerGroupId: 1,
-        organizerGroupName: '여름 수상 스포츠 운영진',
+        organizerGroupName: '여름 수상 스포츠 호스트팀',
         currentUserStatus: 'PENDING',
         createdAt: '2026-07-05T10:00:00',
         updatedAt: '2026-07-05T10:00:00',
@@ -151,7 +159,7 @@ const sampleEvents = (): Event[] => [
     {
         id: 10004,
         title: '서핑 원데이 클래스',
-        description: '정원 마감된 운영진 진행 서핑 클래스입니다.',
+        description: '정원 마감된 호스트 진행 서핑 클래스입니다.',
         activityType: 'SURF',
         planningMode: 'MANAGER_PLANNED',
         applicationStartsAt: '2026-07-22T20:00:00',
@@ -167,7 +175,7 @@ const sampleEvents = (): Event[] => [
         visibilityType: 'CREW_LIMITED',
         joinPolicy: 'APPROVAL_REQUIRED',
         organizerGroupId: 1,
-        organizerGroupName: '여름 수상 스포츠 운영진',
+        organizerGroupName: '여름 수상 스포츠 호스트팀',
         currentUserStatus: 'NONE',
         createdAt: '2026-07-06T10:00:00',
         updatedAt: '2026-07-06T10:00:00',
@@ -248,7 +256,7 @@ export const getDevParties = (): Event[] => {
             visibilityType: 'PUBLIC',
             joinPolicy: 'INSTANT',
             organizerGroupId: 1,
-            organizerGroupName: '이벤트 운영 샘플 그룹',
+            organizerGroupName: '호스트 샘플 그룹',
             currentUserStatus: 'NONE',
             createdAt: now(),
             updatedAt: now(),
@@ -445,7 +453,7 @@ const responseSheetConsentItems = (): ConsentItem[] => [
         id: 21005,
         category: 'MEDICATION_INFORMATION',
         title: '복용 약물 및 건강 유의사항',
-        content: '현재 복용 중인 약물, 알러지 또는 현장에서 운영진이 알아야 할 건강 유의사항이 있다면 작성해 주세요.',
+        content: '현재 복용 중인 약물, 알러지 또는 현장에서 호스트가 알아야 할 건강 유의사항이 있다면 작성해 주세요.',
         contentHash: 'e'.repeat(64),
         responseType: 'TEXTAREA',
         required: false,
@@ -456,7 +464,7 @@ const responseSheetConsentItems = (): ConsentItem[] => [
         id: 21006,
         category: 'DIETARY_ACCESSIBILITY',
         title: '식이 제한 및 접근성 지원 요청',
-        content: '알러지, 식이 제한, 이동 또는 의사소통 지원 등 운영진이 준비해야 할 사항이 있다면 작성해 주세요.',
+        content: '알러지, 식이 제한, 이동 또는 의사소통 지원 등 호스트가 준비해야 할 사항이 있다면 작성해 주세요.',
         contentHash: 'f'.repeat(64),
         responseType: 'TEXTAREA',
         required: false,
@@ -652,7 +660,7 @@ export const getDevEventPaymentInfo = (eventId: number): EventPaymentPolicy => {
         bankAccountNumber: '110-123-456789',
         bankAccountHolder: '보드버디 체험팀',
         paymentDeadlineAt: event.paymentDeadlineAt ?? null,
-        paymentInstructions: '반드시 참가자 본인 이름으로 입금해 주세요. 입금 확인은 운영진이 수동으로 처리합니다.',
+        paymentInstructions: '반드시 참가자 본인 이름으로 입금해 주세요. 입금 확인은 호스트가 수동으로 처리합니다.',
         refundPolicy: '행사 3일 전까지 취소하면 전액 환불되며, 이후에는 장비 예약 비용을 제외하고 환불됩니다.',
     };
 };
@@ -689,7 +697,7 @@ export const getDevOrganizerGroups = (): OrganizerGroup[] => {
     if (roleOverride === 'organizer' || roleOverride === 'admin' || roleOverride === 'viewer') {
         const stored = readMigratedDevStorage<OrganizerGroup[]>(DEV_GROUPS_KEY);
         if (stored) return stored;
-        const groups = [{ id: 1, name: '이벤트 운영 샘플 그룹' }];
+        const groups = [{ id: 1, name: '호스트 샘플 그룹' }];
         localStorage.setItem(DEV_GROUPS_KEY, JSON.stringify(groups));
         return groups;
     }
@@ -705,7 +713,7 @@ export const createDevOrganizerGroup = (name: string): OrganizerGroup => {
 };
 
 export const getDevOrganizerGroup = (groupId: number): OrganizerGroup => (
-    getDevOrganizerGroups().find(group => group.id === groupId) || { id: groupId, name: '이벤트 운영 샘플 그룹' }
+    getDevOrganizerGroups().find(group => group.id === groupId) || { id: groupId, name: '호스트 샘플 그룹' }
 );
 
 export const getDevGroupMembers = (groupId: number): OrganizerGroupMembership[] => {

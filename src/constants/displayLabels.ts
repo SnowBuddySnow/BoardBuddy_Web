@@ -15,9 +15,9 @@ export const crewRoleLabel: Record<CrewRole, string> = {
 };
 
 export const eventGroupRoleLabel: Record<OrganizerGroupMembership['role'], string> = {
-  EVENT_GROUP_OWNER: '이벤트 그룹 오너',
-  EVENT_GROUP_MANAGER: '이벤트 그룹 매니저',
-  EVENT_GROUP_VIEWER: '이벤트 그룹 뷰어',
+  EVENT_GROUP_OWNER: '호스트 그룹 오너',
+  EVENT_GROUP_MANAGER: '호스트 그룹 매니저',
+  EVENT_GROUP_VIEWER: '호스트 그룹 뷰어',
 };
 
 export const eventStatusLabel: Record<EventStatus, string> = {
