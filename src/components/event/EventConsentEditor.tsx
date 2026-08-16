@@ -26,6 +26,7 @@ interface EventConsentEditorProps {
 
 interface ConsentTemplate {
     key: string;
+    group: 'CONSENT' | 'PARTICIPANT_INFO' | 'NOTICE';
     label: string;
     description: string;
     icon: typeof ShieldCheck;
@@ -35,6 +36,7 @@ interface ConsentTemplate {
 const templates: ConsentTemplate[] = [
     {
         key: 'SAFETY',
+        group: 'CONSENT',
         label: '안전·위험 확인',
         description: '안전수칙과 활동 위험을 필수로 확인합니다.',
         icon: AlertTriangle,
@@ -48,6 +50,7 @@ const templates: ConsentTemplate[] = [
     },
     {
         key: 'PRIVACY',
+        group: 'CONSENT',
         label: '개인정보 이용',
         description: '행사 운영에 필요한 정보 이용 동의를 받습니다.',
         icon: ShieldCheck,
@@ -61,6 +64,7 @@ const templates: ConsentTemplate[] = [
     },
     {
         key: 'PHOTO',
+        group: 'CONSENT',
         label: '사진·영상 활용',
         description: '촬영물 활용 여부를 참가자가 선택합니다.',
         icon: Camera,
@@ -74,6 +78,7 @@ const templates: ConsentTemplate[] = [
     },
     {
         key: 'EMERGENCY',
+        group: 'PARTICIPANT_INFO',
         label: '긴급 연락처',
         description: '비상시 연락할 사람과 전화번호를 입력받습니다.',
         icon: ContactRound,
@@ -87,6 +92,7 @@ const templates: ConsentTemplate[] = [
     },
     {
         key: 'MEDICATION',
+        group: 'PARTICIPANT_INFO',
         label: '복용 약물·건강 정보',
         description: '운영진이 알아야 할 건강 정보를 선택 입력받습니다.',
         icon: Pill,
@@ -100,6 +106,7 @@ const templates: ConsentTemplate[] = [
     },
     {
         key: 'ACCESSIBILITY',
+        group: 'PARTICIPANT_INFO',
         label: '식이·접근성 요청',
         description: '식이 제한이나 접근성 지원 요청을 받습니다.',
         icon: Utensils,
@@ -113,6 +120,7 @@ const templates: ConsentTemplate[] = [
     },
     {
         key: 'NOTICE',
+        group: 'NOTICE',
         label: '안내문',
         description: '응답 없이 꼭 읽어야 할 정보를 보여줍니다.',
         icon: Info,
@@ -141,6 +149,21 @@ const responseTypeLabels: Record<ConsentResponseType, string> = {
     TEXTAREA: '상세 입력',
     INFORMATION: '안내만 표시',
 };
+
+const templateGroups = [
+    {
+        key: 'CONSENT' as const,
+        label: '동의·확인',
+        description: '참가자가 항목별로 체크',
+        icon: ShieldCheck,
+    },
+    {
+        key: 'PARTICIPANT_INFO' as const,
+        label: '참가 정보',
+        description: '운영에 필요한 내용을 입력',
+        icon: ContactRound,
+    },
+];
 
 export function EventConsentEditor({ value, onChange }: EventConsentEditorProps) {
     const replaceItems = (items: ConsentItemInput[]) => {
@@ -207,34 +230,81 @@ export function EventConsentEditor({ value, onChange }: EventConsentEditorProps)
                     <p className="text-xs font-black text-zinc-700">빠른 템플릿</p>
                     <p className="text-[11px] text-zinc-400">여러 개 선택 가능</p>
                 </div>
-                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-3">
-                    {templates.map(template => {
-                        const active = value.items.some(item => matchesTemplate(item, template));
-                        const Icon = template.icon;
+                <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                    {templateGroups.map(group => {
+                        const GroupIcon = group.icon;
                         return (
-                            <button
-                                key={template.key}
-                                type="button"
-                                onClick={() => toggleTemplate(template)}
-                                aria-pressed={active}
-                                className={`group relative flex min-h-20 items-start gap-3 rounded-2xl border p-3 text-left transition ${
-                                    active
-                                        ? 'border-[#162660] bg-[#162660] text-white shadow-sm'
-                                        : 'border-zinc-200 bg-white text-zinc-700 hover:border-blue-300 hover:bg-blue-50/40'
-                                }`}
-                            >
-                                <Icon className={`mt-0.5 h-4 w-4 shrink-0 ${active ? 'text-blue-200' : 'text-[#162660]'}`} />
-                                <span className="min-w-0">
-                                    <span className="block text-xs font-black">{template.label}</span>
-                                    <span className={`mt-1 block text-[11px] leading-relaxed ${active ? 'text-blue-100' : 'text-zinc-400'}`}>
-                                        {template.description}
+                            <div key={group.key} className="rounded-2xl border border-zinc-200 bg-white p-2.5 shadow-[0_1px_0_rgba(0,0,0,0.02)]">
+                                <div className="flex items-center gap-2 px-1.5 pb-2 pt-0.5">
+                                    <span className="rounded-lg bg-blue-50 p-1.5 text-[#162660]">
+                                        <GroupIcon className="h-3.5 w-3.5" />
                                     </span>
-                                </span>
-                                {active && <Check className="absolute right-2.5 top-2.5 h-3.5 w-3.5" />}
-                            </button>
+                                    <div>
+                                        <p className="text-[11px] font-black text-zinc-700">{group.label}</p>
+                                        <p className="text-[10px] text-zinc-400">{group.description}</p>
+                                    </div>
+                                </div>
+                                <div className="space-y-1.5">
+                                    {templates.filter(template => template.group === group.key).map(template => {
+                                        const active = value.items.some(item => matchesTemplate(item, template));
+                                        const Icon = template.icon;
+                                        return (
+                                            <button
+                                                key={template.key}
+                                                type="button"
+                                                onClick={() => toggleTemplate(template)}
+                                                aria-pressed={active}
+                                                className={`relative flex min-h-16 w-full items-center gap-3 rounded-xl border px-3 py-2.5 text-left transition ${
+                                                    active
+                                                        ? 'border-[#162660] bg-[#162660] text-white shadow-sm'
+                                                        : 'border-zinc-100 bg-zinc-50/70 text-zinc-700 hover:border-blue-200 hover:bg-blue-50/50'
+                                                }`}
+                                            >
+                                                <Icon className={`h-4 w-4 shrink-0 ${active ? 'text-blue-200' : 'text-[#162660]'}`} />
+                                                <span className="min-w-0 pr-4">
+                                                    <span className="block text-xs font-black">{template.label}</span>
+                                                    <span className={`mt-0.5 block text-[10px] leading-snug ${active ? 'text-blue-100' : 'text-zinc-400'}`}>
+                                                        {template.description}
+                                                    </span>
+                                                </span>
+                                                {active && <Check className="absolute right-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2" />}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            </div>
                         );
                     })}
                 </div>
+
+                {templates.filter(template => template.group === 'NOTICE').map(template => {
+                    const active = value.items.some(item => matchesTemplate(item, template));
+                    const Icon = template.icon;
+                    return (
+                        <button
+                            key={template.key}
+                            type="button"
+                            onClick={() => toggleTemplate(template)}
+                            aria-pressed={active}
+                            className={`relative mt-2 flex w-full items-center gap-3 rounded-xl border px-3.5 py-3 text-left transition ${
+                                active
+                                    ? 'border-[#162660] bg-[#162660] text-white shadow-sm'
+                                    : 'border-zinc-200 bg-white text-zinc-700 hover:border-blue-200 hover:bg-blue-50/50'
+                            }`}
+                        >
+                            <span className={`rounded-lg p-1.5 ${active ? 'bg-white/10 text-blue-100' : 'bg-blue-50 text-[#162660]'}`}>
+                                <Icon className="h-3.5 w-3.5" />
+                            </span>
+                            <span className="min-w-0 flex-1 sm:flex sm:items-center sm:gap-2">
+                                <span className="block text-xs font-black">{template.label}</span>
+                                <span className={`block text-[10px] sm:before:mr-2 sm:before:content-['·'] ${active ? 'text-blue-100' : 'text-zinc-400'}`}>
+                                    {template.description}
+                                </span>
+                            </span>
+                            {active && <Check className="h-3.5 w-3.5 shrink-0" />}
+                        </button>
+                    );
+                })}
             </div>
 
             {value.items.length > 0 && (
