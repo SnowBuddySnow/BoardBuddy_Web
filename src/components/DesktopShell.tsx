@@ -61,7 +61,7 @@ export default function DesktopShell({
 }: DesktopShellProps) {
   return (
     <div className="flex h-full min-h-0 w-full bg-[#F5F4F0]">
-      <aside className="flex w-64 shrink-0 flex-col border-r border-zinc-200 bg-white px-4 py-6">
+      <aside className="flex min-h-0 w-64 shrink-0 flex-col overflow-y-auto border-r border-zinc-200 bg-white px-4 py-6">
         <button
           type="button"
           onClick={() => onNavigate('home')}

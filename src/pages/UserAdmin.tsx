@@ -11,9 +11,11 @@ import { Button } from '../components/Button';
 import { getApiErrorMessage } from '../lib/apiError';
 import {
     searchAdminUsers,
+    updateAdminCrewRole,
     updatePlatformAdmin,
     type AccountStatus,
     type AdminUser,
+    type CrewRole,
 } from '../services/userAdmin';
 
 interface UserAdminProps {
@@ -32,6 +34,12 @@ const userTypeCopy = {
     REGULAR: '일반',
     KUSBF: '학생',
 } as const;
+
+const crewRoleCopy: Record<CrewRole, string> = {
+    CREW_MEMBER: '크루 멤버',
+    CREW_MANAGER: '크루 매니저',
+    CREW_CAPTAIN: '크루장',
+};
 
 const formatDate = (value: string) => new Intl.DateTimeFormat('ko-KR', {
     year: 'numeric',
@@ -52,7 +60,7 @@ export default function UserAdmin({ onBack }: UserAdminProps) {
     const [query, setQuery] = useState('');
     const [users, setUsers] = useState<AdminUser[]>([]);
     const [loading, setLoading] = useState(true);
-    const [changingAccountId, setChangingAccountId] = useState<number | null>(null);
+    const [changingKey, setChangingKey] = useState<string | null>(null);
     const [error, setError] = useState('');
 
     const load = useCallback(async (searchQuery: string) => {
@@ -87,20 +95,49 @@ export default function UserAdmin({ onBack }: UserAdminProps) {
         };
     }, [query]);
 
-    const handleAccessChange = async (user: AdminUser) => {
-        const promote = !user.platformAdmin;
-        const action = promote ? '플랫폼 관리자로 승격' : '플랫폼 관리자에서 강등';
-        if (!window.confirm(`${user.name || user.userCode} 사용자를 ${action}하시겠습니까?`)) return;
+    const handlePlatformAccessChange = async (user: AdminUser, platformAdmin: boolean) => {
+        if (platformAdmin === user.platformAdmin) return;
+        const question = platformAdmin
+            ? `${user.name || user.userCode} 사용자에게 플랫폼 관리자 권한을 부여하시겠습니까?`
+            : `${user.name || user.userCode} 사용자의 플랫폼 관리자 권한을 해제하시겠습니까?`;
+        if (!window.confirm(question)) return;
 
-        setChangingAccountId(user.accountId);
+        setChangingKey(`platform-${user.accountId}`);
         setError('');
         try {
-            const updated = await updatePlatformAdmin(user.accountId, promote);
+            const updated = await updatePlatformAdmin(user.accountId, platformAdmin);
             setUsers(current => current.map(item => item.accountId === updated.accountId ? updated : item));
         } catch (updateError) {
             setError(getApiErrorMessage(updateError) || '사용자 권한을 변경하지 못했습니다.');
         } finally {
-            setChangingAccountId(null);
+            setChangingKey(null);
+        }
+    };
+
+    const handleCrewRoleChange = async (
+        user: AdminUser,
+        crewId: number,
+        crewName: string,
+        currentRole: CrewRole,
+        role: CrewRole,
+    ) => {
+        if (role === currentRole) return;
+        const captainNotice = role === 'CREW_CAPTAIN'
+            ? ' 기존 크루장은 크루 매니저로 자동 변경됩니다.'
+            : '';
+        if (!window.confirm(
+            `${user.name || user.userCode} 사용자의 ${crewName} 역할을 ${crewRoleCopy[role]}(으)로 변경하시겠습니까?${captainNotice}`,
+        )) return;
+
+        setChangingKey(`crew-${user.accountId}-${crewId}`);
+        setError('');
+        try {
+            await updateAdminCrewRole(user.accountId, crewId, role);
+            await load(query.trim());
+        } catch (updateError) {
+            setError(getApiErrorMessage(updateError) || '크루 역할을 변경하지 못했습니다.');
+        } finally {
+            setChangingKey(null);
         }
     };
 
@@ -132,9 +169,9 @@ export default function UserAdmin({ onBack }: UserAdminProps) {
             <main className="min-h-0 flex-1 overflow-y-auto">
                 <div className="mx-auto max-w-7xl space-y-5 p-4 pb-28 lg:p-8">
                     <section className="rounded-2xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-900">
-                        <p className="font-black">플랫폼 관리자 권한</p>
+                        <p className="font-black">권한 범위를 분리해서 관리합니다</p>
                         <p className="mt-1 leading-6 text-blue-800">
-                            플랫폼 관리자는 모든 운영 기능에 접근할 수 있습니다. 승격 전에 대상 사용자 이름과 코드를 다시 확인해 주세요.
+                            플랫폼 권한과 각 크루의 역할은 별개입니다. 새 크루장을 지정하면 기존 크루장은 크루 매니저로 자동 인계됩니다.
                         </p>
                     </section>
 
@@ -175,14 +212,14 @@ export default function UserAdmin({ onBack }: UserAdminProps) {
                         ) : (
                             <>
                                 <div className="hidden overflow-x-auto lg:block">
-                                    <table className="w-full min-w-[900px] border-collapse text-left text-sm">
+                                    <table className="w-full min-w-[1120px] border-collapse text-left text-sm">
                                         <thead className="bg-zinc-50 text-xs font-black uppercase tracking-wider text-zinc-500">
                                             <tr>
                                                 <th className="px-5 py-3">사용자</th>
                                                 <th className="px-5 py-3">식별자</th>
                                                 <th className="px-5 py-3">계정 상태</th>
-                                                <th className="px-5 py-3">가입</th>
-                                                <th className="px-5 py-3 text-right">플랫폼 권한</th>
+                                                <th className="px-5 py-3">크루 역할</th>
+                                                <th className="px-5 py-3">플랫폼 권한</th>
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y divide-zinc-100">
@@ -190,30 +227,58 @@ export default function UserAdmin({ onBack }: UserAdminProps) {
                                                 <tr key={user.accountId} className="hover:bg-zinc-50/70">
                                                     <td className="px-5 py-4">
                                                         <p className="font-black text-zinc-900">{user.name || '이름 미등록'}</p>
-                                                        <p className="mt-1 text-xs text-zinc-500">{userTypeCopy[user.userType]}</p>
+                                                        <p className="mt-1 text-xs text-zinc-500">{userTypeCopy[user.userType]} · {formatDate(user.createdAt)} 가입</p>
                                                     </td>
                                                     <td className="px-5 py-4 font-mono text-xs text-zinc-600">
                                                         <p>{user.userCode}</p>
                                                         <p className="mt-1 text-zinc-400">ID {user.accountId}</p>
                                                     </td>
                                                     <td className="px-5 py-4"><AccountStatusBadge status={user.accountStatus} /></td>
-                                                    <td className="px-5 py-4 text-xs text-zinc-500">{formatDate(user.createdAt)}</td>
-                                                    <td className="px-5 py-4 text-right">
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => void handleAccessChange(user)}
-                                                            disabled={changingAccountId === user.accountId || (!user.platformAdmin && user.accountStatus !== 'ACTIVE')}
-                                                            title={!user.platformAdmin && user.accountStatus !== 'ACTIVE' ? '활성 계정만 승격할 수 있습니다.' : undefined}
-                                                            className={`rounded-xl px-4 py-2 text-xs font-black transition disabled:cursor-not-allowed disabled:opacity-40 ${
-                                                                user.platformAdmin
-                                                                    ? 'border border-rose-200 bg-white text-rose-700 hover:bg-rose-50'
-                                                                    : 'border border-[#162660] bg-[#162660] text-white hover:bg-blue-950'
-                                                            }`}
+                                                    <td className="min-w-72 px-5 py-4">
+                                                        {user.crewMemberships.length === 0 ? (
+                                                            <span className="text-xs text-zinc-400">가입 크루 없음</span>
+                                                        ) : (
+                                                            <div className="space-y-2">
+                                                                {user.crewMemberships.map(membership => {
+                                                                    const roleKey = `crew-${user.accountId}-${membership.crewId}`;
+                                                                    const isCaptain = membership.role === 'CREW_CAPTAIN';
+                                                                    return (
+                                                                        <div key={membership.crewId} className="flex items-center gap-2">
+                                                                            <span className="min-w-0 flex-1 truncate text-xs font-bold text-zinc-600">{membership.crewName}</span>
+                                                                            <select
+                                                                                value={membership.role}
+                                                                                onChange={event => void handleCrewRoleChange(
+                                                                                    user,
+                                                                                    membership.crewId,
+                                                                                    membership.crewName,
+                                                                                    membership.role,
+                                                                                    event.target.value as CrewRole,
+                                                                                )}
+                                                                                disabled={changingKey === roleKey || isCaptain}
+                                                                                title={isCaptain ? '다른 멤버를 크루장으로 지정하면 역할이 자동 인계됩니다.' : undefined}
+                                                                                className="rounded-lg border border-zinc-200 bg-white px-2.5 py-2 text-xs font-black text-zinc-700 outline-none disabled:bg-zinc-100 disabled:text-zinc-500"
+                                                                            >
+                                                                                {(Object.keys(crewRoleCopy) as CrewRole[]).map(role => (
+                                                                                    <option key={role} value={role}>{crewRoleCopy[role]}</option>
+                                                                                ))}
+                                                                            </select>
+                                                                        </div>
+                                                                    );
+                                                                })}
+                                                            </div>
+                                                        )}
+                                                    </td>
+                                                    <td className="px-5 py-4">
+                                                        <select
+                                                            value={user.platformAdmin ? 'PLATFORM_ADMIN' : 'USER'}
+                                                            onChange={event => void handlePlatformAccessChange(user, event.target.value === 'PLATFORM_ADMIN')}
+                                                            disabled={changingKey === `platform-${user.accountId}` || (!user.platformAdmin && user.accountStatus !== 'ACTIVE')}
+                                                            title={!user.platformAdmin && user.accountStatus !== 'ACTIVE' ? '활성 계정만 플랫폼 관리자로 지정할 수 있습니다.' : undefined}
+                                                            className="rounded-lg border border-zinc-200 bg-white px-3 py-2 text-xs font-black text-zinc-700 outline-none disabled:bg-zinc-100 disabled:text-zinc-400"
                                                         >
-                                                            {changingAccountId === user.accountId
-                                                                ? '변경 중…'
-                                                                : user.platformAdmin ? '관리자 강등' : '관리자 승격'}
-                                                        </button>
+                                                            <option value="USER">일반 사용자</option>
+                                                            <option value="PLATFORM_ADMIN">플랫폼 관리자</option>
+                                                        </select>
                                                     </td>
                                                 </tr>
                                             ))}
@@ -231,23 +296,49 @@ export default function UserAdmin({ onBack }: UserAdminProps) {
                                                 </div>
                                                 <AccountStatusBadge status={user.accountStatus} />
                                             </div>
-                                            <div className="flex items-center justify-between gap-3">
-                                                <span className="text-xs font-semibold text-zinc-500">{userTypeCopy[user.userType]} · {formatDate(user.createdAt)} 가입</span>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => void handleAccessChange(user)}
-                                                    disabled={changingAccountId === user.accountId || (!user.platformAdmin && user.accountStatus !== 'ACTIVE')}
-                                                    className={`shrink-0 rounded-xl px-3 py-2 text-xs font-black disabled:opacity-40 ${
-                                                        user.platformAdmin
-                                                            ? 'border border-rose-200 bg-white text-rose-700'
-                                                            : 'border border-[#162660] bg-[#162660] text-white'
-                                                    }`}
-                                                >
-                                                    {changingAccountId === user.accountId
-                                                        ? '변경 중…'
-                                                        : user.platformAdmin ? '관리자 강등' : '관리자 승격'}
-                                                </button>
+                                            <p className="text-xs font-semibold text-zinc-500">{userTypeCopy[user.userType]} · {formatDate(user.createdAt)} 가입</p>
+                                            <div className="space-y-2 rounded-xl bg-zinc-50 p-3">
+                                                <p className="text-[10px] font-black uppercase tracking-wider text-zinc-400">크루 역할</p>
+                                                {user.crewMemberships.length === 0 ? (
+                                                    <p className="text-xs text-zinc-400">가입 크루 없음</p>
+                                                ) : user.crewMemberships.map(membership => {
+                                                    const roleKey = `crew-${user.accountId}-${membership.crewId}`;
+                                                    const isCaptain = membership.role === 'CREW_CAPTAIN';
+                                                    return (
+                                                        <label key={membership.crewId} className="flex items-center justify-between gap-3">
+                                                            <span className="min-w-0 flex-1 truncate text-xs font-bold text-zinc-600">{membership.crewName}</span>
+                                                            <select
+                                                                value={membership.role}
+                                                                onChange={event => void handleCrewRoleChange(
+                                                                    user,
+                                                                    membership.crewId,
+                                                                    membership.crewName,
+                                                                    membership.role,
+                                                                    event.target.value as CrewRole,
+                                                                )}
+                                                                disabled={changingKey === roleKey || isCaptain}
+                                                                className="rounded-lg border border-zinc-200 bg-white px-2 py-2 text-xs font-black text-zinc-700 disabled:bg-zinc-100"
+                                                            >
+                                                                {(Object.keys(crewRoleCopy) as CrewRole[]).map(role => (
+                                                                    <option key={role} value={role}>{crewRoleCopy[role]}</option>
+                                                                ))}
+                                                            </select>
+                                                        </label>
+                                                    );
+                                                })}
                                             </div>
+                                            <label className="flex items-center justify-between gap-3">
+                                                <span className="text-xs font-black text-zinc-600">플랫폼 권한</span>
+                                                <select
+                                                    value={user.platformAdmin ? 'PLATFORM_ADMIN' : 'USER'}
+                                                    onChange={event => void handlePlatformAccessChange(user, event.target.value === 'PLATFORM_ADMIN')}
+                                                    disabled={changingKey === `platform-${user.accountId}` || (!user.platformAdmin && user.accountStatus !== 'ACTIVE')}
+                                                    className="rounded-lg border border-zinc-200 bg-white px-3 py-2 text-xs font-black text-zinc-700 disabled:bg-zinc-100"
+                                                >
+                                                    <option value="USER">일반 사용자</option>
+                                                    <option value="PLATFORM_ADMIN">플랫폼 관리자</option>
+                                                </select>
+                                            </label>
                                         </article>
                                     ))}
                                 </div>
