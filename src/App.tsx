@@ -7,6 +7,7 @@ import MyReservations from './pages/MyReservations';
 import LoginLanding from './pages/LoginLanding';
 import CrewDetail from './pages/CrewDetail';
 import UserInfoInput from './pages/UserInfoInput';
+import ProfileTypeConfirmation from './pages/ProfileTypeConfirmation';
 import CrewMember from './pages/CrewMember';
 import SearchCrew from './pages/SearchCrew';
 import CrewSettings from './pages/CrewSettings';
@@ -58,6 +59,7 @@ type View =
   | 'crew_detail'
   | 'search_crew'
   | 'user_info'
+  | 'profile_type_confirmation'
   | 'crew_member'
   | 'crew_settings'
   | 'guest_reservation'
@@ -110,6 +112,7 @@ const tabViews: Record<Tab, View> = {
 const viewsWithoutBottomNav: View[] = [
   'login',
   'user_info',
+  'profile_type_confirmation',
   'my_page',
   'account_info',
   'crew_create',
@@ -189,7 +192,7 @@ function App() {
   const [captainGuideReturnVisible, setCaptainGuideReturnVisible] = useState(false);
   const isDesktop = useDesktopViewport();
   const usedDesktopLanding = useRef(false);
-  const shouldLoadPermissions = !['login', 'user_info'].includes(currentView);
+  const shouldLoadPermissions = !['login', 'user_info', 'profile_type_confirmation'].includes(currentView);
   const operatingMode = getOperatingMode();
   const operatingFeatures = getOperatingFeatures(operatingMode);
   const seasonHouseAvailable = operatingFeatures.season
@@ -211,6 +214,10 @@ function App() {
       try {
         const user = await getUserInfo();
         if (cancelled) return;
+        if (user.userType === 'GENERAL') {
+          setCurrentView('profile_type_confirmation');
+          return;
+        }
         setIsCaptain(isCrewCaptainRole(user.role));
         setCaptainUserId(user.userId);
         setHasCrew(Boolean(user.crew));
@@ -467,6 +474,7 @@ function App() {
           <LoginLanding
             onLogin={() => setCurrentView(organizerInviteToken ? 'organizer_invite' : 'home')}
             onSignupNeeded={() => setCurrentView('user_info')}
+            onProfileTypeNeeded={() => setCurrentView('profile_type_confirmation')}
             onDebugUserInfo={() => setCurrentView('user_info')}
           />
         );
@@ -512,6 +520,12 @@ function App() {
         return (
           <UserInfoInput
             onBack={() => setCurrentView('login')}
+            onSuccess={() => setCurrentView(organizerInviteToken ? 'organizer_invite' : 'home')}
+          />
+        );
+      case 'profile_type_confirmation':
+        return (
+          <ProfileTypeConfirmation
             onSuccess={() => setCurrentView(organizerInviteToken ? 'organizer_invite' : 'home')}
           />
         );
@@ -660,7 +674,7 @@ function App() {
 
   const usesDesktopShell = isDesktop
     && !isDashboardView
-    && !['login', 'user_info', 'organizer_invite'].includes(currentView);
+    && !['login', 'user_info', 'profile_type_confirmation', 'organizer_invite'].includes(currentView);
 
   const currentContent = renderCurrentView();
 
@@ -685,7 +699,7 @@ function App() {
           </DesktopShell>
         ) : currentContent}
 
-        {currentView !== 'login' && currentView !== 'user_info' && currentView !== 'organizer_invite' && currentView !== 'notifications' && currentView !== 'role_guide' && currentView !== 'crew_create' && currentView !== 'crew_admin' && currentView !== 'school_admin' && !isDashboardView && (
+        {currentView !== 'login' && currentView !== 'user_info' && currentView !== 'profile_type_confirmation' && currentView !== 'organizer_invite' && currentView !== 'notifications' && currentView !== 'role_guide' && currentView !== 'crew_create' && currentView !== 'crew_admin' && currentView !== 'school_admin' && !isDashboardView && (
           <NotificationBell refreshKey={notificationRefreshKey} onClick={() => {
             setNotificationReturnView(currentView);
             setCurrentView('notifications');

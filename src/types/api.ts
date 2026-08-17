@@ -4,7 +4,7 @@ export interface ApiResponse<T> {
     data: T;
 }
 
-export type UserType = 'GENERAL' | 'KUSBF';
+export type UserType = 'GENERAL' | 'REGULAR' | 'KUSBF';
 export type UniversityVerificationStatus = 'NOT_VERIFIED' | 'PENDING' | 'VERIFIED' | 'REJECTED';
 
 export interface CrewDetail {

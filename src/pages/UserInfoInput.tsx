@@ -291,7 +291,7 @@ export default function UserInfoInput({ onBack, onSuccess }: UserInfoInputProps)
             }
 
             const response = await apiClient.put(`/accounts/${accountId}/profile`, {
-                userType: profileType === 'STUDENT' ? 'KUSBF' : 'GENERAL',
+                userType: profileType === 'STUDENT' ? 'KUSBF' : 'REGULAR',
                 displayName: name.trim(),
                 email: email.trim() || undefined,
                 schoolId: profileType === 'STUDENT' ? selectedSchool?.id : undefined,

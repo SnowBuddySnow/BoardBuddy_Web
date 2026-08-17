@@ -11,6 +11,14 @@ export const getUserInfo = async (): Promise<UserDetail> => {
     return response.data.data;
 };
 
+export const confirmProfileType = async (request: {
+    userType: 'REGULAR' | 'KUSBF';
+    schoolId?: number;
+    studentNumber?: string;
+}): Promise<void> => {
+    await apiClient.put('/accounts/profile-type', request);
+};
+
 export const getMyReservations = async (): Promise<MyReservation[]> => {
     const response = await apiClient.get<ApiResponse<MyReservation[]>>('/users/me/reservations');
     return response.data.data;

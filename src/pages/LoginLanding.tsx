@@ -20,10 +20,11 @@ import {
 interface LoginLandingProps {
     onLogin: () => void;
     onSignupNeeded: () => void;
+    onProfileTypeNeeded: () => void;
     onDebugUserInfo?: () => void;
 }
 
-export default function LoginLanding({ onLogin, onSignupNeeded, /* onDebugUserInfo */ }: LoginLandingProps) {
+export default function LoginLanding({ onLogin, onSignupNeeded, onProfileTypeNeeded, /* onDebugUserInfo */ }: LoginLandingProps) {
     const [autoLogin, setAutoLogin] = useState(isAutoLoginEnabled());
     const [isLoggingIn, setIsLoggingIn] = useState(false);
     useEffect(() => {
@@ -60,7 +61,7 @@ export default function LoginLanding({ onLogin, onSignupNeeded, /* onDebugUserIn
                     const data = response.data;
 
                     if (response.status >= 200 && response.status < 300 && data.data) {
-                        const { status, accountId, accessToken, refreshToken } = data.data;
+                        const { status, userType, accountId, accessToken, refreshToken } = data.data;
 
                         // Save the account ID
                         if (accountId) {
@@ -78,7 +79,11 @@ export default function LoginLanding({ onLogin, onSignupNeeded, /* onDebugUserIn
                             saveAuthTokens(accessToken, refreshToken);
                             // Save auto-login preference
                             setAutoLoginPreference(autoLogin);
-                            onLogin();
+                            if (userType === 'GENERAL') {
+                                onProfileTypeNeeded();
+                            } else {
+                                onLogin();
+                            }
                         }
                     } else {
                         setIsLoggingIn(false);

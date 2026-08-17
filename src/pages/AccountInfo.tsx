@@ -73,7 +73,9 @@ export default function AccountInfo({ onBack }: AccountInfoProps) {
                         <div className="space-y-3">
                             <div>
                                 <div className="text-xs text-zinc-500 mb-1">프로필 유형</div>
-                                <div className="text-base font-medium">{userInfo.userType === 'KUSBF' ? '학생' : '일반'}</div>
+                                <div className="text-base font-medium">
+                                    {userInfo.userType === 'KUSBF' ? '학생' : userInfo.userType === 'REGULAR' ? '일반' : '확인 필요'}
+                                </div>
                             </div>
                             {userInfo.userType === 'KUSBF' && (
                                 <>
