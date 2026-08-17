@@ -4,6 +4,7 @@ import { AlertTriangle, Check, ChevronDown, RefreshCw, Search, Sliders, X } from
 interface DevPanelProps {
     onOpenCrewAdmin: () => void;
     onOpenSchoolAdmin: () => void;
+    onOpenUserAdmin: () => void;
 }
 
 interface SimulationOption {
@@ -37,7 +38,7 @@ const clearSimulationData = () => {
     keysToRemove.forEach(key => localStorage.removeItem(key));
 };
 
-export default function DevPanel({ onOpenCrewAdmin, onOpenSchoolAdmin }: DevPanelProps) {
+export default function DevPanel({ onOpenCrewAdmin, onOpenSchoolAdmin, onOpenUserAdmin }: DevPanelProps) {
     const [isOpen, setIsOpen] = useState(false);
     const [query, setQuery] = useState('');
     const [crewOverride, setCrewOverride] = useState(localStorage.getItem('dev_crew_override') || 'server');
@@ -249,7 +250,7 @@ export default function DevPanel({ onOpenCrewAdmin, onOpenSchoolAdmin }: DevPane
                         ))}
                     </div>
 
-                    <footer className="grid shrink-0 grid-cols-2 gap-2 border-t border-zinc-100 bg-white/95 px-5 py-3">
+                    <footer className="grid shrink-0 grid-cols-3 gap-2 border-t border-zinc-100 bg-white/95 px-5 py-3">
                         <button
                             onClick={() => {
                                 setIsOpen(false);
@@ -269,8 +270,17 @@ export default function DevPanel({ onOpenCrewAdmin, onOpenSchoolAdmin }: DevPane
                             학교 관리
                         </button>
                         <button
+                            onClick={() => {
+                                setIsOpen(false);
+                                onOpenUserAdmin();
+                            }}
+                            className="rounded-xl border border-zinc-300 bg-white py-2.5 text-xs font-bold text-zinc-700 transition hover:bg-zinc-50"
+                        >
+                            사용자 권한
+                        </button>
+                        <button
                             onClick={handleApply}
-                            className="col-span-2 flex items-center justify-center gap-1.5 rounded-xl border-none bg-[#162660] py-2.5 text-xs font-bold text-white shadow-sm transition hover:bg-blue-900"
+                            className="col-span-3 flex items-center justify-center gap-1.5 rounded-xl border-none bg-[#162660] py-2.5 text-xs font-bold text-white shadow-sm transition hover:bg-blue-900"
                         >
                             <RefreshCw className="h-3.5 w-3.5" />
                             적용 후 새로고침

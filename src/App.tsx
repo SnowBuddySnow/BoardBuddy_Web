@@ -15,6 +15,7 @@ import MyPage from './pages/MyPage';
 import AccountInfo from './pages/AccountInfo';
 import CrewAdmin from './pages/CrewAdmin';
 import SchoolAdmin from './pages/SchoolAdmin';
+import UserAdmin from './pages/UserAdmin';
 import Notifications from './pages/Notifications';
 import NotificationBell from './components/NotificationBell';
 import DesktopShell, { type DesktopDestination } from './components/DesktopShell';
@@ -69,6 +70,7 @@ type View =
   | 'crew_create'
   | 'crew_admin'
   | 'school_admin'
+  | 'user_admin'
   | 'crew_permissions'
   | 'role_guide'
   | 'notifications'
@@ -120,6 +122,7 @@ const viewsWithoutBottomNav: View[] = [
   'guest_reservation',
   'crew_admin',
   'school_admin',
+  'user_admin',
   'crew_permissions',
   'role_guide',
   'notifications',
@@ -361,6 +364,7 @@ function App() {
   const getDesktopDestination = (): DesktopDestination => {
     if (currentView === 'crew_admin') return 'crew_admin';
     if (currentView === 'school_admin') return 'school_admin';
+    if (currentView === 'user_admin') return 'user_admin';
     if (currentView === 'operations_center') return 'operations_center';
     if (currentView === 'parties' || currentView === 'event_detail') return 'parties';
     if (currentView === 'my_parties') return 'my_parties';
@@ -568,6 +572,8 @@ function App() {
         return <CrewAdmin mode="create" onBack={() => setCurrentView('home')} />;
       case 'school_admin':
         return <SchoolAdmin onBack={() => setCurrentView('home')} />;
+      case 'user_admin':
+        return <UserAdmin onBack={() => setCurrentView('home')} />;
       case 'crew_permissions':
         return <CrewPermissions onBack={() => setCurrentView('operations_center')} />;
       case 'notifications':
@@ -680,7 +686,7 @@ function App() {
 
   return (
     <div className="w-full h-screen bg-zinc-100 dark:bg-zinc-900 flex items-center justify-center overflow-hidden">
-      <div className={isDesktop || isDashboardView || usesDesktopShell || (['crew_admin', 'school_admin'].includes(currentView) && canReviewCrews)
+      <div className={isDesktop || isDashboardView || usesDesktopShell || (['crew_admin', 'school_admin', 'user_admin'].includes(currentView) && canReviewCrews)
         ? "w-full h-full bg-white dark:bg-zinc-950 relative overflow-hidden flex flex-col" 
         : "w-full h-full max-w-md bg-[#FAF8F3] relative shadow-2xl overflow-hidden flex flex-col"
       }>
@@ -699,7 +705,7 @@ function App() {
           </DesktopShell>
         ) : currentContent}
 
-        {currentView !== 'login' && currentView !== 'user_info' && currentView !== 'profile_type_confirmation' && currentView !== 'organizer_invite' && currentView !== 'notifications' && currentView !== 'role_guide' && currentView !== 'crew_create' && currentView !== 'crew_admin' && currentView !== 'school_admin' && !isDashboardView && (
+        {currentView !== 'login' && currentView !== 'user_info' && currentView !== 'profile_type_confirmation' && currentView !== 'organizer_invite' && currentView !== 'notifications' && currentView !== 'role_guide' && currentView !== 'crew_create' && currentView !== 'crew_admin' && currentView !== 'school_admin' && currentView !== 'user_admin' && !isDashboardView && (
           <NotificationBell refreshKey={notificationRefreshKey} onClick={() => {
             setNotificationReturnView(currentView);
             setCurrentView('notifications');
@@ -742,6 +748,7 @@ function App() {
         <DevPanel
           onOpenCrewAdmin={() => setCurrentView('crew_admin')}
           onOpenSchoolAdmin={() => setCurrentView('school_admin')}
+          onOpenUserAdmin={() => setCurrentView('user_admin')}
         />
       )}
     </div>
