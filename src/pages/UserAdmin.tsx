@@ -12,8 +12,10 @@ import { getApiErrorMessage } from '../lib/apiError';
 import {
     searchAdminUsers,
     updateAdminCrewRole,
+    updateAdminEventManager,
     updatePlatformAdmin,
     type AccountStatus,
+    type AdminCrewMembership,
     type AdminUser,
     type CrewRole,
 } from '../services/userAdmin';
@@ -141,6 +143,62 @@ export default function UserAdmin({ onBack }: UserAdminProps) {
         }
     };
 
+    const handleEventManagerChange = async (
+        user: AdminUser,
+        crewId: number,
+        crewName: string,
+        currentValue: boolean,
+        isCaptain: boolean,
+    ) => {
+        if (isCaptain && currentValue) {
+            window.alert('크루장은 이벤트 그룹 매니저 권한을 기본으로 보유합니다. 다른 멤버를 크루장으로 지정하면 개별 변경할 수 있습니다.');
+            return;
+        }
+        const nextValue = !currentValue;
+        if (!window.confirm(
+            `${user.name || user.userCode} 사용자의 ${crewName} 이벤트 그룹 매니저 권한을 ${nextValue ? '부여' : '해제'}하시겠습니까?`,
+        )) return;
+
+        setChangingKey(`event-${user.accountId}-${crewId}`);
+        setError('');
+        try {
+            const updated = await updateAdminEventManager(user.accountId, crewId, nextValue);
+            setUsers(current => current.map(item => item.accountId === updated.accountId ? updated : item));
+        } catch (updateError) {
+            setError(getApiErrorMessage(updateError) || '이벤트 그룹 매니저 권한을 변경하지 못했습니다.');
+        } finally {
+            setChangingKey(null);
+        }
+    };
+
+    const handleCaptainClick = (user: AdminUser, membership: AdminCrewMembership) => {
+        if (membership.role === 'CREW_CAPTAIN') {
+            window.alert('크루장을 변경하려면 같은 크루의 다른 멤버에서 크루장 지정을 선택해 주세요.');
+            return;
+        }
+        void handleCrewRoleChange(
+            user,
+            membership.crewId,
+            membership.crewName,
+            membership.role,
+            'CREW_CAPTAIN',
+        );
+    };
+
+    const handleCrewManagerClick = (user: AdminUser, membership: AdminCrewMembership) => {
+        if (membership.role === 'CREW_CAPTAIN') {
+            window.alert('크루장은 크루 매니저 권한을 기본으로 보유합니다. 다른 멤버를 크루장으로 지정하면 개별 변경할 수 있습니다.');
+            return;
+        }
+        void handleCrewRoleChange(
+            user,
+            membership.crewId,
+            membership.crewName,
+            membership.role,
+            membership.role === 'CREW_MANAGER' ? 'CREW_MEMBER' : 'CREW_MANAGER',
+        );
+    };
+
     return (
         <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden bg-[#F5F4F0] text-zinc-900">
             <header className="shrink-0 border-b border-zinc-200 bg-white px-5 py-4 lg:px-8">
@@ -171,7 +229,7 @@ export default function UserAdmin({ onBack }: UserAdminProps) {
                     <section className="rounded-2xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-900">
                         <p className="font-black">권한 범위를 분리해서 관리합니다</p>
                         <p className="mt-1 leading-6 text-blue-800">
-                            플랫폼 권한과 각 크루의 역할은 별개입니다. 새 크루장을 지정하면 기존 크루장은 크루 매니저로 자동 인계됩니다.
+                            크루 매니저, 이벤트 그룹 매니저, 플랫폼 관리자는 서로 독립적으로 함께 부여할 수 있습니다. 크루장은 두 크루 권한을 기본 보유합니다.
                         </p>
                     </section>
 
@@ -241,27 +299,48 @@ export default function UserAdmin({ onBack }: UserAdminProps) {
                                                             <div className="space-y-2">
                                                                 {user.crewMemberships.map(membership => {
                                                                     const roleKey = `crew-${user.accountId}-${membership.crewId}`;
+                                                                    const eventKey = `event-${user.accountId}-${membership.crewId}`;
                                                                     const isCaptain = membership.role === 'CREW_CAPTAIN';
+                                                                    const isManager = membership.role === 'CREW_MANAGER' || isCaptain;
+                                                                    const busy = changingKey === roleKey || changingKey === eventKey;
                                                                     return (
-                                                                        <div key={membership.crewId} className="flex items-center gap-2">
-                                                                            <span className="min-w-0 flex-1 truncate text-xs font-bold text-zinc-600">{membership.crewName}</span>
-                                                                            <select
-                                                                                value={membership.role}
-                                                                                onChange={event => void handleCrewRoleChange(
-                                                                                    user,
-                                                                                    membership.crewId,
-                                                                                    membership.crewName,
-                                                                                    membership.role,
-                                                                                    event.target.value as CrewRole,
-                                                                                )}
-                                                                                disabled={changingKey === roleKey || isCaptain}
-                                                                                title={isCaptain ? '다른 멤버를 크루장으로 지정하면 역할이 자동 인계됩니다.' : undefined}
-                                                                                className="rounded-lg border border-zinc-200 bg-white px-2.5 py-2 text-xs font-black text-zinc-700 outline-none disabled:bg-zinc-100 disabled:text-zinc-500"
-                                                                            >
-                                                                                {(Object.keys(crewRoleCopy) as CrewRole[]).map(role => (
-                                                                                    <option key={role} value={role}>{crewRoleCopy[role]}</option>
-                                                                                ))}
-                                                                            </select>
+                                                                        <div key={membership.crewId} className="space-y-2 rounded-xl border border-zinc-100 bg-zinc-50 p-2.5">
+                                                                            <span className="block truncate text-xs font-black text-zinc-700">{membership.crewName}</span>
+                                                                            <div className="grid grid-cols-3 gap-1.5">
+                                                                                <button
+                                                                                    type="button"
+                                                                                    aria-pressed={isCaptain}
+                                                                                    disabled={busy}
+                                                                                    onClick={() => handleCaptainClick(user, membership)}
+                                                                                    className={`rounded-lg border px-2 py-2 text-[11px] font-black transition disabled:opacity-50 ${isCaptain ? 'border-violet-700 bg-violet-700 text-white' : 'border-zinc-200 bg-white text-zinc-600 hover:bg-zinc-100'}`}
+                                                                                >
+                                                                                    크루장
+                                                                                </button>
+                                                                                <button
+                                                                                    type="button"
+                                                                                    aria-pressed={isManager}
+                                                                                    disabled={busy}
+                                                                                    onClick={() => handleCrewManagerClick(user, membership)}
+                                                                                    className={`rounded-lg border px-2 py-2 text-[11px] font-black transition disabled:opacity-50 ${isManager ? 'border-zinc-800 bg-zinc-800 text-white' : 'border-zinc-200 bg-white text-zinc-600 hover:bg-zinc-100'}`}
+                                                                                >
+                                                                                    크루 매니저
+                                                                                </button>
+                                                                                <button
+                                                                                    type="button"
+                                                                                    aria-pressed={membership.eventManager}
+                                                                                    disabled={busy}
+                                                                                    onClick={() => void handleEventManagerChange(
+                                                                                        user,
+                                                                                        membership.crewId,
+                                                                                        membership.crewName,
+                                                                                        membership.eventManager,
+                                                                                        isCaptain,
+                                                                                    )}
+                                                                                    className={`rounded-lg border px-2 py-2 text-[11px] font-black transition disabled:opacity-50 ${membership.eventManager ? 'border-[#162660] bg-[#162660] text-white' : 'border-zinc-200 bg-white text-zinc-600 hover:bg-zinc-100'}`}
+                                                                                >
+                                                                                    이벤트 매니저
+                                                                                </button>
+                                                                            </div>
                                                                         </div>
                                                                     );
                                                                 })}
@@ -269,16 +348,16 @@ export default function UserAdmin({ onBack }: UserAdminProps) {
                                                         )}
                                                     </td>
                                                     <td className="px-5 py-4">
-                                                        <select
-                                                            value={user.platformAdmin ? 'PLATFORM_ADMIN' : 'USER'}
-                                                            onChange={event => void handlePlatformAccessChange(user, event.target.value === 'PLATFORM_ADMIN')}
+                                                        <button
+                                                            type="button"
+                                                            aria-pressed={user.platformAdmin}
+                                                            onClick={() => void handlePlatformAccessChange(user, !user.platformAdmin)}
                                                             disabled={changingKey === `platform-${user.accountId}` || (!user.platformAdmin && user.accountStatus !== 'ACTIVE')}
                                                             title={!user.platformAdmin && user.accountStatus !== 'ACTIVE' ? '활성 계정만 플랫폼 관리자로 지정할 수 있습니다.' : undefined}
-                                                            className="rounded-lg border border-zinc-200 bg-white px-3 py-2 text-xs font-black text-zinc-700 outline-none disabled:bg-zinc-100 disabled:text-zinc-400"
+                                                            className={`rounded-lg border px-3 py-2 text-xs font-black transition disabled:opacity-40 ${user.platformAdmin ? 'border-emerald-700 bg-emerald-700 text-white' : 'border-zinc-200 bg-white text-zinc-600 hover:bg-zinc-100'}`}
                                                         >
-                                                            <option value="USER">일반 사용자</option>
-                                                            <option value="PLATFORM_ADMIN">플랫폼 관리자</option>
-                                                        </select>
+                                                            플랫폼 관리자
+                                                        </button>
                                                     </td>
                                                 </tr>
                                             ))}
@@ -303,42 +382,64 @@ export default function UserAdmin({ onBack }: UserAdminProps) {
                                                     <p className="text-xs text-zinc-400">가입 크루 없음</p>
                                                 ) : user.crewMemberships.map(membership => {
                                                     const roleKey = `crew-${user.accountId}-${membership.crewId}`;
+                                                    const eventKey = `event-${user.accountId}-${membership.crewId}`;
                                                     const isCaptain = membership.role === 'CREW_CAPTAIN';
+                                                    const isManager = membership.role === 'CREW_MANAGER' || isCaptain;
+                                                    const busy = changingKey === roleKey || changingKey === eventKey;
                                                     return (
-                                                        <label key={membership.crewId} className="flex items-center justify-between gap-3">
-                                                            <span className="min-w-0 flex-1 truncate text-xs font-bold text-zinc-600">{membership.crewName}</span>
-                                                            <select
-                                                                value={membership.role}
-                                                                onChange={event => void handleCrewRoleChange(
-                                                                    user,
-                                                                    membership.crewId,
-                                                                    membership.crewName,
-                                                                    membership.role,
-                                                                    event.target.value as CrewRole,
-                                                                )}
-                                                                disabled={changingKey === roleKey || isCaptain}
-                                                                className="rounded-lg border border-zinc-200 bg-white px-2 py-2 text-xs font-black text-zinc-700 disabled:bg-zinc-100"
-                                                            >
-                                                                {(Object.keys(crewRoleCopy) as CrewRole[]).map(role => (
-                                                                    <option key={role} value={role}>{crewRoleCopy[role]}</option>
-                                                                ))}
-                                                            </select>
-                                                        </label>
+                                                        <div key={membership.crewId} className="space-y-2">
+                                                            <span className="block truncate text-xs font-black text-zinc-700">{membership.crewName}</span>
+                                                            <div className="grid grid-cols-3 gap-1.5">
+                                                                <button
+                                                                    type="button"
+                                                                    aria-pressed={isCaptain}
+                                                                    disabled={busy}
+                                                                    onClick={() => handleCaptainClick(user, membership)}
+                                                                    className={`rounded-lg border px-2 py-2 text-[10px] font-black disabled:opacity-50 ${isCaptain ? 'border-violet-700 bg-violet-700 text-white' : 'border-zinc-200 bg-white text-zinc-600'}`}
+                                                                >
+                                                                    크루장
+                                                                </button>
+                                                                <button
+                                                                    type="button"
+                                                                    aria-pressed={isManager}
+                                                                    disabled={busy}
+                                                                    onClick={() => handleCrewManagerClick(user, membership)}
+                                                                    className={`rounded-lg border px-2 py-2 text-[10px] font-black disabled:opacity-50 ${isManager ? 'border-zinc-800 bg-zinc-800 text-white' : 'border-zinc-200 bg-white text-zinc-600'}`}
+                                                                >
+                                                                    크루 매니저
+                                                                </button>
+                                                                <button
+                                                                    type="button"
+                                                                    aria-pressed={membership.eventManager}
+                                                                    disabled={busy}
+                                                                    onClick={() => void handleEventManagerChange(
+                                                                        user,
+                                                                        membership.crewId,
+                                                                        membership.crewName,
+                                                                        membership.eventManager,
+                                                                        isCaptain,
+                                                                    )}
+                                                                    className={`rounded-lg border px-2 py-2 text-[10px] font-black disabled:opacity-50 ${membership.eventManager ? 'border-[#162660] bg-[#162660] text-white' : 'border-zinc-200 bg-white text-zinc-600'}`}
+                                                                >
+                                                                    이벤트 매니저
+                                                                </button>
+                                                            </div>
+                                                        </div>
                                                     );
                                                 })}
                                             </div>
-                                            <label className="flex items-center justify-between gap-3">
+                                            <div className="flex items-center justify-between gap-3">
                                                 <span className="text-xs font-black text-zinc-600">플랫폼 권한</span>
-                                                <select
-                                                    value={user.platformAdmin ? 'PLATFORM_ADMIN' : 'USER'}
-                                                    onChange={event => void handlePlatformAccessChange(user, event.target.value === 'PLATFORM_ADMIN')}
+                                                <button
+                                                    type="button"
+                                                    aria-pressed={user.platformAdmin}
+                                                    onClick={() => void handlePlatformAccessChange(user, !user.platformAdmin)}
                                                     disabled={changingKey === `platform-${user.accountId}` || (!user.platformAdmin && user.accountStatus !== 'ACTIVE')}
-                                                    className="rounded-lg border border-zinc-200 bg-white px-3 py-2 text-xs font-black text-zinc-700 disabled:bg-zinc-100"
+                                                    className={`rounded-lg border px-3 py-2 text-xs font-black disabled:opacity-40 ${user.platformAdmin ? 'border-emerald-700 bg-emerald-700 text-white' : 'border-zinc-200 bg-white text-zinc-600'}`}
                                                 >
-                                                    <option value="USER">일반 사용자</option>
-                                                    <option value="PLATFORM_ADMIN">플랫폼 관리자</option>
-                                                </select>
-                                            </label>
+                                                    플랫폼 관리자
+                                                </button>
+                                            </div>
                                         </article>
                                     ))}
                                 </div>

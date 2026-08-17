@@ -9,6 +9,7 @@ export interface AdminCrewMembership {
     crewCode: string;
     crewName: string;
     role: CrewRole;
+    eventManager: boolean;
 }
 
 export interface AdminUser {
@@ -49,6 +50,18 @@ export const updateAdminCrewRole = async (
     const response = await apiClient.patch<ApiResponse<AdminUser>>(
         `/admin/users/${accountId}/crews/${crewId}/role`,
         { role },
+    );
+    return response.data.data;
+};
+
+export const updateAdminEventManager = async (
+    accountId: number,
+    crewId: number,
+    eventManager: boolean,
+): Promise<AdminUser> => {
+    const response = await apiClient.patch<ApiResponse<AdminUser>>(
+        `/admin/users/${accountId}/crews/${crewId}/event-manager`,
+        { eventManager },
     );
     return response.data.data;
 };
