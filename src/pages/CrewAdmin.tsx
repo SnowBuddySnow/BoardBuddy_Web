@@ -369,7 +369,7 @@ export default function CrewAdmin({ onBack, mode = 'create' }: CrewAdminProps) {
                             <h2 className="mt-4 text-xl font-black">{reviewTarget.name}을(를) {reviewDecision === 'APPROVE' ? '승인' : '반려'}할까요?</h2>
                             <p className="mt-2 text-sm leading-6 text-zinc-500">
                                 {reviewDecision === 'APPROVE'
-                                    ? '요청자에게 Captain 배지가 부여되고 크루가 활성화됩니다.'
+                                    ? '요청자에게 CAPTAIN 배지가 부여되고 크루가 활성화됩니다.'
                                     : '이 요청은 보관되며 요청자에게 크루 권한이 부여되지 않습니다.'}
                             </p>
                             <label className="mt-5 block text-sm font-bold text-zinc-700">

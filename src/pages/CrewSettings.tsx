@@ -289,7 +289,7 @@ export default function CrewSettings({ onBack }: CrewSettingsProps) {
                             </div>
                         ) : (
                             <p className="rounded-lg bg-zinc-50 px-3 py-3 text-xs leading-5 text-zinc-500">
-                                학교 연동 요청은 Captain 배지가 있는 계정만 진행할 수 있습니다.
+                                학교 연동 요청은 CAPTAIN 배지가 있는 계정만 진행할 수 있습니다.
                             </p>
                         )}
                     </section>

@@ -115,11 +115,11 @@ export default function RoleGuide({ onBack }: RoleGuideProps) {
                   <Crown className="h-5 w-5" />
                 </div>
                 <div className="min-w-0">
-                  <h2 className="text-lg font-black">Captain</h2>
+                  <h2 className="text-lg font-black">크루장</h2>
                   <p className="mt-0.5 text-xs font-bold text-zinc-500">두 매니저 역할을 모두 맡고 크루를 대표해요</p>
                 </div>
               </div>
-              <span className="shrink-0 rounded-full bg-amber-100 px-2.5 py-1 text-[11px] font-black text-amber-800">크루 대표</span>
+              <span className="shrink-0 rounded-full bg-amber-100 px-2.5 py-1 text-[11px] font-black text-amber-800">CAPTAIN</span>
             </div>
 
             <div className="mt-5 flex flex-wrap items-center gap-2 rounded-xl bg-amber-50 p-3 text-xs font-black text-amber-900">
@@ -131,7 +131,7 @@ export default function RoleGuide({ onBack }: RoleGuideProps) {
             </div>
 
             <div className="mt-5">
-              <p className="mb-2 text-[11px] font-black text-amber-800">Captain이 할 수 있는 일</p>
+              <p className="mb-2 text-[11px] font-black text-amber-800">크루장이 할 수 있는 일</p>
               <PermissionChips permissions={captainPermissions} />
             </div>
           </article>

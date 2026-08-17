@@ -53,13 +53,13 @@ const steps: OnboardingStep[] = [
   {
     id: 'role-stack',
     navigationLabel: '역할 구조',
-    eyebrow: '01 · Captain의 위치',
-    title: 'Captain은 모든 일을 혼자 하는 사람이 아니에요',
-    description: '일반 멤버의 기본 활동 위에 두 매니저 역할이 쌓이고, Captain은 크루를 대표하는 권한을 더 가집니다.',
+    eyebrow: '01 · 크루장의 위치',
+    title: '크루장은 모든 일을 혼자 하는 사람이 아니에요',
+    description: '일반 멤버의 기본 활동 위에 두 매니저 역할이 쌓이고, 크루장은 크루를 대표하는 권한을 더 가집니다.',
     icon: Crown,
     points: [
       '크루 매니저와 이벤트 그룹 매니저 역할은 같은 사람에게 함께 부여할 수 있어요.',
-      'Captain은 두 역할의 업무를 이해하되, 실제 운영은 적절한 사람에게 나누는 것이 좋아요.',
+      '크루장은 두 역할의 업무를 이해하되, 실제 운영은 적절한 사람에게 나누는 것이 좋아요.',
     ],
   },
   {
@@ -117,7 +117,7 @@ const steps: OnboardingStep[] = [
   {
     id: 'launch-check',
     navigationLabel: '최종 점검',
-    eyebrow: '06 · Captain 체크리스트',
+    eyebrow: '06 · 크루장 체크리스트',
     title: '이 다섯 가지만 확인하면 운영을 시작할 수 있어요',
     description: '완료하면 이 안내는 자동으로 열리지 않습니다. 내 정보에서 언제든 다시 볼 수 있어요.',
     icon: ClipboardCheck,
@@ -136,7 +136,7 @@ function RoleStackVisual() {
     <div className="space-y-3">
       <div className="mx-auto max-w-sm rounded-2xl border border-amber-300 bg-amber-50 p-4 shadow-sm">
         <div className="flex items-center gap-2 text-sm font-black text-amber-950">
-          <Crown className="h-4 w-4 text-amber-700" /> Captain
+          <Crown className="h-4 w-4 text-amber-700" /> 크루장
         </div>
         <div className="mt-3 flex flex-wrap gap-1.5">
           {['두 매니저 역할', '크루 대표', '역할 부여'].map(label => (
@@ -254,12 +254,12 @@ export function CaptainOnboardingReturnButton({ onReturn, onDismiss }: { onRetur
           <Crown className="h-4 w-4" />
         </span>
         <span>
-          <span className="block text-xs font-black">Captain 가이드로 돌아가기</span>
+          <span className="block text-xs font-black">크루장 가이드로 돌아가기</span>
           <span className="mt-0.5 block text-[10px] font-semibold text-amber-800">보던 단계에서 계속해요</span>
         </span>
         <ChevronRight className="h-4 w-4 shrink-0 text-amber-700" />
       </button>
-      <button type="button" onClick={onDismiss} className="mr-2 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border-0 bg-transparent text-amber-700 hover:bg-amber-200" aria-label="Captain 가이드 돌아가기 숨기기">
+      <button type="button" onClick={onDismiss} className="mr-2 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border-0 bg-transparent text-amber-700 hover:bg-amber-200" aria-label="크루장 가이드 돌아가기 숨기기">
         <X className="h-4 w-4" />
       </button>
     </div>
@@ -308,11 +308,11 @@ export default function CaptainOnboarding({ open, isDesktop, initialStep = 0, on
           <div className="flex items-start justify-between gap-4">
             <div className="min-w-0">
               <div className="flex items-center gap-2 text-[11px] font-black uppercase tracking-[0.16em] text-amber-700">
-                <Crown className="h-4 w-4" /> Captain 시작 가이드
+                <Crown className="h-4 w-4" /> 크루장 시작 가이드
               </div>
               <h1 id="captain-onboarding-title" className="mt-1 truncate text-xl font-black text-zinc-950 sm:text-2xl">크루 운영의 전체 지도를 먼저 볼게요</h1>
             </div>
-            <button type="button" onClick={onClose} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-zinc-200 bg-white text-zinc-500 hover:bg-zinc-100" aria-label="Captain 시작 가이드 나중에 보기">
+            <button type="button" onClick={onClose} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-zinc-200 bg-white text-zinc-500 hover:bg-zinc-100" aria-label="크루장 시작 가이드 나중에 보기">
               <X className="h-5 w-5" />
             </button>
           </div>
@@ -348,7 +348,7 @@ export default function CaptainOnboarding({ open, isDesktop, initialStep = 0, on
             <div className="mt-6 rounded-2xl border border-amber-200 bg-amber-50 p-4">
               <Map className="h-5 w-5 text-amber-700" />
               <p className="mt-3 text-xs font-black text-amber-950">다시 보고 싶을 때</p>
-              <p className="mt-1 text-[11px] leading-5 text-amber-800">내 정보 → Captain 시작 가이드에서 언제든 열 수 있어요.</p>
+              <p className="mt-1 text-[11px] leading-5 text-amber-800">내 정보 → 크루장 시작 가이드에서 언제든 열 수 있어요.</p>
             </div>
           </aside>
 
@@ -422,7 +422,7 @@ export default function CaptainOnboarding({ open, isDesktop, initialStep = 0, on
               </button>
             ) : (
               <button type="button" onClick={onComplete} className="flex h-11 items-center gap-2 rounded-xl border-0 bg-amber-400 px-5 text-sm font-black text-amber-950 hover:bg-amber-300">
-                <Crown className="h-4 w-4" /> Captain 준비 완료
+                <Crown className="h-4 w-4" /> 크루장 준비 완료
               </button>
             )}
           </div>

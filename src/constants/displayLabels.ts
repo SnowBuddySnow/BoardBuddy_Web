@@ -9,7 +9,7 @@ import type {
 import type { CrewRole } from './crewRole';
 
 export const crewRoleLabel: Record<CrewRole, string> = {
-  CREW_CAPTAIN: 'Captain',
+  CREW_CAPTAIN: '크루장',
   CREW_MANAGER: '크루 매니저',
   CREW_MEMBER: '일반 멤버',
 };

@@ -289,7 +289,7 @@ export default function CrewMember({ onBack }: CrewMemberProps) {
                     <div className="space-y-6">
                         {/* CAPTAIN badge section */}
                         <section>
-                            <h3 className="text-sm font-bold text-zinc-400 mb-3">Captain</h3>
+                            <h3 className="text-sm font-bold text-zinc-400 mb-3">크루장</h3>
                             <div className="space-y-3">
                                 {members.filter(m => m.role === 'CREW_CAPTAIN').map(member => (
                                     <div key={member.id} className="flex items-center justify-between">
@@ -300,7 +300,7 @@ export default function CrewMember({ onBack }: CrewMemberProps) {
                                             <div>
                                                 <div className="flex items-center gap-2">
                                                     <p className="font-bold text-zinc-900">{member.name}</p>
-                                                    <span className="text-[10px] px-1.5 py-0.5 bg-yellow-100 text-yellow-700 rounded-full font-bold">Captain</span>
+                                                    <span className="text-[10px] px-1.5 py-0.5 bg-yellow-100 text-yellow-700 rounded-full font-bold">CAPTAIN</span>
                                                 </div>
                                                 {currentUserRole === 'CREW_MANAGER' && (
                                                     <p className="text-xs text-zinc-500">{member.studentId}</p>

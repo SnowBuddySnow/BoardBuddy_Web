@@ -223,7 +223,7 @@ export default function MyPage({ onBack, onAccountInfoClick, onRoleGuideClick, o
                                     <Map className="h-5 w-5" />
                                 </span>
                                 <div className="text-left">
-                                    <span className="block font-black text-amber-950">Captain 시작 가이드</span>
+                                    <span className="block font-black text-amber-950">크루장 시작 가이드</span>
                                     <span className="mt-0.5 block text-xs font-medium text-amber-800">크루 운영의 전체 흐름 다시 보기</span>
                                 </div>
                             </div>
