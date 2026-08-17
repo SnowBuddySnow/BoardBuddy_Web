@@ -25,6 +25,13 @@ interface UserAdminProps {
     onBack: () => void;
 }
 
+interface PendingConfirmation {
+    title: string;
+    message: string;
+    confirmLabel: string;
+    onConfirm: () => void;
+}
+
 const accountStatusCopy: Record<AccountStatus, { label: string; className: string }> = {
     PENDING_PROFILE: { label: '프로필 대기', className: 'bg-amber-50 text-amber-700 ring-amber-200' },
     ACTIVE: { label: '활성', className: 'bg-emerald-50 text-emerald-700 ring-emerald-200' },
@@ -37,12 +44,6 @@ const userTypeCopy = {
     REGULAR: '일반',
     KUSBF: '학생',
 } as const;
-
-const crewRoleCopy: Record<CrewRole, string> = {
-    CREW_MEMBER: '크루 멤버',
-    CREW_MANAGER: '크루 매니저',
-    CREW_CAPTAIN: '크루장',
-};
 
 const formatDate = (value: string) => new Intl.DateTimeFormat('ko-KR', {
     year: 'numeric',
@@ -65,6 +66,8 @@ export default function UserAdmin({ onBack }: UserAdminProps) {
     const [loading, setLoading] = useState(true);
     const [changingKey, setChangingKey] = useState<string | null>(null);
     const [error, setError] = useState('');
+    const [notice, setNotice] = useState('');
+    const [pendingConfirmation, setPendingConfirmation] = useState<PendingConfirmation | null>(null);
 
     const load = useCallback(async (searchQuery: string) => {
         setLoading(true);
@@ -100,11 +103,6 @@ export default function UserAdmin({ onBack }: UserAdminProps) {
 
     const handlePlatformAccessChange = async (user: AdminUser, platformAdmin: boolean) => {
         if (platformAdmin === user.platformAdmin) return;
-        const question = platformAdmin
-            ? `${user.name || user.userCode} 사용자에게 플랫폼 관리자 권한을 부여하시겠습니까?`
-            : `${user.name || user.userCode} 사용자의 플랫폼 관리자 권한을 해제하시겠습니까?`;
-        if (!window.confirm(question)) return;
-
         setChangingKey(`platform-${user.accountId}`);
         setError('');
         try {
@@ -120,18 +118,10 @@ export default function UserAdmin({ onBack }: UserAdminProps) {
     const handleCrewRoleChange = async (
         user: AdminUser,
         crewId: number,
-        crewName: string,
         currentRole: CrewRole,
         role: CrewRole,
     ) => {
         if (role === currentRole) return;
-        const captainNotice = role === 'CREW_CAPTAIN'
-            ? ' 기존 크루장은 크루 매니저로 자동 변경됩니다.'
-            : '';
-        if (!window.confirm(
-            `${user.name || user.userCode} 사용자의 ${crewName} 역할을 ${crewRoleCopy[role]}(으)로 변경하시겠습니까?${captainNotice}`,
-        )) return;
-
         setChangingKey(`crew-${user.accountId}-${crewId}`);
         setError('');
         try {
@@ -149,10 +139,6 @@ export default function UserAdmin({ onBack }: UserAdminProps) {
         membership: AdminCrewMembership,
     ) => {
         const nextValue = !membership.crewManager;
-        if (!window.confirm(
-            `${user.name || user.userCode} 사용자의 ${membership.crewName} 크루 매니저 권한을 ${nextValue ? '부여' : '해제'}하시겠습니까?`,
-        )) return;
-
         setChangingKey(`manager-${user.accountId}-${membership.crewId}`);
         setError('');
         try {
@@ -168,14 +154,9 @@ export default function UserAdmin({ onBack }: UserAdminProps) {
     const handleEventManagerChange = async (
         user: AdminUser,
         crewId: number,
-        crewName: string,
         currentValue: boolean,
     ) => {
         const nextValue = !currentValue;
-        if (!window.confirm(
-            `${user.name || user.userCode} 사용자의 ${crewName} 이벤트 그룹 매니저 권한을 ${nextValue ? '부여' : '해제'}하시겠습니까?`,
-        )) return;
-
         setChangingKey(`event-${user.accountId}-${crewId}`);
         setError('');
         try {
@@ -190,20 +171,62 @@ export default function UserAdmin({ onBack }: UserAdminProps) {
 
     const handleCaptainClick = (user: AdminUser, membership: AdminCrewMembership) => {
         if (membership.role === 'CREW_CAPTAIN') {
-            window.alert('크루장을 변경하려면 같은 크루의 다른 멤버에서 크루장 지정을 선택해 주세요.');
+            setNotice('현재 크루장입니다. 크루장을 변경하려면 같은 크루의 다른 멤버에서 크루장 지정을 선택해 주세요.');
             return;
         }
-        void handleCrewRoleChange(
-            user,
-            membership.crewId,
-            membership.crewName,
-            membership.role,
-            'CREW_CAPTAIN',
-        );
+        setNotice('');
+        setPendingConfirmation({
+            title: '크루장 지정',
+            message: `${user.name || user.userCode} 사용자를 ${membership.crewName} 크루장으로 지정합니다. 기존 크루장이 있으면 크루장 지정만 이전됩니다.`,
+            confirmLabel: '크루장으로 지정',
+            onConfirm: () => void handleCrewRoleChange(
+                user,
+                membership.crewId,
+                membership.role,
+                'CREW_CAPTAIN',
+            ),
+        });
     };
 
     const handleCrewManagerClick = (user: AdminUser, membership: AdminCrewMembership) => {
-        void handleCrewManagerChange(user, membership);
+        const nextValue = !membership.crewManager;
+        setPendingConfirmation({
+            title: '크루 매니저 권한 변경',
+            message: `${user.name || user.userCode} 사용자의 ${membership.crewName} 크루 매니저 권한을 ${nextValue ? '부여' : '해제'}합니다.`,
+            confirmLabel: nextValue ? '권한 부여' : '권한 해제',
+            onConfirm: () => void handleCrewManagerChange(user, membership),
+        });
+    };
+
+    const handleEventManagerClick = (user: AdminUser, membership: AdminCrewMembership) => {
+        const nextValue = !membership.eventManager;
+        setPendingConfirmation({
+            title: '이벤트 매니저 권한 변경',
+            message: `${user.name || user.userCode} 사용자의 ${membership.crewName} 이벤트 그룹 매니저 권한을 ${nextValue ? '부여' : '해제'}합니다.`,
+            confirmLabel: nextValue ? '권한 부여' : '권한 해제',
+            onConfirm: () => void handleEventManagerChange(
+                user,
+                membership.crewId,
+                membership.eventManager,
+            ),
+        });
+    };
+
+    const handlePlatformAccessClick = (user: AdminUser) => {
+        const nextValue = !user.platformAdmin;
+        setPendingConfirmation({
+            title: '플랫폼 관리자 권한 변경',
+            message: `${user.name || user.userCode} 사용자의 플랫폼 관리자 권한을 ${nextValue ? '부여' : '해제'}합니다.`,
+            confirmLabel: nextValue ? '권한 부여' : '권한 해제',
+            onConfirm: () => void handlePlatformAccessChange(user, nextValue),
+        });
+    };
+
+    const confirmPendingChange = () => {
+        if (!pendingConfirmation) return;
+        const action = pendingConfirmation.onConfirm;
+        setPendingConfirmation(null);
+        action();
     };
 
     return (
@@ -261,6 +284,12 @@ export default function UserAdmin({ onBack }: UserAdminProps) {
                         {error && (
                             <div className="m-4 rounded-xl border border-red-200 bg-red-50 p-3 text-sm font-semibold text-red-700">
                                 {error}
+                            </div>
+                        )}
+
+                        {notice && (
+                            <div className="m-4 rounded-xl border border-blue-200 bg-blue-50 p-3 text-sm font-semibold text-blue-800">
+                                {notice}
                             </div>
                         )}
 
@@ -336,12 +365,7 @@ export default function UserAdmin({ onBack }: UserAdminProps) {
                                                                                     type="button"
                                                                                     aria-pressed={membership.eventManager}
                                                                                     disabled={busy}
-                                                                                    onClick={() => void handleEventManagerChange(
-                                                                                        user,
-                                                                                        membership.crewId,
-                                                                                        membership.crewName,
-                                                                                        membership.eventManager,
-                                                                                    )}
+                                                                                    onClick={() => handleEventManagerClick(user, membership)}
                                                                                     className={`rounded-lg border px-2 py-2 text-[11px] font-black transition disabled:opacity-50 ${membership.eventManager ? 'border-[#162660] bg-[#162660] text-white' : 'border-zinc-200 bg-white text-zinc-600 hover:bg-zinc-100'}`}
                                                                                 >
                                                                                     이벤트 매니저
@@ -357,7 +381,7 @@ export default function UserAdmin({ onBack }: UserAdminProps) {
                                                         <button
                                                             type="button"
                                                             aria-pressed={user.platformAdmin}
-                                                            onClick={() => void handlePlatformAccessChange(user, !user.platformAdmin)}
+                                                            onClick={() => handlePlatformAccessClick(user)}
                                                             disabled={changingKey === `platform-${user.accountId}` || (!user.platformAdmin && user.accountStatus !== 'ACTIVE')}
                                                             title={!user.platformAdmin && user.accountStatus !== 'ACTIVE' ? '활성 계정만 플랫폼 관리자로 지정할 수 있습니다.' : undefined}
                                                             className={`rounded-lg border px-3 py-2 text-xs font-black transition disabled:opacity-40 ${user.platformAdmin ? 'border-emerald-700 bg-emerald-700 text-white' : 'border-zinc-200 bg-white text-zinc-600 hover:bg-zinc-100'}`}
@@ -418,12 +442,7 @@ export default function UserAdmin({ onBack }: UserAdminProps) {
                                                                     type="button"
                                                                     aria-pressed={membership.eventManager}
                                                                     disabled={busy}
-                                                                    onClick={() => void handleEventManagerChange(
-                                                                        user,
-                                                                        membership.crewId,
-                                                                        membership.crewName,
-                                                                        membership.eventManager,
-                                                                    )}
+                                                                    onClick={() => handleEventManagerClick(user, membership)}
                                                                     className={`rounded-lg border px-2 py-2 text-[10px] font-black disabled:opacity-50 ${membership.eventManager ? 'border-[#162660] bg-[#162660] text-white' : 'border-zinc-200 bg-white text-zinc-600'}`}
                                                                 >
                                                                     이벤트 매니저
@@ -438,7 +457,7 @@ export default function UserAdmin({ onBack }: UserAdminProps) {
                                                 <button
                                                     type="button"
                                                     aria-pressed={user.platformAdmin}
-                                                    onClick={() => void handlePlatformAccessChange(user, !user.platformAdmin)}
+                                                    onClick={() => handlePlatformAccessClick(user)}
                                                     disabled={changingKey === `platform-${user.accountId}` || (!user.platformAdmin && user.accountStatus !== 'ACTIVE')}
                                                     className={`rounded-lg border px-3 py-2 text-xs font-black disabled:opacity-40 ${user.platformAdmin ? 'border-emerald-700 bg-emerald-700 text-white' : 'border-zinc-200 bg-white text-zinc-600'}`}
                                                 >
@@ -453,6 +472,46 @@ export default function UserAdmin({ onBack }: UserAdminProps) {
                     </section>
                 </div>
             </main>
+
+            {pendingConfirmation && (
+                <div
+                    className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-4"
+                    role="presentation"
+                    onMouseDown={event => {
+                        if (event.currentTarget === event.target) setPendingConfirmation(null);
+                    }}
+                >
+                    <section
+                        role="dialog"
+                        aria-modal="true"
+                        aria-labelledby="permission-confirmation-title"
+                        className="w-full max-w-md rounded-2xl bg-white p-5 shadow-2xl"
+                    >
+                        <h2 id="permission-confirmation-title" className="text-lg font-black text-zinc-900">
+                            {pendingConfirmation.title}
+                        </h2>
+                        <p className="mt-3 text-sm font-semibold leading-6 text-zinc-600">
+                            {pendingConfirmation.message}
+                        </p>
+                        <div className="mt-6 flex justify-end gap-2">
+                            <button
+                                type="button"
+                                onClick={() => setPendingConfirmation(null)}
+                                className="rounded-xl border border-zinc-200 bg-white px-4 py-2.5 text-sm font-black text-zinc-700 hover:bg-zinc-50"
+                            >
+                                취소
+                            </button>
+                            <button
+                                type="button"
+                                onClick={confirmPendingChange}
+                                className="rounded-xl bg-[#162660] px-4 py-2.5 text-sm font-black text-white hover:bg-[#0f1b4a]"
+                            >
+                                {pendingConfirmation.confirmLabel}
+                            </button>
+                        </div>
+                    </section>
+                </div>
+            )}
         </div>
     );
 }
