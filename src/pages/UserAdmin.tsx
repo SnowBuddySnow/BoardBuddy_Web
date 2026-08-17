@@ -11,6 +11,7 @@ import { Button } from '../components/Button';
 import { getApiErrorMessage } from '../lib/apiError';
 import {
     searchAdminUsers,
+    updateAdminCrewManager,
     updateAdminCrewRole,
     updateAdminEventManager,
     updatePlatformAdmin,
@@ -143,17 +144,33 @@ export default function UserAdmin({ onBack }: UserAdminProps) {
         }
     };
 
+    const handleCrewManagerChange = async (
+        user: AdminUser,
+        membership: AdminCrewMembership,
+    ) => {
+        const nextValue = !membership.crewManager;
+        if (!window.confirm(
+            `${user.name || user.userCode} 사용자의 ${membership.crewName} 크루 매니저 권한을 ${nextValue ? '부여' : '해제'}하시겠습니까?`,
+        )) return;
+
+        setChangingKey(`manager-${user.accountId}-${membership.crewId}`);
+        setError('');
+        try {
+            const updated = await updateAdminCrewManager(user.accountId, membership.crewId, nextValue);
+            setUsers(current => current.map(item => item.accountId === updated.accountId ? updated : item));
+        } catch (updateError) {
+            setError(getApiErrorMessage(updateError) || '크루 매니저 권한을 변경하지 못했습니다.');
+        } finally {
+            setChangingKey(null);
+        }
+    };
+
     const handleEventManagerChange = async (
         user: AdminUser,
         crewId: number,
         crewName: string,
         currentValue: boolean,
-        isCaptain: boolean,
     ) => {
-        if (isCaptain && currentValue) {
-            window.alert('크루장은 이벤트 그룹 매니저 권한을 기본으로 보유합니다. 다른 멤버를 크루장으로 지정하면 개별 변경할 수 있습니다.');
-            return;
-        }
         const nextValue = !currentValue;
         if (!window.confirm(
             `${user.name || user.userCode} 사용자의 ${crewName} 이벤트 그룹 매니저 권한을 ${nextValue ? '부여' : '해제'}하시겠습니까?`,
@@ -186,17 +203,7 @@ export default function UserAdmin({ onBack }: UserAdminProps) {
     };
 
     const handleCrewManagerClick = (user: AdminUser, membership: AdminCrewMembership) => {
-        if (membership.role === 'CREW_CAPTAIN') {
-            window.alert('크루장은 크루 매니저 권한을 기본으로 보유합니다. 다른 멤버를 크루장으로 지정하면 개별 변경할 수 있습니다.');
-            return;
-        }
-        void handleCrewRoleChange(
-            user,
-            membership.crewId,
-            membership.crewName,
-            membership.role,
-            membership.role === 'CREW_MANAGER' ? 'CREW_MEMBER' : 'CREW_MANAGER',
-        );
+        void handleCrewManagerChange(user, membership);
     };
 
     return (
@@ -229,7 +236,7 @@ export default function UserAdmin({ onBack }: UserAdminProps) {
                     <section className="rounded-2xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-900">
                         <p className="font-black">권한 범위를 분리해서 관리합니다</p>
                         <p className="mt-1 leading-6 text-blue-800">
-                            크루 매니저, 이벤트 그룹 매니저, 플랫폼 관리자는 서로 독립적으로 함께 부여할 수 있습니다. 크루장은 두 크루 권한을 기본 보유합니다.
+                            크루장 지정, 크루 매니저, 이벤트 그룹 매니저, 플랫폼 관리자는 서로 독립적입니다. 진하게 표시된 항목만 현재 부여된 권한입니다.
                         </p>
                     </section>
 
@@ -299,10 +306,10 @@ export default function UserAdmin({ onBack }: UserAdminProps) {
                                                             <div className="space-y-2">
                                                                 {user.crewMemberships.map(membership => {
                                                                     const roleKey = `crew-${user.accountId}-${membership.crewId}`;
+                                                                    const managerKey = `manager-${user.accountId}-${membership.crewId}`;
                                                                     const eventKey = `event-${user.accountId}-${membership.crewId}`;
                                                                     const isCaptain = membership.role === 'CREW_CAPTAIN';
-                                                                    const isManager = membership.role === 'CREW_MANAGER' || isCaptain;
-                                                                    const busy = changingKey === roleKey || changingKey === eventKey;
+                                                                    const busy = changingKey === roleKey || changingKey === managerKey || changingKey === eventKey;
                                                                     return (
                                                                         <div key={membership.crewId} className="space-y-2 rounded-xl border border-zinc-100 bg-zinc-50 p-2.5">
                                                                             <span className="block truncate text-xs font-black text-zinc-700">{membership.crewName}</span>
@@ -318,10 +325,10 @@ export default function UserAdmin({ onBack }: UserAdminProps) {
                                                                                 </button>
                                                                                 <button
                                                                                     type="button"
-                                                                                    aria-pressed={isManager}
+                                                                                    aria-pressed={membership.crewManager}
                                                                                     disabled={busy}
                                                                                     onClick={() => handleCrewManagerClick(user, membership)}
-                                                                                    className={`rounded-lg border px-2 py-2 text-[11px] font-black transition disabled:opacity-50 ${isManager ? 'border-zinc-800 bg-zinc-800 text-white' : 'border-zinc-200 bg-white text-zinc-600 hover:bg-zinc-100'}`}
+                                                                                    className={`rounded-lg border px-2 py-2 text-[11px] font-black transition disabled:opacity-50 ${membership.crewManager ? 'border-zinc-800 bg-zinc-800 text-white' : 'border-zinc-200 bg-white text-zinc-600 hover:bg-zinc-100'}`}
                                                                                 >
                                                                                     크루 매니저
                                                                                 </button>
@@ -334,7 +341,6 @@ export default function UserAdmin({ onBack }: UserAdminProps) {
                                                                                         membership.crewId,
                                                                                         membership.crewName,
                                                                                         membership.eventManager,
-                                                                                        isCaptain,
                                                                                     )}
                                                                                     className={`rounded-lg border px-2 py-2 text-[11px] font-black transition disabled:opacity-50 ${membership.eventManager ? 'border-[#162660] bg-[#162660] text-white' : 'border-zinc-200 bg-white text-zinc-600 hover:bg-zinc-100'}`}
                                                                                 >
@@ -382,10 +388,10 @@ export default function UserAdmin({ onBack }: UserAdminProps) {
                                                     <p className="text-xs text-zinc-400">가입 크루 없음</p>
                                                 ) : user.crewMemberships.map(membership => {
                                                     const roleKey = `crew-${user.accountId}-${membership.crewId}`;
+                                                    const managerKey = `manager-${user.accountId}-${membership.crewId}`;
                                                     const eventKey = `event-${user.accountId}-${membership.crewId}`;
                                                     const isCaptain = membership.role === 'CREW_CAPTAIN';
-                                                    const isManager = membership.role === 'CREW_MANAGER' || isCaptain;
-                                                    const busy = changingKey === roleKey || changingKey === eventKey;
+                                                    const busy = changingKey === roleKey || changingKey === managerKey || changingKey === eventKey;
                                                     return (
                                                         <div key={membership.crewId} className="space-y-2">
                                                             <span className="block truncate text-xs font-black text-zinc-700">{membership.crewName}</span>
@@ -401,10 +407,10 @@ export default function UserAdmin({ onBack }: UserAdminProps) {
                                                                 </button>
                                                                 <button
                                                                     type="button"
-                                                                    aria-pressed={isManager}
+                                                                    aria-pressed={membership.crewManager}
                                                                     disabled={busy}
                                                                     onClick={() => handleCrewManagerClick(user, membership)}
-                                                                    className={`rounded-lg border px-2 py-2 text-[10px] font-black disabled:opacity-50 ${isManager ? 'border-zinc-800 bg-zinc-800 text-white' : 'border-zinc-200 bg-white text-zinc-600'}`}
+                                                                    className={`rounded-lg border px-2 py-2 text-[10px] font-black disabled:opacity-50 ${membership.crewManager ? 'border-zinc-800 bg-zinc-800 text-white' : 'border-zinc-200 bg-white text-zinc-600'}`}
                                                                 >
                                                                     크루 매니저
                                                                 </button>
@@ -417,7 +423,6 @@ export default function UserAdmin({ onBack }: UserAdminProps) {
                                                                         membership.crewId,
                                                                         membership.crewName,
                                                                         membership.eventManager,
-                                                                        isCaptain,
                                                                     )}
                                                                     className={`rounded-lg border px-2 py-2 text-[10px] font-black disabled:opacity-50 ${membership.eventManager ? 'border-[#162660] bg-[#162660] text-white' : 'border-zinc-200 bg-white text-zinc-600'}`}
                                                                 >
