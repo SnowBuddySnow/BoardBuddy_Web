@@ -35,7 +35,9 @@ import RoleGuide from './pages/RoleGuide';
 import GuestAccess from './pages/GuestAccess';
 import OrganizerInviteAccept from './pages/OrganizerInviteAccept';
 import DevPanel from './components/DevPanel';
+import CaptainOnboarding, { CaptainOnboardingReturnButton, type CaptainOnboardingDestination } from './components/CaptainOnboarding';
 import { getAccessToken, hasDevOverride, isAutoLoginEnabled } from './lib/session';
+import { completeCaptainOnboarding, hasCompletedCaptainOnboarding } from './lib/captainOnboarding';
 import { getOperationsContext, type OperationPermission } from './services/operations';
 import { getUserInfo } from './services/user';
 import { getCrewInfo, getMyApplications } from './services/crew';
@@ -44,6 +46,7 @@ import { useDesktopViewport } from './hooks/useDesktopViewport';
 import { getOperatingFeatures, getOperatingMode } from './constants/operatingSeason';
 import { listParties } from './services/event';
 import type { CrewDetail as CrewDetailData } from './types/api';
+import { isCrewCaptainRole } from './constants/crewRole';
 
 type Tab = 'home' | 'events' | 'calendar' | 'edit' | 'heart' | 'user';
 type View =
@@ -178,6 +181,12 @@ function App() {
   const [managementRefreshKey, setManagementRefreshKey] = useState(0);
   const [availableEventCount, setAvailableEventCount] = useState(0);
   const [crewDetail, setCrewDetail] = useState<CrewDetailData | null>(null);
+  const [isCaptain, setIsCaptain] = useState(false);
+  const [captainUserId, setCaptainUserId] = useState<number | null>(null);
+  const [captainOnboardingOpen, setCaptainOnboardingOpen] = useState(false);
+  const [captainOnboardingDismissed, setCaptainOnboardingDismissed] = useState(false);
+  const [captainOnboardingStep, setCaptainOnboardingStep] = useState(0);
+  const [captainGuideReturnVisible, setCaptainGuideReturnVisible] = useState(false);
   const isDesktop = useDesktopViewport();
   const usedDesktopLanding = useRef(false);
   const shouldLoadPermissions = !['login', 'user_info'].includes(currentView);
@@ -202,6 +211,8 @@ function App() {
       try {
         const user = await getUserInfo();
         if (cancelled) return;
+        setIsCaptain(isCrewCaptainRole(user.role));
+        setCaptainUserId(user.userId);
         setHasCrew(Boolean(user.crew));
         if (user.crew) {
           setHasPendingCrewApplication(false);
@@ -217,6 +228,8 @@ function App() {
           setHasCrew(false);
           setHasPendingCrewApplication(false);
           setCrewDetail(null);
+          setIsCaptain(false);
+          setCaptainUserId(null);
         }
       }
     };
@@ -224,6 +237,22 @@ function App() {
     void loadCrewAccess();
     return () => { cancelled = true; };
   }, [shouldLoadPermissions]);
+
+  useEffect(() => {
+    if (!shouldLoadPermissions || !managementAccessResolved || !isCaptain || captainUserId == null) return;
+    if (captainOnboardingDismissed || captainOnboardingOpen) return;
+    if (!hasCompletedCaptainOnboarding(captainUserId)) {
+      setCaptainOnboardingStep(0);
+      setCaptainOnboardingOpen(true);
+    }
+  }, [
+    captainOnboardingDismissed,
+    captainOnboardingOpen,
+    captainUserId,
+    isCaptain,
+    managementAccessResolved,
+    shouldLoadPermissions,
+  ]);
 
   useEffect(() => {
     if (!shouldLoadPermissions) {
@@ -337,6 +366,27 @@ function App() {
   };
 
   const handleDesktopNavigate = (destination: DesktopDestination) => {
+    setCurrentView(destination);
+  };
+
+  const handleCaptainOnboardingClose = () => {
+    setCaptainOnboardingOpen(false);
+    setCaptainOnboardingDismissed(true);
+    setCaptainGuideReturnVisible(false);
+  };
+
+  const handleCaptainOnboardingComplete = () => {
+    if (captainUserId != null) completeCaptainOnboarding(captainUserId);
+    setCaptainOnboardingOpen(false);
+    setCaptainOnboardingDismissed(true);
+    setCaptainGuideReturnVisible(false);
+  };
+
+  const handleCaptainOnboardingNavigate = (destination: CaptainOnboardingDestination, stepIndex: number) => {
+    setCaptainOnboardingStep(stepIndex);
+    setCaptainOnboardingOpen(false);
+    setCaptainOnboardingDismissed(true);
+    setCaptainGuideReturnVisible(true);
     setCurrentView(destination);
   };
 
@@ -487,6 +537,11 @@ function App() {
             onBack={() => setCurrentView('home')}
             onAccountInfoClick={() => setCurrentView('account_info')}
             onRoleGuideClick={() => setCurrentView('role_guide')}
+            onCaptainOnboardingClick={isCaptain ? () => {
+              setCaptainOnboardingStep(0);
+              setCaptainGuideReturnVisible(false);
+              setCaptainOnboardingOpen(true);
+            } : undefined}
           />
         );
       case 'account_info':
@@ -647,6 +702,25 @@ function App() {
             onTabChange={(tab) => {
               setCurrentView(tabViews[tab]);
             }}
+          />
+        )}
+
+        <CaptainOnboarding
+          open={captainOnboardingOpen}
+          isDesktop={isDesktop}
+          initialStep={captainOnboardingStep}
+          onClose={handleCaptainOnboardingClose}
+          onComplete={handleCaptainOnboardingComplete}
+          onNavigate={handleCaptainOnboardingNavigate}
+        />
+
+        {isCaptain && captainGuideReturnVisible && !captainOnboardingOpen && (
+          <CaptainOnboardingReturnButton
+            onReturn={() => {
+              setCaptainGuideReturnVisible(false);
+              setCaptainOnboardingOpen(true);
+            }}
+            onDismiss={() => setCaptainGuideReturnVisible(false)}
           />
         )}
       </div>

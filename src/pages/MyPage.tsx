@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ChevronLeftIcon, ChevronRightIcon, UserIcon, Pencil, ExternalLink, Crown, Waypoints } from 'lucide-react';
+import { ChevronLeftIcon, ChevronRightIcon, UserIcon, Pencil, ExternalLink, Crown, Waypoints, Map } from 'lucide-react';
 import { Button } from '../components/Button';
 import { Calendar } from '../components/Calendar';
 import { getUserInfo, getMyReservations } from '../services/user';
@@ -11,9 +11,10 @@ interface MyPageProps {
     onBack: () => void;
     onAccountInfoClick?: () => void;
     onRoleGuideClick?: () => void;
+    onCaptainOnboardingClick?: () => void;
 }
 
-export default function MyPage({ onBack, onAccountInfoClick, onRoleGuideClick }: MyPageProps) {
+export default function MyPage({ onBack, onAccountInfoClick, onRoleGuideClick, onCaptainOnboardingClick }: MyPageProps) {
     const [userInfo, setUserInfo] = useState<UserDetail | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [reservations, setReservations] = useState<MyReservation[]>([]);
@@ -209,6 +210,27 @@ export default function MyPage({ onBack, onAccountInfoClick, onRoleGuideClick }:
                         </div>
                     )}
                 </div>
+
+                {/* Captain Onboarding Menu */}
+                {isCrewCaptainRole(userInfo.role) && onCaptainOnboardingClick && (
+                    <div className="px-6 mb-4">
+                        <button
+                            onClick={onCaptainOnboardingClick}
+                            className="w-full rounded-[20px] border border-amber-200 bg-amber-50 p-5 flex items-center justify-between hover:bg-amber-100 transition-colors"
+                        >
+                            <div className="flex items-center gap-3">
+                                <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-200 text-amber-900">
+                                    <Map className="h-5 w-5" />
+                                </span>
+                                <div className="text-left">
+                                    <span className="block font-black text-amber-950">Captain 시작 가이드</span>
+                                    <span className="mt-0.5 block text-xs font-medium text-amber-800">크루 운영의 전체 흐름 다시 보기</span>
+                                </div>
+                            </div>
+                            <ChevronRightIcon className="w-5 h-5 text-amber-800" />
+                        </button>
+                    </div>
+                )}
 
                 {/* Role Guide Menu */}
                 {onRoleGuideClick && (

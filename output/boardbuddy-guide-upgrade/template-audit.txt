@@ -1,0 +1,12 @@
+Source deck: BoardBuddy_사용설명서.pptx
+Slides: 17
+Canvas: 1280 x 720
+Visual system: warm off-white canvas, navy/amber accents, Arial typography, screenshot-led instructional layouts.
+Reusable patterns:
+- Slide 2: role overview with four role surfaces.
+- Slide 3 / 11: section divider.
+- Slides 4–10: desktop screenshot with three-step rail.
+- Slides 12–16: mobile screenshot with three-step rail.
+- Slide 17: dark quick-reference close.
+The imported deck contains flattened slide-local content and no reusable custom master/layout hierarchy beyond the default PowerPoint layout.
+Insertion contract: preserve all 17 source slides, revise role and terminology content in place, and insert five duplicates of existing source patterns after source slide 10.

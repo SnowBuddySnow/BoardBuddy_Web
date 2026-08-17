@@ -1,0 +1,720 @@
+{
+  "schema": "openai.presentation.layout/v4",
+  "unit": "px",
+  "slide": {
+    "aid": "sl/mt3vdw",
+    "id": "mt3vdw",
+    "slide": 17,
+    "layoutId": "6ee9644b-2233-464b-8ad2-5e3b5e53ce43",
+    "layoutName": "Title Slide",
+    "layoutType": "title",
+    "masterLayoutId": "e5be2be5-f023-4670-b198-95cb1ea5ca39",
+    "masterLayoutName": "Master",
+    "backgroundColor": "#17265E",
+    "frame": {
+      "left": 0,
+      "top": 0,
+      "width": 1280,
+      "height": 720
+    }
+  },
+  "theme": {
+    "colorSchemeName": "ChatGPT",
+    "colors": {
+      "accent1": "#156082",
+      "accent2": "#E97132",
+      "accent3": "#196B24",
+      "accent4": "#0F9ED5",
+      "accent5": "#A02B93",
+      "accent6": "#4EA72E",
+      "bg1": "#FFFFFF",
+      "bg2": "#000000",
+      "tx1": "#1F1F1F",
+      "tx2": "#FFFFFF",
+      "dk1": "#000000",
+      "lt1": "#FFFFFF",
+      "dk2": "#0E2841",
+      "lt2": "#E8E8E8",
+      "hlink": "#467886",
+      "folHlink": "#96607D"
+    },
+    "typefaces": [
+      "Arial"
+    ]
+  },
+  "inheritedLayers": [
+    {
+      "scope": "layout",
+      "id": "6ee9644b-2233-464b-8ad2-5e3b5e53ce43",
+      "name": "Title Slide",
+      "type": "title",
+      "parentLayoutId": "e5be2be5-f023-4670-b198-95cb1ea5ca39",
+      "elements": []
+    },
+    {
+      "scope": "master",
+      "id": "e5be2be5-f023-4670-b198-95cb1ea5ca39",
+      "name": "Master",
+      "type": "master",
+      "elements": []
+    }
+  ],
+  "elements": [
+    {
+      "order": 1,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/1c3e90ri",
+      "id": "1",
+      "bbox": [
+        58,
+        44,
+        360,
+        30
+      ],
+      "geometry": "rect",
+      "text": "QUICK REFERENCE",
+      "textPreview": "QUICK REFERENCE",
+      "resolvedFontSize": 15,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 15,
+        "typeface": "Arial",
+        "color": "#F5C84C",
+        "bold": true,
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "autoFit": "shrinkText",
+        "autoFitScale": 1,
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "QUICK REFERENCE"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "QUICK REFERENCE",
+          "resolvedTextStyle": {
+            "fontSize": 15,
+            "typeface": "Arial",
+            "color": "#F5C84C",
+            "bold": true,
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "QUICK REFERENCE",
+              "fontSize": 15,
+              "typeface": "Arial",
+              "color": "#F5C84C",
+              "bold": true,
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 2,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/e9cve5s7",
+      "id": "2",
+      "bbox": [
+        58,
+        104,
+        1030,
+        64
+      ],
+      "geometry": "rect",
+      "text": "두 가지 흐름만 기억하면 됩니다",
+      "textPreview": "두 가지 흐름만 기억하면 됩니다",
+      "resolvedFontSize": 42,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 42,
+        "typeface": "Arial",
+        "color": "#FFFFFF",
+        "bold": true,
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "autoFit": "none",
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "두 가지 흐름만 기억하면 됩니다"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "두 가지 흐름만 기억하면 됩니다",
+          "resolvedTextStyle": {
+            "fontSize": 42,
+            "typeface": "Arial",
+            "color": "#FFFFFF",
+            "bold": true,
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "두 가지 흐름만 기억하면 됩니다",
+              "fontSize": 42,
+              "typeface": "Arial",
+              "color": "#FFFFFF",
+              "bold": true,
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 3,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/falw7a9s",
+      "id": "3",
+      "bbox": [
+        58,
+        220,
+        548,
+        300
+      ],
+      "geometry": "rect",
+      "fillColor": "#23336E",
+      "lineColor": "#536190",
+      "lineWidth": 1
+    },
+    {
+      "order": 4,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/s7udcva1",
+      "id": "4",
+      "bbox": [
+        86,
+        252,
+        180,
+        34
+      ],
+      "geometry": "rect",
+      "text": "운영진",
+      "textPreview": "운영진",
+      "resolvedFontSize": 20.33,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 24,
+        "typeface": "Arial",
+        "color": "#F5C84C",
+        "bold": true,
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "autoFit": "shrinkText",
+        "autoFitScale": 0.85,
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "운영진"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "운영진",
+          "resolvedTextStyle": {
+            "fontSize": 24,
+            "typeface": "Arial",
+            "color": "#F5C84C",
+            "bold": true,
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "운영진",
+              "fontSize": 24,
+              "typeface": "Arial",
+              "color": "#F5C84C",
+              "bold": true,
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 5,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/d83e50rm",
+      "id": "5",
+      "bbox": [
+        86,
+        314,
+        470,
+        136
+      ],
+      "geometry": "rect",
+      "text": "운영 센터  →  담당 영역  →  상세 운영\n\n권한이 보이지 않으면 Captain에게 역할을 확인합니다.",
+      "textPreview": "운영 센터  →  담당 영역  →  상세 운영 |  | 권한이 보이지 않으면 Captain에게 역할을 확인합니다.",
+      "resolvedFontSize": 22,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 22,
+        "typeface": "Arial",
+        "color": "#FFFFFF",
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "autoFit": "shrinkText",
+        "autoFitScale": 1,
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 4,
+        "lines": [
+          {
+            "index": 1,
+            "text": "운영 센터  →  담당 영역  →  상세 운영"
+          },
+          {
+            "index": 2,
+            "text": ""
+          },
+          {
+            "index": 3,
+            "text": "권한이 보이지 않으면 Captain에게 역할을"
+          },
+          {
+            "index": 4,
+            "text": "확인합니다."
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "운영 센터  →  담당 영역  →  상세 운영",
+          "resolvedTextStyle": {
+            "fontSize": 22,
+            "typeface": "Arial",
+            "color": "#FFFFFF",
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "운영 센터  →  담당 영역  →  상세 운영",
+              "fontSize": 22,
+              "typeface": "Arial",
+              "color": "#FFFFFF",
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        },
+        {
+          "index": 3,
+          "text": "권한이 보이지 않으면 Captain에게 역할을 확인합니다.",
+          "resolvedTextStyle": {
+            "fontSize": 22,
+            "typeface": "Arial",
+            "color": "#FFFFFF",
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "권한이 보이지 않으면 Captain에게 역할을 확인합니다.",
+              "fontSize": 22,
+              "typeface": "Arial",
+              "color": "#FFFFFF",
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 6,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/q5svalsv",
+      "id": "6",
+      "bbox": [
+        674,
+        220,
+        548,
+        300
+      ],
+      "geometry": "rect",
+      "fillColor": "#23336E",
+      "lineColor": "#536190",
+      "lineWidth": 1
+    },
+    {
+      "order": 7,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/r61w3q9g",
+      "id": "7",
+      "bbox": [
+        702,
+        252,
+        210,
+        34
+      ],
+      "geometry": "rect",
+      "text": "일반 사용자",
+      "textPreview": "일반 사용자",
+      "resolvedFontSize": 20.33,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 24,
+        "typeface": "Arial",
+        "color": "#9FE0C0",
+        "bold": true,
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "autoFit": "shrinkText",
+        "autoFitScale": 0.85,
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "일반 사용자"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "일반 사용자",
+          "resolvedTextStyle": {
+            "fontSize": 24,
+            "typeface": "Arial",
+            "color": "#9FE0C0",
+            "bold": true,
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "일반 사용자",
+              "fontSize": 24,
+              "typeface": "Arial",
+              "color": "#9FE0C0",
+              "bold": true,
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 8,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/c3ex8zq5",
+      "id": "8",
+      "bbox": [
+        702,
+        314,
+        470,
+        136
+      ],
+      "geometry": "rect",
+      "text": "소모임 찾기  →  상세 확인  →  참여 신청\n\n나의 소모임에서 신청 상태와 일정을 다시 확인합니다.",
+      "textPreview": "소모임 찾기  →  상세 확인  →  참여 신청 |  | 나의 소모임에서 신청 상태와 일정을 다시 확인합니다.",
+      "resolvedFontSize": 22,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 22,
+        "typeface": "Arial",
+        "color": "#FFFFFF",
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "autoFit": "shrinkText",
+        "autoFitScale": 1,
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 4,
+        "lines": [
+          {
+            "index": 1,
+            "text": "소모임 찾기  →  상세 확인  →  참여 신청"
+          },
+          {
+            "index": 2,
+            "text": ""
+          },
+          {
+            "index": 3,
+            "text": "나의 소모임에서 신청 상태와 일정을 다시"
+          },
+          {
+            "index": 4,
+            "text": "확인합니다."
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "소모임 찾기  →  상세 확인  →  참여 신청",
+          "resolvedTextStyle": {
+            "fontSize": 22,
+            "typeface": "Arial",
+            "color": "#FFFFFF",
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "소모임 찾기  →  상세 확인  →  참여 신청",
+              "fontSize": 22,
+              "typeface": "Arial",
+              "color": "#FFFFFF",
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        },
+        {
+          "index": 3,
+          "text": "나의 소모임에서 신청 상태와 일정을 다시 확인합니다.",
+          "resolvedTextStyle": {
+            "fontSize": 22,
+            "typeface": "Arial",
+            "color": "#FFFFFF",
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "나의 소모임에서 신청 상태와 일정을 다시 확인합니다.",
+              "fontSize": 22,
+              "typeface": "Arial",
+              "color": "#FFFFFF",
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 9,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/x4nehkrq",
+      "id": "9",
+      "bbox": [
+        58,
+        574,
+        1164,
+        0
+      ],
+      "geometry": "line",
+      "lineColor": "#536190",
+      "lineWidth": 1
+    },
+    {
+      "order": 10,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/tgf6psn6",
+      "id": "10",
+      "bbox": [
+        58,
+        614,
+        680,
+        30
+      ],
+      "geometry": "rect",
+      "text": "BoardBuddy · 운영 흐름에 맞춘 화면 안내",
+      "textPreview": "BoardBuddy · 운영 흐름에 맞춘 화면 안내",
+      "resolvedFontSize": 17,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 17,
+        "typeface": "Arial",
+        "color": "#C7CEE8",
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "autoFit": "shrinkText",
+        "autoFitScale": 1,
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "BoardBuddy · 운영 흐름에 맞춘 화면 안내"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "BoardBuddy · 운영 흐름에 맞춘 화면 안내",
+          "resolvedTextStyle": {
+            "fontSize": 17,
+            "typeface": "Arial",
+            "color": "#C7CEE8",
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "BoardBuddy · 운영 흐름에 맞춘 화면 안내",
+              "fontSize": 17,
+              "typeface": "Arial",
+              "color": "#C7CEE8",
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 11,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/sf65wnml",
+      "id": "11",
+      "bbox": [
+        1178,
+        654,
+        44,
+        22
+      ],
+      "geometry": "rect",
+      "text": "17",
+      "textPreview": "17",
+      "resolvedFontSize": 10.33,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 13,
+        "typeface": "Arial",
+        "color": "#C7CEE8",
+        "alignment": "right",
+        "verticalAlignment": "top",
+        "autoFit": "shrinkText",
+        "autoFitScale": 0.79,
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "17"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "17",
+          "resolvedTextStyle": {
+            "fontSize": 13,
+            "typeface": "Arial",
+            "color": "#C7CEE8",
+            "alignment": "right"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "17",
+              "fontSize": 13,
+              "typeface": "Arial",
+              "color": "#C7CEE8",
+              "alignment": "right"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    }
+  ],
+  "composeRuns": []
+}

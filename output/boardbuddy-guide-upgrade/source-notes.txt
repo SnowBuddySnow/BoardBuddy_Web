@@ -1,0 +1,7 @@
+BoardBuddy 사용 설명서 v2 source notes
+
+- Existing deck: /Users/jake/Desktop/Jake/Devs/BoardBuddy/BoardBuddy_사용설명서.pptx
+- Current screenshots were captured from the local BoardBuddy development build on 2026-08-17.
+- Desktop screenshots use a 1440 x 900 viewport; mobile screenshots use a 390 x 844 viewport.
+- Screenshots contain development simulation data only.
+- Product feature descriptions are based on the visible current build and local source implementation for participant response sheets, preview, draft recovery, privacy reveal, and XLSX export.

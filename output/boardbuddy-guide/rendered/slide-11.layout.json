@@ -1,0 +1,350 @@
+{
+  "schema": "openai.presentation.layout/v4",
+  "unit": "px",
+  "slide": {
+    "aid": "sl/w4ri4e",
+    "id": "w4ri4e",
+    "slide": 11,
+    "layoutId": "6ee9644b-2233-464b-8ad2-5e3b5e53ce43",
+    "layoutName": "Title Slide",
+    "layoutType": "title",
+    "masterLayoutId": "e5be2be5-f023-4670-b198-95cb1ea5ca39",
+    "masterLayoutName": "Master",
+    "backgroundColor": "#FAF9F6",
+    "frame": {
+      "left": 0,
+      "top": 0,
+      "width": 1280,
+      "height": 720
+    }
+  },
+  "theme": {
+    "colorSchemeName": "ChatGPT",
+    "colors": {
+      "accent1": "#156082",
+      "accent2": "#E97132",
+      "accent3": "#196B24",
+      "accent4": "#0F9ED5",
+      "accent5": "#A02B93",
+      "accent6": "#4EA72E",
+      "bg1": "#FFFFFF",
+      "bg2": "#000000",
+      "tx1": "#1F1F1F",
+      "tx2": "#FFFFFF",
+      "dk1": "#000000",
+      "lt1": "#FFFFFF",
+      "dk2": "#0E2841",
+      "lt2": "#E8E8E8",
+      "hlink": "#467886",
+      "folHlink": "#96607D"
+    },
+    "typefaces": [
+      "Arial"
+    ]
+  },
+  "inheritedLayers": [
+    {
+      "scope": "layout",
+      "id": "6ee9644b-2233-464b-8ad2-5e3b5e53ce43",
+      "name": "Title Slide",
+      "type": "title",
+      "parentLayoutId": "e5be2be5-f023-4670-b198-95cb1ea5ca39",
+      "elements": []
+    },
+    {
+      "scope": "master",
+      "id": "e5be2be5-f023-4670-b198-95cb1ea5ca39",
+      "name": "Master",
+      "type": "master",
+      "elements": []
+    }
+  ],
+  "elements": [
+    {
+      "order": 1,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/xkrmdc7e",
+      "id": "1",
+      "bbox": [
+        58,
+        52,
+        500,
+        30
+      ],
+      "geometry": "rect",
+      "text": "PART 2",
+      "textPreview": "PART 2",
+      "resolvedFontSize": 15,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 15,
+        "typeface": "Arial",
+        "color": "#253979",
+        "bold": true,
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "autoFit": "shrinkText",
+        "autoFitScale": 1,
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "PART 2"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "PART 2",
+          "resolvedTextStyle": {
+            "fontSize": 15,
+            "typeface": "Arial",
+            "color": "#253979",
+            "bold": true,
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "PART 2",
+              "fontSize": 15,
+              "typeface": "Arial",
+              "color": "#253979",
+              "bold": true,
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 2,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/ah032x83",
+      "id": "2",
+      "bbox": [
+        58,
+        208,
+        1030,
+        116
+      ],
+      "geometry": "rect",
+      "text": "일반 사용자용 · 모바일",
+      "textPreview": "일반 사용자용 · 모바일",
+      "resolvedFontSize": 64,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 64,
+        "typeface": "Arial",
+        "color": "#151515",
+        "bold": true,
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "autoFit": "none",
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "일반 사용자용 · 모바일"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "일반 사용자용 · 모바일",
+          "resolvedTextStyle": {
+            "fontSize": 64,
+            "typeface": "Arial",
+            "color": "#151515",
+            "bold": true,
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "일반 사용자용 · 모바일",
+              "fontSize": 64,
+              "typeface": "Arial",
+              "color": "#151515",
+              "bold": true,
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 3,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/bi94b2po",
+      "id": "3",
+      "bbox": [
+        60,
+        356,
+        790,
+        72
+      ],
+      "geometry": "rect",
+      "text": "홈에서 모임을 찾고 신청한 뒤 내 일정과 계정 정보를 확인합니다.",
+      "textPreview": "홈에서 모임을 찾고 신청한 뒤 내 일정과 계정 정보를 확인합니다.",
+      "resolvedFontSize": 24,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 24,
+        "typeface": "Arial",
+        "color": "#5C6473",
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "autoFit": "shrinkText",
+        "autoFitScale": 1,
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "홈에서 모임을 찾고 신청한 뒤 내 일정과 계정 정보를 확인합니다."
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "홈에서 모임을 찾고 신청한 뒤 내 일정과 계정 정보를 확인합니다.",
+          "resolvedTextStyle": {
+            "fontSize": 24,
+            "typeface": "Arial",
+            "color": "#5C6473",
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "홈에서 모임을 찾고 신청한 뒤 내 일정과 계정 정보를 확인합니다.",
+              "fontSize": 24,
+              "typeface": "Arial",
+              "color": "#5C6473",
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 4,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/ofil07qx",
+      "id": "4",
+      "bbox": [
+        60,
+        506,
+        1160,
+        0
+      ],
+      "geometry": "line",
+      "lineColor": "#D7D9DE",
+      "lineWidth": 1
+    },
+    {
+      "order": 5,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/9grm9sri",
+      "id": "5",
+      "bbox": [
+        1176,
+        654,
+        44,
+        24
+      ],
+      "geometry": "rect",
+      "text": "11",
+      "textPreview": "11",
+      "resolvedFontSize": 12,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 13,
+        "typeface": "Arial",
+        "color": "#5C6473",
+        "alignment": "right",
+        "verticalAlignment": "top",
+        "autoFit": "shrinkText",
+        "autoFitScale": 0.92,
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "11"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "11",
+          "resolvedTextStyle": {
+            "fontSize": 13,
+            "typeface": "Arial",
+            "color": "#5C6473",
+            "alignment": "right"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "11",
+              "fontSize": 13,
+              "typeface": "Arial",
+              "color": "#5C6473",
+              "alignment": "right"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    }
+  ],
+  "composeRuns": []
+}

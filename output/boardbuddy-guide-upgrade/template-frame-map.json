@@ -1,0 +1,27 @@
+{
+  "outputSlides": [
+    {"outputSlide":1,"sourceSlide":1,"narrativeRole":"cover","reuseMode":"duplicate-slide","editTargets":[]},
+    {"outputSlide":2,"sourceSlide":2,"narrativeRole":"role hierarchy","reuseMode":"duplicate-slide","editTargets":[]},
+    {"outputSlide":3,"sourceSlide":3,"narrativeRole":"operator section","reuseMode":"duplicate-slide","editTargets":[]},
+    {"outputSlide":4,"sourceSlide":4,"narrativeRole":"operations center","reuseMode":"duplicate-slide","editTargets":[]},
+    {"outputSlide":5,"sourceSlide":5,"narrativeRole":"captain guide","reuseMode":"duplicate-slide","editTargets":[]},
+    {"outputSlide":6,"sourceSlide":6,"narrativeRole":"crew manager guide","reuseMode":"duplicate-slide","editTargets":[]},
+    {"outputSlide":7,"sourceSlide":7,"narrativeRole":"event manager groups","reuseMode":"duplicate-slide","editTargets":[]},
+    {"outputSlide":8,"sourceSlide":8,"narrativeRole":"event manager members","reuseMode":"duplicate-slide","editTargets":[]},
+    {"outputSlide":9,"sourceSlide":9,"narrativeRole":"event list","reuseMode":"duplicate-slide","editTargets":[]},
+    {"outputSlide":10,"sourceSlide":10,"narrativeRole":"event detail","reuseMode":"duplicate-slide","editTargets":[]},
+    {"outputSlide":11,"sourceSlide":3,"narrativeRole":"new response-sheet section","reuseMode":"duplicate-slide","editTargets":[]},
+    {"outputSlide":12,"sourceSlide":9,"narrativeRole":"response-sheet templates","reuseMode":"duplicate-slide","editTargets":[]},
+    {"outputSlide":13,"sourceSlide":10,"narrativeRole":"response types and preview","reuseMode":"duplicate-slide","editTargets":[]},
+    {"outputSlide":14,"sourceSlide":10,"narrativeRole":"submission management","reuseMode":"duplicate-slide","editTargets":[]},
+    {"outputSlide":15,"sourceSlide":14,"narrativeRole":"participant response flow","reuseMode":"duplicate-slide","editTargets":[]},
+    {"outputSlide":16,"sourceSlide":11,"narrativeRole":"member section","reuseMode":"duplicate-slide","editTargets":[]},
+    {"outputSlide":17,"sourceSlide":12,"narrativeRole":"member home","reuseMode":"duplicate-slide","editTargets":[]},
+    {"outputSlide":18,"sourceSlide":13,"narrativeRole":"event discovery","reuseMode":"duplicate-slide","editTargets":[]},
+    {"outputSlide":19,"sourceSlide":14,"narrativeRole":"event application","reuseMode":"duplicate-slide","editTargets":[]},
+    {"outputSlide":20,"sourceSlide":15,"narrativeRole":"my events","reuseMode":"duplicate-slide","editTargets":[]},
+    {"outputSlide":21,"sourceSlide":16,"narrativeRole":"my page","reuseMode":"duplicate-slide","editTargets":[]},
+    {"outputSlide":22,"sourceSlide":17,"narrativeRole":"quick reference","reuseMode":"duplicate-slide","editTargets":[]}
+  ],
+  "omittedSourceSlides": []
+}

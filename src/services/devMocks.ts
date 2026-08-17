@@ -61,7 +61,7 @@ export const getDevUser = (): UserDetail => {
         userCode: 'US-DEV999',
         name: 'Mock User (Dev Mode)',
         email: 'dev@boardbuddy.com',
-        role: roleOverride === 'admin' ? 'ADMIN' : 'MEMBER',
+        role: roleOverride === 'admin' ? 'CREW_CAPTAIN' : 'MEMBER',
         userType: 'GENERAL',
         universityVerificationStatus: crewOverride === 'has_crew' ? 'VERIFIED' : 'NOT_VERIFIED',
         birthDate: '2000-01-01',

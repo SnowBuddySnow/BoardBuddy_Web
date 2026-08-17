@@ -1,0 +1,5 @@
+- Slide 2: source role cards are repositioned into a hierarchy to clarify Captain, combinable manager roles, and the member foundation.
+- Slides 4, 7, 8: source screenshots are replaced with current local-development screenshots reflecting 이벤트 관리 / 호스트 그룹 terminology.
+- Slides 11–15: five new slides duplicate source divider, desktop-guide, and mobile-guide patterns to explain participant response sheets.
+- Slides 13–16 and 22: visible terminology is updated from 소모임 to 이벤트 where the current product UI uses 이벤트.
+- No source slide is removed; the original 17-slide narrative is expanded to 22 slides.
