@@ -71,6 +71,8 @@ export interface CrewApplicant {
     applicationId: number;
     userId: number;
     userName: string;
+    userType: UserType;
+    schoolName: string;
     studentId: string;
     profileImageUrl?: string | null;
     status: string; // "PENDING", etc.

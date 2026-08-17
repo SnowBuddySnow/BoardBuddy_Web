@@ -13,6 +13,7 @@ export const getUserInfo = async (): Promise<UserDetail> => {
 
 export const confirmProfileType = async (request: {
     userType: 'REGULAR' | 'KUSBF';
+    displayName?: string;
     schoolId?: number;
     studentNumber?: string;
 }): Promise<void> => {

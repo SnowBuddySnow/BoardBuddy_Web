@@ -13,6 +13,8 @@ type Selection = 'STUDENT' | 'REGULAR';
 
 export default function ProfileTypeConfirmation({ onSuccess }: ProfileTypeConfirmationProps) {
     const [selection, setSelection] = useState<Selection | null>(null);
+    const [currentName, setCurrentName] = useState('');
+    const [realName, setRealName] = useState('');
     const [schools, setSchools] = useState<SchoolOption[]>([]);
     const [schoolQuery, setSchoolQuery] = useState('');
     const [selectedSchool, setSelectedSchool] = useState<SchoolOption | null>(null);
@@ -38,6 +40,7 @@ export default function ProfileTypeConfirmation({ onSuccess }: ProfileTypeConfir
                     return;
                 }
                 setSchools(options);
+                setCurrentName(user.name);
                 setStudentNumber(user.studentId || '');
                 if (user.school) {
                     const matchedSchool = options.find(option => option.name === user.school) || null;
@@ -78,6 +81,7 @@ export default function ProfileTypeConfirmation({ onSuccess }: ProfileTypeConfir
         setSelection(nextSelection);
         setError('');
         if (nextSelection === 'REGULAR') {
+            setRealName('');
             setSchoolQuery('');
             setSelectedSchool(null);
             setStudentNumber('');
@@ -90,8 +94,16 @@ export default function ProfileTypeConfirmation({ onSuccess }: ProfileTypeConfir
             setError('학생 또는 일반 프로필을 선택해주세요.');
             return;
         }
+        if (selection === 'STUDENT' && !realName.trim()) {
+            setError('재학 명단 확인을 위해 실명을 입력해주세요.');
+            return;
+        }
         if (selection === 'STUDENT' && !selectedSchool) {
             setError('검색 결과에서 학교를 선택해주세요.');
+            return;
+        }
+        if (selection === 'STUDENT' && !studentNumber.trim()) {
+            setError('동명이인을 구분할 수 있도록 학번을 입력해주세요.');
             return;
         }
 
@@ -100,8 +112,9 @@ export default function ProfileTypeConfirmation({ onSuccess }: ProfileTypeConfir
         try {
             await confirmProfileType({
                 userType: selection === 'STUDENT' ? 'KUSBF' : 'REGULAR',
+                displayName: selection === 'STUDENT' ? realName.trim() : undefined,
                 schoolId: selection === 'STUDENT' ? selectedSchool?.id : undefined,
-                studentNumber: selection === 'STUDENT' ? studentNumber.trim() || undefined : undefined,
+                studentNumber: selection === 'STUDENT' ? studentNumber.trim() : undefined,
             });
             onSuccess();
         } catch (requestError: unknown) {
@@ -169,6 +182,20 @@ export default function ProfileTypeConfirmation({ onSuccess }: ProfileTypeConfir
 
                 {selection === 'STUDENT' && (
                     <div className="mt-6 grid gap-4 sm:grid-cols-2">
+                        <div className="sm:col-span-2">
+                            <label className="ml-1 text-sm font-bold text-zinc-800">실명</label>
+                            <input
+                                value={realName}
+                                onChange={event => setRealName(event.target.value)}
+                                maxLength={50}
+                                placeholder={currentName ? `현재 프로필: ${currentName}` : '김보드'}
+                                autoComplete="name"
+                                className="mt-2 h-12 w-full rounded-2xl border border-zinc-200 px-4 text-sm outline-none focus:border-[#162660] focus:ring-2 focus:ring-[#162660]/10"
+                            />
+                            <p className="ml-1 mt-2 text-xs leading-5 text-zinc-500">
+                                크루 운영진이 재학 명단과 대조합니다. 닉네임이 아닌 실명을 다시 입력해주세요.
+                            </p>
+                        </div>
                         <div className="relative" ref={schoolRef}>
                             <label className="ml-1 text-sm font-bold text-zinc-800">학교</label>
                             <input
@@ -203,9 +230,7 @@ export default function ProfileTypeConfirmation({ onSuccess }: ProfileTypeConfir
                             )}
                         </div>
                         <div>
-                            <label className="ml-1 text-sm font-bold text-zinc-800">
-                                학번 <span className="font-normal text-zinc-400">(선택)</span>
-                            </label>
+                            <label className="ml-1 text-sm font-bold text-zinc-800">학번</label>
                             <input
                                 value={studentNumber}
                                 onChange={event => setStudentNumber(event.target.value)}
@@ -213,6 +238,9 @@ export default function ProfileTypeConfirmation({ onSuccess }: ProfileTypeConfir
                                 placeholder="20260001"
                                 className="mt-2 h-12 w-full rounded-2xl border border-zinc-200 px-4 text-sm outline-none focus:border-[#162660] focus:ring-2 focus:ring-[#162660]/10"
                             />
+                            <p className="ml-1 mt-2 text-xs leading-5 text-zinc-500">
+                                동일한 실명을 사용하는 학생을 구분하기 위해 필수입니다.
+                            </p>
                         </div>
                     </div>
                 )}

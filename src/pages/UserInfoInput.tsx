@@ -46,7 +46,7 @@ const TERMS_CONTENT = {
 
 2. 개인정보 수집 항목
 - 성명 또는 닉네임, 성별, 휴대전화번호, 이메일(선택)
-- 학생 프로필의 경우 학교, 학번(선택)
+- 학생 프로필의 경우 학교, 학번(필수)
 
 3. 개인정보 제3자 제공 동의 (휴대전화번호 제공)
 - 시즌방 예약 확인, 공지사항 전달, 비상 연락 및 이용자 안전 등 원활한 모임 운영 및 서비스 제공을 위해, 귀하가 속한 시즌방 운영진 및 모임 관리자(manager users)에게 귀하의 휴대전화번호가 제공될 수 있습니다.
@@ -221,6 +221,7 @@ export default function UserInfoInput({ onBack, onSuccess }: UserInfoInputProps)
     };
 
     const selectProfileType = (nextType: 'GENERAL' | 'STUDENT') => {
+        if (nextType !== profileType) setName('');
         setProfileType(nextType);
         if (nextType === 'GENERAL') {
             setSchool('');
@@ -255,10 +256,17 @@ export default function UserInfoInput({ onBack, onSuccess }: UserInfoInputProps)
 
     const handleSubmit = async () => {
         // Granular Validation
-        if (!name.trim()) { alert('닉네임을 입력해주세요.'); return; }
+        if (!name.trim()) {
+            alert(profileType === 'STUDENT' ? '실명을 입력해주세요.' : '닉네임을 입력해주세요.');
+            return;
+        }
         const selectedSchool = schools.find((option) => option.name === school);
         if (profileType === 'STUDENT' && !selectedSchool) {
             alert('검색 결과에서 학교를 선택해주세요.');
+            return;
+        }
+        if (profileType === 'STUDENT' && !studentNumber.trim()) {
+            alert('동명이인을 구분할 수 있도록 학번을 입력해주세요.');
             return;
         }
         if (!phoneNumber) { alert('전화번호를 입력해주세요.'); return; }
@@ -295,9 +303,7 @@ export default function UserInfoInput({ onBack, onSuccess }: UserInfoInputProps)
                 displayName: name.trim(),
                 email: email.trim() || undefined,
                 schoolId: profileType === 'STUDENT' ? selectedSchool?.id : undefined,
-                studentNumber: profileType === 'STUDENT'
-                    ? studentNumber.trim() || undefined
-                    : undefined,
+                studentNumber: profileType === 'STUDENT' ? studentNumber.trim() : undefined,
                 gender: gender === 'male' ? 'MALE' : 'FEMALE',
                 phoneNumber
             }, {
@@ -403,14 +409,21 @@ export default function UserInfoInput({ onBack, onSuccess }: UserInfoInputProps)
 
                         {/* Name */}
                         <div className="space-y-2">
-                            <label className="text-sm font-bold text-zinc-800 ml-1">닉네임</label>
+                            <label className="text-sm font-bold text-zinc-800 ml-1">
+                                {profileType === 'STUDENT' ? '실명' : '닉네임'}
+                            </label>
                             <input
                                 type="text"
                                 value={name}
                                 onChange={(e) => setName(e.target.value)}
                                 className="w-full h-12 rounded-[16px] border-none px-4 text-zinc-900 focus:ring-2 focus:ring-blue-400 outline-none shadow-sm bg-white"
-                                placeholder="보드버디"
+                                placeholder={profileType === 'STUDENT' ? '김보드' : '보드버디'}
                             />
+                            <p className="ml-1 text-xs text-zinc-600">
+                                {profileType === 'STUDENT'
+                                    ? '크루 운영진이 재학 명단과 대조할 수 있도록 실명을 입력해주세요.'
+                                    : '서비스에서 사용할 닉네임을 입력해주세요.'}
+                            </p>
                         </div>
 
                         {/* Email */}
@@ -464,9 +477,7 @@ export default function UserInfoInput({ onBack, onSuccess }: UserInfoInputProps)
                                 </div>
 
                                 <div className="space-y-2">
-                                    <label className="ml-1 text-sm font-bold text-zinc-800">
-                                        학번 <span className="font-normal text-zinc-500">(선택)</span>
-                                    </label>
+                                    <label className="ml-1 text-sm font-bold text-zinc-800">학번</label>
                                     <input
                                         type="text"
                                         value={studentNumber}
@@ -475,6 +486,9 @@ export default function UserInfoInput({ onBack, onSuccess }: UserInfoInputProps)
                                         className="h-12 w-full rounded-[16px] border-none bg-white px-4 text-zinc-900 shadow-sm outline-none focus:ring-2 focus:ring-blue-400"
                                         placeholder="20260001"
                                     />
+                                    <p className="ml-1 text-xs leading-5 text-zinc-600">
+                                        동일한 실명을 사용하는 학생을 구분하기 위해 필수입니다.
+                                    </p>
                                 </div>
                             </>
                         )}

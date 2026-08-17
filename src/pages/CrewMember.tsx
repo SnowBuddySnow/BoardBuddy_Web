@@ -20,6 +20,8 @@ interface Member {
 interface Applicant {
     id: string; // This is application_id
     name: string;
+    userType: 'GENERAL' | 'REGULAR' | 'KUSBF';
+    schoolName: string;
     studentId: string;
     requestDate: string;
     userId: number; // Keep track of user ID for adding to member list locally if needed
@@ -151,6 +153,8 @@ export default function CrewMember({ onBack }: CrewMemberProps) {
                         .map(app => ({
                             id: app.applicationId.toString(),
                             name: app.userName,
+                            userType: app.userType,
+                            schoolName: app.schoolName,
                             studentId: app.studentId,
                             requestDate: app.created_at ? new Date(app.created_at).toLocaleDateString() : 'Unknown',
                             userId: app.userId
@@ -181,10 +185,17 @@ export default function CrewMember({ onBack }: CrewMemberProps) {
 
     const handleAcceptApplicant = async (appId: string) => {
         if (!crewId) return;
+        const applicant = applicants.find(item => item.id === appId);
+        if (!applicant) return;
+        if (applicant.userType === 'KUSBF') {
+            const identity = [applicant.name, applicant.schoolName, applicant.studentId || '학번 미등록']
+                .filter(Boolean)
+                .join(' · ');
+            if (!window.confirm(`${identity}\n\n실명과 재학 여부를 크루의 실제 명단과 대조했나요?`)) return;
+        }
         try {
             await manageApplicant(crewId, parseInt(appId), 1);
             // Optimistic update or refresh
-            const applicant = applicants.find(a => a.id === appId);
             if (applicant) {
                 // Add to members list locally for immediate feedback
                 setMembers([...members, {
@@ -210,19 +221,6 @@ export default function CrewMember({ onBack }: CrewMemberProps) {
             } catch (error) {
                 console.error("Failed to reject", error);
                 alert("처리 중 오류가 발생했습니다.");
-            }
-        }
-    };
-
-    const handleAcceptAll = async () => {
-        if (!crewId) return;
-        if (window.confirm('모든 가입 요청을 수락하시겠습니까?')) {
-            try {
-                await Promise.all(applicants.map(app => manageApplicant(crewId, parseInt(app.id), 1)));
-                refreshData(); // Refresh to get proper member list from server
-            } catch (error) {
-                console.error("Failed to accept all", error);
-                alert("일부 요청 처리 중 오류가 발생했습니다.");
             }
         }
     };
@@ -384,12 +382,7 @@ export default function CrewMember({ onBack }: CrewMemberProps) {
                             <>
                                 <div className="flex items-center justify-between mb-2">
                                     <span className="text-sm text-zinc-500">총 {applicants.length}명의 신청이 있습니다.</span>
-                                    <button
-                                        onClick={handleAcceptAll}
-                                        className="text-xs font-bold text-blue-600 bg-blue-50 px-3 py-1.5 rounded-lg hover:bg-blue-100 transition-colors"
-                                    >
-                                        일괄 수락
-                                    </button>
+                                    <span className="text-xs font-semibold text-zinc-400">명단 대조 후 개별 승인</span>
                                 </div>
                                 <div className="space-y-3">
                                     {applicants.map(applicant => (
@@ -402,9 +395,21 @@ export default function CrewMember({ onBack }: CrewMemberProps) {
                                                     <div>
                                                         <div className="flex items-center gap-2">
                                                             <p className="font-bold text-zinc-900">{applicant.name}</p>
-                                                            <span className="text-[10px] px-1.5 py-0.5 bg-pink-100 text-pink-600 rounded-full font-bold">New</span>
+                                                            <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${
+                                                                applicant.userType === 'KUSBF'
+                                                                    ? 'bg-blue-100 text-blue-700'
+                                                                    : 'bg-zinc-100 text-zinc-600'
+                                                            }`}>
+                                                                {applicant.userType === 'KUSBF' ? '학생' : '일반'}
+                                                            </span>
                                                         </div>
-                                                        <p className="text-xs text-zinc-500">{applicant.studentId}</p>
+                                                        {applicant.userType === 'KUSBF' ? (
+                                                            <p className="text-xs text-zinc-500">
+                                                                {[applicant.schoolName || '학교 미등록', applicant.studentId || '학번 미등록'].join(' · ')}
+                                                            </p>
+                                                        ) : (
+                                                            <p className="text-xs text-zinc-500">닉네임 프로필</p>
+                                                        )}
                                                     </div>
                                                 </div>
                                                 <span className="text-[10px] text-zinc-400">{applicant.requestDate}</span>
