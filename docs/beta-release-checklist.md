@@ -6,7 +6,7 @@ Use this checklist for each `1.0.0-beta.x` release. Web and backend must use the
 
 - [ ] Freeze feature work; accept only beta-blocking fixes after the release candidate is selected.
 - [ ] Review the changelog and identify migrations, configuration changes, and known limitations.
-- [ ] Back up the target database and confirm the restore procedure before applying Flyway migrations.
+- [ ] Back up the target database, review the Atlas declarative schema plan, and confirm the restore procedure before applying it.
 - [ ] Verify production secrets and callback URLs without committing environment files.
 
 ## Automated Verification
