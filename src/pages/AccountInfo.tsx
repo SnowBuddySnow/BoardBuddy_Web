@@ -8,9 +8,10 @@ import { clearAuthSession } from '../lib/session';
 
 interface AccountInfoProps {
     onBack: () => void;
+    onStudentVerificationClick?: () => void;
 }
 
-export default function AccountInfo({ onBack }: AccountInfoProps) {
+export default function AccountInfo({ onBack, onStudentVerificationClick }: AccountInfoProps) {
     const [userInfo, setUserInfo] = useState<UserDetail | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [phoneSharingConsent, setPhoneSharingConsent] = useState<'each_time' | 'always'>(() => {
@@ -86,6 +87,27 @@ export default function AccountInfo({ onBack }: AccountInfoProps) {
                                     <div>
                                         <div className="text-xs text-zinc-500 mb-1">학번</div>
                                         <div className="text-base font-medium">{userInfo.studentId || '등록하지 않음'}</div>
+                                    </div>
+                                    <div>
+                                        <div className="text-xs text-zinc-500 mb-1">학생 인증</div>
+                                        <div className="flex items-center justify-between gap-3">
+                                            <div className="text-base font-medium">
+                                                {userInfo.universityVerificationStatus === 'VERIFIED'
+                                                    ? '인증 완료'
+                                                    : userInfo.universityVerificationStatus === 'PENDING'
+                                                        ? '이메일 확인 대기 중'
+                                                        : '미인증'}
+                                            </div>
+                                            {userInfo.universityVerificationStatus !== 'VERIFIED' && onStudentVerificationClick && (
+                                                <button
+                                                    type="button"
+                                                    onClick={onStudentVerificationClick}
+                                                    className="rounded-xl border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-bold text-[#162660]"
+                                                >
+                                                    이메일 인증
+                                                </button>
+                                            )}
+                                        </div>
                                     </div>
                                 </>
                             )}

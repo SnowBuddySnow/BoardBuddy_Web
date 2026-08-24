@@ -9,6 +9,7 @@ import {
     EventChatAccess,
     EventParticipant,
     EventPaymentPolicy,
+    EventRefundPolicy,
     EventPlanningMode,
     EventStatus,
     JoinPolicy,
@@ -135,6 +136,22 @@ export const getEventPaymentInfo = async (eventId: number): Promise<EventPayment
     return response.data.data;
 };
 
+export const getEventRefundPolicy = async (eventId: number): Promise<EventRefundPolicy> => {
+    if (isDevMode()) {
+        return { refundPolicy: localStorage.getItem(`dev_event_refund_policy_${eventId}`) };
+    }
+    const response = await apiClient.get<ApiResponse<EventRefundPolicy>>(`/events/${eventId}/refund-policy`);
+    return response.data.data;
+};
+
+export const getDashboardEventRefundPolicy = async (eventId: number): Promise<EventRefundPolicy> => {
+    if (isDevMode()) {
+        return { refundPolicy: localStorage.getItem(`dev_event_refund_policy_${eventId}`) };
+    }
+    const response = await apiClient.get<ApiResponse<EventRefundPolicy>>(`/dashboard/events/${eventId}/refund-policy`);
+    return response.data.data;
+};
+
 // --- Dashboard / Organizer APIs ---
 export const listDashboardParties = async (): Promise<Event[]> => {
     if (isDevMode()) {
@@ -221,6 +238,26 @@ export const configureEventConsents = async (
     const response = await apiClient.put<ApiResponse<ConsentConfiguration>>(
         `/dashboard/events/${eventId}/consents`,
         payload,
+    );
+    return response.data.data;
+};
+
+export const configureEventRefundPolicy = async (
+    eventId: number,
+    refundPolicy: string | null,
+): Promise<EventRefundPolicy> => {
+    if (isDevMode()) {
+        const normalizedPolicy = refundPolicy?.trim() || null;
+        if (normalizedPolicy) {
+            localStorage.setItem(`dev_event_refund_policy_${eventId}`, normalizedPolicy);
+        } else {
+            localStorage.removeItem(`dev_event_refund_policy_${eventId}`);
+        }
+        return { refundPolicy: normalizedPolicy };
+    }
+    const response = await apiClient.put<ApiResponse<EventRefundPolicy>>(
+        `/dashboard/events/${eventId}/refund-policy`,
+        { refundPolicy },
     );
     return response.data.data;
 };

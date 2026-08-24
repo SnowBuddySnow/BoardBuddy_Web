@@ -15,7 +15,7 @@ import {
     ManagerConsentResponseSheet,
     UserDetail,
 } from '../types/api';
-import { getDevCrewOverride, getDevEventDataMode, getDevRoleOverride, hasDevOverride } from '../lib/session';
+import { getDevCrewOverride, getDevEventDataMode, getDevRoleOverride, getDevSchoolOverride, hasDevOverride } from '../lib/session';
 import type { CreateEventPayload, UpdateEventPayload } from './event';
 
 const now = () => new Date().toISOString();
@@ -55,27 +55,29 @@ export const isDevMode = hasDevOverride;
 export const getDevUser = (): UserDetail => {
     const crewOverride = getDevCrewOverride();
     const roleOverride = getDevRoleOverride();
+    const schoolOverride = getDevSchoolOverride();
+    const schoolName = schoolOverride && schoolOverride !== 'server' ? schoolOverride : '한국대학교';
 
     return {
         userId: 999,
         userCode: 'US-DEV999',
-        name: 'Mock User (Dev Mode)',
-        email: 'dev@boardbuddy.com',
+        name: '김버디 (학생회원)',
+        email: 'buddy@hankook.ac.kr',
         role: roleOverride === 'admin' ? 'CREW_CAPTAIN' : 'MEMBER',
-        userType: 'REGULAR',
+        userType: 'KUSBF',
         universityVerificationStatus: crewOverride === 'has_crew' ? 'VERIFIED' : 'NOT_VERIFIED',
-        birthDate: '2000-01-01',
-        school: crewOverride === 'has_crew' ? 'Mock University' : 'No University',
-        studentId: '202012345',
+        birthDate: '2004-03-15',
+        school: schoolName,
+        studentId: '202410291',
         gender: 'MALE',
-        phoneNumber: '010-1234-5678',
+        phoneNumber: '010-5678-1234',
         profileImageUrl: '',
         socialId: 'mock_social',
         socialProvider: 'KAKAO',
         isRegistered: true,
         createdAt: now(),
         updatedAt: now(),
-        crew: crewOverride === 'has_crew' ? { crewId: 1, crewName: 'Mock Crew 401' } : null,
+        crew: crewOverride === 'has_crew' ? { crewId: 1, crewName: '아웃런 (OUTRUN)' } : null,
     };
 };
 
@@ -87,14 +89,14 @@ const normalizeDevEvents = (events: Event[]) => events.map(event => ({
 const sampleEvents = (): Event[] => [
     {
         id: 10001,
-        title: '한강 웨이크보드 체험 데이',
+        title: '아웃런 클럽하우스 정기 오픈 세션',
         description: '장비 안내와 초보자 세션을 포함한 호스트 진행 이벤트입니다.',
         activityType: 'WAKE',
         planningMode: 'MANAGER_PLANNED',
         applicationStartsAt: '2026-07-16T18:00:00',
         startsAt: '2026-07-19T10:00:00',
         endsAt: '2026-07-19T16:00:00',
-        locationName: '한강 잠원 수상레저',
+        locationName: '한강 잠원 클럽하우스',
         locationAddress: '서울 서초구 잠원동',
         capacity: 24,
         crewMemberLimit: 4,
@@ -104,21 +106,21 @@ const sampleEvents = (): Event[] => [
         visibilityType: 'CREW_LIMITED',
         joinPolicy: 'APPROVAL_REQUIRED',
         organizerGroupId: 1,
-        organizerGroupName: '여름 수상 스포츠 호스트팀',
+        organizerGroupName: '한국대학교 아웃런 운영진',
         currentUserStatus: 'JOINED',
         createdAt: '2026-07-01T10:00:00',
         updatedAt: '2026-07-01T10:00:00',
     },
     {
         id: 10002,
-        title: '이벤트#0427',
+        title: '신입 크루원 오리엔테이션 & 정모',
         description: '참가자가 함께 장소와 활동을 정하는 자율형 이벤트입니다.',
         activityType: 'OTHER',
         planningMode: 'MEMBER_PLANNED',
         applicationStartsAt: '2026-07-18T12:00:00',
         startsAt: '2026-07-20T14:00:00',
-        locationName: '',
-        locationAddress: '',
+        locationName: '한국대학교 학생회관 라운지',
+        locationAddress: '서울 성북구 안암로',
         capacity: 8,
         crewMemberLimit: null,
         kusbfAssociated: true,
@@ -127,21 +129,21 @@ const sampleEvents = (): Event[] => [
         visibilityType: 'PUBLIC',
         joinPolicy: 'INSTANT',
         organizerGroupId: 1,
-        organizerGroupName: '여름 수상 스포츠 호스트팀',
+        organizerGroupName: '한국대학교 아웃런 운영진',
         currentUserStatus: 'NONE',
         createdAt: '2026-07-03T10:00:00',
         updatedAt: '2026-07-03T10:00:00',
     },
     {
         id: 10003,
-        title: '여름 MT 사전 모임',
+        title: '2026 하계 정기 MT 사전 모임',
         description: 'MT 일정과 준비물을 확정하는 크루 공동 행사입니다.',
         activityType: 'MT',
         planningMode: 'MANAGER_PLANNED',
         applicationStartsAt: '2026-07-20T20:00:00',
         startsAt: '2026-07-26T18:30:00',
         endsAt: '2026-07-26T21:00:00',
-        locationName: '건대입구 회의실',
+        locationName: '건대입구 모임공간',
         locationAddress: '서울 광진구 능동로',
         capacity: 18,
         crewMemberLimit: 2,
@@ -151,21 +153,21 @@ const sampleEvents = (): Event[] => [
         visibilityType: 'CREW_LIMITED',
         joinPolicy: 'INSTANT',
         organizerGroupId: 1,
-        organizerGroupName: '여름 수상 스포츠 호스트팀',
+        organizerGroupName: '한국대학교 아웃런 운영진',
         currentUserStatus: 'PENDING',
         createdAt: '2026-07-05T10:00:00',
         updatedAt: '2026-07-05T10:00:00',
     },
     {
         id: 10004,
-        title: '서핑 원데이 클래스',
-        description: '정원 마감된 호스트 진행 서핑 클래스입니다.',
+        title: '동해 비치 정기 익스트림 트립',
+        description: '정원 마감된 호스트 진행 정기 클래스입니다.',
         activityType: 'SURF',
         planningMode: 'MANAGER_PLANNED',
         applicationStartsAt: '2026-07-22T20:00:00',
         startsAt: '2026-08-02T09:00:00',
         endsAt: '2026-08-02T17:00:00',
-        locationName: '양양 죽도해변',
+        locationName: '양양 죽도해변 베이스',
         locationAddress: '강원특별자치도 양양군 현남면',
         capacity: 12,
         crewMemberLimit: 3,
@@ -175,7 +177,7 @@ const sampleEvents = (): Event[] => [
         visibilityType: 'CREW_LIMITED',
         joinPolicy: 'APPROVAL_REQUIRED',
         organizerGroupId: 1,
-        organizerGroupName: '여름 수상 스포츠 호스트팀',
+        organizerGroupName: '한국대학교 아웃런 운영진',
         currentUserStatus: 'NONE',
         createdAt: '2026-07-06T10:00:00',
         updatedAt: '2026-07-06T10:00:00',
@@ -191,15 +193,15 @@ const responseSheetSimulationEvents = (): Event[] => {
 
     return [{
         id: 11001,
-        title: '최신 참가자 응답 시트 + 필수 입금 체험',
-        description: '필수·선택 체크, 긴급 연락처, 약물·접근성 입력과 안내문을 한 장에서 제출한 뒤 계좌이체 안내까지 확인하는 개발용 시뮬레이션입니다.',
+        title: '2026 청춘 썸머 정기 오픈 세션 & 클럽하우스 정모',
+        description: '한국대학교 아웃런 크루 정기 세션입니다. 장비 렌탈 및 초보자 강습 포함, 안전 교육 후 진행됩니다.',
         activityType: 'WAKE',
         planningMode: 'MANAGER_PLANNED',
         applicationStartsAt: null,
         startsAt: startsAt.toISOString(),
         endsAt: endsAt.toISOString(),
-        locationName: '가평 수상레저 베이스',
-        locationAddress: '경기 가평군 설악면',
+        locationName: '가평 베이스 클럽하우스',
+        locationAddress: '경기 가평군 설악면 유명로',
         capacity: 12,
         crewMemberLimit: null,
         consentWindowMinutes: 10,
@@ -213,7 +215,7 @@ const responseSheetSimulationEvents = (): Event[] => {
         visibilityType: 'PUBLIC',
         joinPolicy: 'INSTANT',
         organizerGroupId: 1,
-        organizerGroupName: 'BoardBuddy Experience Lab',
+        organizerGroupName: '한국대학교 아웃런 운영진',
         currentUserStatus: 'NONE',
         createdAt: now(),
         updatedAt: now(),
@@ -666,8 +668,10 @@ export const getDevEventPaymentInfo = (eventId: number): EventPaymentPolicy => {
 };
 
 export const getDevParticipants = (eventId: number): EventParticipant[] => [
-    { id: 201, eventId, userId: 10, userName: 'Jake Kim (Simulated Owner)', status: 'JOINED', paymentStatus: 'PAID', managerMemo: '입금자명 확인 완료', createdAt: now() },
-    { id: 202, eventId, userId: 11, userName: 'Jane Doe (Simulated Editor)', status: 'CONSENT_PENDING', paymentStatus: null, managerMemo: null, consentDueAt: new Date(Date.now() + 8 * 60 * 1000).toISOString(), createdAt: now() },
+    { id: 201, eventId, userId: 999, userName: '김버디 (학생회장)', status: 'JOINED', paymentStatus: 'PAID', managerMemo: '회비 입금 확인 완료', consentDueAt: null, createdAt: now() },
+    { id: 202, eventId, userId: 11, userName: '이민수 (기획팀장)', status: 'JOINED', paymentStatus: 'PAID', managerMemo: '장비 렌탈 체크', consentDueAt: null, createdAt: now() },
+    { id: 203, eventId, userId: 12, userName: '최준혁 (한국대 24학번)', status: 'JOINED', paymentStatus: 'PAID', managerMemo: '계좌 이체 완료', consentDueAt: null, createdAt: now() },
+    { id: 204, eventId, userId: 13, userName: '정다은 (한국대 23학번)', status: 'CONSENT_PENDING', paymentStatus: null, managerMemo: '응답 시트 작성 중', consentDueAt: new Date(Date.now() + 8 * 60 * 1000).toISOString(), createdAt: now() },
 ];
 
 export const updateDevParticipantStatus = (eventId: number, userId: number, status: ParticipantStatus): EventParticipant => ({
@@ -697,7 +701,7 @@ export const getDevOrganizerGroups = (): OrganizerGroup[] => {
     if (roleOverride === 'organizer' || roleOverride === 'admin' || roleOverride === 'viewer') {
         const stored = readMigratedDevStorage<OrganizerGroup[]>(DEV_GROUPS_KEY);
         if (stored) return stored;
-        const groups = [{ id: 1, name: '호스트 샘플 그룹' }];
+        const groups = [{ id: 1, name: '한국대학교 아웃런 운영진' }];
         localStorage.setItem(DEV_GROUPS_KEY, JSON.stringify(groups));
         return groups;
     }
@@ -713,7 +717,7 @@ export const createDevOrganizerGroup = (name: string): OrganizerGroup => {
 };
 
 export const getDevOrganizerGroup = (groupId: number): OrganizerGroup => (
-    getDevOrganizerGroups().find(group => group.id === groupId) || { id: groupId, name: '호스트 샘플 그룹' }
+    getDevOrganizerGroups().find(group => group.id === groupId) || { id: groupId, name: '한국대학교 아웃런 운영진' }
 );
 
 export const getDevGroupMembers = (groupId: number): OrganizerGroupMembership[] => {
@@ -724,9 +728,9 @@ export const getDevGroupMembers = (groupId: number): OrganizerGroupMembership[] 
     }
 
     const defaultList: OrganizerGroupMembership[] = [
-        { id: 101, groupId, userId: 999, crewId: 401, crewName: 'Mock Crew 401', role: 'EVENT_GROUP_OWNER', userName: 'Mock User (Dev Mode)' },
-        { id: 102, groupId, userId: 11, crewId: 402, crewName: 'Mock Crew 402', role: 'EVENT_GROUP_MANAGER', userName: 'Jane Doe (Simulated Manager)' },
-        { id: 103, groupId, userId: 12, crewId: 402, crewName: 'Mock Crew 402', role: 'EVENT_GROUP_VIEWER', userName: 'Bob Smith (Simulated Viewer)' },
+        { id: 101, groupId, userId: 999, crewId: 101, crewName: '아웃런 (OUTRUN)', role: 'EVENT_GROUP_OWNER', userName: '김버디 (학생회장)' },
+        { id: 102, groupId, userId: 11, crewId: 101, crewName: '아웃런 (OUTRUN)', role: 'EVENT_GROUP_MANAGER', userName: '이민수 (기획팀장)' },
+        { id: 103, groupId, userId: 12, crewId: 101, crewName: '아웃런 (OUTRUN)', role: 'EVENT_GROUP_VIEWER', userName: '박서연 (운영위원)' },
     ];
     localStorage.setItem(key, JSON.stringify(defaultList));
     return defaultList;

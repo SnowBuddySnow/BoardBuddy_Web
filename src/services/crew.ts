@@ -34,12 +34,12 @@ export const getCrewInfo = async (crewId: number): Promise<CrewDetail> => {
         return {
             crewId,
             crew_id: crewId,
-            crewName: 'Mock Crew 401',
-            name: 'Mock Crew 401',
-            univ: 'Mock University',
-            status: 'INACTIVE',
-            role: 'CREW_MANAGER',
-            crewPin: '1234',
+            crewName: '아웃런 (OUTRUN)',
+            name: '아웃런 (OUTRUN)',
+            univ: '한국대학교',
+            status: 'ACTIVE',
+            role: 'CREW_CAPTAIN',
+            crewPin: '2026',
             reservation_day: 'FRIDAY',
             reservation_time: '18:00',
             reservation_offset: 3,
@@ -47,14 +47,14 @@ export const getCrewInfo = async (crewId: number): Promise<CrewDetail> => {
             reservationOpenTime: '18:00',
             reservationOpenOffsetDays: 3,
             reservationPeriodLimitDays: 7,
-            dailyCapacity: 8,
+            dailyCapacity: 12,
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),
-            president_name: 'Mock User (Dev Mode)',
-            member_count: 12,
+            president_name: '김버디 (학생회장)',
+            member_count: 42,
             profile_image_url: null,
             isCapacityLimited: true,
-            seasonHouseActive: false,
+            seasonHouseActive: true,
         };
     }
 
@@ -63,29 +63,105 @@ export const getCrewInfo = async (crewId: number): Promise<CrewDetail> => {
 };
 
 export const getCrewMembers = async (crewId: number): Promise<CrewMember[]> => {
+    if (hasDevOverride()) {
+        return [
+            { user_id: 999, name: '김버디 (학생회장)', student_id: '202410291', role: 'CREW_CAPTAIN' },
+            { user_id: 11, name: '이민수 (기획팀장)', student_id: '202311402', role: 'CREW_MANAGER' },
+            { user_id: 12, name: '박서연 (운영위원)', student_id: '202410319', role: 'CREW_MANAGER' },
+            { user_id: 13, name: '최준혁 (한국대 24학번)', student_id: '202410512', role: 'MEMBER' },
+            { user_id: 14, name: '정다은 (한국대 23학번)', student_id: '202311094', role: 'MEMBER' },
+            { user_id: 15, name: '강현우 (한국대 22학번)', student_id: '202210881', role: 'MEMBER' },
+        ];
+    }
     const response = await apiClient.get<ApiResponse<CrewMember[]>>(`/crews/${crewId}/members`);
     return response.data.data;
 };
 
 export const getCrewManagers = async (crewId: number): Promise<CrewMember[]> => {
+    if (hasDevOverride()) {
+        return [
+            { user_id: 999, name: '김버디 (학생회장)', student_id: '202410291', role: 'CREW_CAPTAIN' },
+            { user_id: 11, name: '이민수 (기획팀장)', student_id: '202311402', role: 'CREW_MANAGER' },
+            { user_id: 12, name: '박서연 (운영위원)', student_id: '202410319', role: 'CREW_MANAGER' },
+        ];
+    }
     const response = await apiClient.get<ApiResponse<CrewMember[]>>(`/crews/${crewId}/managers`);
     return response.data.data;
 };
 
 export const getApplicants = async (crewId: number): Promise<CrewApplicant[]> => {
+    if (hasDevOverride()) {
+        return [
+            { applicationId: 501, userId: 101, userName: '윤도현 (신입지원)', userType: 'KUSBF', schoolName: '한국대학교', studentId: '202611029', status: 'PENDING', created_at: new Date().toISOString() },
+            { applicationId: 502, userId: 102, userName: '송지아 (신입지원)', userType: 'KUSBF', schoolName: '한국대학교', studentId: '202611083', status: 'PENDING', created_at: new Date().toISOString() },
+        ];
+    }
     const response = await apiClient.get<ApiResponse<CrewApplicant[]>>(`/crews/${crewId}/applications`);
     return response.data.data;
 };
 
 export const manageApplicant = async (crewId: number, applicationId: number, decision: number): Promise<void> => {
+    if (hasDevOverride()) return;
     await apiClient.post(`/crews/${crewId}/applications/${applicationId}/approve`, { decision });
 };
 
+export const resetCrewPin = async (crewId: number): Promise<string> => {
+    if (hasDevOverride()) return '2026';
+    const response = await apiClient.post<ApiResponse<{ pin?: string; crewPin?: string }>>(`/crews/${crewId}/pin/reset`);
+    return response.data.data.pin || response.data.data.crewPin || '2026';
+};
+
 export const applyToCrew = async (crewId: number, crewPIN: string): Promise<void> => {
+    if (hasDevOverride()) {
+        if (crewPIN.length !== 4) throw new Error('PIN must be 4 digits');
+        return;
+    }
     await apiClient.post(`/crews/${crewId}/applications`, { crewPIN });
 };
 
 export const discoverCrews = async (query = ''): Promise<DiscoverableCrew[]> => {
+    if (hasDevOverride()) {
+        const mockCrews: DiscoverableCrew[] = [
+            {
+                crewId: 101,
+                crewName: '아웃런 (OUTRUN)',
+                crewCode: 'CRW-OUTRUN',
+                schoolId: 1,
+                schoolName: '한국대학교',
+                memberCount: 42,
+                profileImageUrl: '',
+            },
+            {
+                crewId: 102,
+                crewName: '블루모션 (BlueMotion)',
+                crewCode: 'CRW-BLUEM',
+                schoolId: 2,
+                schoolName: '대한대학교',
+                memberCount: 38,
+                profileImageUrl: '',
+            },
+            {
+                crewId: 103,
+                crewName: '체이서스 (Chasers)',
+                crewCode: 'CRW-CHASER',
+                schoolId: 3,
+                schoolName: '민국대학교',
+                memberCount: 29,
+                profileImageUrl: '',
+            },
+            {
+                crewId: 104,
+                crewName: '피크앤포인트 (Peak & Point)',
+                crewCode: 'CRW-PEAKP',
+                schoolId: 4,
+                schoolName: '청송대학교',
+                memberCount: 31,
+                profileImageUrl: '',
+            },
+        ];
+        if (!query) return mockCrews;
+        return mockCrews.filter(c => c.crewName.includes(query) || (c.schoolName && c.schoolName.includes(query)) || c.crewCode.includes(query));
+    }
     const response = await apiClient.get<ApiResponse<DiscoverableCrew[]>>('/crews/discover', {
         params: { query },
     });
@@ -94,14 +170,6 @@ export const discoverCrews = async (query = ''): Promise<DiscoverableCrew[]> => 
 
 export const updateCrew = async (crewId: number, data: Partial<CrewInfoUpdateRequest> & { id?: number; name?: string }): Promise<void> => {
     await apiClient.patch(`/crews/${crewId}/info`, data);
-};
-
-export const resetCrewPin = async (crewId: number): Promise<string> => {
-    if (hasDevOverride()) {
-        return String(Math.floor(Math.random() * 10_000)).padStart(4, '0');
-    }
-    const response = await apiClient.post<ApiResponse<{ crewPin: string }>>(`/crews/${crewId}/pin/reset`);
-    return response.data.data.crewPin;
 };
 
 export const promoteMember = async (crewId: number, userId: number): Promise<void> => {

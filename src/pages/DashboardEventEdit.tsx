@@ -1,6 +1,13 @@
 import { useState, useEffect } from 'react';
 import { Button } from '../components/Button';
-import { configureEventConsents, getEventConsentConfiguration, getEventDashboard, updateEvent } from '../services/event';
+import {
+    configureEventConsents,
+    configureEventRefundPolicy,
+    getEventConsentConfiguration,
+    getEventDashboard,
+    getDashboardEventRefundPolicy,
+    updateEvent,
+} from '../services/event';
 import { listOrganizerGroups } from '../services/organizerGroup';
 import { ConsentConfigurationInput, JoinPolicy, OrganizerGroup, EventPlanningMode, EventStatus, VisibilityType } from '../types/api';
 import { PlanningModeSelector } from '../components/event/PlanningModeSelector';
@@ -9,6 +16,7 @@ import { ActivityTypeSelector } from '../components/event/ActivityTypeSelector';
 import { ChevronLeft, Save } from 'lucide-react';
 import { getApiErrorMessage, getApiErrorStatus } from '../lib/apiError';
 import { EventConsentEditor } from '../components/event/EventConsentEditor';
+import { EventRefundPolicyEditor } from '../components/event/EventRefundPolicyEditor';
 import { eventStatusLabel, joinPolicyLabel, visibilityTypeLabel } from '../constants/displayLabels';
 
 interface DashboardEventEditProps {
@@ -44,15 +52,17 @@ export default function DashboardEventEdit({ eventId, onBack, onSuccess }: Dashb
         consentWindowMinutes: null,
         items: [],
     });
+    const [refundPolicy, setRefundPolicy] = useState('');
 
     useEffect(() => {
         const loadInitData = async () => {
             try {
                 setLoading(true);
                 // 1. Load groups
-                const [groupsList, consentData] = await Promise.all([
+                const [groupsList, consentData, refundPolicyData] = await Promise.all([
                     listOrganizerGroups(),
                     getEventConsentConfiguration(eventId),
+                    getDashboardEventRefundPolicy(eventId),
                 ]);
                 setGroups(groupsList);
                 setConsentConfiguration({
@@ -66,6 +76,7 @@ export default function DashboardEventEdit({ eventId, onBack, onSuccess }: Dashb
                         displayOrder,
                     })),
                 });
+                setRefundPolicy(refundPolicyData.refundPolicy || '');
 
                 // 2. Load event data
                 const eventData = await getEventDashboard(eventId);
@@ -155,7 +166,10 @@ export default function DashboardEventEdit({ eventId, onBack, onSuccess }: Dashb
             };
 
             await updateEvent(eventId, payload);
-            await configureEventConsents(eventId, consentConfiguration);
+            await Promise.all([
+                configureEventConsents(eventId, consentConfiguration),
+                configureEventRefundPolicy(eventId, refundPolicy.trim() || null),
+            ]);
             alert('이벤트 정보가 성공적으로 수정되었습니다.');
             onSuccess();
         } catch (error: unknown) {
@@ -406,6 +420,8 @@ export default function DashboardEventEdit({ eventId, onBack, onSuccess }: Dashb
                         )}
 
                         <EventConsentEditor value={consentConfiguration} onChange={setConsentConfiguration} />
+
+                        <EventRefundPolicyEditor value={refundPolicy} onChange={setRefundPolicy} />
 
                         <div className="flex items-center justify-end gap-3 border-t border-zinc-50 pt-6">
                             <Button

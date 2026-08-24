@@ -439,6 +439,10 @@ export interface EventPaymentPolicy {
     refundPolicy: string | null;
 }
 
+export interface EventRefundPolicy {
+    refundPolicy: string | null;
+}
+
 export interface OrganizerGroup {
     id: number;
     groupCode?: string;

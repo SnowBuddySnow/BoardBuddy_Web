@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Button } from '../components/Button';
-import { configureEventConsents, createEvent } from '../services/event';
+import { configureEventConsents, configureEventRefundPolicy, createEvent } from '../services/event';
 import { listOrganizerGroups } from '../services/organizerGroup';
 import { ConsentConfigurationInput, JoinPolicy, OrganizerGroup, EventPlanningMode, VisibilityType } from '../types/api';
 import { PlanningModeSelector } from '../components/event/PlanningModeSelector';
@@ -9,6 +9,7 @@ import { ActivityTypeSelector } from '../components/event/ActivityTypeSelector';
 import { ChevronLeft, Save, HelpCircle } from 'lucide-react';
 import { getApiErrorMessage, getApiErrorStatus } from '../lib/apiError';
 import { EventConsentEditor } from '../components/event/EventConsentEditor';
+import { EventRefundPolicyEditor } from '../components/event/EventRefundPolicyEditor';
 import { joinPolicyLabel, visibilityTypeLabel } from '../constants/displayLabels';
 
 interface DashboardEventNewProps {
@@ -45,6 +46,7 @@ export default function DashboardEventNew({ onBack, onSuccess }: DashboardEventN
         consentWindowMinutes: null,
         items: [],
     });
+    const [refundPolicy, setRefundPolicy] = useState('');
 
     useEffect(() => {
         const fetchGroups = async () => {
@@ -132,7 +134,10 @@ export default function DashboardEventNew({ onBack, onSuccess }: DashboardEventN
             };
 
             const newEvent = await createEvent(payload);
-            await configureEventConsents(newEvent.id, consentConfiguration);
+            await Promise.all([
+                configureEventConsents(newEvent.id, consentConfiguration),
+                configureEventRefundPolicy(newEvent.id, refundPolicy.trim() || null),
+            ]);
             alert('이벤트가 DRAFT 상태로 정상 개설되었습니다. 등록을 진행하려면 목록이나 상세조회에서 "오픈"을 클릭하세요.');
             onSuccess(newEvent.id);
         } catch (error: unknown) {
@@ -397,6 +402,8 @@ export default function DashboardEventNew({ onBack, onSuccess }: DashboardEventN
                         )}
 
                         <EventConsentEditor value={consentConfiguration} onChange={setConsentConfiguration} />
+
+                        <EventRefundPolicyEditor value={refundPolicy} onChange={setRefundPolicy} />
 
                         <div className="flex items-center justify-end gap-3 border-t border-zinc-50 pt-6">
                             <Button

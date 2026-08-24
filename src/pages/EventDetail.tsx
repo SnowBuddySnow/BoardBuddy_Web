@@ -6,12 +6,13 @@ import {
     getEventChatAccess,
     getEventConsents,
     getEventPaymentInfo,
+    getEventRefundPolicy,
     joinEvent,
     saveEventConsentDraft,
     saveEventConsentDraftKeepalive,
     submitEventConsents,
 } from '../services/event';
-import { ConsentResponseInput, Event, EventChatAccess, EventPaymentPolicy, ParticipantConsentState } from '../types/api';
+import { ConsentResponseInput, Event, EventChatAccess, EventPaymentPolicy, EventRefundPolicy, ParticipantConsentState } from '../types/api';
 import {
     Banknote,
     Calendar,
@@ -25,6 +26,7 @@ import {
     KeyRound,
     MapPin,
     MessageCircle,
+    ReceiptText,
     LoaderCircle,
     ShieldCheck,
     Users,
@@ -56,6 +58,7 @@ export default function EventDetail({ eventId, onBack, isGuestApplication = fals
     const [consentState, setConsentState] = useState<ParticipantConsentState | null>(null);
     const [consentAnswers, setConsentAnswers] = useState<Record<number, ConsentDraft>>({});
     const [paymentInfo, setPaymentInfo] = useState<EventPaymentPolicy | null>(null);
+    const [refundPolicyInfo, setRefundPolicyInfo] = useState<EventRefundPolicy | null>(null);
     const [consentSubmitting, setConsentSubmitting] = useState(false);
     const [draftHydrated, setDraftHydrated] = useState(false);
     const [draftRestored, setDraftRestored] = useState(false);
@@ -75,6 +78,12 @@ export default function EventDetail({ eventId, onBack, isGuestApplication = fals
             setDraftRestored(false);
             setDraftSaveState('idle');
             setPaymentInfo(null);
+            try {
+                setRefundPolicyInfo(await getEventRefundPolicy(eventId));
+            } catch (refundPolicyError) {
+                console.error('Failed to fetch event cancellation policy:', refundPolicyError);
+                setRefundPolicyInfo(null);
+            }
             if (data.currentUserStatus === 'JOINED') {
                 try {
                     setChatAccess(await getEventChatAccess(eventId));
@@ -626,6 +635,18 @@ export default function EventDetail({ eventId, onBack, isGuestApplication = fals
                         </div>
                     )}
 
+                    {refundPolicyInfo?.refundPolicy && (
+                        <div className="space-y-3 rounded-3xl border border-amber-200 bg-white p-5 shadow-sm">
+                            <div className="flex items-center gap-2">
+                                <ReceiptText className="h-5 w-5 text-amber-600" />
+                                <h3 className="text-sm font-bold text-zinc-900">취소 및 환불 안내</h3>
+                            </div>
+                            <p className="whitespace-pre-wrap text-xs leading-6 text-zinc-600">
+                                {refundPolicyInfo.refundPolicy}
+                            </p>
+                        </div>
+                    )}
+
                     {hasJoined && paymentInfo?.paymentRequired && (
                         <div className="space-y-4 rounded-3xl border border-emerald-200 bg-white p-5 shadow-sm">
                             <div className="flex items-center justify-between gap-3">
@@ -670,14 +691,6 @@ export default function EventDetail({ eventId, onBack, isGuestApplication = fals
                                     <h4 className="text-xs font-bold text-zinc-800">입금 주의사항</h4>
                                     <p className="mt-1 whitespace-pre-wrap text-xs leading-relaxed text-zinc-600">
                                         {paymentInfo.paymentInstructions}
-                                    </p>
-                                </div>
-                            )}
-                            {paymentInfo.refundPolicy && (
-                                <div className="border-t border-zinc-100 pt-3">
-                                    <h4 className="text-xs font-bold text-zinc-800">환불 정책</h4>
-                                    <p className="mt-1 whitespace-pre-wrap text-xs leading-relaxed text-zinc-500">
-                                        {paymentInfo.refundPolicy}
                                     </p>
                                 </div>
                             )}

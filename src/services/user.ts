@@ -14,10 +14,15 @@ export const getUserInfo = async (): Promise<UserDetail> => {
 export const confirmProfileType = async (request: {
     userType: 'REGULAR' | 'KUSBF';
     displayName?: string;
+    email?: string;
     schoolId?: number;
     studentNumber?: string;
-}): Promise<void> => {
-    await apiClient.put('/accounts/profile-type', request);
+}): Promise<{ universityVerificationStatus: string }> => {
+    const response = await apiClient.put<ApiResponse<{ universityVerificationStatus: string }>>(
+        '/accounts/profile-type',
+        request,
+    );
+    return response.data.data;
 };
 
 export const getMyReservations = async (): Promise<MyReservation[]> => {

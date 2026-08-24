@@ -6,7 +6,7 @@ import { confirmProfileType, getUserInfo } from '../services/user';
 import { getApiErrorMessage } from '../lib/apiError';
 
 interface ProfileTypeConfirmationProps {
-    onSuccess: () => void;
+    onSuccess: (requiresStudentVerification?: boolean) => void;
 }
 
 type Selection = 'STUDENT' | 'REGULAR';
@@ -19,6 +19,7 @@ export default function ProfileTypeConfirmation({ onSuccess }: ProfileTypeConfir
     const [schoolQuery, setSchoolQuery] = useState('');
     const [selectedSchool, setSelectedSchool] = useState<SchoolOption | null>(null);
     const [studentNumber, setStudentNumber] = useState('');
+    const [schoolEmail, setSchoolEmail] = useState('');
     const [showSchools, setShowSchools] = useState(false);
     const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
@@ -41,6 +42,7 @@ export default function ProfileTypeConfirmation({ onSuccess }: ProfileTypeConfir
                 }
                 setSchools(options);
                 setCurrentName(user.name);
+                setSchoolEmail(user.email || '');
                 setStudentNumber(user.studentId || '');
                 if (user.school) {
                     const matchedSchool = options.find(option => option.name === user.school) || null;
@@ -85,6 +87,7 @@ export default function ProfileTypeConfirmation({ onSuccess }: ProfileTypeConfir
             setSchoolQuery('');
             setSelectedSchool(null);
             setStudentNumber('');
+            setSchoolEmail('');
             setShowSchools(false);
         }
     };
@@ -106,17 +109,29 @@ export default function ProfileTypeConfirmation({ onSuccess }: ProfileTypeConfir
             setError('동명이인을 구분할 수 있도록 학번을 입력해주세요.');
             return;
         }
+        if (selection === 'STUDENT' && selectedSchool && selectedSchool.emailDomains.length > 0) {
+            const normalizedEmail = schoolEmail.trim().toLowerCase();
+            const emailDomain = normalizedEmail.split('@').pop() || '';
+            const domainMatches = selectedSchool.emailDomains.some(domain => (
+                emailDomain === domain.toLowerCase() || emailDomain.endsWith(`.${domain.toLowerCase()}`)
+            ));
+            if (!normalizedEmail || !domainMatches) {
+                setError(`학교 이메일을 입력해주세요. 사용 가능한 도메인: ${selectedSchool.emailDomains.join(', ')}`);
+                return;
+            }
+        }
 
         setSubmitting(true);
         setError('');
         try {
-            await confirmProfileType({
+            const result = await confirmProfileType({
                 userType: selection === 'STUDENT' ? 'KUSBF' : 'REGULAR',
                 displayName: selection === 'STUDENT' ? realName.trim() : undefined,
+                email: selection === 'STUDENT' ? schoolEmail.trim() || undefined : undefined,
                 schoolId: selection === 'STUDENT' ? selectedSchool?.id : undefined,
                 studentNumber: selection === 'STUDENT' ? studentNumber.trim() : undefined,
             });
-            onSuccess();
+            onSuccess(result.universityVerificationStatus === 'PENDING');
         } catch (requestError: unknown) {
             setError(getApiErrorMessage(requestError) || '프로필 유형을 저장하지 못했습니다.');
         } finally {
@@ -240,6 +255,24 @@ export default function ProfileTypeConfirmation({ onSuccess }: ProfileTypeConfir
                             />
                             <p className="ml-1 mt-2 text-xs leading-5 text-zinc-500">
                                 동일한 실명을 사용하는 학생을 구분하기 위해 필수입니다.
+                            </p>
+                        </div>
+                        <div className="sm:col-span-2">
+                            <label className="ml-1 text-sm font-bold text-zinc-800">
+                                학교 이메일
+                                {selectedSchool?.emailDomains.length ? '' : ' (선택)'}
+                            </label>
+                            <input
+                                type="email"
+                                value={schoolEmail}
+                                onChange={event => setSchoolEmail(event.target.value)}
+                                maxLength={150}
+                                placeholder={selectedSchool?.emailDomains[0] ? `name@${selectedSchool.emailDomains[0]}` : 'name@example.com'}
+                                autoComplete="email"
+                                className="mt-2 h-12 w-full rounded-2xl border border-zinc-200 px-4 text-sm outline-none focus:border-[#162660] focus:ring-2 focus:ring-[#162660]/10"
+                            />
+                            <p className="ml-1 mt-2 text-xs leading-5 text-zinc-500">
+                                인증번호와 활성화 링크를 같은 이메일로 보내드립니다.
                             </p>
                         </div>
                     </div>

@@ -17,7 +17,7 @@ import { getApiErrorMessage, getApiErrorStatus } from '../lib/apiError';
 
 interface UserInfoInputProps {
     onBack: () => void;
-    onSuccess?: () => void;
+    onSuccess?: (requiresStudentVerification?: boolean) => void;
 }
 
 // DEV PHONE BYPASS: Vite removes this path from production builds because import.meta.env.DEV is false.
@@ -48,7 +48,7 @@ const TERMS_CONTENT = {
 - 서비스 오류 발생 시 공지 및 대응
 
 2. 개인정보 수집 항목
-- 성명 또는 닉네임, 성별, 휴대전화번호, 이메일(선택)
+- 성명 또는 닉네임, 성별, 휴대전화번호, 이메일(일반 프로필은 선택, 학교 이메일 인증을 사용하는 학생 프로필은 필수)
 - 학생 프로필의 경우 학교, 학번(필수)
 
 3. 개인정보 제3자 제공 동의 (휴대전화번호 제공)
@@ -278,6 +278,20 @@ export default function UserInfoInput({ onBack, onSuccess }: UserInfoInputProps)
 
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         if (email && !emailRegex.test(email)) { alert('이메일 형식이 올바르지 않습니다.'); return; }
+        if (profileType === 'STUDENT' && selectedSchool && selectedSchool.emailDomains.length > 0) {
+            if (!email.trim()) {
+                alert('학생 인증을 위해 학교 이메일을 입력해주세요.');
+                return;
+            }
+            const emailDomain = email.trim().toLowerCase().split('@').pop() || '';
+            const matchesSchool = selectedSchool.emailDomains.some(domain => (
+                emailDomain === domain.toLowerCase() || emailDomain.endsWith(`.${domain.toLowerCase()}`)
+            ));
+            if (!matchesSchool) {
+                alert(`선택한 학교의 이메일(${selectedSchool.emailDomains.join(', ')})을 입력해주세요.`);
+                return;
+            }
+        }
 
         if (!terms.term1) { alert('첫 번째 필수 약관에 동의해주세요.'); return; }
         if (!terms.term2) { alert('두 번째 필수 약관에 동의해주세요.'); return; }
@@ -322,21 +336,25 @@ export default function UserInfoInput({ onBack, onSuccess }: UserInfoInputProps)
                 localStorage.setItem('phone_sharing_consent_preference', phoneConsentPreference);
 
                 // Promote temp token to final token
-                const completedProfile = response.data.data as { accessToken: string; refreshToken: string };
+                const completedProfile = response.data.data as {
+                    accessToken: string;
+                    refreshToken: string;
+                    universityVerificationStatus?: string;
+                };
                 if (completedProfile.accessToken) {
                     saveAuthTokens(completedProfile.accessToken, completedProfile.refreshToken);
                     clearTempAccessToken();
                 }
 
                 if (onSuccess) {
-                    onSuccess();
+                    onSuccess(completedProfile.universityVerificationStatus === 'PENDING');
                 } else {
                     onBack();
                 }
             }
         } catch (error) {
             console.error('Signup error:', error);
-            alert('서버 연결 중 오류가 발생했습니다.');
+            alert(getApiErrorMessage(error) || '서버 연결 중 오류가 발생했습니다.');
         } finally {
             setIsLoading(false);
         }
@@ -432,7 +450,10 @@ export default function UserInfoInput({ onBack, onSuccess }: UserInfoInputProps)
                         {/* Email */}
                         <div className="space-y-2">
                             <label className="text-sm font-bold text-zinc-800 ml-1">
-                                이메일 <span className="font-normal text-zinc-500">(선택)</span>
+                                이메일 <span className="font-normal text-zinc-500">
+                                    {profileType === 'STUDENT' && schools.find(option => option.name === school)?.emailDomains.length
+                                        ? '(학교 인증용)' : '(선택)'}
+                                </span>
                             </label>
                             <input
                                 type="email"

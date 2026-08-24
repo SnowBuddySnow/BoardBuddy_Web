@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BoardBuddy 크루 대표 & 운영진 가이드 (Desktop/Tablet)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+    body {
+      background-color: #0F172A;
+      color: #F8FAFC;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    /* Top Global Switcher Nav */
+    .top-nav {
+      background: rgba(15, 23, 42, 0.95);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      padding: 12px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .brand-title {
+      font-size: 18px;
+      font-weight: 900;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: #FFFFFF;
+    }
+    .guide-tabs {
+      display: flex;
+      gap: 8px;
+      background: #1E293B;
+      padding: 4px;
+      border-radius: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    .guide-tab-link {
+      text-decoration: none;
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 700;
+      color: #94A3B8;
+      transition: all 0.2s ease;
+    }
+    .guide-tab-link.active {
+      background: #2563EB;
+      color: #FFFFFF;
+      box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+    }
+    .guide-tab-link:hover:not(.active) {
+      color: #F8FAFC;
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    /* Main Container */
+    .main-container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 36px 24px 60px 24px;
+      flex: 1;
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 28px;
+    }
+
+    /* Hero Section */
+    .hero-section {
+      text-align: center;
+      max-width: 800px;
+      margin: 0 auto;
+    }
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(37, 99, 235, 0.15);
+      border: 1px solid rgba(37, 99, 235, 0.3);
+      color: #60A5FA;
+      padding: 6px 14px;
+      border-radius: 9999px;
+      font-size: 13px;
+      font-weight: 800;
+      margin-bottom: 12px;
+    }
+    .hero-title {
+      font-size: 32px;
+      font-weight: 900;
+      color: #FFFFFF;
+      letter-spacing: -0.02em;
+      margin-bottom: 10px;
+    }
+    .hero-desc {
+      font-size: 15px;
+      color: #94A3B8;
+      line-height: 1.6;
+    }
+
+    /* Interactive Card Deck Stage */
+    .deck-stage {
+      display: grid;
+      grid-template-columns: 1fr 420px;
+      gap: 32px;
+      background: #1E293B;
+      border-radius: 28px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      padding: 32px;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    }
+    @media (max-width: 1080px) {
+      .deck-stage {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* Left: Desktop Mockup */
+    .mockup-wrapper {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .desktop-frame {
+      background: #09090B;
+      border-radius: 16px;
+      padding: 10px 10px 12px 10px;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+    }
+    .browser-header {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 8px 10px 8px;
+    }
+    .browser-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+    }
+    .browser-dot.red { background: #EF4444; }
+    .browser-dot.yellow { background: #F59E0B; }
+    .browser-dot.green { background: #10B981; }
+    .browser-address {
+      flex: 1;
+      background: #27272A;
+      color: #94A3B8;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 4px 12px;
+      margin-left: 12px;
+      text-align: center;
+    }
+    .screen-img {
+      width: 100%;
+      height: auto;
+      max-height: 540px;
+      object-fit: contain;
+      background: #FAF8F3;
+      border-radius: 8px;
+      display: block;
+    }
+
+    /* Right: Card Detail Panel */
+    .detail-panel {
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 20px;
+    }
+    .card-meta {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .step-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: #312E81;
+      color: #C7D2FE;
+      padding: 5px 12px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 800;
+    }
+    .card-indicator {
+      font-size: 14px;
+      font-weight: 900;
+      color: #60A5FA;
+    }
+    .card-title {
+      font-size: 22px;
+      font-weight: 900;
+      color: #FFFFFF;
+      line-height: 1.3;
+      margin-top: 10px;
+    }
+    .card-desc {
+      font-size: 14.5px;
+      color: #CBD5E1;
+      line-height: 1.6;
+      margin-top: 8px;
+    }
+    .card-desc strong {
+      color: #FFFFFF;
+    }
+    .tip-box {
+      background: rgba(37, 99, 235, 0.12);
+      border-left: 4px solid #3B82F6;
+      border-radius: 0 10px 10px 0;
+      padding: 12px 14px;
+      font-size: 13px;
+      color: #E2E8F0;
+      line-height: 1.5;
+      margin-top: 14px;
+    }
+    .tip-box strong {
+      color: #93C5FD;
+    }
+    .action-guide {
+      background: #0F172A;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      padding: 12px 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      font-weight: 800;
+      color: #F8FAFC;
+    }
+
+    /* Stage Controls */
+    .controls {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding-top: 16px;
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    .btn-nav {
+      background: #2563EB;
+      color: #FFFFFF;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 12px;
+      font-size: 14px;
+      font-weight: 800;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s;
+    }
+    .btn-nav:hover:not(:disabled) {
+      background: #1D4ED8;
+      transform: translateY(-1px);
+    }
+    .btn-nav:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+    .btn-nav.prev {
+      background: #334155;
+    }
+    .btn-nav.prev:hover:not(:disabled) {
+      background: #475569;
+    }
+
+    /* Thumbnail Carousel Strip */
+    .thumb-strip {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+      gap: 12px;
+    }
+    .thumb-item {
+      background: #1E293B;
+      border: 2px solid transparent;
+      border-radius: 12px;
+      padding: 8px;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s ease;
+    }
+    .thumb-item.active {
+      border-color: #3B82F6;
+      background: #273549;
+    }
+    .thumb-item:hover:not(.active) {
+      border-color: rgba(255, 255, 255, 0.2);
+    }
+    .thumb-img {
+      width: 100%;
+      height: 64px;
+      object-fit: cover;
+      border-radius: 6px;
+      background: #09090B;
+    }
+    .thumb-label {
+      font-size: 11px;
+      font-weight: 700;
+      color: #94A3B8;
+      text-align: center;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      width: 100%;
+    }
+    .thumb-item.active .thumb-label {
+      color: #60A5FA;
+    }
+  </style>
+</head>
+<body>
+  <!-- Top Switcher Nav -->
+  <nav class="top-nav">
+    <div class="brand-title">
+      <span>🛹 BoardBuddy</span>
+      <span style="font-size: 12px; color: #60A5FA; font-weight: 700; background: rgba(37,99,235,0.2); padding: 3px 8px; border-radius: 6px;">운영진 포털</span>
+    </div>
+    <div class="guide-tabs">
+      <a href="index.html" class="guide-tab-link">🎓 일반 학생 회원 가이드 (Mobile)</a>
+      <a href="manager.html" class="guide-tab-link active">👑 크루 대표 & 운영진 가이드 (Desktop/Tablet)</a>
+    </div>
+  </nav>
+
+  <main class="main-container">
+    <header class="hero-section">
+      <div class="hero-badge">👑 Crew Captain & Host Operations Guide</div>
+      <h1 class="hero-title">보드버디 크루 대표 & 운영진 가이드</h1>
+      <p class="hero-desc">
+        신규 크루 개설 신청부터 가입 보안 PIN 관리, 신입 부원 심사, 정기 세션 개설 및 참가자 명부/정산까지<br />
+        데스크톱 및 태블릿 화면에서 효율적으로 관리하는 전체 10단계 매뉴얼입니다.
+      </p>
+    </header>
+
+    <!-- Interactive Deck Stage -->
+    <section class="deck-stage">
+      <div class="mockup-wrapper">
+        <div class="desktop-frame">
+          <div class="browser-header">
+            <div class="browser-dot red"></div>
+            <div class="browser-dot yellow"></div>
+            <div class="browser-dot green"></div>
+            <div class="browser-address" id="live-url">boardbuddy.kr/?view=crew_create</div>
+          </div>
+          <img id="live-screen" class="screen-img" src="assets_manager/01_create_crew_form.png" alt="Desktop Screen" />
+        </div>
+      </div>
+
+      <div class="detail-panel">
+        <div>
+          <div class="card-meta">
+            <span class="step-tag" id="live-step">👑 STEP 01 · 크루 신설</span>
+            <span class="card-indicator" id="live-indicator">01 / 10</span>
+          </div>
+          <h2 class="card-title" id="live-title">신규 대학 크루 생성 신청</h2>
+          <p class="card-desc" id="live-desc">
+            대학교 소속 동아리/크루를 신설합니다. 크루명(<strong>아웃런 OUTRUN</strong>)과 소속 대학(<strong>한국대학교</strong>)을 입력해 승인을 요청합니다.
+          </p>
+          <div class="tip-box" id="live-tip">
+            💡 <strong>운영 Tip:</strong> 정식 승인 후 4자리 가입 보안 PIN과 크루 관리 센터 권한이 즉시 활성화됩니다.
+          </div>
+        </div>
+
+        <div>
+          <div class="action-guide" id="live-action">
+            👉 크루명 입력 후 [생성 요청 보내기] 클릭
+          </div>
+
+          <div class="controls">
+            <button class="btn-nav prev" id="btn-prev" onclick="prevSlide()">◀ 이전 단계</button>
+            <button class="btn-nav" id="btn-next" onclick="nextSlide()">다음 단계 ▶</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Thumbnail Strip -->
+    <nav class="thumb-strip" id="thumb-strip"></nav>
+  </main>
+
+  <script>
+    const steps = [
+      {
+        id: 1,
+        url: 'boardbuddy.kr/?view=crew_create',
+        img: 'assets_manager/01_create_crew_form.png',
+        step: '👑 STEP 01 · 크루 신설',
+        title: '신규 대학 크루 생성 신청',
+        desc: '대학교 소속 동아리/크루를 신설합니다. 크루명(<strong>아웃런 OUTRUN</strong>)과 소속 대학(<strong>한국대학교</strong>)을 입력해 승인을 요청합니다.',
+        tip: '💡 <strong>운영 Tip:</strong> 정식 승인 후 4자리 가입 보안 PIN과 크루 관리 센터 권한이 즉시 활성화됩니다.',
+        action: '👉 크루명 입력 후 [생성 요청 보내기] 클릭'
+      },
+      {
+        id: 2,
+        url: 'boardbuddy.kr/?view=crew_settings',
+        img: 'assets_manager/02_crew_settings_pin.png',
+        step: '🔐 STEP 02 · 보안 PIN 설정',
+        title: '크루 설정 & 4자리 가입 PIN 관리',
+        desc: '신입 동아리원에게 안내할 <strong>4자리 가입 보안 PIN(2026)</strong>을 확인하고, 필요 시 언제든 [PIN 재발급]으로 보안을 유지합니다.',
+        tip: '💡 <strong>보안 Tip:</strong> 학기별 신입 모집이 끝나면 PIN을 재발급하여 외부인의 무단 가입을 원천 차단할 수 있습니다.',
+        action: '👉 [PIN 복사] 버튼으로 동아리 단톡방에 전달'
+      },
+      {
+        id: 3,
+        url: 'boardbuddy.kr/?view=crew_member',
+        img: 'assets_manager/03_crew_members_review.png',
+        step: '👥 STEP 03 · 멤버 심사',
+        title: '신입 부원 가입 신청 심사 & 명부 관리',
+        desc: '가입을 신청한 학생들의 <strong>학번, 실명, 학교 인증</strong> 내역을 대조하여 [수락] 또는 [거절]을 원클릭으로 처리합니다.',
+        tip: '💡 <strong>권한 Tip:</strong> 활동 중인 정회원에게는 부운영진(크루 매니저) 권한을 손쉽게 위임할 수 있습니다.',
+        action: '👉 [승인 대기] 탭에서 신입 지원자 [수락] 클릭'
+      },
+      {
+        id: 4,
+        url: 'boardbuddy.kr/?view=dashboard_event_new',
+        img: 'assets_manager/04_create_event_step1.png',
+        step: '🏄‍♂️ STEP 04 · 호스트 그룹 & 종목',
+        title: '주최 호스트 그룹 지정 & 모임 유형 선택',
+        desc: '모임을 주최할 <strong>호스트 그룹(한국대학교 아웃런 운영진)</strong>과 진행 방식(<strong>호스트 참여·운영형</strong>), 종목(<strong>Wake / Surf / MT</strong>)을 선택합니다.',
+        tip: '💡 <strong>호스트 그룹이란?</strong><br />• 모임을 공동 기획·운영하는 <strong>운영진 조직 단위</strong>입니다.<br />• 단일 동아리 운영진뿐 아니라 여러 크루가 함께하는 <strong>연합 주최단</strong>을 구성해 이벤트를 공동 관리할 수도 있습니다.',
+        action: '👉 주최 호스트 그룹 선택 및 모임명 입력'
+      },
+      {
+        id: 5,
+        url: 'boardbuddy.kr/?view=dashboard_event_new',
+        img: 'assets_manager/05_create_event_step2.png',
+        step: '📍 STEP 05 · 일정/정원/정책',
+        title: '일정·정원·참가비 & 승인 정책 설정',
+        desc: '모임 일시, 장소, 정원(<strong>12명</strong>)과 함께 <strong>참가비(유료 45,000원 / 무료 0원)</strong> 및 <strong>참가 정책(즉시 승인 / 승인 후 참가)</strong>을 모임 성격에 맞춰 설정합니다.',
+        tip: '💡 <strong>정책 구분 가이드:</strong><br />• <strong>즉시 승인</strong>: 신청 즉시 자동 확정 (캐주얼 정모, 오픈 세션)<br />• <strong>승인 후 참가</strong>: 호스트가 응답/자격 검토 후 승인 (강습/레벨별 세션)<br />• <strong>유료/무료</strong>: 참가비 유무에 따라 입금 대조 절차가 자동 분기됩니다.',
+        action: '👉 모임 특성에 맞는 참가비 & 승인 정책 선택'
+      },
+      {
+        id: 6,
+        url: 'boardbuddy.kr/?view=role_guide',
+        img: 'assets_manager/06_captain_role_guide.png',
+        step: '📋 STEP 06 · 권한 & 호스트 그룹',
+        title: '크루 권한 체계 & 호스트 그룹 협업',
+        desc: '크루 단위 권한(<strong>크루장 / 매니저</strong>)과 호스트 그룹 권한(<strong>그룹 오너 / 매니저 / 뷰어</strong>)을 활용하여 모임 기획, 명부 관리, 스태프 업무를 분담합니다.',
+        tip: '💡 <strong>역할 분담 Tip:</strong><br />• <strong>그룹 오너</strong>: 이벤트 총괄 개설 및 권한 위임<br />• <strong>그룹 매니저</strong>: 참가자 승인, 입금 확인, 호스트 메모 작성<br />• <strong>그룹 뷰어</strong>: 현장 출석 및 참가자 명부 열람 전용',
+        action: '👉 운영진 역할 분담 및 체크리스트 확인'
+      },
+      {
+        id: 7,
+        url: 'boardbuddy.kr/?view=dashboard_parties',
+        img: 'assets_manager/07_dashboard_events_list.png',
+        step: '📊 STEP 07 · 운영 대시보드',
+        title: '이벤트 관리 대시보드 & 실시간 현황',
+        desc: '개설된 모임 목록과 실시간 모집 현황(<strong>7/12명 확정</strong>), 상태(<strong>모집 중 / 마감</strong>)를 한눈에 모니터링합니다.',
+        tip: '💡 <strong>관리 Tip:</strong> 정원이 충족되거나 현장 사정 발생 시 언제든 [마감] 버튼으로 신청을 즉시 중단할 수 있습니다.',
+        action: '👉 이벤트 목록 우측 [상세] 버튼 클릭'
+      },
+      {
+        id: 8,
+        url: 'boardbuddy.kr/?view=dashboard_event_detail&eventId=11001',
+        img: 'assets_manager/08_dashboard_event_roster.png',
+        step: '📝 STEP 08 · 참가자 명부',
+        title: '참가자 상세 명단 & 응답 시트 조회',
+        desc: '신청자별 <strong>실명, 학번, 비상 연락망, 작성된 응답 내용</strong>을 확인하고, 호스트 메모를 통해 개별 특이사항을 기록합니다.',
+        tip: '💡 <strong>안전 Tip:</strong> 동의 대기 중인 인원에게는 오픈채팅방이나 문자로 동의서 작성을 안내하세요.',
+        action: '👉 참가자별 호스트 메모 기록 및 저장'
+      },
+      {
+        id: 9,
+        url: 'boardbuddy.kr/?view=event_detail&eventId=11001',
+        img: 'assets_manager/09_manager_event_overview.png',
+        step: '💰 STEP 09 · 입금/참가 확정',
+        title: '유료/무료별 참가 확정 & 입금 관리',
+        desc: '<strong>유료 모임</strong>은 계좌 입금 대조 후 [확인 완료]로 확정하고, <strong>무료/즉시 승인 모임</strong>은 신청 즉시 자동 확정되며, <strong>승인제 모임</strong>은 [승인] 버튼으로 확정합니다.',
+        tip: '💡 <strong>정산 & 확정 구분:</strong><br />• <strong>유료 모임</strong>: 입금 확인 ➔ 최종 참가 확정<br />• <strong>무료 모임</strong>: 신청 즉시 참가 확정 (입금 생략)<br />• <strong>승인제</strong>: 호스트의 [승인] 클릭 후 확정',
+        action: '👉 입금 상태 [확인 완료] 또는 [참가 승인] 처리'
+      },
+      {
+        id: 10,
+        url: 'boardbuddy.kr/?view=my_parties',
+        img: 'assets_manager/10_manager_my_parties.png',
+        step: '🎉 STEP 10 · 집결 & 완료',
+        title: '크루 공지 배포 & 정모 당일 운영 체크인',
+        desc: '모임 링크를 복사하여 크루 단톡방에 최종 배포하고, 당일 집결 장소(가평 베이스)에서 출석 체크 후 즐거운 세션을 시작합니다!',
+        tip: '💡 <strong>호스트 Tip:</strong> 보드버디와 함께 체계적이고 안전한 대학생 보드 문화를 만들어가세요 🎉',
+        action: '👉 [모임 링크 복사]로 동아리 공지 공유 완료!'
+      }
+    ];
+
+    let currentIndex = 0;
+
+    function renderSlide(index) {
+      currentIndex = index;
+      const data = steps[index];
+
+      document.getElementById('live-url').textContent = data.url;
+      document.getElementById('live-screen').src = data.img;
+      document.getElementById('live-step').textContent = data.step;
+      document.getElementById('live-indicator').textContent = `${String(index + 1).padStart(2, '0')} / ${String(steps.length).padStart(2, '0')}`;
+      document.getElementById('live-title').innerHTML = data.title;
+      document.getElementById('live-desc').innerHTML = data.desc;
+      document.getElementById('live-tip').innerHTML = data.tip;
+      document.getElementById('live-action').innerHTML = data.action;
+
+      document.getElementById('btn-prev').disabled = index === 0;
+      document.getElementById('btn-next').disabled = index === steps.length - 1;
+
+      // Update thumbs
+      const thumbItems = document.querySelectorAll('.thumb-item');
+      thumbItems.forEach((el, i) => {
+        el.classList.toggle('active', i === index);
+      });
+    }
+
+    function prevSlide() {
+      if (currentIndex > 0) renderSlide(currentIndex - 1);
+    }
+
+    function nextSlide() {
+      if (currentIndex < steps.length - 1) renderSlide(currentIndex + 1);
+    }
+
+    // Build thumbnails
+    const thumbStrip = document.getElementById('thumb-strip');
+    steps.forEach((s, idx) => {
+      const item = document.createElement('div');
+      item.className = 'thumb-item' + (idx === 0 ? ' active' : '');
+      item.onclick = () => renderSlide(idx);
+
+      const img = document.createElement('img');
+      img.className = 'thumb-img';
+      img.src = s.img;
+      img.alt = s.title;
+
+      const label = document.createElement('div');
+      label.className = 'thumb-label';
+      label.textContent = `${idx + 1}. ${s.title.split(' ')[0]}`;
+
+      item.appendChild(img);
+      item.appendChild(label);
+      thumbStrip.appendChild(item);
+    });
+
+    // Keyboard navigation
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowLeft') prevSlide();
+      if (e.key === 'ArrowRight') nextSlide();
+    });
+  </script>
+</body>
+</html>

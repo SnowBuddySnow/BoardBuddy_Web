@@ -1,5 +1,6 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { AlertTriangle, Check, ChevronDown, RefreshCw, Search, Sliders, X } from 'lucide-react';
+import { getSchools, type SchoolOption } from '../services/schools';
 
 interface DevPanelProps {
     onOpenCrewAdmin: () => void;
@@ -42,9 +43,19 @@ export default function DevPanel({ onOpenCrewAdmin, onOpenSchoolAdmin, onOpenUse
     const [isOpen, setIsOpen] = useState(false);
     const [query, setQuery] = useState('');
     const [crewOverride, setCrewOverride] = useState(localStorage.getItem('dev_crew_override') || 'server');
+    const [schoolOverride, setSchoolOverride] = useState(localStorage.getItem('dev_school_override') || 'server');
+    const [schools, setSchools] = useState<SchoolOption[]>([]);
     const [roleOverride, setRoleOverride] = useState(localStorage.getItem('dev_role_override') || 'server');
     const [eventDataMode, setEventDataMode] = useState(localStorage.getItem('dev_event_data_mode') || 'server');
     const [operatingMode, setOperatingMode] = useState(localStorage.getItem('dev_operating_mode') || 'server');
+
+    useEffect(() => {
+        let cancelled = false;
+        getSchools().then(options => {
+            if (!cancelled) setSchools(options);
+        });
+        return () => { cancelled = true; };
+    }, []);
 
     const sections: SimulationSection[] = useMemo(() => [
         {
@@ -67,10 +78,25 @@ export default function DevPanel({ onOpenCrewAdmin, onOpenSchoolAdmin, onOpenUse
             setValue: setCrewOverride,
             storageKey: 'dev_crew_override',
             options: [
-                { id: 'server', label: '실제 서버 상태' },
-                { id: 'none', label: '크루 없음' },
-                { id: 'has_crew', label: '크루 가입됨', description: 'Mock Crew 401' },
-                { id: 'pending', label: '가입 승인 대기' },
+                { id: 'server', label: '서버 데이터 사용' },
+                { id: 'none', label: '크루 없음', description: '크루 미소속 상태' },
+                { id: 'has_crew', label: '크루 가입됨', description: '아웃런 (OUTRUN)' },
+                { id: 'pending', label: '가입 승인 대기', description: '가입 신청 중' },
+            ],
+        },
+        {
+            id: 'school',
+            label: '학교',
+            value: schoolOverride,
+            setValue: setSchoolOverride,
+            storageKey: 'dev_school_override',
+            options: [
+                { id: 'server', label: '서버 학교 사용' },
+                ...schools.map(school => ({
+                    id: school.name,
+                    label: school.name,
+                    description: school.schoolCode,
+                })),
             ],
         },
         {
@@ -103,7 +129,7 @@ export default function DevPanel({ onOpenCrewAdmin, onOpenSchoolAdmin, onOpenUse
                 },
             ],
         },
-    ], [crewOverride, eventDataMode, operatingMode, roleOverride]);
+    ], [crewOverride, eventDataMode, operatingMode, roleOverride, schoolOverride, schools]);
 
     const normalizedQuery = query.trim().toLocaleLowerCase('ko-KR');
     const visibleSections = sections
@@ -256,7 +282,7 @@ export default function DevPanel({ onOpenCrewAdmin, onOpenSchoolAdmin, onOpenUse
                                 setIsOpen(false);
                                 onOpenCrewAdmin();
                             }}
-                            className="rounded-xl border border-zinc-300 bg-white py-2.5 text-xs font-bold text-zinc-700 transition hover:bg-zinc-50"
+                            className="rounded-xl border border-zinc-300 bg-white py-2 text-xs font-bold text-zinc-700 transition hover:bg-zinc-50"
                         >
                             크루 관리
                         </button>
@@ -265,7 +291,7 @@ export default function DevPanel({ onOpenCrewAdmin, onOpenSchoolAdmin, onOpenUse
                                 setIsOpen(false);
                                 onOpenSchoolAdmin();
                             }}
-                            className="rounded-xl border border-zinc-300 bg-white py-2.5 text-xs font-bold text-zinc-700 transition hover:bg-zinc-50"
+                            className="rounded-xl border border-zinc-300 bg-white py-2 text-xs font-bold text-zinc-700 transition hover:bg-zinc-50"
                         >
                             학교 관리
                         </button>
@@ -274,10 +300,18 @@ export default function DevPanel({ onOpenCrewAdmin, onOpenSchoolAdmin, onOpenUse
                                 setIsOpen(false);
                                 onOpenUserAdmin();
                             }}
-                            className="rounded-xl border border-zinc-300 bg-white py-2.5 text-xs font-bold text-zinc-700 transition hover:bg-zinc-50"
+                            className="rounded-xl border border-zinc-300 bg-white py-2 text-xs font-bold text-zinc-700 transition hover:bg-zinc-50"
                         >
                             사용자 권한
                         </button>
+                        <a
+                            href="/guide/index.html"
+                            target="_blank"
+                            rel="noreferrer"
+                            className="col-span-3 flex items-center justify-center gap-1.5 rounded-xl border border-amber-300 bg-amber-50/70 py-2 text-xs font-bold text-amber-900 shadow-sm transition hover:bg-amber-100"
+                        >
+                            <span>📱</span> 사용자 이용 가이드 (Instagram Card Deck)
+                        </a>
                         <button
                             onClick={handleApply}
                             className="col-span-3 flex items-center justify-center gap-1.5 rounded-xl border-none bg-[#162660] py-2.5 text-xs font-bold text-white shadow-sm transition hover:bg-blue-900"

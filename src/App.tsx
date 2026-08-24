@@ -8,6 +8,7 @@ import LoginLanding from './pages/LoginLanding';
 import CrewDetail from './pages/CrewDetail';
 import UserInfoInput from './pages/UserInfoInput';
 import ProfileTypeConfirmation from './pages/ProfileTypeConfirmation';
+import StudentVerification from './pages/StudentVerification';
 import CrewMember from './pages/CrewMember';
 import SearchCrew from './pages/SearchCrew';
 import CrewSettings from './pages/CrewSettings';
@@ -61,6 +62,7 @@ type View =
   | 'search_crew'
   | 'user_info'
   | 'profile_type_confirmation'
+  | 'student_verification'
   | 'crew_member'
   | 'crew_settings'
   | 'guest_reservation'
@@ -115,6 +117,7 @@ const viewsWithoutBottomNav: View[] = [
   'login',
   'user_info',
   'profile_type_confirmation',
+  'student_verification',
   'my_page',
   'account_info',
   'crew_create',
@@ -130,7 +133,10 @@ const viewsWithoutBottomNav: View[] = [
 ];
 
 const getInitialView = (): View => {
-  const hasOrganizerInvite = new URLSearchParams(window.location.search).has('organizerInvite');
+  const params = new URLSearchParams(window.location.search);
+  const requestedView = params.get('view') as View | null;
+  if (requestedView) return requestedView;
+  const hasOrganizerInvite = params.has('organizerInvite');
   if (hasDevOverride()) {
     return hasOrganizerInvite ? 'organizer_invite' : 'home';
   }
@@ -168,10 +174,13 @@ function FeatureUnavailable({ title, description, onBack }: { title: string; des
 }
 
 function App() {
-  const [currentView, setCurrentView] = useState<View>('login');
+  const [currentView, setCurrentView] = useState<View>(() => getInitialView());
   const [hasCrew, setHasCrew] = useState(false);
   const [hasPendingCrewApplication, setHasPendingCrewApplication] = useState(false);
-  const [selectedEventId, setSelectedEventId] = useState<number | null>(null);
+  const [selectedEventId, setSelectedEventId] = useState<number | null>(() => {
+    const raw = new URLSearchParams(window.location.search).get('eventId');
+    return raw ? Number(raw) : null;
+  });
   const [guestCrewId, setGuestCrewId] = useState<number | null>(null);
   const [isGuestEventApplication, setIsGuestEventApplication] = useState(false);
   const [selectedGroupId, setSelectedGroupId] = useState<number | null>(null);
@@ -195,7 +204,7 @@ function App() {
   const [captainGuideReturnVisible, setCaptainGuideReturnVisible] = useState(false);
   const isDesktop = useDesktopViewport();
   const usedDesktopLanding = useRef(false);
-  const shouldLoadPermissions = !['login', 'user_info', 'profile_type_confirmation'].includes(currentView);
+  const shouldLoadPermissions = !['login', 'user_info', 'profile_type_confirmation', 'student_verification'].includes(currentView);
   const operatingMode = getOperatingMode();
   const operatingFeatures = getOperatingFeatures(operatingMode);
   const seasonHouseAvailable = operatingFeatures.season
@@ -524,13 +533,26 @@ function App() {
         return (
           <UserInfoInput
             onBack={() => setCurrentView('login')}
-            onSuccess={() => setCurrentView(organizerInviteToken ? 'organizer_invite' : 'home')}
+            onSuccess={(requiresStudentVerification) => setCurrentView(
+              requiresStudentVerification ? 'student_verification' : organizerInviteToken ? 'organizer_invite' : 'home'
+            )}
           />
         );
       case 'profile_type_confirmation':
         return (
           <ProfileTypeConfirmation
-            onSuccess={() => setCurrentView(organizerInviteToken ? 'organizer_invite' : 'home')}
+            onSuccess={(requiresStudentVerification) => setCurrentView(
+              requiresStudentVerification ? 'student_verification' : organizerInviteToken ? 'organizer_invite' : 'home'
+            )}
+          />
+        );
+      case 'student_verification':
+        return (
+          <StudentVerification
+            onDone={() => {
+              window.history.replaceState({}, '', window.location.pathname);
+              setCurrentView(getAccessToken() ? (organizerInviteToken ? 'organizer_invite' : 'home') : 'login');
+            }}
           />
         );
       case 'organizer_invite':
@@ -563,7 +585,12 @@ function App() {
           />
         );
       case 'account_info':
-        return <AccountInfo onBack={() => setCurrentView('my_page')} />;
+        return (
+          <AccountInfo
+            onBack={() => setCurrentView('my_page')}
+            onStudentVerificationClick={() => setCurrentView('student_verification')}
+          />
+        );
       case 'role_guide':
         return <RoleGuide onBack={() => setCurrentView('my_page')} />;
       case 'crew_admin':
@@ -705,7 +732,7 @@ function App() {
           </DesktopShell>
         ) : currentContent}
 
-        {currentView !== 'login' && currentView !== 'user_info' && currentView !== 'profile_type_confirmation' && currentView !== 'organizer_invite' && currentView !== 'notifications' && currentView !== 'role_guide' && currentView !== 'crew_create' && currentView !== 'crew_admin' && currentView !== 'school_admin' && currentView !== 'user_admin' && !isDashboardView && (
+        {currentView !== 'login' && currentView !== 'user_info' && currentView !== 'profile_type_confirmation' && currentView !== 'student_verification' && currentView !== 'organizer_invite' && currentView !== 'notifications' && currentView !== 'role_guide' && currentView !== 'crew_create' && currentView !== 'crew_admin' && currentView !== 'school_admin' && currentView !== 'user_admin' && !isDashboardView && (
           <NotificationBell refreshKey={notificationRefreshKey} onClick={() => {
             setNotificationReturnView(currentView);
             setCurrentView('notifications');

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ChevronLeftIcon, ChevronRightIcon, UserIcon, Pencil, ExternalLink, Crown, Waypoints, Map } from 'lucide-react';
+import { BadgeCheck, ChevronLeftIcon, ChevronRightIcon, UserIcon, Pencil, ExternalLink, Crown, Waypoints, Map } from 'lucide-react';
 import { Button } from '../components/Button';
 import { Calendar } from '../components/Calendar';
 import { getUserInfo, getMyReservations } from '../services/user';
@@ -130,6 +130,16 @@ export default function MyPage({ onBack, onAccountInfoClick, onRoleGuideClick, o
                                 <span className="text-zinc-600 dark:text-zinc-400 text-sm">
                                     {[userInfo.school, userInfo.crew?.crewName].filter(Boolean).join(' / ')}
                                 </span>
+                                {userInfo.school && userInfo.universityVerificationStatus === 'VERIFIED' && (
+                                    <span
+                                        title={`${userInfo.school} 학교 인증`}
+                                        aria-label={`${userInfo.school} 학교 인증`}
+                                        className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-2 py-1 text-[11px] font-black text-[#162660] dark:bg-blue-950/50 dark:text-blue-200"
+                                    >
+                                        <BadgeCheck className="h-3.5 w-3.5" />
+                                        학교 인증
+                                    </span>
+                                )}
                                 <button className="w-4 h-4 flex items-center justify-center">
                                     <ExternalLink className="w-3.5 h-3.5 text-zinc-400" />
                                 </button>
