@@ -1,10 +1,12 @@
 import { Button } from '../components/Button';
-import { ChevronLeftIcon, Trash2Icon, CheckIcon, XIcon, UserIcon } from 'lucide-react';
+import { BadgeCheckIcon, ChevronLeftIcon, Trash2Icon, CheckIcon, ShieldAlertIcon, XIcon, UserIcon } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { getUserInfo } from '../services/user';
 import { getCrewInfo, getCrewManagers, getCrewMembers, getApplicants, manageApplicant } from '../services/crew';
 import { CrewApplicant } from '../types/api';
 import { type CrewRole, normalizeCrewRole } from '../constants/crewRole';
+import { getApiErrorMessage } from '../lib/apiError';
+import type { UniversityVerificationStatus } from '../types/api';
 
 interface CrewMemberProps {
     onBack: () => void;
@@ -23,6 +25,7 @@ interface Applicant {
     userType: 'GENERAL' | 'REGULAR' | 'KUSBF';
     schoolName: string;
     studentId: string;
+    universityVerificationStatus: UniversityVerificationStatus;
     requestDate: string;
     userId: number; // Keep track of user ID for adding to member list locally if needed
 }
@@ -35,6 +38,7 @@ export default function CrewMember({ onBack }: CrewMemberProps) {
     const [applicants, setApplicants] = useState<Applicant[]>([]);
     const [loading, setLoading] = useState(true);
     const [crewId, setCrewId] = useState<number | null>(null);
+    const [schoolVerificationRequired, setSchoolVerificationRequired] = useState(false);
 
     const refreshData = async () => {
         setLoading(true);
@@ -57,6 +61,7 @@ export default function CrewMember({ onBack }: CrewMemberProps) {
                 console.log("DEBUG: CrewInfo", crewInfo);
                 console.log("DEBUG: Managers", managers);
                 console.log("DEBUG: RegularMembers", regularMembers);
+                setSchoolVerificationRequired(crewInfo.schoolVerificationRequired);
 
                 // Determine Role
                 let isAdmin = false;
@@ -156,6 +161,7 @@ export default function CrewMember({ onBack }: CrewMemberProps) {
                             userType: app.userType,
                             schoolName: app.schoolName,
                             studentId: app.studentId,
+                            universityVerificationStatus: app.universityVerificationStatus,
                             requestDate: app.created_at ? new Date(app.created_at).toLocaleDateString() : 'Unknown',
                             userId: app.userId
                         }));
@@ -187,6 +193,10 @@ export default function CrewMember({ onBack }: CrewMemberProps) {
         if (!crewId) return;
         const applicant = applicants.find(item => item.id === appId);
         if (!applicant) return;
+        if (schoolVerificationRequired && applicant.universityVerificationStatus !== 'VERIFIED') {
+            alert('학교 인증 필수 설정으로 인해 인증을 완료한 신청자만 승인할 수 있습니다.');
+            return;
+        }
         if (applicant.userType === 'KUSBF') {
             const identity = [applicant.name, applicant.schoolName, applicant.studentId || '학번 미등록']
                 .filter(Boolean)
@@ -208,7 +218,7 @@ export default function CrewMember({ onBack }: CrewMemberProps) {
             }
         } catch (error) {
             console.error("Failed to accept", error);
-            alert("처리 중 오류가 발생했습니다.");
+            alert(getApiErrorMessage(error) || "처리 중 오류가 발생했습니다.");
         }
     };
 
@@ -380,6 +390,12 @@ export default function CrewMember({ onBack }: CrewMemberProps) {
                     <div className="space-y-6">
                         {applicants.length > 0 ? (
                             <>
+                                {schoolVerificationRequired && (
+                                    <div className="flex items-start gap-2 rounded-2xl border border-blue-100 bg-blue-50 p-3 text-xs leading-5 text-[#162660]">
+                                        <ShieldAlertIcon className="mt-0.5 h-4 w-4 shrink-0" />
+                                        <span>학교 인증 필수 가입이 켜져 있습니다. 미인증 신청은 거절할 수 있지만 승인할 수는 없습니다.</span>
+                                    </div>
+                                )}
                                 <div className="flex items-center justify-between mb-2">
                                     <span className="text-sm text-zinc-500">총 {applicants.length}명의 신청이 있습니다.</span>
                                     <span className="text-xs font-semibold text-zinc-400">명단 대조 후 개별 승인</span>
@@ -402,6 +418,13 @@ export default function CrewMember({ onBack }: CrewMemberProps) {
                                                             }`}>
                                                                 {applicant.userType === 'KUSBF' ? '학생' : '일반'}
                                                             </span>
+                                                            {applicant.universityVerificationStatus === 'VERIFIED' ? (
+                                                                <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-1.5 py-0.5 text-[10px] font-bold text-[#162660]">
+                                                                    <BadgeCheckIcon className="h-3 w-3" /> 학교 인증
+                                                                </span>
+                                                            ) : (
+                                                                <span className="rounded-full bg-amber-50 px-1.5 py-0.5 text-[10px] font-bold text-amber-700">학교 미인증</span>
+                                                            )}
                                                         </div>
                                                         {applicant.userType === 'KUSBF' ? (
                                                             <p className="text-xs text-zinc-500">
@@ -417,7 +440,9 @@ export default function CrewMember({ onBack }: CrewMemberProps) {
                                             <div className="flex gap-2">
                                                 <button
                                                     onClick={() => handleAcceptApplicant(applicant.id)}
-                                                    className="flex-1 bg-zinc-900 text-white text-sm font-bold h-10 rounded-xl hover:bg-zinc-800 transition-colors flex items-center justify-center gap-2"
+                                                    disabled={schoolVerificationRequired && applicant.universityVerificationStatus !== 'VERIFIED'}
+                                                    title={schoolVerificationRequired && applicant.universityVerificationStatus !== 'VERIFIED' ? '학교 인증을 완료해야 승인할 수 있습니다.' : undefined}
+                                                    className="flex-1 bg-zinc-900 text-white text-sm font-bold h-10 rounded-xl hover:bg-zinc-800 transition-colors flex items-center justify-center gap-2 disabled:cursor-not-allowed disabled:bg-zinc-300"
                                                 >
                                                     <CheckIcon className="w-4 h-4" />
                                                     수락

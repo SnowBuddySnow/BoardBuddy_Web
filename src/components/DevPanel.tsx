@@ -32,6 +32,7 @@ const clearSimulationData = () => {
             || key === 'dev_onboarding_events_list'
             || key === 'dev_response_sheet_events_v2'
             || key.startsWith('dev_event_consent_')
+            || key.startsWith('dev_crew_school_verification_required_')
         )) {
             keysToRemove.push(key);
         }

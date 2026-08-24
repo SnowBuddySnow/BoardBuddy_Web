@@ -26,6 +26,7 @@ export interface DiscoverableCrew {
     schoolName: string | null;
     memberCount: number;
     profileImageUrl: string | null;
+    schoolVerificationRequired: boolean;
 }
 
 // --- Missing / TBD Crew Endpoints ---
@@ -55,6 +56,7 @@ export const getCrewInfo = async (crewId: number): Promise<CrewDetail> => {
             profile_image_url: null,
             isCapacityLimited: true,
             seasonHouseActive: true,
+            schoolVerificationRequired: localStorage.getItem(`dev_crew_school_verification_required_${crewId}`) === 'true',
         };
     }
 
@@ -92,8 +94,8 @@ export const getCrewManagers = async (crewId: number): Promise<CrewMember[]> => 
 export const getApplicants = async (crewId: number): Promise<CrewApplicant[]> => {
     if (hasDevOverride()) {
         return [
-            { applicationId: 501, userId: 101, userName: '윤도현 (신입지원)', userType: 'KUSBF', schoolName: '한국대학교', studentId: '202611029', status: 'PENDING', created_at: new Date().toISOString() },
-            { applicationId: 502, userId: 102, userName: '송지아 (신입지원)', userType: 'KUSBF', schoolName: '한국대학교', studentId: '202611083', status: 'PENDING', created_at: new Date().toISOString() },
+            { applicationId: 501, userId: 101, userName: '윤도현 (신입지원)', userType: 'KUSBF', schoolName: '한국대학교', studentId: '202611029', universityVerificationStatus: 'VERIFIED', status: 'PENDING', created_at: new Date().toISOString() },
+            { applicationId: 502, userId: 102, userName: '송지아 (신입지원)', userType: 'KUSBF', schoolName: '한국대학교', studentId: '202611083', universityVerificationStatus: 'PENDING', status: 'PENDING', created_at: new Date().toISOString() },
         ];
     }
     const response = await apiClient.get<ApiResponse<CrewApplicant[]>>(`/crews/${crewId}/applications`);
@@ -130,6 +132,7 @@ export const discoverCrews = async (query = ''): Promise<DiscoverableCrew[]> => 
                 schoolName: '한국대학교',
                 memberCount: 42,
                 profileImageUrl: '',
+                schoolVerificationRequired: true,
             },
             {
                 crewId: 102,
@@ -139,6 +142,7 @@ export const discoverCrews = async (query = ''): Promise<DiscoverableCrew[]> => 
                 schoolName: '대한대학교',
                 memberCount: 38,
                 profileImageUrl: '',
+                schoolVerificationRequired: false,
             },
             {
                 crewId: 103,
@@ -148,6 +152,7 @@ export const discoverCrews = async (query = ''): Promise<DiscoverableCrew[]> => 
                 schoolName: '민국대학교',
                 memberCount: 29,
                 profileImageUrl: '',
+                schoolVerificationRequired: false,
             },
             {
                 crewId: 104,
@@ -157,6 +162,7 @@ export const discoverCrews = async (query = ''): Promise<DiscoverableCrew[]> => 
                 schoolName: '청송대학교',
                 memberCount: 31,
                 profileImageUrl: '',
+                schoolVerificationRequired: false,
             },
         ];
         if (!query) return mockCrews;
@@ -169,6 +175,15 @@ export const discoverCrews = async (query = ''): Promise<DiscoverableCrew[]> => 
 };
 
 export const updateCrew = async (crewId: number, data: Partial<CrewInfoUpdateRequest> & { id?: number; name?: string }): Promise<void> => {
+    if (hasDevOverride()) {
+        if (typeof data.schoolVerificationRequired === 'boolean') {
+            localStorage.setItem(
+                `dev_crew_school_verification_required_${crewId}`,
+                String(data.schoolVerificationRequired),
+            );
+        }
+        return;
+    }
     await apiClient.patch(`/crews/${crewId}/info`, data);
 };
 

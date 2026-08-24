@@ -1,5 +1,5 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react';
-import { ChevronLeftIcon, Search, ShieldCheck, UsersRound, X } from 'lucide-react';
+import { BadgeCheck, ChevronLeftIcon, Search, ShieldCheck, UsersRound, X } from 'lucide-react';
 import { Button } from '../components/Button';
 import { applyToCrew, discoverCrews, type DiscoverableCrew } from '../services/crew';
 import { getApiErrorMessage } from '../lib/apiError';
@@ -65,6 +65,8 @@ export default function SearchCrew({ onBack }: SearchCrewProps) {
             const message = getApiErrorMessage(requestError);
             setError(message === 'Invalid crew PIN'
                 ? '가입 PIN이 올바르지 않습니다.'
+                : message === 'School verification is required to join this crew'
+                    ? '이 크루에 가입하려면 먼저 학교 인증을 완료해야 합니다.'
                 : message || '가입 신청에 실패했습니다.');
         } finally {
             setSubmitting(false);
@@ -126,6 +128,11 @@ export default function SearchCrew({ onBack }: SearchCrewProps) {
                                         <h2 className="truncate text-base font-black text-zinc-900">{crew.crewName}</h2>
                                         <p className="mt-1 truncate text-xs text-zinc-500">{crew.schoolName || '학교 미지정'}</p>
                                         <p className="mt-1 text-xs font-semibold text-zinc-400">{crew.crewCode} · 멤버 {crew.memberCount}명</p>
+                                        {crew.schoolVerificationRequired && (
+                                            <span className="mt-2 inline-flex items-center gap-1 rounded-full bg-blue-50 px-2 py-1 text-[10px] font-bold text-[#162660]">
+                                                <BadgeCheck className="h-3 w-3" /> 학교 인증 필수
+                                            </span>
+                                        )}
                                     </div>
                                     <Button
                                         size="small"
@@ -162,6 +169,12 @@ export default function SearchCrew({ onBack }: SearchCrewProps) {
                                 <X className="h-4 w-4" />
                             </button>
                         </div>
+                        {selectedCrew.schoolVerificationRequired && (
+                            <div className="mt-5 flex items-start gap-2 rounded-2xl border border-blue-100 bg-blue-50 px-4 py-3 text-xs leading-5 text-[#162660]">
+                                <BadgeCheck className="mt-0.5 h-4 w-4 shrink-0" />
+                                <span>이 크루는 학교 인증을 완료한 계정만 가입할 수 있습니다.</span>
+                            </div>
+                        )}
                         <label className="mt-6 block text-sm font-bold text-zinc-700">
                             4자리 가입 PIN
                             <span className="mt-2 flex gap-2">

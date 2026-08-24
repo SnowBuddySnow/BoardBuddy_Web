@@ -1,5 +1,5 @@
 import { Button } from '../components/Button';
-import { CheckCircle2Icon, ChevronLeftIcon, CopyIcon, KeyRoundIcon, Link2Icon, RefreshCwIcon, SaveIcon } from 'lucide-react';
+import { BadgeCheckIcon, CheckCircle2Icon, ChevronLeftIcon, CopyIcon, KeyRoundIcon, Link2Icon, RefreshCwIcon, SaveIcon } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { getCrewInfo, resetCrewPin, updateCrew } from '../services/crew';
 import { getUserInfo } from '../services/user';
@@ -38,7 +38,8 @@ export default function CrewSettings({ onBack }: CrewSettingsProps) {
         reservationOpenOffsetDays: 3,
         dailyCapacity: 0,
         isCapacityLimited: false,
-        reservationPeriodLimitDays: 7
+        reservationPeriodLimitDays: 7,
+        schoolVerificationRequired: false,
     });
 
     const [crewPin, setCrewPin] = useState('');
@@ -87,7 +88,8 @@ export default function CrewSettings({ onBack }: CrewSettingsProps) {
                         reservationOpenOffsetDays: info.reservationOpenOffsetDays || 3, // Default fallback
                         dailyCapacity: info.dailyCapacity,
                         isCapacityLimited: info.isCapacityLimited,
-                        reservationPeriodLimitDays: info.reservationPeriodLimitDays || 7
+                        reservationPeriodLimitDays: info.reservationPeriodLimitDays || 7,
+                        schoolVerificationRequired: info.schoolVerificationRequired,
                     });
                     setCrewPin(info.crewPin || '');
                 }
@@ -292,6 +294,27 @@ export default function CrewSettings({ onBack }: CrewSettingsProps) {
                                 학교 연동 요청은 CAPTAIN 배지가 있는 계정만 진행할 수 있습니다.
                             </p>
                         )}
+                    </section>
+
+                    <section className="rounded-xl border border-zinc-200 bg-white p-4">
+                        <label className="flex cursor-pointer items-start gap-3">
+                            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-[#162660]">
+                                <BadgeCheckIcon className="h-5 w-5" />
+                            </span>
+                            <span className="min-w-0 flex-1">
+                                <span className="block text-sm font-bold text-zinc-900">학교 인증 필수 가입</span>
+                                <span className="mt-1 block text-xs leading-5 text-zinc-500">
+                                    켜면 학교 인증을 완료한 계정만 새로 가입하거나 승인받을 수 있습니다.
+                                    이미 승인된 현재 멤버는 영향을 받지 않습니다.
+                                </span>
+                            </span>
+                            <input
+                                type="checkbox"
+                                checked={formData.schoolVerificationRequired}
+                                onChange={(event) => handleChange('schoolVerificationRequired', event.target.checked)}
+                                className="mt-2 h-5 w-5 rounded border-zinc-300 text-[#162660] focus:ring-[#162660]"
+                            />
+                        </label>
                     </section>
 
                     {/* Updated Reservation Scheme */}

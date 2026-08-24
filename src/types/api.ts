@@ -32,6 +32,7 @@ export interface CrewDetail {
     isCapacityLimited: boolean;
     kusbfAssociated?: boolean;
     seasonHouseActive?: boolean;
+    schoolVerificationRequired: boolean;
 }
 
 export interface CrewSimple {
@@ -74,6 +75,7 @@ export interface CrewApplicant {
     userType: UserType;
     schoolName: string;
     studentId: string;
+    universityVerificationStatus: UniversityVerificationStatus;
     profileImageUrl?: string | null;
     status: string; // "PENDING", etc.
     created_at?: string;
@@ -140,6 +142,7 @@ export interface CrewInfoUpdateRequest {
     reservationPeriodLimitDays: number;
     dailyCapacity: number;
     isCapacityLimited: boolean;
+    schoolVerificationRequired: boolean;
 }
 
 export interface CrewUsageStatistic {
