@@ -24,6 +24,9 @@ interface UserInfoInputProps {
 // Delete this constant, the skip handler, and the development-only button to restore verification-only UI.
 const CAN_SKIP_PHONE_VERIFICATION = import.meta.env.DEV;
 
+// Keep the temporary signup default in one place so a developer-controlled setting can replace it later.
+const DEFAULT_SIGNUP_PROFILE_TYPE: 'GENERAL' | 'STUDENT' = 'STUDENT';
+
 const TERMS_CONTENT = {
     service: {
         title: '보드버디 서비스 이용약관',
@@ -63,7 +66,7 @@ const TERMS_CONTENT = {
 
 
 export default function UserInfoInput({ onBack, onSuccess }: UserInfoInputProps) {
-    const [profileType, setProfileType] = useState<'GENERAL' | 'STUDENT'>('GENERAL');
+    const [profileType, setProfileType] = useState<'GENERAL' | 'STUDENT'>(DEFAULT_SIGNUP_PROFILE_TYPE);
     const [name, setName] = useState('');
     const [school, setSchool] = useState('');
     const [studentNumber, setStudentNumber] = useState('');

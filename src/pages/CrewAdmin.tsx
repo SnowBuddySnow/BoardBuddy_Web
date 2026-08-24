@@ -20,6 +20,7 @@ import {
     reviewCrew,
     type AdminCrew,
     type AdminCrewData,
+    type AdminSchool,
 } from '../services/crewAdmin';
 
 interface CrewAdminProps {
@@ -57,6 +58,15 @@ const formatDate = (value: string | null) => {
 const ApprovalBadge = ({ status }: { status: AdminCrew['approvalStatus'] }) => {
     const copy = approvalCopy[status];
     return <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-black ring-1 ring-inset ${copy.className}`}>{copy.label}</span>;
+};
+
+const schoolsForCrew = (schools: AdminSchool[], crew: AdminCrew) => {
+    if (!crew.requestedBySchoolId) return schools;
+    return [...schools].sort((left, right) => {
+        if (left.id === crew.requestedBySchoolId) return -1;
+        if (right.id === crew.requestedBySchoolId) return 1;
+        return 0;
+    });
 };
 
 export default function CrewAdmin({ onBack, mode = 'create' }: CrewAdminProps) {
@@ -291,7 +301,11 @@ export default function CrewAdmin({ onBack, mode = 'create' }: CrewAdminProps) {
                                                                 className="min-w-0 flex-1 rounded-lg border border-zinc-200 bg-white px-2.5 py-2 text-xs font-semibold"
                                                             >
                                                                 <option value="">학교 선택</option>
-                                                                {data.schools.map(school => <option key={school.id} value={school.id}>{school.name}</option>)}
+                                                                {schoolsForCrew(data.schools, crew).map(school => (
+                                                                    <option key={school.id} value={school.id}>
+                                                                        {school.name}{school.id === crew.requestedBySchoolId ? ' · 캡틴 학교' : ''}
+                                                                    </option>
+                                                                ))}
                                                             </select>
                                                             <button
                                                                 type="button"
@@ -338,7 +352,11 @@ export default function CrewAdmin({ onBack, mode = 'create' }: CrewAdminProps) {
                                                     className="min-w-0 flex-1 rounded-xl border border-zinc-200 bg-white px-3 py-2.5 text-sm"
                                                 >
                                                     <option value="">연동할 학교 선택</option>
-                                                    {data.schools.map(school => <option key={school.id} value={school.id}>{school.name}</option>)}
+                                                    {schoolsForCrew(data.schools, crew).map(school => (
+                                                        <option key={school.id} value={school.id}>
+                                                            {school.name}{school.id === crew.requestedBySchoolId ? ' · 캡틴 학교' : ''}
+                                                        </option>
+                                                    ))}
                                                 </select>
                                                 <button type="button" disabled={!schoolSelections[crew.id] || actingCrewId === crew.id} onClick={() => void submitAffiliation(crew)} className="rounded-xl bg-[#162660] px-4 text-sm font-black text-white disabled:opacity-40">연동</button>
                                             </div>
