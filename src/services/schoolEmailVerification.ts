@@ -12,6 +12,7 @@ export interface SchoolEmailChallenge {
 export interface SchoolEmailVerificationStatus {
     status: UniversityVerificationStatus;
     configured: boolean;
+    deliveryAvailable: boolean;
     schoolName: string;
     maskedEmail: string;
     challengeId: string | null;

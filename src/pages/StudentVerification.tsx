@@ -132,6 +132,12 @@ export default function StudentVerification({ onDone }: StudentVerificationProps
                     </div>
                 )}
 
+                {status?.configured && !status.deliveryAvailable && (
+                    <div className="mt-5 rounded-2xl bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-800">
+                        학교 인증 이메일 서비스가 아직 준비되지 않았습니다. 회원가입은 완료되었으며, 이메일 서비스가 열리면 이 화면에서 인증할 수 있습니다.
+                    </div>
+                )}
+
                 {challengeId && (
                     <div className="mt-6">
                         <label className="ml-1 text-sm font-bold text-zinc-800">6자리 인증번호</label>
@@ -151,7 +157,7 @@ export default function StudentVerification({ onDone }: StudentVerificationProps
                     </div>
                 )}
 
-                {status?.configured && (
+                {status?.configured && status.deliveryAvailable && (
                     <div className="mt-5">
                         <label className="ml-1 text-sm font-bold text-zinc-800">학교 이메일 변경 또는 추가</label>
                         <input
@@ -176,7 +182,7 @@ export default function StudentVerification({ onDone }: StudentVerificationProps
 
                 {error && <p className="mt-4 rounded-2xl bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">{error}</p>}
 
-                {status?.configured && (
+                {status?.configured && status.deliveryAvailable && (
                     <button
                         type="button"
                         onClick={() => void sendAgain()}

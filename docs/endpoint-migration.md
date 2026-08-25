@@ -1,57 +1,50 @@
-# Endpoint Connection Document
+# Endpoint Contract Status
 
-This document maps the legacy API behaviors expected by the frontend (`BoardBuddy_Web`) to the new source-of-truth backend endpoints (`BoardBuddy_Backend`). It serves as a guide for resolving mismatches and highlights APIs that were removed or restructured during the backend normalization.
+Last reviewed: 2026-08-25
 
-## Reservations
+This document replaces the earlier migration note that incorrectly described current crew,
+calendar, and teaching endpoints as missing. `BoardBuddy_Backend` is the source of truth. The
+cross-repository security and behavior review is in its
+`docs/api-audit-2026-08-25.md`.
 
-The reservation system underwent a major core remake, shifting to deterministic waitlists and batched day requests.
+The Axios client prefixes service paths with `/api`; paths below show their complete server form.
 
-| Legacy Frontend Endpoint | New Backend Endpoint (Source of Truth) | Status / Notes |
-| :--- | :--- | :--- |
-| `GET /crews/{crewId}/reservations/detail?date={date}` | `GET /api/crews/{crewId}/reservations/days/{reservationDate}` | **Replaced**. The response shape changed from `ReservationDetail` to `ReservationDayResponse` (`confirmedCount`, `waitingCount`, `reservations`). |
-| `POST /crews/{crewId}/reservations` | `POST /api/crews/{crewId}/reservations` | **Updated**. Request now accepts `dates: LocalDate[]` and `guestId: Long`. Returns batch results (`success`, `waitlistPosition`) instead of a single object. |
-| `DELETE /crews/{crewId}/reservations` | `DELETE /api/crews/{crewId}/reservations/{reservationId}` | **Restructured**. The legacy API deleted a batch of dates; the new API deletes a single `reservationId`. |
-| `GET /crews/{crewId}/reservations/{reservationId}`| *N/A* | **Removed**. Details are fetched via the `/days` inspection endpoints. |
-| `POST /crews/{crewId}/reservations/{reservationId}/teaching` | *N/A* | **[MISSING/TBD]** |
-| `DELETE /crews/{crewId}/reservations/{reservationId}/teaching`| *N/A* | **[MISSING/TBD]** |
+## Current Connected Areas
 
-## Calendars
+| Area | Backend contract | Frontend consumer |
+| --- | --- | --- |
+| OAuth | `POST /api/auth/social/{provider}`, `POST /api/auth/refresh` | `LoginLanding`, Axios interceptor |
+| Signup | phone verification, profile completion, school email status/confirm/activate under `/api/accounts` | `UserInfoInput`, `StudentVerification` |
+| Schools | `GET /api/schools` | `services/schools.ts` |
+| Crew discovery/membership | `/api/crews`, detail, members/managers, applications, settings, PIN, usage | `services/crew.ts` and crew pages |
+| Crew creation/review | `/api/admin/crews`, review, affiliation | `services/crewAdmin.ts`, `CrewAdmin` |
+| Calendar | `GET /api/crews/{crewId}/calendar` and `/calendar/my` | `ReservationStats`, `MyReservations` |
+| Reservations | day list/detail/prepare, create/cancel, management fields, teaching under `/api/crews/{crewId}/reservations` | `services/crew.ts` and reservation pages |
+| Operations | context and crew event-manager assignments under `/api/operations` | operations pages/services |
+| Events | `/api/party-events` and related participation/consent/attendance/refund routes | event and dashboard services/pages |
+| Organizer groups | `/api/event-organizer-groups` plus invite links | organizer dashboard/invite flows |
+| Notifications | `/api/notifications` | notification services/pages |
+| User/admin | `/api/users`, `/api/admin/users`, `/api/admin/schools/import` | account, user admin, school admin pages |
 
-Calendar functionality has been absorbed directly into the `days` endpoints under `ReservationApiController`.
+## Known Contract Cleanup
 
-| Legacy Frontend Endpoint | New Backend Endpoint (Source of Truth) | Status / Notes |
-| :--- | :--- | :--- |
-| `GET /crews/{crewId}/calendar` | `GET /api/crews/{crewId}/reservations/days?from={from}&to={to}` <br/> `POST /api/crews/{crewId}/reservations/days/prepare` | **Replaced**. Generic calendar endpoint is gone. Use the `/days` endpoints for availability block checking. |
-| `GET /crews/{crewId}/calendar/my` | *N/A* | **[MISSING/TBD]** No equivalent currently exists on the backend. |
+- Deprecated frontend `getReservation(crewId, reservationId)` calls a route that does not exist.
+  Reservation details come from the date-based `/reservations/days/{date}` route; remove the dead
+  function unless a single-booking route is deliberately added.
+- The reservation manager “force delete” modal is currently unreachable. The ordinary cancel route
+  allows the requester/participant, not an arbitrary manager. Design a separate audited manager
+  cancellation contract before exposing that control.
+- `services/schools.ts` now limits fallback schools to Vite development builds; keep production
+  failures visible and retryable.
+- Developer override branches must be gated by a development build, not only browser local-storage
+  keys.
 
-## Crews
+## Change Discipline
 
-The legacy `CrewController` was entirely removed in the backend. All endpoints below are missing in the current source-of-truth API.
+When an endpoint changes:
 
-| Legacy Frontend Endpoint | New Backend Endpoint (Source of Truth) | Status / Notes |
-| :--- | :--- | :--- |
-| `GET /crews/{crewId}` | *N/A* | **[MISSING/TBD]** |
-| `GET /crews/{crewId}/members` | *N/A* | **[MISSING/TBD]** |
-| `GET /crews/{crewId}/managers` | *N/A* | **[MISSING/TBD]** |
-| `GET /crews/{crewId}/applications` | *N/A* | **[MISSING/TBD]** |
-| `POST /crews/{crewId}/applications/{applicationId}/approve` | *N/A* | **[MISSING/TBD]** |
-| `POST /crews/{crewId}/applications` | *N/A* | **[MISSING/TBD]** |
-| `PATCH /crews/{crewId}/info` | *N/A* | **[MISSING/TBD]** |
-| `POST /crews/{crewId}/managers/{userId}` | *N/A* | **[MISSING/TBD]** |
-| `DELETE /crews/{crewId}/managers/{userId}` | *N/A* | **[MISSING/TBD]** |
-| `GET /crews/{crewId}/usage-statistics` | *N/A* | **[MISSING/TBD]** |
-| `GET /crews/my-applications` | *N/A* | **[MISSING/TBD]** |
-
-## Domain Models (DTOs)
-
-### `CoreCrew` (Crew Configuration)
-The backend `CoreCrew` entity has updated fields for configuring reservations:
-- `reservation_day` -> `reservationOpenDay` (DayOfWeek)
-- `reservation_time` -> `reservationOpenTime` (LocalTime)
-- `reservation_offset` -> `reservationOpenOffsetDays` (Integer)
-- *(New)* `reservationPeriodLimitDays` (Integer)
-
-### `Party` to `PartyEvent`
-- The `Party` entity is now `PartyEvent`.
-- Endpoints migrated from `/api/parties` to `/api/party-events`.
-- Features `DRAFT`, `OPEN`, `CANCELED` statuses, and newly structured contact information (`contactType`, `contactValue`).
+1. Change backend controller, DTO, authorization, and integration tests together.
+2. Update the typed frontend service and every consumer in the same release window.
+3. Exercise both success and forbidden/error responses against MySQL Testcontainers.
+4. Update this status document and the backend API audit if the security/privacy contract changes.
+5. Deploy matching immutable web/backend commits only after the Atlas schema gate succeeds.

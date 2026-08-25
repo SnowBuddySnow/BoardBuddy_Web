@@ -21,7 +21,10 @@ export const getSchools = async (): Promise<SchoolOption[]> => {
     try {
         const response = await apiClient.get<ApiResponse<SchoolOption[]>>('/schools');
         return response.data.data;
-    } catch {
-        return DEV_SCHOOLS;
+    } catch (error) {
+        if (import.meta.env.DEV) {
+            return DEV_SCHOOLS;
+        }
+        throw error;
     }
 };
