@@ -13,6 +13,7 @@ import {
   UserCog,
   UsersRound,
 } from 'lucide-react';
+import NotificationBell from './NotificationBell';
 
 export type DesktopDestination =
   | 'home'
@@ -38,6 +39,8 @@ interface DesktopShellProps {
   availableEventCount?: number;
   children: ReactNode;
   onNavigate: (destination: DesktopDestination) => void;
+  notificationRefreshKey?: number;
+  onNotificationsClick: () => void;
 }
 
 const primaryItems = [
@@ -60,6 +63,8 @@ export default function DesktopShell({
   availableEventCount = 0,
   children,
   onNavigate,
+  notificationRefreshKey = 0,
+  onNotificationsClick,
 }: DesktopShellProps) {
   return (
     <div className="flex h-full min-h-0 w-full bg-[#F5F4F0]">
@@ -104,6 +109,10 @@ export default function DesktopShell({
               </button>
             );
           })}
+          <NotificationBell
+            refreshKey={notificationRefreshKey}
+            onClick={onNotificationsClick}
+          />
         </nav>
 
         {canManage && (

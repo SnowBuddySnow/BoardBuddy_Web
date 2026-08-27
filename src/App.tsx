@@ -19,7 +19,6 @@ import SchoolAdmin from './pages/SchoolAdmin';
 import UserAdmin from './pages/UserAdmin';
 import SignupAudit from './pages/SignupAudit';
 import Notifications from './pages/Notifications';
-import NotificationBell from './components/NotificationBell';
 import DesktopShell, { type DesktopDestination } from './components/DesktopShell';
 import DesktopRequired from './components/DesktopRequired';
 
@@ -41,7 +40,7 @@ import OrganizerInviteAccept from './pages/OrganizerInviteAccept';
 import DevPanel from './components/DevPanel';
 import CaptainOnboarding, { CaptainOnboardingReturnButton, type CaptainOnboardingDestination } from './components/CaptainOnboarding';
 import { getAccessToken, hasDevOverride, isAutoLoginEnabled } from './lib/session';
-import { completeCaptainOnboarding, hasCompletedCaptainOnboarding } from './lib/captainOnboarding';
+import { completeCaptainOnboarding, dismissCaptainOnboarding, shouldAutoShowCaptainOnboarding } from './lib/captainOnboarding';
 import { getOperationsContext, type OperationPermission } from './services/operations';
 import { getUserInfo } from './services/user';
 import { getCrewInfo, getMyApplications } from './services/crew';
@@ -263,7 +262,7 @@ function App() {
   useEffect(() => {
     if (!shouldLoadPermissions || !managementAccessResolved || !isCaptain || captainUserId == null) return;
     if (captainOnboardingDismissed || captainOnboardingOpen) return;
-    if (!hasCompletedCaptainOnboarding(captainUserId)) {
+    if (shouldAutoShowCaptainOnboarding(captainUserId)) {
       setCaptainOnboardingStep(0);
       setCaptainOnboardingOpen(true);
     }
@@ -394,6 +393,7 @@ function App() {
   };
 
   const handleCaptainOnboardingClose = () => {
+    if (captainUserId != null) dismissCaptainOnboarding(captainUserId);
     setCaptainOnboardingOpen(false);
     setCaptainOnboardingDismissed(true);
     setCaptainGuideReturnVisible(false);
@@ -733,17 +733,15 @@ function App() {
             offSeasonAvailable={operatingFeatures.offSeason}
             availableEventCount={availableEventCount}
             onNavigate={handleDesktopNavigate}
+            notificationRefreshKey={notificationRefreshKey}
+            onNotificationsClick={() => {
+              setNotificationReturnView(currentView);
+              setCurrentView('notifications');
+            }}
           >
             {currentContent}
           </DesktopShell>
         ) : currentContent}
-
-        {currentView !== 'login' && currentView !== 'user_info' && currentView !== 'profile_type_confirmation' && currentView !== 'student_verification' && currentView !== 'organizer_invite' && currentView !== 'notifications' && currentView !== 'role_guide' && currentView !== 'crew_create' && currentView !== 'crew_admin' && currentView !== 'school_admin' && currentView !== 'user_admin' && currentView !== 'signup_audit' && !isDashboardView && (
-          <NotificationBell refreshKey={notificationRefreshKey} onClick={() => {
-            setNotificationReturnView(currentView);
-            setCurrentView('notifications');
-          }} />
-        )}
 
         {showBottomNav && !isDesktop && (
           <LowerMenuBar
@@ -754,6 +752,11 @@ function App() {
             offSeasonAvailable={operatingFeatures.offSeason}
             onTabChange={(tab) => {
               setCurrentView(tabViews[tab]);
+            }}
+            notificationRefreshKey={notificationRefreshKey}
+            onNotificationsClick={() => {
+              setNotificationReturnView(currentView);
+              setCurrentView('notifications');
             }}
           />
         )}
@@ -782,6 +785,7 @@ function App() {
           onOpenCrewAdmin={() => setCurrentView('crew_admin')}
           onOpenSchoolAdmin={() => setCurrentView('school_admin')}
           onOpenUserAdmin={() => setCurrentView('user_admin')}
+          deployedDeveloperAccess={canReviewCrews}
         />
       )}
     </div>

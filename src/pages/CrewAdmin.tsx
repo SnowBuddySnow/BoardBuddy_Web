@@ -99,6 +99,28 @@ export default function CrewAdmin({ onBack, mode = 'create' }: CrewAdminProps) {
         void load();
     }, [load]);
 
+    useEffect(() => {
+        if (!data?.developerAccess) return;
+        const availableSchoolIds = new Set(data.schools.map(school => school.id));
+        setSchoolSelections(current => {
+            let changed = false;
+            const next = { ...current };
+            data.crews.forEach((crew) => {
+                if (
+                    crew.approvalStatus === 'APPROVED'
+                    && !crew.kusbfAssociated
+                    && !next[crew.id]
+                    && crew.requestedBySchoolId != null
+                    && availableSchoolIds.has(crew.requestedBySchoolId)
+                ) {
+                    next[crew.id] = String(crew.requestedBySchoolId);
+                    changed = true;
+                }
+            });
+            return changed ? next : current;
+        });
+    }, [data]);
+
     const updateCrew = (updated: AdminCrew) => {
         setData(current => current ? {
             ...current,

@@ -33,3 +33,19 @@ export const getMyReservations = async (): Promise<MyReservation[]> => {
 export const deleteAccount = async (): Promise<void> => {
     await apiClient.delete<ApiResponse<null>>('/users/me');
 };
+
+export const downloadPersonalData = async (): Promise<string> => {
+    const data = isDevMode()
+        ? { exportedAt: new Date().toISOString(), account: getDevUser(), developmentSimulation: true }
+        : (await apiClient.get<ApiResponse<unknown>>('/users/me/personal-data')).data.data;
+    const filename = `boardbuddy-personal-data-${new Date().toISOString().slice(0, 10)}.json`;
+    const url = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: 'application/json;charset=utf-8' }));
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = filename;
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    URL.revokeObjectURL(url);
+    return filename;
+};

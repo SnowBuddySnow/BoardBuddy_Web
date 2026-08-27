@@ -26,6 +26,20 @@ export interface SchoolImportResult {
     schools: SchoolImportResultItem[];
 }
 
+export interface SchoolCatalogItem {
+    schoolCode: string;
+    name: string;
+    active: boolean;
+    aliases: string[];
+    emailDomains: string[];
+    externalIdentifiers: Record<string, string>;
+}
+
+export const getSchoolCatalog = async (): Promise<SchoolCatalogItem[]> => {
+    const response = await apiClient.get<ApiResponse<SchoolCatalogItem[]>>('/admin/schools');
+    return response.data.data;
+};
+
 export const importSchools = async (
     schools: SchoolImportInput[],
     dryRun: boolean,

@@ -1,6 +1,7 @@
 import { cn } from '../lib/utils';
 import { Button } from './Button';
 import { Sparkles } from 'lucide-react';
+import NotificationBell from './NotificationBell';
 
 type IconProps = React.SVGProps<SVGSVGElement>;
 
@@ -109,6 +110,8 @@ interface LowerMenuBarProps {
   seasonAvailable?: boolean;
   offSeasonAvailable?: boolean;
   onTabChange?: (tab: 'home' | 'events' | 'calendar' | 'edit' | 'heart' | 'user') => void;
+  notificationRefreshKey?: number;
+  onNotificationsClick: () => void;
 }
 
 export const LowerMenuBar = ({
@@ -119,6 +122,8 @@ export const LowerMenuBar = ({
   seasonAvailable = false,
   offSeasonAvailable = false,
   onTabChange,
+  notificationRefreshKey = 0,
+  onNotificationsClick,
 }: LowerMenuBarProps) => {
   const menuItems = [
     { id: 'home', icon: HomeIcon, label: '홈', requiresCrew: false },
@@ -176,6 +181,11 @@ export const LowerMenuBar = ({
           </Button>
         );
       })}
+      <NotificationBell
+        variant="bottom-navigation"
+        refreshKey={notificationRefreshKey}
+        onClick={onNotificationsClick}
+      />
     </nav>
   );
 };

@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
-import { ChevronLeftIcon } from 'lucide-react';
+import { ChevronLeftIcon, Download, LogOut, Trash2, UserMinus } from 'lucide-react';
 import { Button } from '../components/Button';
-import { getUserInfo, deleteAccount } from '../services/user';
+import { getUserInfo, deleteAccount, downloadPersonalData } from '../services/user';
+import { leaveCrew } from '../services/crew';
 import { UserDetail } from '../types/api';
 import { APP_VERSION, COPYRIGHT_TEXT } from '../version';
 import { clearAuthSession } from '../lib/session';
+import { isCrewCaptainRole } from '../constants/crewRole';
 
 interface AccountInfoProps {
     onBack: () => void;
@@ -17,6 +19,38 @@ export default function AccountInfo({ onBack, onStudentVerificationClick }: Acco
     const [phoneSharingConsent, setPhoneSharingConsent] = useState<'each_time' | 'always'>(() => {
         return (localStorage.getItem('phone_sharing_consent_preference') as 'each_time' | 'always') || 'each_time';
     });
+    const [actionBusy, setActionBusy] = useState<'download' | 'leave' | 'delete' | null>(null);
+    const [actionError, setActionError] = useState('');
+
+    const handleDownload = async () => {
+        setActionBusy('download');
+        setActionError('');
+        try {
+            await downloadPersonalData();
+        } catch (error) {
+            console.error('Personal data export failed:', error);
+            setActionError('개인정보 파일을 만들지 못했습니다. 잠시 후 다시 시도해 주세요.');
+        } finally {
+            setActionBusy(null);
+        }
+    };
+
+    const handleLeaveCrew = async () => {
+        if (!userInfo?.crew || isCrewCaptainRole(userInfo.role)) return;
+        if (!confirm(`${userInfo.crew.crewName} 크루에서 탈퇴하시겠습니까?\n기존 예약과 이벤트 참가는 자동 취소되지 않습니다.`)) return;
+        setActionBusy('leave');
+        setActionError('');
+        try {
+            await leaveCrew(userInfo.crew.crewId);
+            setUserInfo(current => current ? { ...current, crew: null, role: 'MEMBER' } : current);
+            alert('크루 탈퇴가 완료되었습니다.');
+        } catch (error) {
+            console.error('Crew departure failed:', error);
+            setActionError('크루에서 탈퇴하지 못했습니다. 크루장이라면 먼저 크루장 권한을 이전해야 합니다.');
+        } finally {
+            setActionBusy(null);
+        }
+    };
 
     useEffect(() => {
         const fetchUserInfo = async () => {
@@ -62,7 +96,7 @@ export default function AccountInfo({ onBack, onStudentVerificationClick }: Acco
             </header>
 
             {/* Content */}
-            <div className="flex-1 overflow-hidden p-6 flex flex-col">
+            <div className="flex-1 overflow-y-auto p-6 flex flex-col">
                 {/* Title */}
                 <div className="mb-4">
                     <h2 className="text-sm font-semibold text-zinc-500 dark:text-zinc-400">계정 관리</h2>
@@ -179,29 +213,61 @@ export default function AccountInfo({ onBack, onStudentVerificationClick }: Acco
                     )}
                 </div>
 
-                {/* Delete Account Button - Bottom */}
-                <div className="mt-auto mb-8 flex justify-center">
-                    <Button
-                        variant="outline"
+                <section className="mt-auto mb-8 space-y-3 rounded-2xl border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-800 dark:bg-zinc-900">
+                    <div>
+                        <h3 className="text-sm font-black text-zinc-900 dark:text-white">내 데이터와 계정</h3>
+                        <p className="mt-1 text-xs leading-5 text-zinc-500">저장된 개인정보를 내려받거나 서비스·크루 이용을 종료할 수 있습니다.</p>
+                    </div>
+
+                    <button type="button" onClick={() => void handleDownload()} disabled={actionBusy !== null} className="flex w-full items-center gap-3 rounded-xl border border-zinc-200 bg-white px-4 py-3 text-left text-sm font-bold text-zinc-700 disabled:opacity-40 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200">
+                        <Download className="h-4 w-4" />
+                        <span className="min-w-0 flex-1">내 개인정보 JSON으로 받기</span>
+                        <span className="text-xs font-medium text-zinc-400">{actionBusy === 'download' ? '준비 중' : '다운로드'}</span>
+                    </button>
+
+                    {userInfo.crew && (
+                        <button type="button" onClick={() => void handleLeaveCrew()} disabled={actionBusy !== null || isCrewCaptainRole(userInfo.role)} className="flex w-full items-center gap-3 rounded-xl border border-amber-200 bg-white px-4 py-3 text-left text-sm font-bold text-amber-800 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-zinc-800">
+                            <UserMinus className="h-4 w-4" />
+                            <span className="min-w-0 flex-1">
+                                <span className="block">{userInfo.crew.crewName}에서 탈퇴</span>
+                                {isCrewCaptainRole(userInfo.role) && <span className="mt-0.5 block text-[10px] font-medium">크루장은 권한 이전 후 탈퇴할 수 있습니다.</span>}
+                            </span>
+                        </button>
+                    )}
+
+                    <button type="button" onClick={() => {
+                        if (!confirm('BoardBuddy에서 로그아웃하시겠습니까?')) return;
+                        clearAuthSession();
+                        window.location.href = '/';
+                    }} disabled={actionBusy !== null} className="flex w-full items-center gap-3 rounded-xl border border-zinc-200 bg-white px-4 py-3 text-left text-sm font-bold text-zinc-700 disabled:opacity-40 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200">
+                        <LogOut className="h-4 w-4" /> BoardBuddy 로그아웃
+                    </button>
+
+                    <button
+                        type="button"
+                        disabled={actionBusy !== null}
                         onClick={async () => {
-                            if (confirm('정말 회원 탈퇴를 하시겠습니까?\n탈퇴 후 모든 데이터가 삭제되며 복구할 수 없습니다.')) {
-                                try {
-                                    await deleteAccount();
-                                    // 성공 시 토큰 삭제 및 로그인 페이지로 리다이렉트
-                                    clearAuthSession();
-                                    alert('회원 탈퇴가 완료되었습니다.');
-                                    window.location.href = '/';
-                                } catch (error) {
-                                    console.error('회원 탈퇴 실패:', error);
-                                    alert('회원 탈퇴에 실패했습니다. 다시 시도해주세요.');
-                                }
+                            if (!confirm('정말 회원 탈퇴를 하시겠습니까?\n탈퇴 처리 후 계정으로 다시 로그인할 수 없습니다. 먼저 개인정보를 내려받는 것을 권장합니다.')) return;
+                            setActionBusy('delete');
+                            setActionError('');
+                            try {
+                                await deleteAccount();
+                                clearAuthSession();
+                                alert('회원 탈퇴가 완료되었습니다.');
+                                window.location.href = '/';
+                            } catch (error) {
+                                console.error('회원 탈퇴 실패:', error);
+                                setActionError('회원 탈퇴에 실패했습니다. 다시 시도해 주세요.');
+                                setActionBusy(null);
                             }
                         }}
-                        className="w-32 h-10 text-sm border-red-300 text-red-600 hover:bg-red-50 hover:border-red-400"
+                        className="flex w-full items-center gap-3 rounded-xl border border-red-200 bg-white px-4 py-3 text-left text-sm font-bold text-red-600 disabled:opacity-40 dark:bg-zinc-800"
                     >
-                        회원 탈퇴
-                    </Button>
-                </div>
+                        <Trash2 className="h-4 w-4" /> 회원 탈퇴
+                    </button>
+
+                    {actionError && <p className="rounded-xl border border-red-100 bg-red-50 p-3 text-xs font-bold text-red-600">{actionError}</p>}
+                </section>
 
                 {/* Version Info */}
                 <div className="text-center mb-24">

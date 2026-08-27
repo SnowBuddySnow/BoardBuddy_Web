@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import {
     CheckCircle2,
+    CameraOff,
     Download,
     Eye,
     FileSpreadsheet,
@@ -83,6 +84,7 @@ export function ManagerConsentResponseSheet({ eventId }: ManagerConsentResponseS
     const [selectedItemIds, setSelectedItemIds] = useState<number[]>([]);
     const [actionBusy, setActionBusy] = useState(false);
     const [actionError, setActionError] = useState<string | null>(null);
+    const [captureWarningAcknowledged, setCaptureWarningAcknowledged] = useState(false);
 
     useEffect(() => {
         let active = true;
@@ -129,6 +131,7 @@ export function ManagerConsentResponseSheet({ eventId }: ManagerConsentResponseS
         setPrivacyAction(action);
         setReason('');
         setIncludeSensitive(false);
+        setCaptureWarningAcknowledged(false);
         setActionError(null);
         if (action === 'EXPORT' && sheet) {
             setSelectedItemIds(sheet.items
@@ -399,6 +402,22 @@ export function ManagerConsentResponseSheet({ eventId }: ManagerConsentResponseS
                             행사 운영 목적으로만 사용하고, 공유 드라이브·메신저 업로드를 피하며, 이용 목적이 끝나면 안전하게 삭제해 주세요.
                         </div>
 
+                        <label className="mt-3 flex cursor-pointer items-start gap-3 rounded-2xl border border-red-200 bg-red-50 p-4">
+                            <input
+                                type="checkbox"
+                                checked={captureWarningAcknowledged}
+                                onChange={event => setCaptureWarningAcknowledged(event.target.checked)}
+                                className="mt-0.5 accent-red-600"
+                            />
+                            <span className="flex min-w-0 gap-2">
+                                <CameraOff className="mt-0.5 h-4 w-4 shrink-0 text-red-600" />
+                                <span>
+                                    <span className="block text-xs font-black text-red-700">화면 캡처·녹화·공유 금지 확인</span>
+                                    <span className="mt-1 block text-[10px] leading-relaxed text-red-600">참가자의 별도 동의 없이 이 화면을 캡처하거나 화면 공유하지 않겠습니다. 필요한 정보는 승인된 운영 절차로만 사용합니다.</span>
+                                </span>
+                            </span>
+                        </label>
+
                         {privacyAction === 'EXPORT' && (
                             <div className="mt-5 space-y-3">
                                 <div className="flex items-center justify-between">
@@ -471,7 +490,7 @@ export function ManagerConsentResponseSheet({ eventId }: ManagerConsentResponseS
                         <button
                             type="button"
                             onClick={privacyAction === 'REVEAL' ? handleReveal : handleExport}
-                            disabled={actionBusy || reason.trim().length < 5 || (privacyAction === 'EXPORT' && selectedItemIds.length === 0)}
+                            disabled={actionBusy || !captureWarningAcknowledged || reason.trim().length < 5 || (privacyAction === 'EXPORT' && selectedItemIds.length === 0)}
                             className="mt-5 h-12 w-full rounded-xl bg-[#162660] text-sm font-black text-white shadow-sm disabled:cursor-not-allowed disabled:opacity-40"
                         >
                             {actionBusy

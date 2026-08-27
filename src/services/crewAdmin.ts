@@ -46,7 +46,9 @@ export interface CreateCrewRequest {
 import { hasDevOverride } from '../lib/session';
 
 export const getCrewAdminData = async (mine = false): Promise<AdminCrewData> => {
-    if (hasDevOverride()) {
+    // Local UI simulation may stand in for a user's own crew-creation view, but it
+    // must never stand in for the deployed developer-account authorization check.
+    if (hasDevOverride() && mine) {
         return {
             crews: [
                 {

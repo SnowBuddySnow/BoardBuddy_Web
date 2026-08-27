@@ -245,13 +245,17 @@ export default function EventDetail({ eventId, onBack, isGuestApplication = fals
 
     const handleCancelAction = async () => {
         if (!event) return;
-        const confirmCancel = window.confirm('정말 참여를 취소하시겠습니까?');
+        const confirmCancel = window.confirm(
+            event.currentUserStatus === 'JOINED'
+                ? '이 이벤트에서 나가시겠습니까?\n참가 상태는 취소되지만 운영 기록과 이미 제출한 응답은 보관 정책에 따라 유지될 수 있습니다.'
+                : '이벤트 참가 신청을 취소하시겠습니까?',
+        );
         if (!confirmCancel) return;
 
         try {
             setActionLoading(true);
             await cancelEvent(event.id);
-            alert('참여 신청이 취소되었습니다.');
+            alert(event.currentUserStatus === 'JOINED' ? '이벤트에서 나갔습니다.' : '참가 신청이 취소되었습니다.');
             await fetchEventDetail(); // Refresh
         } catch (error: unknown) {
             console.error('Failed to cancel:', error);
@@ -748,7 +752,7 @@ export default function EventDetail({ eventId, onBack, isGuestApplication = fals
                             disabled={actionLoading}
                             className="w-full h-12 rounded-full font-bold"
                         >
-                            참여 취소하기
+                            이벤트에서 나가기
                         </Button>
                     </div>
                 ) : isConsentPending ? (

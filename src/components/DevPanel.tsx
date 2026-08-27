@@ -6,6 +6,7 @@ interface DevPanelProps {
     onOpenCrewAdmin: () => void;
     onOpenSchoolAdmin: () => void;
     onOpenUserAdmin: () => void;
+    deployedDeveloperAccess: boolean;
 }
 
 interface SimulationOption {
@@ -40,7 +41,7 @@ const clearSimulationData = () => {
     keysToRemove.forEach(key => localStorage.removeItem(key));
 };
 
-export default function DevPanel({ onOpenCrewAdmin, onOpenSchoolAdmin, onOpenUserAdmin }: DevPanelProps) {
+export default function DevPanel({ onOpenCrewAdmin, onOpenSchoolAdmin, onOpenUserAdmin, deployedDeveloperAccess }: DevPanelProps) {
     const [isOpen, setIsOpen] = useState(false);
     const [query, setQuery] = useState('');
     const [crewOverride, setCrewOverride] = useState(localStorage.getItem('dev_crew_override') || 'server');
@@ -278,33 +279,37 @@ export default function DevPanel({ onOpenCrewAdmin, onOpenSchoolAdmin, onOpenUse
                     </div>
 
                     <footer className="grid shrink-0 grid-cols-3 gap-2 border-t border-zinc-100 bg-white/95 px-5 py-3">
-                        <button
-                            onClick={() => {
-                                setIsOpen(false);
-                                onOpenCrewAdmin();
-                            }}
-                            className="rounded-xl border border-zinc-300 bg-white py-2 text-xs font-bold text-zinc-700 transition hover:bg-zinc-50"
-                        >
-                            크루 관리
-                        </button>
-                        <button
-                            onClick={() => {
-                                setIsOpen(false);
-                                onOpenSchoolAdmin();
-                            }}
-                            className="rounded-xl border border-zinc-300 bg-white py-2 text-xs font-bold text-zinc-700 transition hover:bg-zinc-50"
-                        >
-                            학교 관리
-                        </button>
-                        <button
-                            onClick={() => {
-                                setIsOpen(false);
-                                onOpenUserAdmin();
-                            }}
-                            className="rounded-xl border border-zinc-300 bg-white py-2 text-xs font-bold text-zinc-700 transition hover:bg-zinc-50"
-                        >
-                            사용자 권한
-                        </button>
+                        {deployedDeveloperAccess && (
+                            <>
+                                <button
+                                    onClick={() => {
+                                        setIsOpen(false);
+                                        onOpenCrewAdmin();
+                                    }}
+                                    className="rounded-xl border border-zinc-300 bg-white py-2 text-xs font-bold text-zinc-700 transition hover:bg-zinc-50"
+                                >
+                                    크루 관리
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        setIsOpen(false);
+                                        onOpenSchoolAdmin();
+                                    }}
+                                    className="rounded-xl border border-zinc-300 bg-white py-2 text-xs font-bold text-zinc-700 transition hover:bg-zinc-50"
+                                >
+                                    학교 관리
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        setIsOpen(false);
+                                        onOpenUserAdmin();
+                                    }}
+                                    className="rounded-xl border border-zinc-300 bg-white py-2 text-xs font-bold text-zinc-700 transition hover:bg-zinc-50"
+                                >
+                                    사용자 권한
+                                </button>
+                            </>
+                        )}
                         <a
                             href="/guide/index.html"
                             target="_blank"

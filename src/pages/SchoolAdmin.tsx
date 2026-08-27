@@ -6,16 +6,21 @@ import {
     ChevronLeftIcon,
     ClipboardPaste,
     Copy,
+    Edit3,
     LoaderCircle,
     Plus,
+    RefreshCw,
+    Search,
     School,
     Send,
     Trash2,
 } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Button } from '../components/Button';
 import {
+    getSchoolCatalog,
     importSchools,
+    type SchoolCatalogItem,
     type SchoolImportAction,
     type SchoolImportInput,
     type SchoolImportResult,
@@ -92,6 +97,9 @@ const getErrorMessage = (error: unknown) => {
 
 export default function SchoolAdmin({ onBack }: SchoolAdminProps) {
     const [drafts, setDrafts] = useState<SchoolDraft[]>([createDraft()]);
+    const [catalog, setCatalog] = useState<SchoolCatalogItem[]>([]);
+    const [catalogQuery, setCatalogQuery] = useState('');
+    const [catalogLoading, setCatalogLoading] = useState(true);
     const [bulkText, setBulkText] = useState('');
     const [showBulkInput, setShowBulkInput] = useState(false);
     const [preview, setPreview] = useState<SchoolImportResult | null>(null);
@@ -99,10 +107,36 @@ export default function SchoolAdmin({ onBack }: SchoolAdminProps) {
     const [loadingMode, setLoadingMode] = useState<'preview' | 'apply' | null>(null);
     const [error, setError] = useState('');
 
+    const loadCatalog = useCallback(async () => {
+        setCatalogLoading(true);
+        try {
+            setCatalog(await getSchoolCatalog());
+        } catch (catalogError) {
+            setError(getErrorMessage(catalogError));
+        } finally {
+            setCatalogLoading(false);
+        }
+    }, []);
+
+    useEffect(() => {
+        void loadCatalog();
+    }, [loadCatalog]);
+
     const usableDrafts = useMemo(
         () => drafts.filter(draft => draft.name.trim()),
         [drafts],
     );
+
+    const filteredCatalog = useMemo(() => {
+        const query = catalogQuery.trim().toLocaleLowerCase('ko-KR');
+        if (!query) return catalog;
+        return catalog.filter(school => [
+            school.name,
+            school.schoolCode,
+            ...school.aliases,
+            ...school.emailDomains,
+        ].some(value => value.toLocaleLowerCase('ko-KR').includes(query)));
+    }, [catalog, catalogQuery]);
 
     const invalidatePreview = () => {
         setPreview(null);
@@ -128,6 +162,36 @@ export default function SchoolAdmin({ onBack }: SchoolAdminProps) {
             externalIdentifiers: draft.externalIdentifiers,
         })]);
         invalidatePreview();
+    };
+
+    const editSchool = (school: SchoolCatalogItem) => {
+        const existingDraft = drafts.find(draft => draft.schoolCode === school.schoolCode);
+        if (existingDraft) {
+            setDrafts(current => current.map(draft => draft.key === existingDraft.key
+                ? { ...draft, expanded: true }
+                : draft));
+            document.getElementById(`school-draft-${existingDraft.key}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            return;
+        }
+
+        const draft = createDraft({
+            schoolCode: school.schoolCode,
+            name: school.name,
+            active: school.active,
+            aliases: school.aliases.join('\n'),
+            emailDomains: school.emailDomains.join('\n'),
+            externalIdentifiers: Object.entries(school.externalIdentifiers)
+                .map(([authority, externalId]) => `${authority}=${externalId}`)
+                .join('\n'),
+        });
+        setDrafts(current => {
+            const withoutEmptyPlaceholder = current.length === 1 && !current[0].name.trim() ? [] : current;
+            return [...withoutEmptyPlaceholder, draft];
+        });
+        invalidatePreview();
+        window.setTimeout(() => {
+            document.getElementById(`school-draft-${draft.key}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }, 0);
     };
 
     const removeDraft = (key: string) => {
@@ -192,10 +256,8 @@ export default function SchoolAdmin({ onBack }: SchoolAdminProps) {
             const result = await importSchools(preparePayload(), false);
             setApplied(result);
             setPreview(null);
-            setDrafts(current => current.map((draft) => {
-                const match = result.schools.find(item => item.name === draft.name.trim());
-                return match?.schoolCode ? { ...draft, schoolCode: match.schoolCode } : draft;
-            }));
+            setDrafts([createDraft()]);
+            await loadCatalog();
         } catch (applyError) {
             setError(getErrorMessage(applyError));
         } finally {
@@ -237,6 +299,68 @@ export default function SchoolAdmin({ onBack }: SchoolAdminProps) {
                         </p>
                     </section>
 
+                    <section className="overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm">
+                        <div className="flex flex-col gap-3 border-b border-zinc-100 p-5 sm:flex-row sm:items-center">
+                            <div className="min-w-0 flex-1">
+                                <h2 className="font-black">현재 학교 카탈로그</h2>
+                                <p className="mt-1 text-xs text-zinc-500">
+                                    전체 {catalog.length}개 · 활성 {catalog.filter(school => school.active).length}개
+                                </p>
+                            </div>
+                            <div className="flex gap-2">
+                                <label className="relative min-w-0 flex-1 sm:w-64">
+                                    <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
+                                    <input
+                                        value={catalogQuery}
+                                        onChange={event => setCatalogQuery(event.target.value)}
+                                        placeholder="학교명, 코드, 도메인 검색"
+                                        className="w-full rounded-xl border border-zinc-200 bg-zinc-50 py-2.5 pl-9 pr-3 text-sm outline-none focus:border-[#162660]"
+                                    />
+                                </label>
+                                <button
+                                    type="button"
+                                    onClick={() => void loadCatalog()}
+                                    disabled={catalogLoading}
+                                    aria-label="학교 카탈로그 새로고침"
+                                    className="rounded-xl border border-zinc-200 p-2.5 text-zinc-600 hover:bg-zinc-50 disabled:opacity-40"
+                                >
+                                    <RefreshCw className={`h-4 w-4 ${catalogLoading ? 'animate-spin' : ''}`} />
+                                </button>
+                            </div>
+                        </div>
+                        {catalogLoading && catalog.length === 0 ? (
+                            <div className="flex justify-center py-12"><LoaderCircle className="h-6 w-6 animate-spin text-[#162660]" /></div>
+                        ) : filteredCatalog.length === 0 ? (
+                            <p className="py-12 text-center text-sm font-semibold text-zinc-400">표시할 학교가 없습니다.</p>
+                        ) : (
+                            <div className="max-h-96 divide-y divide-zinc-100 overflow-y-auto">
+                                {filteredCatalog.map(school => (
+                                    <div key={school.schoolCode} className="flex items-center gap-3 px-5 py-4">
+                                        <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${school.active ? 'bg-emerald-500' : 'bg-zinc-300'}`} />
+                                        <div className="min-w-0 flex-1">
+                                            <div className="flex flex-wrap items-center gap-2">
+                                                <p className="font-bold">{school.name}</p>
+                                                <span className={`rounded-full px-2 py-0.5 text-[10px] font-black ${school.active ? 'bg-emerald-50 text-emerald-700' : 'bg-zinc-100 text-zinc-500'}`}>
+                                                    {school.active ? '활성' : '비활성'}
+                                                </span>
+                                            </div>
+                                            <p className="mt-1 truncate font-mono text-xs text-zinc-400">
+                                                {school.schoolCode}{school.emailDomains.length ? ` · ${school.emailDomains.join(', ')}` : ''}
+                                            </p>
+                                        </div>
+                                        <button
+                                            type="button"
+                                            onClick={() => editSchool(school)}
+                                            className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-zinc-200 px-3 py-2 text-xs font-black text-zinc-700 hover:border-[#162660] hover:text-[#162660]"
+                                        >
+                                            <Edit3 className="h-3.5 w-3.5" /> 수정
+                                        </button>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </section>
+
                     {showBulkInput && (
                         <section className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm">
                             <div className="flex flex-col gap-4 lg:flex-row lg:items-end">
@@ -272,8 +396,12 @@ export default function SchoolAdmin({ onBack }: SchoolAdminProps) {
                     )}
 
                     <section className="space-y-3">
+                        <div>
+                            <h2 className="font-black">편집 및 신규 등록</h2>
+                            <p className="mt-1 text-xs text-zinc-500">위 카탈로그에서 수정할 학교를 선택하거나 새 학교를 추가하세요.</p>
+                        </div>
                         {drafts.map((draft, index) => (
-                            <article key={draft.key} className="overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm">
+                            <article id={`school-draft-${draft.key}`} key={draft.key} className="scroll-mt-6 overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm">
                                 <div className="flex items-center gap-3 p-4 lg:px-5">
                                     <button
                                         type="button"

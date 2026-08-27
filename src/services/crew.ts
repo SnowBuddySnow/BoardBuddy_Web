@@ -237,6 +237,14 @@ export const withdrawCrewApplication = async (applicationId: number): Promise<vo
     await apiClient.delete(`/crews/my-applications/${applicationId}`);
 };
 
+export const leaveCrew = async (crewId: number): Promise<void> => {
+    if (hasDevOverride()) {
+        localStorage.setItem('dev_crew_override', 'none');
+        return;
+    }
+    await apiClient.delete(`/crews/${crewId}/membership`);
+};
+
 // --- New / Updated Reservation Endpoints ---
 
 export const getReservationDetail = async (crewId: number, date: string): Promise<ReservationDayResponse> => {
