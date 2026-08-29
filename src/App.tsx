@@ -40,7 +40,7 @@ import OrganizerInviteAccept from './pages/OrganizerInviteAccept';
 import DevPanel from './components/DevPanel';
 import CaptainOnboarding, { CaptainOnboardingReturnButton, type CaptainOnboardingDestination } from './components/CaptainOnboarding';
 import { getAccessToken, hasDevOverride, isAutoLoginEnabled } from './lib/session';
-import { completeCaptainOnboarding, dismissCaptainOnboarding, shouldAutoShowCaptainOnboarding } from './lib/captainOnboarding';
+import { claimCaptainOnboarding, completeCaptainOnboarding, dismissCaptainOnboarding } from './lib/captainOnboarding';
 import { getOperationsContext, type OperationPermission } from './services/operations';
 import { getUserInfo } from './services/user';
 import { getCrewInfo, getMyApplications } from './services/crew';
@@ -262,7 +262,7 @@ function App() {
   useEffect(() => {
     if (!shouldLoadPermissions || !managementAccessResolved || !isCaptain || captainUserId == null) return;
     if (captainOnboardingDismissed || captainOnboardingOpen) return;
-    if (shouldAutoShowCaptainOnboarding(captainUserId)) {
+    if (claimCaptainOnboarding(captainUserId)) {
       setCaptainOnboardingStep(0);
       setCaptainOnboardingOpen(true);
     }
@@ -414,6 +414,12 @@ function App() {
     setCurrentView(destination);
   };
 
+  const openCaptainOnboarding = () => {
+    setCaptainOnboardingStep(0);
+    setCaptainGuideReturnVisible(false);
+    setCaptainOnboardingOpen(true);
+  };
+
   const openEventDetail = (id: number, destination: View = 'event_detail') => {
     setIsGuestEventApplication(false);
     setSelectedEventId(id);
@@ -528,7 +534,12 @@ function App() {
           />
         );
       case 'crew_settings':
-        return <CrewSettings onBack={() => setCurrentView('crew_detail')} />;
+        return (
+          <CrewSettings
+            onBack={() => setCurrentView('crew_detail')}
+            onCaptainGuideClick={isCaptain ? openCaptainOnboarding : undefined}
+          />
+        );
       case 'crew_member':
         return <CrewMember onBack={() => setCurrentView('crew_detail')} />;
       case 'search_crew':
@@ -581,11 +592,7 @@ function App() {
             onBack={() => setCurrentView('home')}
             onAccountInfoClick={() => setCurrentView('account_info')}
             onRoleGuideClick={() => setCurrentView('role_guide')}
-            onCaptainOnboardingClick={isCaptain ? () => {
-              setCaptainOnboardingStep(0);
-              setCaptainGuideReturnVisible(false);
-              setCaptainOnboardingOpen(true);
-            } : undefined}
+            onCaptainOnboardingClick={isCaptain ? openCaptainOnboarding : undefined}
           />
         );
       case 'account_info':

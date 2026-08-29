@@ -1,5 +1,5 @@
 import { Button } from '../components/Button';
-import { BadgeCheckIcon, CheckCircle2Icon, ChevronLeftIcon, CopyIcon, KeyRoundIcon, Link2Icon, RefreshCwIcon, SaveIcon } from 'lucide-react';
+import { BadgeCheckIcon, CheckCircle2Icon, ChevronLeftIcon, ChevronRightIcon, CopyIcon, KeyRoundIcon, Link2Icon, MapIcon, RefreshCwIcon, SaveIcon } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { getCrewInfo, resetCrewPin, updateCrew } from '../services/crew';
 import { getUserInfo } from '../services/user';
@@ -10,9 +10,10 @@ import Promote from './Promote';
 
 interface CrewSettingsProps {
     onBack: () => void;
+    onCaptainGuideClick?: () => void;
 }
 
-export default function CrewSettings({ onBack }: CrewSettingsProps) {
+export default function CrewSettings({ onBack, onCaptainGuideClick }: CrewSettingsProps) {
     const DAY_TO_KR: { [key: string]: string } = {
         'MONDAY': '월요일',
         'TUESDAY': '화요일',
@@ -235,6 +236,23 @@ export default function CrewSettings({ onBack }: CrewSettingsProps) {
                                 </button>
                             </div>
                         </section>
+                    )}
+
+                    {isCaptain && onCaptainGuideClick && (
+                        <button
+                            type="button"
+                            onClick={onCaptainGuideClick}
+                            className="flex w-full items-center gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-left transition-colors hover:bg-amber-100"
+                        >
+                            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-200 text-amber-900">
+                                <MapIcon className="h-5 w-5" />
+                            </span>
+                            <span className="min-w-0 flex-1">
+                                <span className="block text-sm font-black text-amber-950">크루장 시작 가이드</span>
+                                <span className="mt-1 block text-xs leading-5 text-amber-800">필요할 때 크루 운영 흐름을 다시 확인하세요.</span>
+                            </span>
+                            <ChevronRightIcon className="h-5 w-5 shrink-0 text-amber-800" />
+                        </button>
                     )}
 
                     {/* School affiliation */}
