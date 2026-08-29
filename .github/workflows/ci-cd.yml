@@ -1,0 +1,136 @@
+name: Web CI/CD
+
+on:
+  push:
+    branches: [ develop, main ]
+  pull_request:
+    branches: [ develop, main ]
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  verify:
+    name: Verify & Build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install pnpm
+        run: corepack enable && corepack prepare pnpm@11.9.0 --activate
+
+      - name: Install Dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run TypeScript Check
+        run: pnpm run typecheck
+
+      - name: Run ESLint
+        run: pnpm run lint
+
+      - name: Build Web Application
+        env:
+          VITE_KAKAO_JAVASCRIPT_KEY: ${{ secrets.VITE_KAKAO_JAVASCRIPT_KEY || 'dummy_ci_key' }}
+          VITE_API_BASE_URL: /api
+        run: pnpm run build
+
+  deploy:
+    name: Build & Deploy
+    needs: verify
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/develop' || github.ref == 'refs/heads/main')
+    runs-on: ubuntu-latest
+    environment:
+      name: ${{ github.ref == 'refs/heads/main' && 'production' || 'staging' }}
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Compute Image Tags
+        id: meta
+        run: |
+          REPO_OWNER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
+          ENV_PREFIX="${{ github.ref == 'refs/heads/main' && 'prod' || 'stg' }}"
+          IMAGE_BASE="ghcr.io/${REPO_OWNER}/boardbuddy-web"
+          TAG_SHA="${IMAGE_BASE}:${ENV_PREFIX}-${{ github.sha }}"
+          TAG_LATEST="${IMAGE_BASE}:${ENV_PREFIX}-latest"
+          
+          echo "image_base=${IMAGE_BASE}" >> $GITHUB_OUTPUT
+          echo "tag_sha=${TAG_SHA}" >> $GITHUB_OUTPUT
+          echo "tag_latest=${TAG_LATEST}" >> $GITHUB_OUTPUT
+          echo "env_prefix=${ENV_PREFIX}" >> $GITHUB_OUTPUT
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and Push Web Docker Image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          build-args: |
+            KAKAO_JS_PUBLIC_KEY=${{ secrets.VITE_KAKAO_JAVASCRIPT_KEY }}
+            VITE_API_BASE_URL=/api
+          tags: |
+            ${{ steps.meta.outputs.tag_sha }}
+            ${{ steps.meta.outputs.tag_latest }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Deploy to Remote Server via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        env:
+          TARGET_IMAGE: ${{ steps.meta.outputs.tag_sha }}
+          ENV_NAME: ${{ steps.meta.outputs.env_prefix }}
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          port: ${{ secrets.SERVER_PORT || 22 }}
+          envs: TARGET_IMAGE,ENV_NAME
+          script: |
+            set -euo pipefail
+            echo "==> Starting deployment of ${TARGET_IMAGE} (${ENV_NAME})..."
+
+            DEPLOY_DIR="/opt/boardbuddy"
+            cd "${DEPLOY_DIR}"
+
+            # 1. Pull immutable image
+            echo "==> Pulling target image..."
+            echo "${{ secrets.GHCR_PAT || secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+            docker pull "${TARGET_IMAGE}"
+
+            # 2. Update WEB_IMAGE in .env file
+            echo "==> Updating .env with WEB_IMAGE=${TARGET_IMAGE}"
+            if grep -q "^WEB_IMAGE=" .env; then
+              sed -i "s|^WEB_IMAGE=.*|WEB_IMAGE=${TARGET_IMAGE}|" .env
+            else
+              echo "WEB_IMAGE=${TARGET_IMAGE}" >> .env
+            fi
+
+            # 3. Rolling update of web container
+            echo "==> Restarting boardbuddy-web service..."
+            docker compose up -d --no-build boardbuddy-web
+
+            # 4. Verify Health Status
+            echo "==> Verifying web health check..."
+            docker compose exec -T boardbuddy-web wget -qO- http://127.0.0.1/nginx-health | grep -qx healthy
+            echo "==> Web container is healthy!"
+
+            # 5. Cleanup dangling images
+            docker image prune -af --filter "until=72h" || true
+            echo "==> Deployment completed successfully."
