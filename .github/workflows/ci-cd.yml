@@ -92,9 +92,10 @@ jobs:
           cache-to: type=gha,mode=max
 
       - name: Deploy to Remote Server via SSH
-        if: "${{ secrets.SERVER_HOST != '' }}"
+        if: env.SERVER_HOST != ''
         uses: appleboy/ssh-action@v1.0.3
         env:
+          SERVER_HOST: ${{ secrets.SERVER_HOST }}
           TARGET_IMAGE: ${{ steps.meta.outputs.tag_sha }}
           ENV_NAME: ${{ steps.meta.outputs.env_prefix }}
         with:
