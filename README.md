@@ -64,3 +64,24 @@ docker run --rm \
 `BACKEND_UPSTREAM` must remain an internal HTTP endpoint. Expose nginx rather than Spring Boot's
 port 8080. Production internet traffic must terminate TLS before reaching this HTTP listener, or
 nginx must be given a separate TLS server configuration and certificates for the final domain.
+
+## Vercel environments
+
+Vercel is the authoritative hosted web deployment. Configure `main` as the Production Branch and
+keep `develop` as a long-lived Preview branch. On Vercel Pro or Enterprise, `develop` can instead
+track a custom environment named `staging`.
+
+Configure these public build-time variables in the Vercel project:
+
+| Vercel target | Git branch | Variable |
+| --- | --- | --- |
+| Production | `main` | `VITE_API_BASE_URL=https://api.boardbuddy.kr/api` |
+| Preview, scoped to branch | `develop` | `VITE_API_BASE_URL=https://api-stg.boardbuddy.kr/api` |
+
+Set `VITE_KAKAO_JAVASCRIPT_KEY` separately for Production and for the `develop` Preview branch.
+Assign `boardbuddy.kr` and `www.boardbuddy.kr` only to Production. A persistent domain such as
+`stg.boardbuddy.kr` can be assigned to `develop`; feature branches keep their generated Preview
+URLs.
+
+`vercel.json` deliberately contains no API rewrite. A Vercel build fails when
+`VITE_API_BASE_URL` is absent, preventing a frontend from silently using the wrong backend.

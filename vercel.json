@@ -1,11 +1,6 @@
 {
+    "$schema": "https://openapi.vercel.sh/vercel.json",
     "installCommand": "pnpm install --frozen-lockfile",
     "buildCommand": "pnpm run build",
-    "outputDirectory": "dist",
-    "rewrites": [
-        {
-            "source": "/api/:match*",
-            "destination": "http://152.42.195.70:8080/api/:match*"
-        }
-    ]
+    "outputDirectory": "dist"
 }

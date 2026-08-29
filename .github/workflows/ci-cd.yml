@@ -42,15 +42,21 @@ jobs:
         run: pnpm run build
 
   deploy:
-    name: Build & Deploy
+    name: Publish Container
     needs: verify
     if: github.event_name == 'push' && (github.ref == 'refs/heads/develop' || github.ref == 'refs/heads/main')
     runs-on: ubuntu-latest
+    concurrency:
+      group: web-image-${{ github.ref_name }}
+      cancel-in-progress: false
     environment:
       name: ${{ github.ref == 'refs/heads/main' && 'production' || 'staging' }}
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -82,57 +88,13 @@ jobs:
           context: .
           file: ./Dockerfile
           push: true
+          platforms: linux/amd64,linux/arm64
           build-args: |
             KAKAO_JS_PUBLIC_KEY=${{ secrets.VITE_KAKAO_JAVASCRIPT_KEY }}
             VITE_API_BASE_URL=/api
+            VITE_BUILD_SHA=${{ github.sha }}
           tags: |
             ${{ steps.meta.outputs.tag_sha }}
             ${{ steps.meta.outputs.tag_latest }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
-
-      - name: Deploy to Remote Server via SSH
-        if: env.SERVER_HOST != ''
-        uses: appleboy/ssh-action@v1.0.3
-        env:
-          SERVER_HOST: ${{ secrets.SERVER_HOST }}
-          TARGET_IMAGE: ${{ steps.meta.outputs.tag_sha }}
-          ENV_NAME: ${{ steps.meta.outputs.env_prefix }}
-        with:
-          host: ${{ secrets.SERVER_HOST }}
-          username: ${{ secrets.SERVER_USER }}
-          key: ${{ secrets.SERVER_SSH_KEY }}
-          port: ${{ secrets.SERVER_PORT || 22 }}
-          envs: TARGET_IMAGE,ENV_NAME
-          script: |
-            set -euo pipefail
-            echo "==> Starting deployment of ${TARGET_IMAGE} (${ENV_NAME})..."
-
-            DEPLOY_DIR="/opt/boardbuddy"
-            cd "${DEPLOY_DIR}"
-
-            # 1. Pull immutable image
-            echo "==> Pulling target image..."
-            echo "${{ secrets.GHCR_PAT || secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
-            docker pull "${TARGET_IMAGE}"
-
-            # 2. Update WEB_IMAGE in .env file
-            echo "==> Updating .env with WEB_IMAGE=${TARGET_IMAGE}"
-            if grep -q "^WEB_IMAGE=" .env; then
-              sed -i "s|^WEB_IMAGE=.*|WEB_IMAGE=${TARGET_IMAGE}|" .env
-            else
-              echo "WEB_IMAGE=${TARGET_IMAGE}" >> .env
-            fi
-
-            # 3. Rolling update of web container
-            echo "==> Restarting boardbuddy-web service..."
-            docker compose up -d --no-build boardbuddy-web
-
-            # 4. Verify Health Status
-            echo "==> Verifying web health check..."
-            docker compose exec -T boardbuddy-web wget -qO- http://127.0.0.1/nginx-health | grep -qx healthy
-            echo "==> Web container is healthy!"
-
-            # 5. Cleanup dangling images
-            docker image prune -af --filter "until=72h" || true
-            echo "==> Deployment completed successfully."
