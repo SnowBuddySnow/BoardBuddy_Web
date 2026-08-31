@@ -1,4 +1,4 @@
-name: Web CI/CD
+name: Web CI
 
 on:
   push:
@@ -8,7 +8,6 @@ on:
 
 permissions:
   contents: read
-  packages: write
 
 jobs:
   verify:
@@ -40,61 +39,3 @@ jobs:
           VITE_KAKAO_JAVASCRIPT_KEY: ${{ secrets.VITE_KAKAO_JAVASCRIPT_KEY || 'dummy_ci_key' }}
           VITE_API_BASE_URL: /api
         run: pnpm run build
-
-  deploy:
-    name: Publish Container
-    needs: verify
-    if: github.event_name == 'push' && (github.ref == 'refs/heads/develop' || github.ref == 'refs/heads/main')
-    runs-on: ubuntu-latest
-    concurrency:
-      group: web-image-${{ github.ref_name }}
-      cancel-in-progress: false
-    environment:
-      name: ${{ github.ref == 'refs/heads/main' && 'production' || 'staging' }}
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
-
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Compute Image Tags
-        id: meta
-        run: |
-          REPO_OWNER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
-          ENV_PREFIX="${{ github.ref == 'refs/heads/main' && 'prod' || 'stg' }}"
-          IMAGE_BASE="ghcr.io/${REPO_OWNER}/boardbuddy-web"
-          TAG_SHA="${IMAGE_BASE}:${ENV_PREFIX}-${{ github.sha }}"
-          TAG_LATEST="${IMAGE_BASE}:${ENV_PREFIX}-latest"
-          
-          echo "image_base=${IMAGE_BASE}" >> $GITHUB_OUTPUT
-          echo "tag_sha=${TAG_SHA}" >> $GITHUB_OUTPUT
-          echo "tag_latest=${TAG_LATEST}" >> $GITHUB_OUTPUT
-          echo "env_prefix=${ENV_PREFIX}" >> $GITHUB_OUTPUT
-
-      - name: Log in to GitHub Container Registry
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Build and Push Web Docker Image
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          file: ./Dockerfile
-          push: true
-          platforms: linux/amd64,linux/arm64
-          build-args: |
-            KAKAO_JS_PUBLIC_KEY=${{ secrets.VITE_KAKAO_JAVASCRIPT_KEY }}
-            VITE_API_BASE_URL=/api
-            VITE_BUILD_SHA=${{ github.sha }}
-          tags: |
-            ${{ steps.meta.outputs.tag_sha }}
-            ${{ steps.meta.outputs.tag_latest }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
