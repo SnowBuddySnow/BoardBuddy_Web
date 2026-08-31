@@ -39,7 +39,7 @@ import GuestAccess from './pages/GuestAccess';
 import OrganizerInviteAccept from './pages/OrganizerInviteAccept';
 import DevPanel from './components/DevPanel';
 import CaptainOnboarding, { CaptainOnboardingReturnButton, type CaptainOnboardingDestination } from './components/CaptainOnboarding';
-import { getAccessToken, hasDevOverride, isAutoLoginEnabled } from './lib/session';
+import { getAccessToken, getSignupToken, hasDevOverride, isAutoLoginEnabled } from './lib/session';
 import { claimCaptainOnboarding, completeCaptainOnboarding, dismissCaptainOnboarding } from './lib/captainOnboarding';
 import { getOperationsContext, type OperationPermission } from './services/operations';
 import { getUserInfo } from './services/user';
@@ -89,6 +89,53 @@ type View =
   | 'dashboard_group_detail'
   | 'organizer_invite';
 
+const knownViews = new Set<View>([
+  'login',
+  'home',
+  'reservation',
+  'stats',
+  'my_reservations',
+  'crew_detail',
+  'search_crew',
+  'user_info',
+  'profile_type_confirmation',
+  'student_verification',
+  'crew_member',
+  'crew_settings',
+  'guest_reservation',
+  'guest_access',
+  'guest_access',
+  'my_page',
+  'account_info',
+  'crew_create',
+  'crew_admin',
+  'school_admin',
+  'user_admin',
+  'signup_audit',
+  'crew_permissions',
+  'role_guide',
+  'notifications',
+  'parties',
+  'event_detail',
+  'my_parties',
+  'operations_center',
+  'dashboard_parties',
+  'dashboard_event_new',
+  'dashboard_event_detail',
+  'dashboard_event_edit',
+  'dashboard_groups',
+  'dashboard_group_detail',
+  'organizer_invite',
+]);
+
+const publicEntryViews = new Set<View>(['login', 'guest_access']);
+const signupViews = new Set<View>(['user_info', 'profile_type_confirmation', 'student_verification']);
+
+const parseView = (value: string | null): View | null => {
+  if (!value || !knownViews.has(value as View)) return null;
+  return value as View;
+};
+
 const viewTabs: Partial<Record<View, Tab>> = {
   home: 'home',
   parties: 'events',
@@ -136,14 +183,17 @@ const viewsWithoutBottomNav: View[] = [
 
 const getInitialView = (): View => {
   const params = new URLSearchParams(window.location.search);
-  const requestedView = params.get('view') as View | null;
-  if (requestedView) return requestedView;
+  const requestedView = parseView(params.get('view'));
   const hasOrganizerInvite = params.has('organizerInvite');
+  if (hasOrganizerInvite) return 'organizer_invite';
+  if (requestedView && publicEntryViews.has(requestedView)) return requestedView;
+  if (requestedView && getAccessToken()) return requestedView;
+  if (requestedView && signupViews.has(requestedView) && getSignupToken()) return requestedView;
   if (hasDevOverride()) {
-    return hasOrganizerInvite ? 'organizer_invite' : 'home';
+    return requestedView || 'home';
   }
   if (getAccessToken() && isAutoLoginEnabled()) {
-    return hasOrganizerInvite ? 'organizer_invite' : 'home';
+    return 'home';
   }
   return 'login';
 };
@@ -369,8 +419,13 @@ function App() {
 
   const isDashboardView = currentView.startsWith('dashboard_');
   const isManagementView = isDashboardView || currentView === 'operations_center';
+  const isPublicGuestFlow = !getAccessToken() && (
+    currentView === 'guest_access'
+    || currentView === 'guest_reservation'
+    || (currentView === 'event_detail' && isGuestEventApplication)
+  );
   const activeTab = viewTabs[currentView] || 'home';
-  const showBottomNav = !viewsWithoutBottomNav.includes(currentView) && !isDashboardView;
+  const showBottomNav = !viewsWithoutBottomNav.includes(currentView) && !isDashboardView && !isPublicGuestFlow;
 
   const getDesktopDestination = (): DesktopDestination => {
     if (currentView === 'crew_admin') return 'crew_admin';
@@ -450,7 +505,7 @@ function App() {
         <FeatureUnavailable
           title="시즌방 예약을 이용할 수 없습니다"
           description="현재는 오프시즌 운영 중입니다. 이벤트 초대 코드는 게스트 이용 화면에서 계속 사용할 수 있습니다."
-          onBack={() => setCurrentView('home')}
+          onBack={() => setCurrentView('guest_access')}
         />
       );
     }
@@ -507,7 +562,7 @@ function App() {
         return <Reservation onBack={() => setCurrentView('guest_access')} isGuest={true} guestCrewId={guestCrewId ?? undefined} />;
       case 'guest_access':
         return <GuestAccess
-          onBack={() => setCurrentView('home')}
+          onBack={() => setCurrentView(getAccessToken() ? 'home' : 'login')}
           onSeasonHouseAccess={(crewId) => { setGuestCrewId(crewId); setCurrentView('guest_reservation'); }}
           onEventAccess={openGuestEventApplication}
           seasonAvailable={operatingFeatures.season}
@@ -720,7 +775,8 @@ function App() {
 
   const usesDesktopShell = isDesktop
     && !isDashboardView
-    && !['login', 'user_info', 'profile_type_confirmation', 'organizer_invite'].includes(currentView);
+    && !isPublicGuestFlow
+    && !['login', 'user_info', 'profile_type_confirmation', 'student_verification', 'organizer_invite'].includes(currentView);
 
   const currentContent = renderCurrentView();
 

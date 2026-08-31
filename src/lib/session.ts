@@ -72,6 +72,8 @@ export const getDevRoleOverride = () => localStorage.getItem(SESSION_KEYS.devRol
 export const getDevEventDataMode = () => localStorage.getItem(SESSION_KEYS.devEventDataMode);
 
 export const hasDevOverride = () => {
+    if (!import.meta.env.DEV) return false;
+
     const crewOverride = getDevCrewOverride();
     const schoolOverride = getDevSchoolOverride();
     const roleOverride = getDevRoleOverride();

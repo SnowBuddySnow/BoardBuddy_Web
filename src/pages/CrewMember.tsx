@@ -1,5 +1,5 @@
 import { Button } from '../components/Button';
-import { BadgeCheckIcon, ChevronLeftIcon, Trash2Icon, CheckIcon, ShieldAlertIcon, XIcon, UserIcon } from 'lucide-react';
+import { BadgeCheckIcon, ChevronLeftIcon, CheckIcon, ShieldAlertIcon, XIcon, UserIcon } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { getUserInfo } from '../services/user';
 import { getCrewInfo, getCrewManagers, getCrewMembers, getApplicants, manageApplicant } from '../services/crew';
@@ -182,13 +182,6 @@ export default function CrewMember({ onBack }: CrewMemberProps) {
         refreshData();
     }, []);
 
-    const handleDeleteMember = (id: string, name: string) => {
-        if (window.confirm(`${name}님을 크루에서 삭제하시겠습니까?`)) {
-            // TODO: Implement delete API
-            setMembers(members.filter(m => m.id !== id));
-        }
-    };
-
     const handleAcceptApplicant = async (appId: string) => {
         if (!crewId) return;
         const applicant = applicants.find(item => item.id === appId);
@@ -340,14 +333,6 @@ export default function CrewMember({ onBack }: CrewMemberProps) {
                                                 )}
                                             </div>
                                         </div>
-                                        {currentUserRole === 'CREW_MANAGER' && (
-                                            <button
-                                                onClick={() => handleDeleteMember(member.id, member.name)}
-                                                className="p-2 text-zinc-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors"
-                                            >
-                                                <Trash2Icon className="w-4 h-4" />
-                                            </button>
-                                        )}
                                     </div>
                                 ))}
                             </div>
@@ -370,14 +355,6 @@ export default function CrewMember({ onBack }: CrewMemberProps) {
                                                 )}
                                             </div>
                                         </div>
-                                        {currentUserRole === 'CREW_MANAGER' && (
-                                            <button
-                                                onClick={() => handleDeleteMember(member.id, member.name)}
-                                                className="p-2 text-zinc-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors"
-                                            >
-                                                <Trash2Icon className="w-4 h-4" />
-                                            </button>
-                                        )}
                                     </div>
                                 ))}
                             </div>
