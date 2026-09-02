@@ -34,6 +34,9 @@ jobs:
       - name: Run ESLint
         run: pnpm run lint
 
+      - name: Run Tests
+        run: pnpm run test
+
       - name: Build Web Application
         env:
           VITE_KAKAO_JAVASCRIPT_KEY: ${{ secrets.VITE_KAKAO_JAVASCRIPT_KEY || 'dummy_ci_key' }}

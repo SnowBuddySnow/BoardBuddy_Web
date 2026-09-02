@@ -37,6 +37,7 @@ export const clearAccountId = () => {
 };
 
 export const saveAuthTokens = (accessToken?: string, refreshToken?: string) => {
+    localStorage.removeItem(SESSION_KEYS.tempAccessToken);
     if (accessToken) {
         localStorage.setItem(SESSION_KEYS.accessToken, accessToken);
     }
@@ -46,6 +47,8 @@ export const saveAuthTokens = (accessToken?: string, refreshToken?: string) => {
 };
 
 export const saveTempAccessToken = (tempAccessToken?: string) => {
+    localStorage.removeItem(SESSION_KEYS.accessToken);
+    localStorage.removeItem(SESSION_KEYS.refreshToken);
     if (tempAccessToken) {
         localStorage.setItem(SESSION_KEYS.tempAccessToken, tempAccessToken);
     }

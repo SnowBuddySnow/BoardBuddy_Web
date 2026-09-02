@@ -7,6 +7,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "test": "vitest run",
     "typecheck": "tsc -b",
     "lint": "eslint \"src/**/*.{ts,tsx}\"",
     "preview": "vite preview"
@@ -36,6 +37,7 @@
     "tailwindcss": "^4.1.17",
     "typescript": "~5.7.2",
     "typescript-eslint": "^8.24.1",
-    "vite": "^6.2.0"
+    "vite": "^6.2.0",
+    "vitest": "^4.1.11"
   }
 }
