@@ -13,9 +13,10 @@ import { crewRoleLabel } from '../constants/displayLabels';
 
 interface CrewPermissionsProps {
   onBack: () => void;
+  onPermissionsChanged?: () => void;
 }
 
-export default function CrewPermissions({ onBack }: CrewPermissionsProps) {
+export default function CrewPermissions({ onBack, onPermissionsChanged }: CrewPermissionsProps) {
   const [crewId, setCrewId] = useState<number | null>(null);
   const [members, setMembers] = useState<CrewMemberAccess[]>([]);
   const [loading, setLoading] = useState(true);
@@ -57,6 +58,7 @@ export default function CrewPermissions({ onBack }: CrewPermissionsProps) {
       setMembers((current) => current.map((item) => item.accountId === member.accountId
         ? { ...item, eventManager: !item.eventManager }
         : item));
+      onPermissionsChanged?.();
     } catch {
       setError('이벤트 그룹 매니저 권한을 변경할 수 없습니다. 계정 권한을 확인해 주세요.');
     } finally {
@@ -80,6 +82,7 @@ export default function CrewPermissions({ onBack }: CrewPermissionsProps) {
             crewRole: item.crewRole === 'CREW_MANAGER' ? 'CREW_MEMBER' : 'CREW_MANAGER',
           }
         : item));
+      onPermissionsChanged?.();
     } catch {
       setError('크루 매니저 권한을 변경할 수 없습니다. 계정 권한을 확인해 주세요.');
     } finally {

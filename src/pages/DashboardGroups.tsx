@@ -7,12 +7,14 @@ import boardBuddyLogo from '../assets/boardbuddy-logo.png';
 import { eventGroupRoleLabel } from '../constants/displayLabels';
 
 interface DashboardGroupsProps {
+    canCreate: boolean;
     onBackToHomeClick: () => void;
     onPartiesClick: () => void;
     onViewGroupDetailClick: (groupId: number) => void;
 }
 
 export default function DashboardGroups({
+    canCreate,
     onBackToHomeClick,
     onPartiesClick,
     onViewGroupDetailClick
@@ -127,13 +129,15 @@ export default function DashboardGroups({
                     </div>
                 </div>
                 <div className="flex items-center gap-3">
-                    <Button
-                        variant="primary"
-                        onClick={() => setIsCreateOpen(true)}
-                        className="bg-[#162660] text-white border-none rounded-full h-10 py-0 font-bold flex items-center gap-1.5"
-                    >
-                        <Plus className="w-4 h-4" /> 그룹 만들기
-                    </Button>
+                    {canCreate && (
+                        <Button
+                            variant="primary"
+                            onClick={() => setIsCreateOpen(true)}
+                            className="bg-[#162660] text-white border-none rounded-full h-10 py-0 font-bold flex items-center gap-1.5"
+                        >
+                            <Plus className="w-4 h-4" /> 그룹 만들기
+                        </Button>
+                    )}
                     <Button
                         variant="outline"
                         onClick={onBackToHomeClick}
@@ -245,7 +249,7 @@ export default function DashboardGroups({
                 </div>
             </main>
 
-            {isCreateOpen && (
+            {canCreate && isCreateOpen && (
                 <div className="fixed inset-0 bg-black/30 z-[9999] flex items-center justify-center p-4">
                     <form onSubmit={handleCreateGroup} className="bg-white border border-zinc-200 rounded-2xl w-full max-w-md p-6 shadow-2xl space-y-5">
                         <div className="flex items-center justify-between">

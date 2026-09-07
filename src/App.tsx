@@ -670,7 +670,12 @@ function App() {
       case 'signup_audit':
         return <SignupAudit onBack={() => setCurrentView('home')} />;
       case 'crew_permissions':
-        return <CrewPermissions onBack={() => setCurrentView('operations_center')} />;
+        return (
+          <CrewPermissions
+            onBack={() => setCurrentView('operations_center')}
+            onPermissionsChanged={() => setManagementRefreshKey(key => key + 1)}
+          />
+        );
       case 'notifications':
         return <Notifications onBack={() => setCurrentView(notificationReturnView)} onChanged={() => setNotificationRefreshKey(key => key + 1)} />;
       case 'parties':
@@ -679,7 +684,7 @@ function App() {
             onBack={() => setCurrentView('home')}
             onEventClick={(id) => openEventDetail(id)}
             onCreateClick={() => setCurrentView('dashboard_event_new')}
-            canCreate={canManage && isDesktop}
+            canCreate={operationPermissions.includes('PARTIES_CREATE') && isDesktop}
           />
         );
       case 'event_detail':
@@ -734,6 +739,7 @@ function App() {
       case 'dashboard_groups':
         return (
           <DashboardGroups
+            canCreate={operationPermissions.includes('EVENT_GROUPS_CREATE')}
             onBackToHomeClick={() => setCurrentView('home')}
             onPartiesClick={() => setCurrentView('dashboard_parties')}
             onViewGroupDetailClick={(id) => {
