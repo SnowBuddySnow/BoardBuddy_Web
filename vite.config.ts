@@ -14,6 +14,12 @@ export default defineConfig(({ mode }) => {
   if (env.VERCEL === '1' && !env.VITE_API_BASE_URL.startsWith('https://')) {
     throw new Error('VITE_API_BASE_URL must use HTTPS on Vercel')
   }
+  if (env.VITE_GLITCHTIP_DSN && !env.VITE_GLITCHTIP_DSN.startsWith('https://')) {
+    throw new Error('VITE_GLITCHTIP_DSN must use HTTPS')
+  }
+  if (env.VITE_GLITCHTIP_DSN && !['staging', 'production'].includes(env.VITE_OBSERVABILITY_ENVIRONMENT)) {
+    throw new Error('VITE_OBSERVABILITY_ENVIRONMENT must be staging or production when GlitchTip is enabled')
+  }
 
   const buildSha = env.VERCEL_GIT_COMMIT_SHA || env.VITE_BUILD_SHA
   const buildVersion = buildSha
