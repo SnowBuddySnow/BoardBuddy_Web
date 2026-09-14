@@ -9,6 +9,7 @@ import {
     requestSchoolEmailVerification,
     type SchoolEmailVerificationStatus,
 } from '../services/schoolEmailVerification';
+import { SCHOOL_EMAIL_AUTH_AVAILABLE } from '../config/features';
 
 interface StudentVerificationProps {
     onDone: () => void;
@@ -29,6 +30,10 @@ export default function StudentVerification({ onDone }: StudentVerificationProps
     useEffect(() => {
         let cancelled = false;
         const load = async () => {
+            if (!SCHOOL_EMAIL_AUTH_AVAILABLE) {
+                setLoading(false);
+                return;
+            }
             try {
                 if (token) {
                     await activateSchoolEmailLink(token);
@@ -107,6 +112,25 @@ export default function StudentVerification({ onDone }: StudentVerificationProps
                     <p className="mt-3 text-sm leading-6 text-zinc-500">선택한 학교의 인증된 학생으로 등록되었습니다.</p>
                     <Button fullWidth onClick={onDone} className="mt-7 h-12 rounded-2xl border-[#162660] bg-[#162660] font-black">
                         계속하기
+                    </Button>
+                </main>
+            </div>
+        );
+    }
+
+    if (!SCHOOL_EMAIL_AUTH_AVAILABLE) {
+        return (
+            <div className="flex h-full overflow-y-auto bg-[#F5F4F0] px-5 py-8">
+                <main className="m-auto w-full max-w-lg rounded-[2rem] border border-amber-200 bg-white p-8 text-center shadow-xl">
+                    <span className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-amber-100 text-amber-700">
+                        <MailCheckIcon className="h-8 w-8" />
+                    </span>
+                    <h1 className="mt-5 text-2xl font-black text-zinc-950">학교 이메일 인증 준비 중</h1>
+                    <p className="mt-3 text-sm leading-6 text-zinc-500">
+                        학교 이메일 인증은 아직 사용할 수 없습니다. 인증 없이도 가입과 기본 서비스 이용을 계속할 수 있습니다.
+                    </p>
+                    <Button fullWidth onClick={onDone} className="mt-7 h-12 rounded-2xl border-[#162660] bg-[#162660] font-black">
+                        서비스로 돌아가기
                     </Button>
                 </main>
             </div>

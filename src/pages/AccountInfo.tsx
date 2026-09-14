@@ -7,6 +7,7 @@ import { UserDetail } from '../types/api';
 import { APP_VERSION, COPYRIGHT_TEXT } from '../version';
 import { clearAuthSession } from '../lib/session';
 import { isCrewCaptainRole } from '../constants/crewRole';
+import { SCHOOL_EMAIL_AUTH_AVAILABLE } from '../config/features';
 
 interface AccountInfoProps {
     onBack: () => void;
@@ -126,13 +127,15 @@ export default function AccountInfo({ onBack, onStudentVerificationClick }: Acco
                                         <div className="text-xs text-zinc-500 mb-1">학생 인증</div>
                                         <div className="flex items-center justify-between gap-3">
                                             <div className="text-base font-medium">
-                                                {userInfo.universityVerificationStatus === 'VERIFIED'
+                                                {!SCHOOL_EMAIL_AUTH_AVAILABLE
+                                                    ? '학교 이메일 인증 준비 중'
+                                                    : userInfo.universityVerificationStatus === 'VERIFIED'
                                                     ? '인증 완료'
                                                     : userInfo.universityVerificationStatus === 'PENDING'
                                                         ? '이메일 확인 대기 중'
                                                         : '미인증'}
                                             </div>
-                                            {userInfo.universityVerificationStatus !== 'VERIFIED' && onStudentVerificationClick && (
+                                            {SCHOOL_EMAIL_AUTH_AVAILABLE && userInfo.universityVerificationStatus !== 'VERIFIED' && onStudentVerificationClick && (
                                                 <button
                                                     type="button"
                                                     onClick={onStudentVerificationClick}
@@ -247,13 +250,13 @@ export default function AccountInfo({ onBack, onStudentVerificationClick }: Acco
                         type="button"
                         disabled={actionBusy !== null}
                         onClick={async () => {
-                            if (!confirm('정말 회원 탈퇴를 하시겠습니까?\n탈퇴 처리 후 계정으로 다시 로그인할 수 없습니다. 먼저 개인정보를 내려받는 것을 권장합니다.')) return;
+                            if (!confirm('정말 회원 탈퇴를 하시겠습니까?\n현재 탈퇴는 계정을 비활성화하며, 같은 카카오 계정으로 다시 로그인하면 계정이 복구됩니다. 먼저 개인정보를 내려받는 것을 권장합니다.')) return;
                             setActionBusy('delete');
                             setActionError('');
                             try {
                                 await deleteAccount();
                                 clearAuthSession();
-                                alert('회원 탈퇴가 완료되었습니다.');
+                                alert('계정이 비활성화되었습니다. 같은 카카오 계정으로 다시 로그인하면 복구할 수 있습니다.');
                                 window.location.href = '/';
                             } catch (error) {
                                 console.error('회원 탈퇴 실패:', error);
