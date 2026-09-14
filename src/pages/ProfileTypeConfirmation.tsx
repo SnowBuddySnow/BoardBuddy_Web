@@ -4,6 +4,7 @@ import { Button } from '../components/Button';
 import { getSchools, type SchoolOption } from '../services/schools';
 import { confirmProfileType, getUserInfo } from '../services/user';
 import { getApiErrorMessage } from '../lib/apiError';
+import { SCHOOL_EMAIL_AUTH_AVAILABLE } from '../config/features';
 
 interface ProfileTypeConfirmationProps {
     onSuccess: (requiresStudentVerification?: boolean) => void;
@@ -109,7 +110,7 @@ export default function ProfileTypeConfirmation({ onSuccess }: ProfileTypeConfir
             setError('동명이인을 구분할 수 있도록 학번을 입력해주세요.');
             return;
         }
-        if (selection === 'STUDENT' && selectedSchool && selectedSchool.emailDomains.length > 0) {
+        if (SCHOOL_EMAIL_AUTH_AVAILABLE && selection === 'STUDENT' && selectedSchool && selectedSchool.emailDomains.length > 0) {
             const normalizedEmail = schoolEmail.trim().toLowerCase();
             const emailDomain = normalizedEmail.split('@').pop() || '';
             const domainMatches = selectedSchool.emailDomains.some(domain => (
@@ -127,11 +128,11 @@ export default function ProfileTypeConfirmation({ onSuccess }: ProfileTypeConfir
             const result = await confirmProfileType({
                 userType: selection === 'STUDENT' ? 'KUSBF' : 'REGULAR',
                 displayName: selection === 'STUDENT' ? realName.trim() : undefined,
-                email: selection === 'STUDENT' ? schoolEmail.trim() || undefined : undefined,
+                email: selection === 'STUDENT' && SCHOOL_EMAIL_AUTH_AVAILABLE ? schoolEmail.trim() || undefined : undefined,
                 schoolId: selection === 'STUDENT' ? selectedSchool?.id : undefined,
                 studentNumber: selection === 'STUDENT' ? studentNumber.trim() : undefined,
             });
-            onSuccess(result.universityVerificationStatus === 'PENDING');
+            onSuccess(SCHOOL_EMAIL_AUTH_AVAILABLE && result.universityVerificationStatus === 'PENDING');
         } catch (requestError: unknown) {
             setError(getApiErrorMessage(requestError) || '프로필 유형을 저장하지 못했습니다.');
         } finally {
@@ -259,20 +260,20 @@ export default function ProfileTypeConfirmation({ onSuccess }: ProfileTypeConfir
                         </div>
                         <div className="sm:col-span-2">
                             <label className="ml-1 text-sm font-bold text-zinc-800">
-                                학교 이메일
-                                {selectedSchool?.emailDomains.length ? '' : ' (선택)'}
+                                학교 이메일 (준비 중)
                             </label>
                             <input
                                 type="email"
                                 value={schoolEmail}
                                 onChange={event => setSchoolEmail(event.target.value)}
+                                disabled={!SCHOOL_EMAIL_AUTH_AVAILABLE}
                                 maxLength={150}
-                                placeholder={selectedSchool?.emailDomains[0] ? `name@${selectedSchool.emailDomains[0]}` : 'name@example.com'}
+                                placeholder="아직 사용할 수 없습니다"
                                 autoComplete="email"
-                                className="mt-2 h-12 w-full rounded-2xl border border-zinc-200 px-4 text-sm outline-none focus:border-[#162660] focus:ring-2 focus:ring-[#162660]/10"
+                                className="mt-2 h-12 w-full rounded-2xl border border-zinc-200 px-4 text-sm outline-none focus:border-[#162660] focus:ring-2 focus:ring-[#162660]/10 disabled:bg-zinc-100 disabled:text-zinc-400"
                             />
                             <p className="ml-1 mt-2 text-xs leading-5 text-zinc-500">
-                                인증번호와 활성화 링크를 같은 이메일로 보내드립니다.
+                                학교 이메일 인증은 아직 준비 중입니다. 이메일 없이 학생 프로필을 등록할 수 있습니다.
                             </p>
                         </div>
                     </div>

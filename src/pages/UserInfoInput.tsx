@@ -14,6 +14,7 @@ import {
 import { confirmPhoneVerification, requestPhoneVerification } from '../services/phoneVerification';
 import { getSchools, type SchoolOption } from '../services/schools';
 import { getApiErrorMessage, getApiErrorStatus } from '../lib/apiError';
+import { SCHOOL_EMAIL_AUTH_AVAILABLE } from '../config/features';
 
 interface UserInfoInputProps {
     onBack: () => void;
@@ -48,7 +49,7 @@ const TERMS_CONTENT = {
 - 서비스 오류 발생 시 공지 및 대응
 
 2. 개인정보 수집 항목
-- 성명 또는 닉네임, 성별, 휴대전화번호, 이메일(일반 프로필은 선택, 학교 이메일 인증을 사용하는 학생 프로필은 필수)
+- 성명 또는 닉네임, 성별, 휴대전화번호, 이메일(선택, 학교 이메일 인증 기능은 현재 준비 중)
 - 학생 프로필의 경우 학교, 학번(필수)
 
 3. 개인정보 제3자 제공 동의 (휴대전화번호 제공)
@@ -278,7 +279,7 @@ export default function UserInfoInput({ onBack, onSuccess }: UserInfoInputProps)
 
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         if (email && !emailRegex.test(email)) { alert('이메일 형식이 올바르지 않습니다.'); return; }
-        if (profileType === 'STUDENT' && selectedSchool && selectedSchool.emailDomains.length > 0) {
+        if (SCHOOL_EMAIL_AUTH_AVAILABLE && profileType === 'STUDENT' && selectedSchool && selectedSchool.emailDomains.length > 0) {
             if (!email.trim()) {
                 alert('학생 인증을 위해 학교 이메일을 입력해주세요.');
                 return;
@@ -318,7 +319,7 @@ export default function UserInfoInput({ onBack, onSuccess }: UserInfoInputProps)
             const response = await apiClient.put(`/accounts/${accountId}/profile`, {
                 userType: profileType === 'STUDENT' ? 'KUSBF' : 'REGULAR',
                 displayName: name.trim(),
-                email: email.trim() || undefined,
+                email: profileType === 'STUDENT' && !SCHOOL_EMAIL_AUTH_AVAILABLE ? undefined : email.trim() || undefined,
                 schoolId: profileType === 'STUDENT' ? selectedSchool?.id : undefined,
                 studentNumber: profileType === 'STUDENT' ? studentNumber.trim() : undefined,
                 gender: gender === 'male' ? 'MALE' : 'FEMALE',
@@ -347,7 +348,7 @@ export default function UserInfoInput({ onBack, onSuccess }: UserInfoInputProps)
                 }
 
                 if (onSuccess) {
-                    onSuccess(completedProfile.universityVerificationStatus === 'PENDING');
+                    onSuccess(SCHOOL_EMAIL_AUTH_AVAILABLE && completedProfile.universityVerificationStatus === 'PENDING');
                 } else {
                     onBack();
                 }
@@ -451,17 +452,25 @@ export default function UserInfoInput({ onBack, onSuccess }: UserInfoInputProps)
                         <div className="space-y-2">
                             <label className="text-sm font-bold text-zinc-800 ml-1">
                                 이메일 <span className="font-normal text-zinc-500">
-                                    {profileType === 'STUDENT' && schools.find(option => option.name === school)?.emailDomains.length
-                                        ? '(학교 인증용)' : '(선택)'}
+                                    {profileType === 'STUDENT' && !SCHOOL_EMAIL_AUTH_AVAILABLE
+                                        ? '(학교 인증 준비 중)'
+                                        : profileType === 'STUDENT' && schools.find(option => option.name === school)?.emailDomains.length
+                                            ? '(학교 인증용)' : '(선택)'}
                                 </span>
                             </label>
                             <input
                                 type="email"
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
-                                className="w-full h-12 rounded-[16px] border-none px-4 text-zinc-900 focus:ring-2 focus:ring-blue-400 outline-none shadow-sm bg-white"
-                                placeholder="name@example.com"
+                                disabled={profileType === 'STUDENT' && !SCHOOL_EMAIL_AUTH_AVAILABLE}
+                                className="w-full h-12 rounded-[16px] border-none px-4 text-zinc-900 focus:ring-2 focus:ring-blue-400 outline-none shadow-sm bg-white disabled:bg-zinc-100 disabled:text-zinc-400"
+                                placeholder={profileType === 'STUDENT' && !SCHOOL_EMAIL_AUTH_AVAILABLE ? '아직 사용할 수 없습니다' : 'name@example.com'}
                             />
+                            {profileType === 'STUDENT' && !SCHOOL_EMAIL_AUTH_AVAILABLE && (
+                                <p className="ml-1 text-xs font-semibold leading-5 text-amber-700">
+                                    학교 이메일 인증은 아직 준비 중입니다. 이메일 없이 가입할 수 있습니다.
+                                </p>
+                            )}
                         </div>
 
                         {profileType === 'STUDENT' && (
