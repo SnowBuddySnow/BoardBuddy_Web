@@ -162,6 +162,7 @@ const tabViews: Record<Tab, View> = {
 };
 
 const viewsWithoutBottomNav: View[] = [
+  'event_detail',
   'login',
   'user_info',
   'profile_type_confirmation',

@@ -34,6 +34,8 @@ import {
 import { getApiErrorMessage, getApiErrorStatus } from '../lib/apiError';
 import { PlanningModeBadge } from '../components/event/PlanningModeBadge';
 import { getEventActivityLabel } from '../constants/eventActivity';
+import { EVENT_TIME_ZONE, parseEventDateTime } from '../lib/eventDateTime';
+import { getConsentPendingCopy, getConsentSubmissionMessage } from '../lib/eventRegistration';
 import { ConsentResponseField } from '../components/event/ConsentResponseField';
 import {
     getConsentResponseError,
@@ -67,11 +69,11 @@ export default function EventDetail({ eventId, onBack, isGuestApplication = fals
     const latestDraftPayloadRef = useRef<ConsentResponseInput[]>([]);
     const draftSaveQueueRef = useRef<Promise<unknown>>(Promise.resolve());
 
-    const fetchEventDetail = async () => {
+    const fetchEventDetail = async (knownEvent?: Event) => {
         try {
             setLoading(true);
             setErrorMsg(null);
-            const data = await getEvent(eventId);
+            const data = knownEvent ?? await getEvent(eventId);
             setEvent(data);
             setConsentState(null);
             setDraftHydrated(false);
@@ -190,9 +192,19 @@ export default function EventDetail({ eventId, onBack, isGuestApplication = fals
 
     useEffect(() => {
         if (!event?.applicationStartsAt) return;
-        const delay = new Date(event.applicationStartsAt).getTime() - Date.now();
-        if (delay <= 0) return;
-        const timeoutId = window.setTimeout(() => setCurrentTime(Date.now()), delay + 100);
+        const opensAt = parseEventDateTime(event.applicationStartsAt).getTime();
+        if (!Number.isFinite(opensAt)) return;
+        let timeoutId: number;
+        const refreshAtOpening = () => {
+            const remaining = opensAt - Date.now();
+            if (remaining <= 0) {
+                setCurrentTime(Date.now());
+                return;
+            }
+            // Longer timers overflow in browsers; recheck until the actual opening time.
+            timeoutId = window.setTimeout(refreshAtOpening, Math.min(remaining + 100, 2_147_483_647));
+        };
+        refreshAtOpening();
         return () => window.clearTimeout(timeoutId);
     }, [event?.applicationStartsAt]);
 
@@ -215,7 +227,7 @@ export default function EventDetail({ eventId, onBack, isGuestApplication = fals
             setActionLoading(true);
             const participant = await joinEvent(event.id);
             if (participant.status === 'CONSENT_PENDING') {
-                alert('자리가 임시 확보되었습니다. 제한시간 내 동의서를 작성해 주세요.');
+                alert(getConsentPendingCopy(event.joinPolicy).alert);
             } else {
                 alert(event.joinPolicy === 'APPROVAL_REQUIRED' ? '게스트 참여 신청이 대기 상태로 접수되었습니다.' : '게스트 참여가 접수되었습니다.');
             }
@@ -293,7 +305,7 @@ export default function EventDetail({ eventId, onBack, isGuestApplication = fals
 
         try {
             setConsentSubmitting(true);
-            await submitEventConsents(event.id, consentState.items.map(item => ({
+            const submitted = await submitEventConsents(event.id, consentState.items.map(item => ({
                 consentItemId: item.id,
                 documentVersion: item.documentVersion,
                 contentHash: item.contentHash,
@@ -306,25 +318,41 @@ export default function EventDetail({ eventId, onBack, isGuestApplication = fals
             })));
             setDraftHydrated(false);
             setDraftSaveState('idle');
-            alert('응답 시트가 한 번에 제출되어 참가가 확정되었습니다.');
+            latestDraftPayloadRef.current = [];
+            alert(getConsentSubmissionMessage(submitted.participantStatus));
             await fetchEventDetail();
         } catch (error: unknown) {
             console.error('Failed to submit event consents:', error);
             alert(getApiErrorMessage(error) || (error instanceof Error ? error.message : '동의서 제출에 실패했습니다.'));
+            if (getApiErrorStatus(error) === 400) {
+                try {
+                    // Expiry may commit cancellation while returning 400. Keep unsaved answers for
+                    // ordinary validation failures, but never keep claiming a cancelled held seat.
+                    const latest = await getEvent(eventId);
+                    if (latest.currentUserStatus !== 'CONSENT_PENDING') {
+                        setDraftHydrated(false);
+                        latestDraftPayloadRef.current = [];
+                        await fetchEventDetail(latest);
+                    }
+                } catch (refreshError) {
+                    console.error('Failed to reconcile event participation:', refreshError);
+                }
+            }
         } finally {
             setConsentSubmitting(false);
         }
     };
 
     const formatDate = (dateStr: string) => {
-        const d = new Date(dateStr);
+        const d = parseEventDateTime(dateStr);
         const options: Intl.DateTimeFormatOptions = {
             month: 'long',
             day: 'numeric',
             weekday: 'short',
             hour: '2-digit',
             minute: '2-digit',
-            hour12: false
+            hour12: false,
+            timeZone: EVENT_TIME_ZONE,
         };
         return d.toLocaleDateString('ko-KR', options);
     };
@@ -363,13 +391,14 @@ export default function EventDetail({ eventId, onBack, isGuestApplication = fals
     const hasJoined = event.currentUserStatus === 'JOINED';
     const isPending = event.currentUserStatus === 'PENDING';
     const isConsentPending = event.currentUserStatus === 'CONSENT_PENDING';
+    const consentCopy = getConsentPendingCopy(event.joinPolicy);
     const requiredConsentItems = consentState?.items.filter(item => item.required) || [];
     const completedRequiredItems = requiredConsentItems.filter(item => (
         isConsentItemComplete(item, consentAnswers[item.id])
     )).length;
     const applicationNotOpen = Boolean(
         event.applicationStartsAt
-        && new Date(event.applicationStartsAt).getTime() > currentTime,
+        && parseEventDateTime(event.applicationStartsAt).getTime() > currentTime,
     );
 
     return (
@@ -379,6 +408,7 @@ export default function EventDetail({ eventId, onBack, isGuestApplication = fals
                 <Button
                     variant="ghost"
                     onClick={onBack}
+                    aria-label="돌아가기"
                     className="p-2 bg-white/95 dark:bg-zinc-900/95 shadow-sm rounded-full text-zinc-800 shrink-0"
                 >
                     <ChevronLeft className="w-5 h-5" />
@@ -633,7 +663,7 @@ export default function EventDetail({ eventId, onBack, isGuestApplication = fals
                                     disabled={consentSubmitting}
                                     className="h-12 w-full rounded-xl bg-[#162660] font-black text-white shadow-sm"
                                 >
-                                    {consentSubmitting ? '한 번에 제출 중...' : '전체 응답 제출하고 참가 확정'}
+                                    {consentSubmitting ? '한 번에 제출 중...' : consentCopy.submitLabel}
                                 </Button>
                             </div>
                         </div>
@@ -659,7 +689,7 @@ export default function EventDetail({ eventId, onBack, isGuestApplication = fals
                                     <h3 className="text-sm font-bold text-zinc-900">입금 안내</h3>
                                 </div>
                                 <span className="rounded-full bg-amber-50 px-2.5 py-1 text-[10px] font-black text-amber-700">
-                                    입금 확인 대기
+                                    입금 정보
                                 </span>
                             </div>
                             <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-4">
@@ -759,7 +789,7 @@ export default function EventDetail({ eventId, onBack, isGuestApplication = fals
                     <div className="flex flex-col gap-2">
                         <div className="flex items-center justify-center gap-1.5 rounded-2xl border border-amber-100 bg-amber-50 py-2 text-xs font-bold text-amber-700">
                             <ShieldCheck className="h-4 w-4 shrink-0" />
-                            <span>동의서 작성 대기 · 자리가 임시 확보되었습니다.</span>
+                            <span>{consentCopy.notice}</span>
                         </div>
                         <Button
                             variant="danger"
