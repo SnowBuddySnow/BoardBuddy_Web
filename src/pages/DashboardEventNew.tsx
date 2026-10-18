@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Button } from '../components/Button';
-import { configureEventConsents, configureEventRefundPolicy, createEvent } from '../services/event';
+import { EventSaveError, saveEventConfiguration } from '../services/eventSave';
 import { listOrganizerGroups } from '../services/organizerGroup';
 import { ConsentConfigurationInput, JoinPolicy, OrganizerGroup, EventPlanningMode, VisibilityType } from '../types/api';
 import { PlanningModeSelector } from '../components/event/PlanningModeSelector';
@@ -23,6 +23,11 @@ export default function DashboardEventNew({ onBack, onSuccess }: DashboardEventN
     const [groups, setGroups] = useState<OrganizerGroup[]>([]);
     const [groupsLoading, setGroupsLoading] = useState(true);
     const [submitLoading, setSubmitLoading] = useState(false);
+    const submitting = useRef(false);
+    const createdDraftId = useRef<number | null>(null);
+    const [recoveryDraftId, setRecoveryDraftId] = useState<number | null>(null);
+    const [saveError, setSaveError] = useState('');
+    const [needsReconciliation, setNeedsReconciliation] = useState(false);
 
     // Form states
     const [title, setTitle] = useState('');
@@ -89,6 +94,7 @@ export default function DashboardEventNew({ onBack, onSuccess }: DashboardEventN
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        if (submitting.current || needsReconciliation) return;
 
         if (!title.trim()) return alert('제목을 입력하세요.');
         if (!startsAt) return alert('시작 일시를 설정하세요.');
@@ -112,7 +118,9 @@ export default function DashboardEventNew({ onBack, onSuccess }: DashboardEventN
             : applicationStartsAt;
 
         try {
+            submitting.current = true;
             setSubmitLoading(true);
+            setSaveError('');
             const payload = {
                 title,
                 description: description || undefined,
@@ -133,24 +141,30 @@ export default function DashboardEventNew({ onBack, onSuccess }: DashboardEventN
                 organizerGroupId: Number(organizerGroupId)
             };
 
-            const newEvent = await createEvent(payload);
-            await Promise.all([
-                configureEventConsents(newEvent.id, consentConfiguration),
-                configureEventRefundPolicy(newEvent.id, refundPolicy.trim() || null),
-            ]);
+            const configuration = { payload, consentConfiguration, refundPolicy };
+            const eventId = await saveEventConfiguration(createdDraftId.current == null
+                ? { ...configuration, onCreated: id => { createdDraftId.current = id; setRecoveryDraftId(id); } }
+                : { ...configuration, eventId: createdDraftId.current });
             alert('이벤트가 DRAFT 상태로 정상 개설되었습니다. 등록을 진행하려면 목록이나 상세조회에서 "오픈"을 클릭하세요.');
-            onSuccess(newEvent.id);
+            onSuccess(eventId);
         } catch (error: unknown) {
             console.error('Failed to create event:', error);
-            const apiMessage = getApiErrorMessage(error);
-            if (getApiErrorStatus(error) === 403) {
-                alert('이 이벤트를 관리할 권한이 없습니다.');
-            } else if (apiMessage) {
-                alert(apiMessage);
+            const cause = error instanceof EventSaveError ? error.originalError : error;
+            const status = getApiErrorStatus(cause);
+            const message = status === 403 ? '이 이벤트를 관리할 권한이 없습니다.'
+                : status === 409 ? '다른 요청과 충돌했습니다. 저장된 초안을 확인한 후 다시 수정해 주세요.'
+                    : getApiErrorMessage(cause) || '이벤트 저장에 실패했습니다.';
+            if (createdDraftId.current != null) {
+                setSaveError(`초안 #${createdDraftId.current}은 이미 생성되었으며 일부 정보가 저장되었을 수 있습니다. ${message} 다시 저장하면 같은 초안을 수정합니다. 새로고침하거나 나가기 전 입력 내용을 보관해 주세요.`);
+            } else if (status == null || status >= 500) {
+                // The POST may have committed even when its response was lost. Never blindly retry it.
+                setNeedsReconciliation(true);
+                setSaveError('생성 결과를 확인할 수 없습니다. 중복 생성을 막기 위해 다시 생성하지 않습니다. 먼저 목록에서 저장된 초안이 있는지 확인해 주세요.');
             } else {
-                alert('이벤트 등록에 실패했습니다.');
+                setSaveError(message);
             }
         } finally {
+            submitting.current = false;
             setSubmitLoading(false);
         }
     };
@@ -160,7 +174,7 @@ export default function DashboardEventNew({ onBack, onSuccess }: DashboardEventN
             {/* Header */}
             <header className="bg-white border-b border-zinc-100 px-6 py-4 flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                    <Button variant="ghost" onClick={onBack} className="-ml-2 gap-1 text-zinc-600 hover:bg-transparent">
+                    <Button variant="ghost" onClick={onBack} disabled={submitLoading} className="-ml-2 gap-1 text-zinc-600 hover:bg-transparent">
                         <ChevronLeft className="w-5 h-5" />
                     </Button>
                     <h1 className="text-lg font-bold text-zinc-900">새 이벤트 만들기</h1>
@@ -170,6 +184,15 @@ export default function DashboardEventNew({ onBack, onSuccess }: DashboardEventN
 
             {/* Form */}
             <main className="flex-1 overflow-y-auto p-6 max-w-3xl w-full mx-auto">
+                {saveError && (
+                    <div role="alert" className="mb-4 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+                        <p>{saveError}</p>
+                        <Button type="button" variant="ghost" disabled={submitLoading}
+                            onClick={() => recoveryDraftId == null ? onBack() : onSuccess(recoveryDraftId)}>
+                            {recoveryDraftId == null ? '목록에서 확인' : `저장된 초안 #${recoveryDraftId} 확인`}
+                        </Button>
+                    </div>
+                )}
                 {groupsLoading ? (
                     <div className="flex flex-col items-center justify-center py-20 text-zinc-500">
                         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#162660] mb-3"></div>
@@ -188,6 +211,7 @@ export default function DashboardEventNew({ onBack, onSuccess }: DashboardEventN
                     </div>
                 ) : (
                     <form onSubmit={handleSubmit} className="bg-white border border-zinc-100 rounded-3xl p-6 shadow-sm space-y-6">
+                        <fieldset disabled={submitLoading || needsReconciliation} className="contents">
                         <PlanningModeSelector value={planningMode} onChange={handlePlanningModeChange} />
                         {/* Organizer Group Selection */}
                         <div className="space-y-1.5">
@@ -417,13 +441,14 @@ export default function DashboardEventNew({ onBack, onSuccess }: DashboardEventN
                             <Button
                                 type="submit"
                                 variant="primary"
-                                disabled={submitLoading}
+                                disabled={submitLoading || needsReconciliation}
                                 className="bg-[#162660] hover:bg-[#1e3a8a] text-white border-none rounded-full px-6 font-bold flex items-center gap-1.5 shadow-sm"
                             >
                                 <Save className="w-4 h-4" />
-                                {submitLoading ? '생성 중...' : 'DRAFT 저장하기'}
+                                {submitLoading ? '저장 중...' : recoveryDraftId == null ? 'DRAFT 저장하기' : `초안 #${recoveryDraftId} 다시 저장`}
                             </Button>
                         </div>
+                        </fieldset>
                     </form>
                 )}
             </main>

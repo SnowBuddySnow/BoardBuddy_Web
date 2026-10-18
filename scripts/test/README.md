@@ -1,5 +1,22 @@
 # Local event browser scenarios
 
+## Host configuration regressions — 2026-10-18
+
+`pnpm test` also runs `DashboardEventSave.test.tsx` in jsdom with the real create/edit components,
+editors, service orchestration and a synthetic HTTP boundary (no browser login or live API).
+Eight cases cover sequential consent/refund writes, duplicate-submit suppression, partial failure
+at either configuration stage, same-DRAFT retry, ambiguous POST reconciliation, ordinary validation
+retry and edit-conflict input preservation. `eventSave.test.ts` adds seven transport-level cases.
+jsdom is development-only. These checks do not replace deployed authenticated acceptance.
+
+The save workflow is intentionally **not a single atomic server transaction**. It serializes three
+commits, retains a returned DRAFT ID in the current page, and reports partial saves honestly.
+After leaving/reloading, use the event list and edit the saved DRAFT; do not recreate it. When the
+initial POST response is ambiguous, the form blocks blind recreation and asks for list inspection.
+Backend optimistic locking remains enabled; separate editing sessions can receive HTTP 409.
+
+## Participant browser fixtures
+
 These CLI-driven checks render the actual app with a **synthetic HTTP boundary**. They are not
 staging acceptance, real backend authorization/locking tests, OAuth login, email/SMS or payments.
 Do not load real credentials into these sessions or point the fixture at a deployed API.
