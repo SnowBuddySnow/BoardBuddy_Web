@@ -208,7 +208,7 @@ export default function DashboardEventEdit({ eventId, onBack, onSuccess }: Dashb
                     </div>
                 ) : (
                     <form onSubmit={handleSubmit} className="bg-white border border-zinc-100 rounded-3xl p-6 shadow-sm space-y-6">
-                        <fieldset disabled={submitLoading} className="contents">
+                        <fieldset disabled={submitLoading} className="min-w-0 space-y-6">
                         <PlanningModeSelector value={planningMode} onChange={setPlanningMode} />
                         {/* Organizer Group Selection */}
                         <div className="space-y-1.5">
