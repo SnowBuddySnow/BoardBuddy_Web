@@ -1,13 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Button } from '../components/Button';
 import {
-    configureEventConsents,
-    configureEventRefundPolicy,
     getEventConsentConfiguration,
     getEventDashboard,
     getDashboardEventRefundPolicy,
-    updateEvent,
 } from '../services/event';
+import { EventSaveError, saveEventConfiguration } from '../services/eventSave';
 import { listOrganizerGroups } from '../services/organizerGroup';
 import { ConsentConfigurationInput, JoinPolicy, OrganizerGroup, EventPlanningMode, EventStatus, VisibilityType } from '../types/api';
 import { PlanningModeSelector } from '../components/event/PlanningModeSelector';
@@ -29,6 +27,8 @@ export default function DashboardEventEdit({ eventId, onBack, onSuccess }: Dashb
     const [groups, setGroups] = useState<OrganizerGroup[]>([]);
     const [loading, setLoading] = useState(true);
     const [submitLoading, setSubmitLoading] = useState(false);
+    const submitting = useRef(false);
+    const [saveError, setSaveError] = useState('');
 
     // Form states
     const [title, setTitle] = useState('');
@@ -121,6 +121,7 @@ export default function DashboardEventEdit({ eventId, onBack, onSuccess }: Dashb
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        if (submitting.current) return;
 
         if (!title.trim()) return alert('제목을 입력하세요.');
         if (!startsAt) return alert('시작 일시를 설정하세요.');
@@ -143,7 +144,9 @@ export default function DashboardEventEdit({ eventId, onBack, onSuccess }: Dashb
             : applicationStartsAt;
 
         try {
+            submitting.current = true;
             setSubmitLoading(true);
+            setSaveError('');
             const payload = {
                 title,
                 description: description || undefined,
@@ -165,24 +168,19 @@ export default function DashboardEventEdit({ eventId, onBack, onSuccess }: Dashb
                 status
             };
 
-            await updateEvent(eventId, payload);
-            await Promise.all([
-                configureEventConsents(eventId, consentConfiguration),
-                configureEventRefundPolicy(eventId, refundPolicy.trim() || null),
-            ]);
+            await saveEventConfiguration({ eventId, payload, consentConfiguration, refundPolicy });
             alert('이벤트 정보가 성공적으로 수정되었습니다.');
             onSuccess();
         } catch (error: unknown) {
             console.error('Failed to update event:', error);
-            const apiMessage = getApiErrorMessage(error);
-            if (getApiErrorStatus(error) === 403) {
-                alert('이 이벤트를 관리할 권한이 없습니다.');
-            } else if (apiMessage) {
-                alert(apiMessage);
-            } else {
-                alert('이벤트 정보 수정에 실패했습니다.');
-            }
+            const cause = error instanceof EventSaveError ? error.originalError : error;
+            const status = getApiErrorStatus(cause);
+            const message = status === 403 ? '이 이벤트를 관리할 권한이 없습니다.'
+                : status === 409 ? '다른 요청과 충돌했습니다. 저장된 정보를 확인한 후 다시 수정해 주세요.'
+                    : getApiErrorMessage(cause) || '이벤트 정보 수정에 실패했습니다.';
+            setSaveError(`${message} 일부 변경 사항이 이미 저장되었을 수 있습니다. 현재 입력은 유지됩니다. 나가기 전 입력 내용을 보관하고 저장된 정보를 확인해 주세요.`);
         } finally {
+            submitting.current = false;
             setSubmitLoading(false);
         }
     };
@@ -192,7 +190,7 @@ export default function DashboardEventEdit({ eventId, onBack, onSuccess }: Dashb
             {/* Header */}
             <header className="bg-white border-b border-zinc-100 px-6 py-4 flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                    <Button variant="ghost" onClick={onBack} className="-ml-2 gap-1 text-zinc-600 hover:bg-transparent">
+                    <Button variant="ghost" onClick={onBack} disabled={submitLoading} className="-ml-2 gap-1 text-zinc-600 hover:bg-transparent">
                         <ChevronLeft className="w-5 h-5" />
                     </Button>
                     <h1 className="text-lg font-bold text-zinc-900">이벤트 정보 수정</h1>
@@ -202,6 +200,7 @@ export default function DashboardEventEdit({ eventId, onBack, onSuccess }: Dashb
 
             {/* Form */}
             <main className="flex-1 overflow-y-auto p-6 max-w-3xl w-full mx-auto">
+                {saveError && <p role="alert" className="mb-4 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">{saveError}</p>}
                 {loading ? (
                     <div className="flex flex-col items-center justify-center py-20 text-zinc-500">
                         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#162660] mb-3"></div>
@@ -209,6 +208,7 @@ export default function DashboardEventEdit({ eventId, onBack, onSuccess }: Dashb
                     </div>
                 ) : (
                     <form onSubmit={handleSubmit} className="bg-white border border-zinc-100 rounded-3xl p-6 shadow-sm space-y-6">
+                        <fieldset disabled={submitLoading} className="contents">
                         <PlanningModeSelector value={planningMode} onChange={setPlanningMode} />
                         {/* Organizer Group Selection */}
                         <div className="space-y-1.5">
@@ -442,6 +442,7 @@ export default function DashboardEventEdit({ eventId, onBack, onSuccess }: Dashb
                                 {submitLoading ? '수정 중...' : '수정 사항 저장'}
                             </Button>
                         </div>
+                        </fieldset>
                     </form>
                 )}
             </main>
