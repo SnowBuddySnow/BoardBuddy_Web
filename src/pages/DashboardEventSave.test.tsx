@@ -120,6 +120,45 @@ describe('rendered create/edit forms with real save orchestration and synthetic 
         await submit(); expect(success).toHaveBeenCalledWith(1);
     });
 
+    it.each(['2026-10-25T18:00:00', '2026-10-25T09:00:00Z', '2026-10-25T02:00:00-07:00'])(
+        'edits %s as Korean wall-clock time without silently moving the event', async startsAt => {
+            const get = http.get.getMockImplementation()!;
+            http.get.mockImplementation(path => path === '/dashboard/events/1'
+                ? Promise.resolve(result({ ...event, startsAt })) : get(path));
+            await act(async () => root.render(<DashboardEventEdit eventId={1} onBack={back} onSuccess={success} />));
+            expect(container.querySelectorAll<HTMLInputElement>('input[type="datetime-local"]')[1].value).toBe('2026-10-25T18:00');
+            await submit();
+            expect(http.patch).toHaveBeenCalledWith('/dashboard/events/1', expect.objectContaining({ startsAt: '2026-10-25T18:00:00' }));
+        },
+    );
+
+    it('keeps unsaved edits when only the parent back callback changes', async () => {
+        await act(async () => root.render(<DashboardEventEdit eventId={1} onBack={back} onSuccess={success} />));
+        await fill(container.querySelector<HTMLInputElement>('input[type="text"][required]')!, 'Unsaved synthetic change');
+        await act(async () => root.render(<DashboardEventEdit eventId={1} onBack={vi.fn()} onSuccess={success} />));
+        expect(container.querySelector<HTMLInputElement>('input[type="text"][required]')!.value).toBe('Unsaved synthetic change');
+        expect(http.get.mock.calls.filter(([path]) => path === '/dashboard/events/1')).toHaveLength(1);
+    });
+
+    it('ignores an older event load that completes after switching to another draft', async () => {
+        const pending = deferred(); const get = http.get.getMockImplementation()!;
+        http.get.mockImplementation(path => {
+            if (path === '/dashboard/events/1') return pending.promise;
+            if (path === '/dashboard/events/2') return Promise.resolve(result({ ...event, id: 2, title: 'Second synthetic draft' }));
+            if (path === '/dashboard/events/2/consents') return Promise.resolve(result(consent));
+            if (path === '/dashboard/events/2/refund-policy') return Promise.resolve(result({ refundPolicy: 'TEST ONLY' }));
+            return get(path);
+        });
+        await act(async () => root.render(<DashboardEventEdit eventId={1} onBack={back} onSuccess={success} />));
+        await act(async () => root.render(<DashboardEventEdit eventId={2} onBack={back} onSuccess={success} />));
+        const title = () => container.querySelector<HTMLInputElement>('input[type="text"][required]')!;
+        expect(title().value).toBe('Second synthetic draft');
+        await fill(title(), 'Unsaved second-draft change');
+        await act(async () => pending.resolve(result(event)));
+        expect(title().value).toBe('Unsaved second-draft change');
+        expect(back).not.toHaveBeenCalled(); expect(http.patch).not.toHaveBeenCalled();
+    });
+
     it('edits through sequential writes and navigates only after all three commits', async () => {
         const pending = deferred(); http.put.mockReturnValueOnce(pending.promise).mockResolvedValue(result());
         await act(async () => root.render(<DashboardEventEdit eventId={1} onBack={back} onSuccess={success} />));

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { formatEventDateTime, isEventRegistrationAvailable, parseEventDateTime } from '../lib/eventDateTime';
 import { Button } from '../components/Button';
 import { listParties, joinEvent } from '../services/event';
 import { Event } from '../types/api';
@@ -64,24 +65,10 @@ export default function Parties({ onBack, onEventClick, onCreateClick, canCreate
         }
     };
 
-    const formatDate = (dateStr: string) => {
-        const d = new Date(dateStr);
-        const month = d.getMonth() + 1;
-        const date = d.getDate();
-        const hour = String(d.getHours()).padStart(2, '0');
-        const min = String(d.getMinutes()).padStart(2, '0');
-        const dayNames = ['일', '월', '화', '수', '목', '금', '토'];
-        const day = dayNames[d.getDay()];
-        return `${month}월 ${date}일 (${day}) ${hour}:${min}`;
-    };
+    const formatDate = formatEventDateTime;
 
     const activityTags = ['ALL', ...EVENT_ACTIVITY_OPTIONS.map(option => option.value)];
-    const availableEventCount = parties.filter(event => (
-        event.status === 'OPEN'
-        && new Date(event.startsAt).getTime() > Date.now()
-        && (!event.applicationStartsAt || new Date(event.applicationStartsAt).getTime() <= Date.now())
-        && (event.joinedCount || 0) < event.capacity
-    )).length;
+    const availableEventCount = parties.filter(event => isEventRegistrationAvailable(event)).length;
 
     const filteredParties = parties.filter(event => {
         const matchesSearch = event.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -172,7 +159,7 @@ export default function Parties({ onBack, onEventClick, onCreateClick, canCreate
                             const isConsentPending = event.currentUserStatus === 'CONSENT_PENDING';
                             const applicationNotOpen = Boolean(
                                 event.applicationStartsAt
-                                && new Date(event.applicationStartsAt).getTime() > Date.now(),
+                                && parseEventDateTime(event.applicationStartsAt).getTime() > Date.now(),
                             );
 
                             return (

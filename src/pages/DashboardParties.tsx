@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { formatEventDateTime } from '../lib/eventDateTime';
 import { Button } from '../components/Button';
 import { listDashboardParties, updateEvent, deleteEvent } from '../services/event';
 import { Event } from '../types/api';
@@ -92,17 +93,7 @@ export default function DashboardParties({
         }
     };
 
-    const formatDate = (dateStr: string) => {
-        const d = new Date(dateStr);
-        return d.toLocaleDateString('ko-KR', {
-            year: 'numeric',
-            month: '2-digit',
-            day: '2-digit',
-            hour: '2-digit',
-            minute: '2-digit',
-            hour12: false
-        });
-    };
+    const formatDate = formatEventDateTime;
 
     const getStatusStyle = (status: string) => {
         switch (status) {

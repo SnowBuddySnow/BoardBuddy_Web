@@ -1,6 +1,6 @@
 // Member Statistics Page
 import { ChevronLeftIcon, UserIcon, DownloadIcon } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Button } from "../components/Button";
 import { getCrewUsageStatistics } from "../services/crew";
 import { CrewUsageStatistic } from "../types/api";
@@ -17,7 +17,7 @@ export default function MemberStats({ crewId, onBack }: MemberStatsProps) {
     const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
     // const [searchQuery, setSearchQuery] = useState("");
 
-    const fetchData = async () => {
+    const fetchData = useCallback(async () => {
         setLoading(true);
         try {
             const data = await getCrewUsageStatistics(crewId, sortBy, sortOrder, ""); // Fixed search to empty
@@ -27,12 +27,12 @@ export default function MemberStats({ crewId, onBack }: MemberStatsProps) {
         } finally {
             setLoading(false);
         }
-    };
+    }, [crewId, sortBy, sortOrder]);
 
     useEffect(() => {
         // Debounce search could be added here if needed, but for now simple effect
         fetchData();
-    }, [crewId, sortBy, sortOrder]); // Add searchQuery if you want real-time, or handle separately
+    }, [fetchData]);
 
     // Handle search separately to avoid too many API calls if we want debounce, 
     // but for simplicity let's just fetch when enter is pressed or just include it in effect if not high traffic.

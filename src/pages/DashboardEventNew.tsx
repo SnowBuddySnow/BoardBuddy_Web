@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { parseEventDateTime } from '../lib/eventDateTime';
 import { Button } from '../components/Button';
 import { EventSaveError, saveEventConfiguration } from '../services/eventSave';
 import { listOrganizerGroups } from '../services/organizerGroup';
@@ -98,7 +99,7 @@ export default function DashboardEventNew({ onBack, onSuccess }: DashboardEventN
 
         if (!title.trim()) return alert('제목을 입력하세요.');
         if (!startsAt) return alert('시작 일시를 설정하세요.');
-        if (applicationStartsAt && new Date(applicationStartsAt) >= new Date(startsAt)) {
+        if (applicationStartsAt && parseEventDateTime(applicationStartsAt) >= parseEventDateTime(startsAt)) {
             return alert('신청 시작 일시는 모임 시작 일시보다 빨라야 합니다.');
         }
         if (capacity < 1) return alert('모집인원은 최소 1명 이상이어야 합니다.');
@@ -321,7 +322,7 @@ export default function DashboardEventNew({ onBack, onSuccess }: DashboardEventN
                         {/* Dates */}
                         <div className="grid grid-cols-3 gap-4">
                             <div className="space-y-1.5">
-                                <label className="text-xs font-bold text-zinc-400 uppercase tracking-wider">신청 시작 일시</label>
+                                <label className="text-xs font-bold text-zinc-400 uppercase tracking-wider">신청 시작 일시 (한국 시간)</label>
                                 <input
                                     type="datetime-local"
                                     value={applicationStartsAt}
@@ -331,7 +332,7 @@ export default function DashboardEventNew({ onBack, onSuccess }: DashboardEventN
                                 />
                             </div>
                             <div className="space-y-1.5">
-                                <label className="text-xs font-bold text-zinc-400 uppercase tracking-wider">시작 일시 *</label>
+                                <label className="text-xs font-bold text-zinc-400 uppercase tracking-wider">시작 일시 (한국 시간) *</label>
                                 <input
                                     type="datetime-local"
                                     value={startsAt}
@@ -342,7 +343,7 @@ export default function DashboardEventNew({ onBack, onSuccess }: DashboardEventN
                             </div>
 
                             <div className="space-y-1.5">
-                                <label className="text-xs font-bold text-zinc-400 uppercase tracking-wider">종료 일시</label>
+                                <label className="text-xs font-bold text-zinc-400 uppercase tracking-wider">종료 일시 (한국 시간)</label>
                                 <input
                                     type="datetime-local"
                                     value={endsAt}

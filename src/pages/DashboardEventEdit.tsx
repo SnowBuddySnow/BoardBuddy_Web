@@ -16,6 +16,7 @@ import { getApiErrorMessage, getApiErrorStatus } from '../lib/apiError';
 import { EventConsentEditor } from '../components/event/EventConsentEditor';
 import { EventRefundPolicyEditor } from '../components/event/EventRefundPolicyEditor';
 import { eventStatusLabel, joinPolicyLabel, visibilityTypeLabel } from '../constants/displayLabels';
+import { formatEventDateTimeInput, parseEventDateTime } from '../lib/eventDateTime';
 
 interface DashboardEventEditProps {
     eventId: number;
@@ -28,6 +29,8 @@ export default function DashboardEventEdit({ eventId, onBack, onSuccess }: Dashb
     const [loading, setLoading] = useState(true);
     const [submitLoading, setSubmitLoading] = useState(false);
     const submitting = useRef(false);
+    const onBackRef = useRef(onBack);
+    useEffect(() => { onBackRef.current = onBack; }, [onBack]);
     const [saveError, setSaveError] = useState('');
 
     // Form states
@@ -55,15 +58,18 @@ export default function DashboardEventEdit({ eventId, onBack, onSuccess }: Dashb
     const [refundPolicy, setRefundPolicy] = useState('');
 
     useEffect(() => {
+        let cancelled = false;
         const loadInitData = async () => {
             try {
                 setLoading(true);
                 // 1. Load groups
-                const [groupsList, consentData, refundPolicyData] = await Promise.all([
+                const [groupsList, consentData, refundPolicyData, eventData] = await Promise.all([
                     listOrganizerGroups(),
                     getEventConsentConfiguration(eventId),
                     getDashboardEventRefundPolicy(eventId),
+                    getEventDashboard(eventId),
                 ]);
+                if (cancelled) return;
                 setGroups(groupsList);
                 setConsentConfiguration({
                     consentWindowMinutes: consentData.consentWindowMinutes,
@@ -79,7 +85,6 @@ export default function DashboardEventEdit({ eventId, onBack, onSuccess }: Dashb
                 setRefundPolicy(refundPolicyData.refundPolicy || '');
 
                 // 2. Load event data
-                const eventData = await getEventDashboard(eventId);
                 setTitle(eventData.title);
                 setDescription(eventData.description || '');
                 setActivityType(EVENT_ACTIVITY_OPTIONS.some(option => option.value === eventData.activityType)
@@ -87,17 +92,9 @@ export default function DashboardEventEdit({ eventId, onBack, onSuccess }: Dashb
                     : 'OTHER');
                 setPlanningMode(eventData.planningMode || 'MANAGER_PLANNED');
 
-                // Convert ISO startsAt / endsAt to input datetime-local format (YYYY-MM-DDTHH:MM)
-                const formatForInput = (isoStr?: string) => {
-                    if (!isoStr) return '';
-                    const date = new Date(isoStr);
-                    const pad = (num: number) => String(num).padStart(2, '0');
-                    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
-                };
-
-                setApplicationStartsAt(formatForInput(eventData.applicationStartsAt || undefined));
-                setStartsAt(formatForInput(eventData.startsAt));
-                setEndsAt(formatForInput(eventData.endsAt));
+                setApplicationStartsAt(formatEventDateTimeInput(eventData.applicationStartsAt));
+                setStartsAt(formatEventDateTimeInput(eventData.startsAt));
+                setEndsAt(formatEventDateTimeInput(eventData.endsAt));
                 setLocationName(eventData.locationName || '');
                 setLocationAddress(eventData.locationAddress || '');
                 setCapacity(eventData.capacity);
@@ -109,14 +106,16 @@ export default function DashboardEventEdit({ eventId, onBack, onSuccess }: Dashb
                 setOrganizerGroupId(eventData.organizerGroupId);
                 setStatus(eventData.status);
             } catch (error) {
+                if (cancelled) return;
                 console.error('Failed to load event edit data:', error);
                 alert('이벤트 정보를 불러오는 도중 오류가 발생했습니다.');
-                onBack();
+                onBackRef.current();
             } finally {
-                setLoading(false);
+                if (!cancelled) setLoading(false);
             }
         };
         loadInitData();
+        return () => { cancelled = true; };
     }, [eventId]);
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -125,7 +124,7 @@ export default function DashboardEventEdit({ eventId, onBack, onSuccess }: Dashb
 
         if (!title.trim()) return alert('제목을 입력하세요.');
         if (!startsAt) return alert('시작 일시를 설정하세요.');
-        if (applicationStartsAt && new Date(applicationStartsAt) >= new Date(startsAt)) {
+        if (applicationStartsAt && parseEventDateTime(applicationStartsAt) >= parseEventDateTime(startsAt)) {
             return alert('신청 시작 일시는 모임 시작 일시보다 빨라야 합니다.');
         }
         if (capacity < 1) return alert('모집인원은 최소 1명 이상이어야 합니다.');
@@ -315,7 +314,7 @@ export default function DashboardEventEdit({ eventId, onBack, onSuccess }: Dashb
                         {/* Dates */}
                         <div className="grid grid-cols-3 gap-4">
                             <div className="space-y-1.5">
-                                <label className="text-xs font-bold text-zinc-400 uppercase tracking-wider">신청 시작 일시</label>
+                                <label className="text-xs font-bold text-zinc-400 uppercase tracking-wider">신청 시작 일시 (한국 시간)</label>
                                 <input
                                     type="datetime-local"
                                     value={applicationStartsAt}
@@ -325,7 +324,7 @@ export default function DashboardEventEdit({ eventId, onBack, onSuccess }: Dashb
                                 />
                             </div>
                             <div className="space-y-1.5">
-                                <label className="text-xs font-bold text-zinc-400 uppercase tracking-wider">시작 일시 *</label>
+                                <label className="text-xs font-bold text-zinc-400 uppercase tracking-wider">시작 일시 (한국 시간) *</label>
                                 <input
                                     type="datetime-local"
                                     value={startsAt}
@@ -336,7 +335,7 @@ export default function DashboardEventEdit({ eventId, onBack, onSuccess }: Dashb
                             </div>
 
                             <div className="space-y-1.5">
-                                <label className="text-xs font-bold text-zinc-400 uppercase tracking-wider">종료 일시</label>
+                                <label className="text-xs font-bold text-zinc-400 uppercase tracking-wider">종료 일시 (한국 시간)</label>
                                 <input
                                     type="datetime-local"
                                     value={endsAt}

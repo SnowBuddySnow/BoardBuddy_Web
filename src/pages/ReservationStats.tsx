@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { ChevronLeftIcon, ChevronRightIcon, Smile, ChevronDown, Save, Trash2 } from 'lucide-react';
 import { Button } from '../components/Button';
 import { Calendar } from '../components/Calendar';
@@ -75,9 +75,9 @@ export default function ReservationStats({ onBack, onMyCalendarClick, onReservat
     const [sortOrder, setSortOrder] = useState<'default' | 'earliest'>('default');
     const [managementSavingId, setManagementSavingId] = useState<number | null>(null);
 
-    const formatDate = (day: number) => {
+    const formatDate = useCallback((day: number) => {
         return `${currentYear}-${String(currentMonthIndex + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-    };
+    }, [currentYear, currentMonthIndex]);
 
     // 1. Fetch User Info to get Crew ID
     // 2. Then Fetch Crew Info using that ID
@@ -125,11 +125,11 @@ export default function ReservationStats({ onBack, onMyCalendarClick, onReservat
     }, [crewId, currentYear, currentMonthIndex, showMySchedule]);
 
 
-    const fetchDetailForDay = async (day: number) => {
+    const fetchDetailForDay = useCallback(async (day: number, refresh = false) => {
         if (!crewId) return; // Wait for crewId
 
         const dateStr = formatDate(day);
-        if (detailsCache[dateStr]) return; // Already cached
+        if (!refresh && Object.prototype.hasOwnProperty.call(detailsCache, dateStr)) return;
 
         try {
             const data = await getReservationDetail(crewId, dateStr);
@@ -137,14 +137,14 @@ export default function ReservationStats({ onBack, onMyCalendarClick, onReservat
         } catch (error) {
             console.error(`Failed to fetch detail for ${dateStr}:`, error);
         }
-    };
+    }, [crewId, detailsCache, formatDate]);
 
     // Effect to fetch detail when selectedDay changes
     useEffect(() => {
         if (selectedDay > 0 && crewId) {
             fetchDetailForDay(selectedDay);
         }
-    }, [selectedDay, currentYear, currentMonthIndex, crewId]);
+    }, [selectedDay, crewId, fetchDetailForDay]);
 
 
     // Parse My Schedule Data
@@ -171,7 +171,7 @@ export default function ReservationStats({ onBack, onMyCalendarClick, onReservat
             const calDateStr = `${currentYear}-${String(currentMonthIndex + 1).padStart(2, '0')}-15`;
             const data = await getCrewCalendar(crewId, calDateStr, showMySchedule);
             setCalendarData(data);
-            fetchDetailForDay(selectedDay);
+            await fetchDetailForDay(selectedDay, true);
         } catch (error) {
             console.error("Reservation creation failed:", error);
             alert("예약 신청에 실패했습니다.");
@@ -197,7 +197,7 @@ export default function ReservationStats({ onBack, onMyCalendarClick, onReservat
             const calDateStr = `${currentYear}-${String(currentMonthIndex + 1).padStart(2, '0')}-15`;
             const data = await getCrewCalendar(crewId, calDateStr, showMySchedule);
             setCalendarData(data);
-            fetchDetailForDay(selectedDay);
+            await fetchDetailForDay(selectedDay, true);
         } catch (error) {
             console.error("Cancellation failed:", error);
             alert("예약 취소에 실패했습니다.");
@@ -603,7 +603,7 @@ export default function ReservationStats({ onBack, onMyCalendarClick, onReservat
                                                     const calDateStr = `${currentYear}-${String(currentMonthIndex + 1).padStart(2, '0')}-15`;
                                                     const data = await getCrewCalendar(crewId, calDateStr, showMySchedule);
                                                     setCalendarData(data);
-                                                    fetchDetailForDay(selectedDay);
+                                                    await fetchDetailForDay(selectedDay, true);
                                                 } catch (error) {
                                                     console.error("Failed to delete reservation:", error);
                                                     alert("예약 삭제에 실패했습니다.");
