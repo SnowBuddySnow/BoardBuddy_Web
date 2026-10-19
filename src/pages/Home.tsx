@@ -9,6 +9,7 @@ import { getWeather, WeatherData } from '../services/weather';
 import { getEventActivityLabel } from '../constants/eventActivity';
 import { getOperatingFeatures, OperatingMode } from '../constants/operatingSeason';
 import boardBuddyLogo from '../assets/boardbuddy-logo.png';
+import { formatEventDateTime, isEventRegistrationAvailable, parseEventDateTime } from '../lib/eventDateTime';
 
 interface HomeProps {
     onMakeReservationClick: () => void;
@@ -119,22 +120,12 @@ export default function Home({
     }, [operatingFeatures.offSeason, operatingFeatures.season]);
 
     // Helper to format small gathering date
-    const formatEventDate = (dateStr: string) => {
-        const d = new Date(dateStr);
-        const month = d.getMonth() + 1;
-        const date = d.getDate();
-        const hour = String(d.getHours()).padStart(2, '0');
-        const min = String(d.getMinutes()).padStart(2, '0');
-        return `${month}/${date} ${hour}:${min}`;
-    };
+    const formatEventDate = formatEventDateTime;
 
     // Filter logic for sections
-    const nowTime = new Date();
-    const upcomingParties = parties.filter(p => {
-        const start = new Date(p.startsAt);
-        const applicationStarted = !p.applicationStartsAt || new Date(p.applicationStartsAt) <= nowTime;
-        return start > nowTime && applicationStarted && (p.joinedCount || 0) < p.capacity;
-    }).sort((a, b) => new Date(a.startsAt).getTime() - new Date(b.startsAt).getTime());
+    const nowTime = Date.now();
+    const upcomingParties = parties.filter(event => isEventRegistrationAvailable(event, nowTime))
+        .sort((a, b) => parseEventDateTime(a.startsAt).getTime() - parseEventDateTime(b.startsAt).getTime());
 
     const seasonHouseUnavailable = operatingFeatures.season && crewDetail?.seasonHouseActive === false;
     const seasonHouseAvailable = operatingFeatures.season && crewDetail !== null && crewDetail.seasonHouseActive !== false;

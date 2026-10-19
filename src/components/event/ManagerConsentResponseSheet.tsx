@@ -24,6 +24,7 @@ import type {
     ManagerConsentResponseSheet,
 } from '../../types/api';
 import { getApiErrorMessage } from '../../lib/apiError';
+import { formatEventDateTime } from '../../lib/eventDateTime';
 
 interface ManagerConsentResponseSheetProps {
     eventId: number;
@@ -48,12 +49,7 @@ const participantStatusLabel: Record<string, string> = {
 };
 
 const formatDateTime = (value: string | null) => value
-    ? new Intl.DateTimeFormat('ko-KR', {
-        month: 'numeric',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-    }).format(new Date(value))
+    ? formatEventDateTime(value)
     : '-';
 
 const getAnswer = (

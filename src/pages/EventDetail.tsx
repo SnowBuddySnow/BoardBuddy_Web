@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Button } from '../components/Button';
 import {
     cancelEvent,
@@ -69,7 +69,7 @@ export default function EventDetail({ eventId, onBack, isGuestApplication = fals
     const latestDraftPayloadRef = useRef<ConsentResponseInput[]>([]);
     const draftSaveQueueRef = useRef<Promise<unknown>>(Promise.resolve());
 
-    const fetchEventDetail = async (knownEvent?: Event) => {
+    const fetchEventDetail = useCallback(async (knownEvent?: Event) => {
         try {
             setLoading(true);
             setErrorMsg(null);
@@ -138,11 +138,11 @@ export default function EventDetail({ eventId, onBack, isGuestApplication = fals
         } finally {
             setLoading(false);
         }
-    };
+    }, [eventId]);
 
     useEffect(() => {
         fetchEventDetail();
-    }, [eventId]);
+    }, [fetchEventDetail]);
 
     useEffect(() => {
         if (!draftHydrated || !consentState || consentState.participantStatus !== 'CONSENT_PENDING') return;
