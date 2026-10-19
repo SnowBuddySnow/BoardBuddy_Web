@@ -10,6 +10,11 @@ export const SESSION_KEYS = {
     devEventDataMode: 'dev_event_data_mode',
 } as const;
 
+// Distinguish local login/logout transitions even if a provider returns the same
+// token pair again. In-flight requests must never revive an earlier session.
+let authSessionRevision = 0;
+export const getAuthSessionRevision = () => authSessionRevision;
+
 export const getAccessToken = () => localStorage.getItem(SESSION_KEYS.accessToken);
 
 export const getRefreshToken = () => localStorage.getItem(SESSION_KEYS.refreshToken);
@@ -37,6 +42,7 @@ export const clearAccountId = () => {
 };
 
 export const saveAuthTokens = (accessToken?: string, refreshToken?: string) => {
+    authSessionRevision += 1;
     localStorage.removeItem(SESSION_KEYS.tempAccessToken);
     if (accessToken) {
         localStorage.setItem(SESSION_KEYS.accessToken, accessToken);
@@ -47,6 +53,7 @@ export const saveAuthTokens = (accessToken?: string, refreshToken?: string) => {
 };
 
 export const saveTempAccessToken = (tempAccessToken?: string) => {
+    authSessionRevision += 1;
     localStorage.removeItem(SESSION_KEYS.accessToken);
     localStorage.removeItem(SESSION_KEYS.refreshToken);
     if (tempAccessToken) {
@@ -55,10 +62,12 @@ export const saveTempAccessToken = (tempAccessToken?: string) => {
 };
 
 export const clearTempAccessToken = () => {
+    authSessionRevision += 1;
     localStorage.removeItem(SESSION_KEYS.tempAccessToken);
 };
 
 export const clearAuthSession = () => {
+    authSessionRevision += 1;
     localStorage.removeItem(SESSION_KEYS.accessToken);
     localStorage.removeItem(SESSION_KEYS.refreshToken);
     localStorage.removeItem(SESSION_KEYS.tempAccessToken);
