@@ -1,174 +1,148 @@
 import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios';
-import { clearAuthSession, getRefreshToken, getSignupToken, saveAuthTokens } from './session';
+import {
+    clearAuthSession,
+    getAuthSessionRevision,
+    getRefreshToken,
+    getSignupToken,
+    saveAuthTokens,
+} from './session';
 
 const apiClient = axios.create({
     baseURL: import.meta.env.VITE_API_BASE_URL,
-    headers: {
-        'Content-Type': 'application/json',
-    },
-    withCredentials: true, // If cookies are needed later
+    headers: { 'Content-Type': 'application/json' },
+    withCredentials: true,
 });
 
-// Flag to prevent multiple simultaneous refresh requests
-let isRefreshing = false;
-let failedQueue: Array<{
-    resolve: (value?: string) => void;
-    reject: (error?: unknown) => void;
-}> = [];
+interface AuthSessionSnapshot {
+    accessToken: string | null;
+    refreshToken: string | null;
+    revision: number;
+}
 
-const processQueue = (error: AxiosError | null, token: string | null = null) => {
-    failedQueue.forEach((prom) => {
-        if (error) {
-            prom.reject(error);
-        } else {
-            prom.resolve(token || undefined);
-        }
-    });
-    failedQueue = [];
+type SessionRequest = InternalAxiosRequestConfig & {
+    _authRetry?: boolean;
+    _authSessionRevision?: number;
 };
 
-apiClient.interceptors.request.use(
-    (config) => {
-        // During onboarding there is no permanent access token yet. Use the
-        // temporary signup token so protected setup requests (such as loading
-        // schools and requesting phone verification) stay authenticated.
-        const token = getSignupToken();
-        // Some public auth endpoints provide their own bearer token (for example,
-        // the Kakao access token used by /auth/social/kakao). Do not replace it
-        // with a previously stored BoardBuddy access token.
-        if (token && !config.headers.has('Authorization')) {
-            config.headers.Authorization = `Bearer ${token}`;
-        }
-        return config;
-    },
-    (error) => {
-        return Promise.reject(error);
-    }
+const currentSession = (): AuthSessionSnapshot => ({
+    accessToken: getSignupToken(),
+    refreshToken: getRefreshToken(),
+    revision: getAuthSessionRevision(),
+});
+
+const sameSession = (left: AuthSessionSnapshot, right: AuthSessionSnapshot) => (
+    left.revision === right.revision
+    && left.accessToken === right.accessToken
+    && left.refreshToken === right.refreshToken
 );
 
+const invalidateSession = (session: AuthSessionSnapshot) => {
+    if (!sameSession(session, currentSession())) return;
+    clearAuthSession();
+    if (window.location.pathname !== '/') window.location.href = '/';
+};
+
+let pendingRefresh: { session: AuthSessionSnapshot; promise: Promise<AuthSessionSnapshot> } | null = null;
+
+const refreshSession = async (session: AuthSessionSnapshot): Promise<AuthSessionSnapshot> => {
+    let response;
+    try {
+        // Keep refresh outside apiClient so it cannot intercept itself. A finite
+        // timeout releases every waiter when the connection stops responding.
+        response = await axios.post<{
+            code?: number;
+            data?: { accessToken?: unknown; refreshToken?: unknown };
+        }>(
+            `${import.meta.env.VITE_API_BASE_URL || '/api'}/auth/refresh`,
+            {},
+            {
+                headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${session.refreshToken}`,
+                },
+                timeout: 15_000,
+            },
+        );
+    } catch (error) {
+        // An offline device, timeout or unavailable server does not establish
+        // that a refresh credential is invalid. Surface the failure and allow a
+        // later explicit retry; never replay an ambiguous network-failed write.
+        if (axios.isAxiosError(error) && [400, 401, 403].includes(error.response?.status ?? 0)) {
+            invalidateSession(session);
+        }
+        throw error;
+    }
+
+    if (!sameSession(session, currentSession())) {
+        throw new axios.CanceledError('Authentication session changed');
+    }
+    const data = response.data?.data;
+    if (response.data?.code !== 200
+        || typeof data?.accessToken !== 'string' || !data.accessToken.trim()
+        || typeof data?.refreshToken !== 'string' || !data.refreshToken.trim()) {
+        throw new Error('Invalid refresh response format');
+    }
+    saveAuthTokens(data.accessToken, data.refreshToken);
+    return currentSession();
+};
+
+const getRefreshedSession = (session: AuthSessionSnapshot) => {
+    if (pendingRefresh && sameSession(pendingRefresh.session, session)) return pendingRefresh.promise;
+
+    const flight = { session, promise: refreshSession(session) };
+    pendingRefresh = flight;
+    const release = () => { if (pendingRefresh === flight) pendingRefresh = null; };
+    // Both handlers consume cleanup without creating an unhandled rejection.
+    void flight.promise.then(release, release);
+    return flight.promise;
+};
+
+apiClient.interceptors.request.use((config: SessionRequest) => {
+    const session = currentSession();
+    if (config._authRetry && (config._authSessionRevision !== session.revision
+        || !session.accessToken || config.headers.get('Authorization') !== `Bearer ${session.accessToken}`)) {
+        throw new axios.CanceledError('Authentication session changed');
+    }
+    // Onboarding uses its temporary token. Explicit credentials (notably Kakao)
+    // must not be replaced or refreshed as a BoardBuddy session.
+    if (session.accessToken && !config.headers.has('Authorization')) {
+        config.headers.Authorization = `Bearer ${session.accessToken}`;
+    }
+    // Only the revision is attached to request configs: never copy the refresh
+    // credential into a config that a page may log when handling an error.
+    config._authSessionRevision = session.accessToken
+        && config.headers.get('Authorization') === `Bearer ${session.accessToken}`
+        ? session.revision : undefined;
+    return config;
+});
+
 apiClient.interceptors.response.use(
-    (response) => response,
+    response => response,
     async (error: AxiosError) => {
-        const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
+        const request = error.config as SessionRequest | undefined;
+        const body = error.response?.data as { code?: number; message?: unknown } | undefined;
+        const expired = error.response?.status === 401
+            && (body?.code === 401 || (typeof body?.message === 'string' && body.message.includes('만료된 JWT 토큰')));
+        const session = currentSession();
+        if (!expired || !request || !session.accessToken
+            || request._authSessionRevision !== session.revision
+            || request.headers.get('Authorization') !== `Bearer ${session.accessToken}`) throw error;
 
-        // Handle 401 Unauthorized - Token expired
-        // 응답 형식: { code: 401, message: "만료된 JWT 토큰입니다.", data: null }
-        const errorResponse = error.response?.data as { code?: number; message?: string } | undefined;
-        const isTokenExpired = error.response?.status === 401 && 
-            (errorResponse?.code === 401 || errorResponse?.message?.includes('만료된 JWT 토큰'));
-        
-        if (isTokenExpired && originalRequest && !originalRequest._retry) {
-            if (isRefreshing) {
-                // If already refreshing, queue this request
-                return new Promise((resolve, reject) => {
-                    failedQueue.push({ resolve, reject });
-                })
-                    .then((token) => {
-                        if (originalRequest.headers) {
-                            originalRequest.headers.Authorization = `Bearer ${token}`;
-                        }
-                        return apiClient(originalRequest);
-                    })
-                    .catch((err) => {
-                        return Promise.reject(err);
-                    });
-            }
-
-            originalRequest._retry = true;
-            isRefreshing = true;
-
-            const refreshToken = getRefreshToken();
-
-            if (!refreshToken) {
-                // No refresh token, redirect to login
-                processQueue(error, null);
-                isRefreshing = false;
-                clearAuthSession();
-                // Redirect to login page
-                if (window.location.pathname !== '/') {
-                    window.location.href = '/';
-                }
-                return Promise.reject(error);
-            }
-
-            try {
-                // Request new access token using refresh token
-                // Header에 Authorization: Bearer {refreshToken} 형식으로 요청
-                const response = await axios.post(
-                    `${import.meta.env.VITE_API_BASE_URL || '/api'}/auth/refresh`,
-                    {},
-                    {
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'Authorization': `Bearer ${refreshToken}`,
-                        },
-                    }
-                );
-
-                // 응답 형식: { code: 200, message: "...", data: { accessToken, refreshToken } }
-                const responseData = response.data;
-                
-                if (responseData.code === 200 && responseData.data) {
-                        const { accessToken, refreshToken: newRefreshToken } = responseData.data;
-
-                        if (accessToken) {
-                        saveAuthTokens(accessToken, newRefreshToken);
-
-                        // Update the original request with new token
-                        if (originalRequest.headers) {
-                            originalRequest.headers.Authorization = `Bearer ${accessToken}`;
-                        }
-
-                        // Process queued requests
-                        processQueue(null, accessToken);
-                        isRefreshing = false;
-
-                        // Retry the original request
-                        return apiClient(originalRequest);
-                    } else {
-                        throw new Error('No access token in refresh response');
-                    }
-                } else {
-                    throw new Error('Invalid refresh response format');
-                }
-            } catch (refreshError) {
-                // Refresh failed - check if it's refresh token expiration
-                const axiosError = refreshError as AxiosError;
-                
-                // 네트워크 에러가 아닌 경우에만 응답 데이터 확인
-                if (axiosError.response) {
-                    const errorResponse = axiosError.response.data as { code?: number; message?: string } | undefined;
-                    
-                    // Refresh 토큰도 만료된 경우 (code: 401, message: "만료된 리프레시 토큰입니다.")
-                    if (errorResponse?.code === 401 && errorResponse?.message?.includes('리프레시 토큰')) {
-                        // Clear tokens and redirect to login
-                        processQueue(axiosError, null);
-                        isRefreshing = false;
-                        clearAuthSession();
-                        // Redirect to login page
-                        if (window.location.pathname !== '/') {
-                            window.location.href = '/';
-                        }
-                        return Promise.reject(refreshError);
-                    }
-                }
-                
-                // Other refresh errors (네트워크 에러 포함)
-                // 네트워크 에러의 경우에도 토큰을 지우고 로그인 페이지로 리다이렉트
-                processQueue(axiosError, null);
-                isRefreshing = false;
-                clearAuthSession();
-                // Redirect to login page
-                if (window.location.pathname !== '/') {
-                    window.location.href = '/';
-                }
-                return Promise.reject(refreshError);
-            }
+        if (request._authRetry || !session.refreshToken) {
+            invalidateSession(session);
+            throw error;
         }
 
-        // Handle other errors
-        return Promise.reject(error);
-    }
+        // Every waiter gets the same one-replay limit, not just the first request.
+        request._authRetry = true;
+        const refreshed = await getRefreshedSession(session);
+        if (!sameSession(refreshed, currentSession())) {
+            throw new axios.CanceledError('Authentication session changed');
+        }
+        request.headers.Authorization = `Bearer ${refreshed.accessToken}`;
+        request._authSessionRevision = refreshed.revision;
+        return apiClient(request);
+    },
 );
 
 export default apiClient;
