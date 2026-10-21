@@ -1,5 +1,5 @@
 import { ChevronLeftIcon, SearchIcon, UserIcon } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Button } from "../components/Button";
 import { getCrewManagers, getCrewMembers, promoteMember, demoteManager } from "../services/crew";
 import { CrewMember } from "../types/api";
@@ -16,7 +16,7 @@ export default function Promote({ crewId, onBack }: PromoteProps) {
     const [searchQuery, setSearchQuery] = useState("");
     const [loading, setLoading] = useState(true);
 
-    const refreshData = async () => {
+    const refreshData = useCallback(async () => {
         setLoading(true);
         try {
             const [managersData, membersData] = await Promise.all([
@@ -30,11 +30,11 @@ export default function Promote({ crewId, onBack }: PromoteProps) {
         } finally {
             setLoading(false);
         }
-    };
+    }, [crewId]);
 
     useEffect(() => {
         refreshData();
-    }, [crewId]);
+    }, [refreshData]);
 
     const handlePromote = async (userId: number) => {
         if (window.confirm("이 회원을 운영진으로 임명하시겠습니까?")) {

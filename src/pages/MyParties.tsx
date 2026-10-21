@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { formatEventDateTime } from '../lib/eventDateTime';
 import { Button } from '../components/Button';
 import { listParties } from '../services/event';
 import { Event } from '../types/api';
@@ -35,16 +36,7 @@ export default function MyParties({ onBack, onEventClick }: MyPartiesProps) {
         fetchMyPlans();
     }, []);
 
-    const formatDate = (dateStr: string) => {
-        const d = new Date(dateStr);
-        const month = d.getMonth() + 1;
-        const date = d.getDate();
-        const hour = String(d.getHours()).padStart(2, '0');
-        const min = String(d.getMinutes()).padStart(2, '0');
-        const dayNames = ['일', '월', '화', '수', '목', '금', '토'];
-        const day = dayNames[d.getDay()];
-        return `${month}월 ${date}일 (${day}) ${hour}:${min}`;
-    };
+    const formatDate = formatEventDateTime;
 
     return (
         <div className="flex-1 flex flex-col h-full overflow-hidden bg-[#FAF8F3] relative">

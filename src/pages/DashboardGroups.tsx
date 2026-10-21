@@ -80,33 +80,6 @@ export default function DashboardGroups({
         }
     };
 
-    // Helper to mock or determine roles (role is set in simulated mode or determined by group/user relationship)
-    const getSimulatedRole = () => {
-        const roleOverride = localStorage.getItem('dev_role_override');
-        if (roleOverride === 'admin') return 'ADMIN';
-        if (roleOverride === 'organizer') return 'EVENT_GROUP_OWNER';
-        if (roleOverride === 'member') return 'MEMBER';
-        return 'EVENT_GROUP_MANAGER'; // Default fallback
-    };
-
-    const getRoleBadgeStyle = (role: string) => {
-        switch (role) {
-            case 'ADMIN':
-            case 'EVENT_GROUP_OWNER':
-                return 'bg-amber-50 text-amber-700 border border-amber-200';
-            case 'EVENT_GROUP_MANAGER':
-                return 'bg-blue-50 text-blue-700 border border-blue-200';
-            default:
-                return 'bg-zinc-50 text-zinc-500 border border-zinc-200';
-        }
-    };
-
-    const getRoleLabel = (role: ReturnType<typeof getSimulatedRole>) => {
-        if (role === 'ADMIN') return '플랫폼 관리자';
-        if (role === 'MEMBER') return '일반 멤버';
-        return eventGroupRoleLabel[role];
-    };
-
     return (
         <div className="flex-1 flex flex-col h-full bg-[#FAF8F3] overflow-hidden">
             {/* Top Desktop Navigation */}
@@ -187,7 +160,7 @@ export default function DashboardGroups({
                     )}
                     <div>
                         <h2 className="text-2xl font-black text-zinc-950">호스트 그룹 설정</h2>
-                        <p className="text-sm text-zinc-500 mt-1">내가 가입되어 있고 이벤트 호스트 권한이 있는 그룹 목록입니다.</p>
+                        <p className="text-sm text-zinc-500 mt-1">접근 가능한 호스트 그룹입니다. 내 역할은 각 그룹의 멤버 목록에서 확인하세요.</p>
                     </div>
 
                     {loading ? (
@@ -206,7 +179,6 @@ export default function DashboardGroups({
                     ) : (
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                             {groups.map((group) => {
-                                const role = getSimulatedRole();
                                 return (
                                     <div 
                                         key={group.id} 
@@ -217,8 +189,8 @@ export default function DashboardGroups({
                                                 <div className="p-2 bg-zinc-50 rounded-2xl border border-zinc-100/60 w-max text-[#162660]">
                                                     <Users className="w-5 h-5" />
                                                 </div>
-                                                <span className={`text-[10px] uppercase font-black px-2.5 py-1 rounded-full tracking-wider ${getRoleBadgeStyle(role)}`}>
-                                                    {getRoleLabel(role)}
+                                                <span className="text-[10px] font-black px-2.5 py-1 rounded-full bg-zinc-50 text-zinc-500 border border-zinc-200">
+                                                    호스트 그룹
                                                 </span>
                                             </div>
                                             <div>
@@ -230,14 +202,14 @@ export default function DashboardGroups({
                                         <div className="border-t border-zinc-50 pt-4 flex items-center justify-between">
                                             <div className="flex items-center gap-1 text-[11px] font-bold text-zinc-400">
                                                 <Award className="w-3.5 h-3.5 text-zinc-400" />
-                                                <span>호스트 관리 가능</span>
+                                                <span>멤버별 권한 확인</span>
                                             </div>
                                             <Button 
                                                 variant="ghost" 
                                                 onClick={() => onViewGroupDetailClick(group.id)}
                                                 className="text-[#162660] hover:bg-zinc-50 hover:text-blue-900 font-bold text-xs flex items-center gap-1 px-3 py-1.5 rounded-full"
                                             >
-                                                <span>멤버 관리</span>
+                                                <span>그룹 상세</span>
                                                 <ArrowRight className="w-3.5 h-3.5" />
                                             </Button>
                                         </div>

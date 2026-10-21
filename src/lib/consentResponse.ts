@@ -48,6 +48,7 @@ export const getConsentResponseError = (item: ConsentFieldItem, draft?: ConsentD
 
     const value = draft?.responseText?.trim();
     if (!value) return null;
+    if (value.length > 5000) return `${item.title}: 응답은 5,000자 이하여야 합니다.`;
 
     switch (item.responseType) {
         case 'EMAIL':
@@ -61,7 +62,9 @@ export const getConsentResponseError = (item: ConsentFieldItem, draft?: ConsentD
                 : `${item.title}: 올바른 전화번호를 입력해 주세요.`;
         }
         case 'NUMBER':
-            return Number.isFinite(Number(value)) ? null : `${item.title}: 숫자를 입력해 주세요.`;
+            // The server parses decimal text with BigDecimal, not JavaScript's hex/binary/octal forms.
+            return /^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?$/.test(value)
+                && Number.isFinite(Number(value)) ? null : `${item.title}: 숫자를 입력해 주세요.`;
         case 'DATE':
             return isValidDate(value) ? null : `${item.title}: 올바른 날짜를 선택해 주세요.`;
         case 'TIME':

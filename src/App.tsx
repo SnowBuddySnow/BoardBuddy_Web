@@ -1,42 +1,11 @@
-import { useState, useEffect, useRef } from 'react';
+import { lazy, useState, useEffect, useRef } from 'react';
 import { LowerMenuBar } from './components/LowerMenuBar';
 import Home from './pages/Home';
-import Reservation from './pages/Reservation';
-import ReservationStats from './pages/ReservationStats';
-import MyReservations from './pages/MyReservations';
 import LoginLanding from './pages/LoginLanding';
-import CrewDetail from './pages/CrewDetail';
-import UserInfoInput from './pages/UserInfoInput';
-import ProfileTypeConfirmation from './pages/ProfileTypeConfirmation';
-import StudentVerification from './pages/StudentVerification';
-import CrewMember from './pages/CrewMember';
-import SearchCrew from './pages/SearchCrew';
-import CrewSettings from './pages/CrewSettings';
-import MyPage from './pages/MyPage';
-import AccountInfo from './pages/AccountInfo';
-import CrewAdmin from './pages/CrewAdmin';
-import SchoolAdmin from './pages/SchoolAdmin';
-import UserAdmin from './pages/UserAdmin';
-import SignupAudit from './pages/SignupAudit';
-import Notifications from './pages/Notifications';
 import DesktopShell, { type DesktopDestination } from './components/DesktopShell';
 import DesktopRequired from './components/DesktopRequired';
 
-// New Event Pages
-import Parties from './pages/Parties';
-import EventDetail from './pages/EventDetail';
-import MyParties from './pages/MyParties';
-import DashboardParties from './pages/DashboardParties';
-import DashboardEventNew from './pages/DashboardEventNew';
-import DashboardEventDetail from './pages/DashboardEventDetail';
-import DashboardEventEdit from './pages/DashboardEventEdit';
-import DashboardGroups from './pages/DashboardGroups';
-import DashboardGroupDetail from './pages/DashboardGroupDetail';
-import OperationsCenter from './pages/OperationsCenter';
-import CrewPermissions from './pages/CrewPermissions';
-import RoleGuide from './pages/RoleGuide';
-import GuestAccess from './pages/GuestAccess';
-import OrganizerInviteAccept from './pages/OrganizerInviteAccept';
+import PageBoundary from './components/PageBoundary';
 import DevPanel from './components/DevPanel';
 import CaptainOnboarding, { CaptainOnboardingReturnButton, type CaptainOnboardingDestination } from './components/CaptainOnboarding';
 import { getAccessToken, getSignupToken, hasDevOverride, isAutoLoginEnabled } from './lib/session';
@@ -50,6 +19,40 @@ import { getOperatingFeatures, getOperatingMode } from './constants/operatingSea
 import { listParties } from './services/event';
 import type { CrewDetail as CrewDetailData } from './types/api';
 import { isCrewCaptainRole } from './constants/crewRole';
+import { isEventRegistrationAvailable } from './lib/eventDateTime';
+
+// Keep login/home immediate; fetch heavier screens only when their existing route is entered.
+const Reservation = lazy(() => import('./pages/Reservation'));
+const ReservationStats = lazy(() => import('./pages/ReservationStats'));
+const MyReservations = lazy(() => import('./pages/MyReservations'));
+const CrewDetail = lazy(() => import('./pages/CrewDetail'));
+const UserInfoInput = lazy(() => import('./pages/UserInfoInput'));
+const ProfileTypeConfirmation = lazy(() => import('./pages/ProfileTypeConfirmation'));
+const StudentVerification = lazy(() => import('./pages/StudentVerification'));
+const CrewMember = lazy(() => import('./pages/CrewMember'));
+const SearchCrew = lazy(() => import('./pages/SearchCrew'));
+const CrewSettings = lazy(() => import('./pages/CrewSettings'));
+const MyPage = lazy(() => import('./pages/MyPage'));
+const AccountInfo = lazy(() => import('./pages/AccountInfo'));
+const CrewAdmin = lazy(() => import('./pages/CrewAdmin'));
+const SchoolAdmin = lazy(() => import('./pages/SchoolAdmin'));
+const UserAdmin = lazy(() => import('./pages/UserAdmin'));
+const SignupAudit = lazy(() => import('./pages/SignupAudit'));
+const Notifications = lazy(() => import('./pages/Notifications'));
+const Parties = lazy(() => import('./pages/Parties'));
+const EventDetail = lazy(() => import('./pages/EventDetail'));
+const MyParties = lazy(() => import('./pages/MyParties'));
+const DashboardParties = lazy(() => import('./pages/DashboardParties'));
+const DashboardEventNew = lazy(() => import('./pages/DashboardEventNew'));
+const DashboardEventDetail = lazy(() => import('./pages/DashboardEventDetail'));
+const DashboardEventEdit = lazy(() => import('./pages/DashboardEventEdit'));
+const DashboardGroups = lazy(() => import('./pages/DashboardGroups'));
+const DashboardGroupDetail = lazy(() => import('./pages/DashboardGroupDetail'));
+const OperationsCenter = lazy(() => import('./pages/OperationsCenter'));
+const CrewPermissions = lazy(() => import('./pages/CrewPermissions'));
+const RoleGuide = lazy(() => import('./pages/RoleGuide'));
+const GuestAccess = lazy(() => import('./pages/GuestAccess'));
+const OrganizerInviteAccept = lazy(() => import('./pages/OrganizerInviteAccept'));
 
 type Tab = 'home' | 'events' | 'calendar' | 'edit' | 'heart' | 'user';
 type View =
@@ -162,6 +165,7 @@ const tabViews: Record<Tab, View> = {
 };
 
 const viewsWithoutBottomNav: View[] = [
+  'event_detail',
   'login',
   'user_info',
   'profile_type_confirmation',
@@ -353,12 +357,7 @@ function App() {
       .then((events) => {
         if (cancelled) return;
         const currentTime = Date.now();
-        setAvailableEventCount(events.filter((event) => (
-          event.status === 'OPEN'
-          && new Date(event.startsAt).getTime() > currentTime
-          && (!event.applicationStartsAt || new Date(event.applicationStartsAt).getTime() <= currentTime)
-          && (event.joinedCount || 0) < event.capacity
-        )).length);
+        setAvailableEventCount(events.filter(event => isEventRegistrationAvailable(event, currentTime)).length);
       })
       .catch(() => {
         if (!cancelled) setAvailableEventCount(0);
@@ -400,9 +399,7 @@ function App() {
   useEffect(() => {
     if (!isDesktop) {
       usedDesktopLanding.current = false;
-      if (currentView.startsWith('dashboard_') || currentView === 'operations_center') {
-        setCurrentView('home');
-      }
+      // Keep the requested destination so DesktopRequired can explain the restriction.
       return;
     }
 
@@ -808,9 +805,9 @@ function App() {
               setCurrentView('notifications');
             }}
           >
-            {currentContent}
+            <PageBoundary key={currentView} onBack={() => setCurrentView('home')}>{currentContent}</PageBoundary>
           </DesktopShell>
-        ) : currentContent}
+        ) : <PageBoundary key={currentView} onBack={() => setCurrentView('home')}>{currentContent}</PageBoundary>}
 
         {showBottomNav && !isDesktop && (
           <LowerMenuBar
