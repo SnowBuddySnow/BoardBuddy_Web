@@ -56,6 +56,33 @@ export default function EventDetail({ eventId, onBack, isGuestApplication = fals
     const [errorMsg, setErrorMsg] = useState<string | null>(null);
     const [actionLoading, setActionLoading] = useState(false);
     const [showPhoneConsentModal, setShowPhoneConsentModal] = useState(false);
+    const phoneConsentDialogRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        if (!showPhoneConsentModal) return;
+        const previousFocus = document.activeElement as HTMLElement | null;
+        const dialog = phoneConsentDialogRef.current;
+        dialog?.focus();
+        const handleKeyDown = (keyEvent: KeyboardEvent) => {
+            if (keyEvent.key === 'Escape') {
+                keyEvent.preventDefault(); setShowPhoneConsentModal(false); return;
+            }
+            if (keyEvent.key !== 'Tab') return;
+            const controls = Array.from(dialog?.querySelectorAll<HTMLElement>('button:not(:disabled)') || []);
+            const first = controls[0]; const last = controls[controls.length - 1];
+            const outside = !dialog?.contains(document.activeElement) || document.activeElement === dialog;
+            if (keyEvent.shiftKey && (outside || document.activeElement === first)) {
+                keyEvent.preventDefault(); last?.focus();
+            } else if (!keyEvent.shiftKey && (outside || document.activeElement === last)) {
+                keyEvent.preventDefault(); first?.focus();
+            }
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => {
+            window.removeEventListener('keydown', handleKeyDown);
+            if (previousFocus?.isConnected) previousFocus.focus();
+        };
+    }, [showPhoneConsentModal]);
     const [chatAccess, setChatAccess] = useState<EventChatAccess | null>(null);
     const [consentState, setConsentState] = useState<ParticipantConsentState | null>(null);
     const [consentAnswers, setConsentAnswers] = useState<Record<number, ConsentDraft>>({});
@@ -245,8 +272,12 @@ export default function EventDetail({ eventId, onBack, isGuestApplication = fals
             const participant = await joinEvent(event.id);
             if (participant.status === 'CONSENT_PENDING') {
                 alert(getConsentPendingCopy(event.joinPolicy).alert);
+            } else if (participant.status === 'PENDING') {
+                alert('참여 신청이 접수되었습니다. 호스트 승인 후 참가가 확정됩니다.');
+            } else if (participant.status === 'JOINED') {
+                alert('이벤트 참가가 확정되었습니다.');
             } else {
-                alert(event.joinPolicy === 'APPROVAL_REQUIRED' ? '게스트 참여 신청이 대기 상태로 접수되었습니다.' : '게스트 참여가 접수되었습니다.');
+                alert('신청 결과를 확인했습니다. 최신 참가 상태를 확인해 주세요.');
             }
             await fetchEventDetail(); // Refresh
         } catch (error: unknown) {
@@ -858,11 +889,11 @@ export default function EventDetail({ eventId, onBack, isGuestApplication = fals
             {showPhoneConsentModal && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
                     <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setShowPhoneConsentModal(false)} />
-                    <div className="bg-white dark:bg-zinc-900 rounded-2xl w-full max-w-sm p-6 shadow-xl relative z-10 animate-in fade-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
-                        <h3 className="text-lg font-bold text-zinc-900 dark:text-zinc-100 mb-3 text-center">
+                    <div ref={phoneConsentDialogRef} role="dialog" aria-modal="true" aria-labelledby="phone-sharing-consent-title" aria-describedby="phone-sharing-consent-description" tabIndex={-1} className="bg-white dark:bg-zinc-900 rounded-2xl w-full max-w-sm max-h-[calc(100dvh-2rem)] overflow-y-auto p-6 shadow-xl relative z-10 animate-in fade-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
+                        <h3 id="phone-sharing-consent-title" className="text-lg font-bold text-zinc-900 dark:text-zinc-100 mb-3 text-center">
                             전화번호 제공 동의
                         </h3>
-                        <p className="text-sm text-zinc-600 dark:text-zinc-400 mb-6 text-center leading-relaxed">
+                        <p id="phone-sharing-consent-description" className="text-sm text-zinc-600 dark:text-zinc-400 mb-6 text-center leading-relaxed">
                             예약 확인, 안내 및 안전 연락 등 원활한 이벤트 운영을 위해 호스트에게 본인의 전화번호를 제공하시겠습니까?
                             <br />
                             <span className="text-xs text-zinc-400 dark:text-zinc-500 block mt-2.5 leading-normal">
