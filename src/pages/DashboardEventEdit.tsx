@@ -56,6 +56,7 @@ export default function DashboardEventEdit({ eventId, onBack, onSuccess }: Dashb
         items: [],
     });
     const [refundPolicy, setRefundPolicy] = useState('');
+    const [configurationLocked, setConfigurationLocked] = useState(false);
 
     useEffect(() => {
         let cancelled = false;
@@ -71,6 +72,8 @@ export default function DashboardEventEdit({ eventId, onBack, onSuccess }: Dashb
                 ]);
                 if (cancelled) return;
                 setGroups(groupsList);
+                // Older APIs do not advertise this capability: fail closed for document editing.
+                setConfigurationLocked(consentData.configurationLocked !== false);
                 setConsentConfiguration({
                     consentWindowMinutes: consentData.consentWindowMinutes,
                     items: consentData.items.map((item, displayOrder) => ({
@@ -167,7 +170,7 @@ export default function DashboardEventEdit({ eventId, onBack, onSuccess }: Dashb
                 status
             };
 
-            await saveEventConfiguration({ eventId, payload, consentConfiguration, refundPolicy });
+            await saveEventConfiguration({ eventId, payload, consentConfiguration, refundPolicy, configurationLocked });
             alert('이벤트 정보가 성공적으로 수정되었습니다.');
             onSuccess();
         } catch (error: unknown) {
@@ -189,7 +192,7 @@ export default function DashboardEventEdit({ eventId, onBack, onSuccess }: Dashb
             {/* Header */}
             <header className="bg-white border-b border-zinc-100 px-6 py-4 flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                    <Button variant="ghost" onClick={onBack} disabled={submitLoading} className="-ml-2 gap-1 text-zinc-600 hover:bg-transparent">
+                    <Button variant="ghost" aria-label="뒤로 가기" onClick={onBack} disabled={submitLoading} className="-ml-2 min-h-11 min-w-11 gap-1 text-zinc-600 hover:bg-transparent">
                         <ChevronLeft className="w-5 h-5" />
                     </Button>
                     <h1 className="text-lg font-bold text-zinc-900">이벤트 정보 수정</h1>
@@ -318,6 +321,7 @@ export default function DashboardEventEdit({ eventId, onBack, onSuccess }: Dashb
                                 <input
                                     type="datetime-local"
                                     value={applicationStartsAt}
+                                    aria-label="신청 시작 일시 (한국 시간)"
                                     max={startsAt || undefined}
                                     onChange={e => setApplicationStartsAt(e.target.value)}
                                     className="w-full px-4 py-2.5 bg-white border border-zinc-200 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-[#162660]/20 text-zinc-800"
@@ -328,6 +332,7 @@ export default function DashboardEventEdit({ eventId, onBack, onSuccess }: Dashb
                                 <input
                                     type="datetime-local"
                                     value={startsAt}
+                                    aria-label="시작 일시 (한국 시간)"
                                     onChange={e => setStartsAt(e.target.value)}
                                     className="w-full px-4 py-2.5 bg-white border border-zinc-200 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-[#162660]/20 text-zinc-800"
                                     required
@@ -339,6 +344,7 @@ export default function DashboardEventEdit({ eventId, onBack, onSuccess }: Dashb
                                 <input
                                     type="datetime-local"
                                     value={endsAt}
+                                    aria-label="종료 일시 (한국 시간)"
                                     onChange={e => setEndsAt(e.target.value)}
                                     className="w-full px-4 py-2.5 bg-white border border-zinc-200 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-[#162660]/20 text-zinc-800"
                                 />
@@ -418,9 +424,11 @@ export default function DashboardEventEdit({ eventId, onBack, onSuccess }: Dashb
                             </div>
                         )}
 
-                        <EventConsentEditor value={consentConfiguration} onChange={setConsentConfiguration} />
-
-                        <EventRefundPolicyEditor value={refundPolicy} onChange={setRefundPolicy} />
+                        {configurationLocked && <p role="status" className="text-sm text-amber-900">동의 항목과 환불 규정은 현재 변경할 수 없습니다. 기본 정보만 수정할 수 있습니다.</p>}
+                        <fieldset disabled={configurationLocked} className="min-w-0 space-y-6">
+                            <EventConsentEditor value={consentConfiguration} onChange={setConsentConfiguration} />
+                            <EventRefundPolicyEditor value={refundPolicy} onChange={setRefundPolicy} />
+                        </fieldset>
 
                         <div className="flex items-center justify-end gap-3 border-t border-zinc-50 pt-6">
                             <Button

@@ -37,7 +37,7 @@ describe('real App management navigation with synthetic HTTP', () => {
         http.get.mockImplementation(async (path: string) => {
             let data: unknown;
             if (path === '/users/me') data = { userId: 7, userType: 'REGULAR', name: 'Synthetic host', role: 'CREW_MEMBER', crew: hasCrew ? { crewId: 1 } : null };
-            else if (path === '/crews/1') data = { crewId: 1, crewName: 'Synthetic crew', seasonHouseActive: false };
+            else if (path === '/crews/1') data = { crewId: 1, crewName: 'Synthetic crew', seasonHouseActive: true };
             else if (path === '/operations/context') data = { permissions };
             else if (path === '/admin/crews') data = { developerAccess: false, crews: [], schools: [] };
             else if (path === '/events') data = events;
@@ -66,6 +66,37 @@ describe('real App management navigation with synthetic HTTP', () => {
         await act(async () => listeners.forEach(listener => listener({ matches: width >= 1024 })));
         await settle();
     };
+
+    it.each([320, 390, 768, 1023, 1024])('blocks every direct reservation view at %spx, including a season override', async viewport => {
+        width = viewport; hasCrew = true;
+        localStorage.setItem('dev_operating_mode', 'BOTH');
+        for (const view of ['reservation', 'guest_reservation', 'stats', 'my_reservations']) {
+            window.history.replaceState(null, '', `/?view=${view}`);
+            await render();
+            expect(container.textContent).toContain('시즌방 예약을 이용할 수 없습니다');
+            await act(async () => root.unmount());
+            root = createRoot(container);
+        }
+        expect(http.get.mock.calls.some(([path]) => /reservations|calendar|usage-statistics/.test(path))).toBe(false);
+    });
+
+    it('does not expose or fetch the personal reservation calendar', async () => {
+        window.history.replaceState(null, '', '/?view=my_page');
+        await render();
+        expect(container.textContent).toContain('My Page');
+        expect(container.textContent).not.toContain('나의 달력');
+        expect(container.textContent).not.toContain('시즌방 이용 횟수');
+        expect(http.get).not.toHaveBeenCalledWith('/users/me/reservations');
+    });
+
+    it('hides reservation management even from a desktop host granted the legacy permission', async () => {
+        width = 1024; hasCrew = true; permissions.push('RESERVATIONS_MANAGE');
+        window.history.replaceState(null, '', '/?view=operations_center');
+        await render();
+        expect(container.textContent).toContain('이벤트 관리');
+        expect(container.textContent).not.toContain('예약 관리');
+        expect(Array.from(container.querySelectorAll('button')).some(button => /예약|나의 달력/.test(button.textContent || ''))).toBe(false);
+    });
 
     it('keeps the desktop-required explanation visible after a mobile host clicks Operations Center', async () => {
         await render(); await click('운영 센터');

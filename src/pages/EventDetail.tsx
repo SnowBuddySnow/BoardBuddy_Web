@@ -34,7 +34,7 @@ import {
 import { getApiErrorMessage, getApiErrorStatus } from '../lib/apiError';
 import { PlanningModeBadge } from '../components/event/PlanningModeBadge';
 import { getEventActivityLabel } from '../constants/eventActivity';
-import { EVENT_TIME_ZONE, parseEventDateTime } from '../lib/eventDateTime';
+import { EVENT_TIME_ZONE, hasEventStarted, parseEventDateTime } from '../lib/eventDateTime';
 import { getConsentPendingCopy, getConsentSubmissionMessage } from '../lib/eventRegistration';
 import { ConsentResponseField } from '../components/event/ConsentResponseField';
 import {
@@ -191,6 +191,12 @@ export default function EventDetail({ eventId, onBack, isGuestApplication = fals
     }, [draftHydrated, eventId]);
 
     useEffect(() => {
+        if (!event) return;
+        const timer = window.setInterval(() => setCurrentTime(Date.now()), 1000);
+        return () => window.clearInterval(timer);
+    }, [event]);
+
+    useEffect(() => {
         if (!event?.applicationStartsAt) return;
         const opensAt = parseEventDateTime(event.applicationStartsAt).getTime();
         if (!Number.isFinite(opensAt)) return;
@@ -210,6 +216,7 @@ export default function EventDetail({ eventId, onBack, isGuestApplication = fals
 
     const handleJoinAction = async () => {
         if (!event) return;
+        if (hasEventStarted(event.startsAt)) return;
 
         // Check phone sharing consent preference
         const consentPref = localStorage.getItem('phone_sharing_consent_preference') || 'each_time';
@@ -408,8 +415,8 @@ export default function EventDetail({ eventId, onBack, isGuestApplication = fals
                 <Button
                     variant="ghost"
                     onClick={onBack}
-                    aria-label="돌아가기"
-                    className="p-2 bg-white/95 dark:bg-zinc-900/95 shadow-sm rounded-full text-zinc-800 shrink-0"
+                    aria-label="뒤로 가기"
+                    className="min-h-11 min-w-11 p-2 bg-white/95 dark:bg-zinc-900/95 shadow-sm rounded-full text-zinc-800 shrink-0"
                 >
                     <ChevronLeft className="w-5 h-5" />
                 </Button>
@@ -420,15 +427,15 @@ export default function EventDetail({ eventId, onBack, isGuestApplication = fals
             {/* Content Container */}
             <div className="flex-1 overflow-y-auto pb-[130px]">
                 {/* Hero / Cover Visual Panel */}
-                <div className="w-full h-44 bg-gradient-to-br from-[#162660] via-[#1e3a8a] to-[#2563eb] relative flex items-end p-5">
+                <div className="w-full min-h-52 bg-gradient-to-br from-[#162660] via-[#1e3a8a] to-[#2563eb] relative flex items-end px-5 pb-5 pt-16">
                     <div className="absolute inset-0 bg-black/10"></div>
-                    <div className="z-10 flex flex-col gap-1.5">
+                    <div className="z-10 flex w-full min-w-0 flex-col items-start gap-1.5">
                         {isGuestApplication && <span className="w-max rounded-full bg-amber-300 px-2.5 py-1 text-[10px] font-black text-[#162660]">게스트 초대</span>}
                         <PlanningModeBadge mode={event.planningMode} />
                         <span className="text-[10px] uppercase font-black text-blue-200 tracking-widest px-3 py-1 bg-white/10 backdrop-blur-md rounded-full w-max">
                             {getEventActivityLabel(event.activityType)}
                         </span>
-                        <h1 className="text-xl font-bold text-white leading-tight">
+                        <h1 className="text-xl font-bold text-white leading-tight [overflow-wrap:anywhere]">
                             {event.title}
                         </h1>
                     </div>
@@ -815,6 +822,8 @@ export default function EventDetail({ eventId, onBack, isGuestApplication = fals
                             신청 취소하기
                         </Button>
                     </div>
+                ) : hasEventStarted(event.startsAt, currentTime) ? (
+                    <Button disabled className="w-full h-12 rounded-full font-bold">신청 마감</Button>
                 ) : applicationNotOpen ? (
                     <Button disabled className="w-full h-12 bg-amber-100 border-amber-200 text-amber-800 rounded-full font-bold">
                         {formatDate(event.applicationStartsAt!)} 신청 시작

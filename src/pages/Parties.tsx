@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { formatEventDateTime, isEventRegistrationAvailable, parseEventDateTime } from '../lib/eventDateTime';
+import { formatEventDateTime, hasEventStarted, isEventRegistrationAvailable, parseEventDateTime } from '../lib/eventDateTime';
 import { Button } from '../components/Button';
 import { listParties, joinEvent } from '../services/event';
 import { Event } from '../types/api';
@@ -21,6 +21,12 @@ export default function Parties({ onBack, onEventClick, onCreateClick, canCreate
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedTag, setSelectedTag] = useState('ALL');
     const [joiningIds, setJoiningIds] = useState<number[]>([]);
+    const [currentTime, setCurrentTime] = useState(Date.now());
+
+    useEffect(() => {
+        const timer = window.setInterval(() => setCurrentTime(Date.now()), 1000);
+        return () => window.clearInterval(timer);
+    }, []);
 
     const fetchAllParties = async () => {
         try {
@@ -44,6 +50,8 @@ export default function Parties({ onBack, onEventClick, onCreateClick, canCreate
     const handleJoin = async (e: React.MouseEvent, eventId: number) => {
         e.stopPropagation(); // Avoid navigating to details
         if (joiningIds.includes(eventId)) return;
+        const event = parties.find(item => item.id === eventId);
+        if (!event || !isEventRegistrationAvailable(event)) return;
 
         try {
             setJoiningIds(prev => [...prev, eventId]);
@@ -68,7 +76,7 @@ export default function Parties({ onBack, onEventClick, onCreateClick, canCreate
     const formatDate = formatEventDateTime;
 
     const activityTags = ['ALL', ...EVENT_ACTIVITY_OPTIONS.map(option => option.value)];
-    const availableEventCount = parties.filter(event => isEventRegistrationAvailable(event)).length;
+    const availableEventCount = parties.filter(event => isEventRegistrationAvailable(event, currentTime)).length;
 
     const filteredParties = parties.filter(event => {
         const matchesSearch = event.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -86,7 +94,7 @@ export default function Parties({ onBack, onEventClick, onCreateClick, canCreate
         <div className="flex-1 flex flex-col h-full overflow-hidden bg-[#FAF8F3] relative">
             {/* Header */}
             <header className="px-4 pt-3 pb-3 flex items-center justify-between border-b border-zinc-100 bg-[#FAF8F3]">
-                <Button variant="ghost" onClick={onBack} className="-ml-2 gap-1 text-zinc-800 hover:bg-transparent">
+                <Button variant="ghost" aria-label="뒤로 가기" onClick={onBack} className="-ml-2 min-h-11 min-w-11 gap-1 text-zinc-800 hover:bg-transparent">
                     <ChevronLeft className="w-6 h-6" />
                 </Button>
                 <div className="text-center">
@@ -97,7 +105,8 @@ export default function Parties({ onBack, onEventClick, onCreateClick, canCreate
                     {canCreate && onCreateClick && (
                         <button
                             onClick={onCreateClick}
-                            className="bg-[#162660] text-white p-2 rounded-full hover:bg-blue-900 transition-colors shadow-sm"
+                            aria-label="이벤트 만들기"
+                            className="min-h-11 min-w-11 bg-[#162660] text-white p-2 rounded-full hover:bg-blue-900 transition-colors shadow-sm"
                         >
                             <Sparkles className="w-4 h-4" />
                         </button>
@@ -124,7 +133,7 @@ export default function Parties({ onBack, onEventClick, onCreateClick, canCreate
                         <button
                             key={tag}
                             onClick={() => setSelectedTag(tag)}
-                            className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all shrink-0 border ${
+                            className={`min-h-11 min-w-11 px-3.5 py-1.5 rounded-full text-xs font-bold transition-all shrink-0 border ${
                                 selectedTag === tag
                                     ? 'bg-[#162660] text-white border-[#162660] shadow-sm'
                                     : 'bg-white text-zinc-600 border-zinc-200 hover:bg-zinc-50'
@@ -146,7 +155,7 @@ export default function Parties({ onBack, onEventClick, onCreateClick, canCreate
                 ) : filteredParties.length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-20 text-center text-zinc-400">
                         <AlertCircle className="w-12 h-12 stroke-[1.5] mb-2 text-zinc-300" />
-                        <p className="text-base font-bold">등록된 이벤트가 없습니다</p>
+                        <p className="text-base font-bold">{parties.length ? '검색 조건에 맞는 이벤트가 없습니다' : '등록된 이벤트가 없습니다'}</p>
                         <p className="text-xs mt-1">새로운 액티비티 모임을 제안하거나 필터를 변경해보세요.</p>
                     </div>
                 ) : (
@@ -157,9 +166,10 @@ export default function Parties({ onBack, onEventClick, onCreateClick, canCreate
                             const hasJoined = event.currentUserStatus === 'JOINED';
                             const isPending = event.currentUserStatus === 'PENDING';
                             const isConsentPending = event.currentUserStatus === 'CONSENT_PENDING';
+                            const started = hasEventStarted(event.startsAt, currentTime);
                             const applicationNotOpen = Boolean(
                                 event.applicationStartsAt
-                                && parseEventDateTime(event.applicationStartsAt).getTime() > Date.now(),
+                                && parseEventDateTime(event.applicationStartsAt).getTime() > currentTime,
                             );
 
                             return (
@@ -230,6 +240,8 @@ export default function Parties({ onBack, onEventClick, onCreateClick, canCreate
                                             <span className="text-xs font-bold text-amber-600 px-3 py-1.5 bg-amber-50 rounded-full border border-amber-100 animate-pulse">
                                                 승인 대기
                                             </span>
+                                        ) : started ? (
+                                            <span className="text-xs font-bold text-zinc-500 px-3 py-1.5 bg-zinc-100 rounded-full">신청 마감</span>
                                         ) : applicationNotOpen ? (
                                             <span className="text-xs font-bold text-amber-700 px-3 py-1.5 bg-amber-50 rounded-full border border-amber-100">
                                                 {formatDate(event.applicationStartsAt!)} 신청 시작
@@ -242,7 +254,7 @@ export default function Parties({ onBack, onEventClick, onCreateClick, canCreate
                                             <button
                                                 onClick={(e) => handleJoin(e, event.id)}
                                                 disabled={joiningIds.includes(event.id)}
-                                                className="bg-[#162660] hover:bg-[#1e3a8a] text-white text-xs font-bold px-4.5 py-2 rounded-2xl shadow-sm transition-all hover:scale-[1.02] disabled:opacity-50"
+                                                className="min-h-11 min-w-11 bg-[#162660] hover:bg-[#1e3a8a] text-white text-xs font-bold px-4.5 py-2 rounded-2xl shadow-sm transition-all hover:scale-[1.02] disabled:opacity-50"
                                             >
                                                 {joiningIds.includes(event.id) ? '신청 중...' : '신청'}
                                             </button>

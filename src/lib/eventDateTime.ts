@@ -34,10 +34,14 @@ export const formatEventDateTimeInput = (value?: string | null): string => {
     return `${parts.year}-${parts.month}-${parts.day}T${parts.hour}:${parts.minute}`;
 };
 
+export const hasEventStarted = (startsAt: string, now = Date.now()): boolean =>
+    // Invalid dates fail closed as well: no admission until the schedule can be verified.
+    !(parseEventDateTime(startsAt).getTime() > now);
+
 export const isEventRegistrationAvailable = (
     event: Pick<Event, 'status' | 'startsAt' | 'applicationStartsAt' | 'joinedCount' | 'capacity'>,
     now = Date.now(),
 ): boolean => event.status === 'OPEN'
-    && parseEventDateTime(event.startsAt).getTime() > now
+    && !hasEventStarted(event.startsAt, now)
     && (!event.applicationStartsAt || parseEventDateTime(event.applicationStartsAt).getTime() <= now)
     && (event.joinedCount ?? 0) < event.capacity;
