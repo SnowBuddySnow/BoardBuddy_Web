@@ -34,7 +34,7 @@ import {
 import { getApiErrorMessage, getApiErrorStatus } from '../lib/apiError';
 import { PlanningModeBadge } from '../components/event/PlanningModeBadge';
 import { getEventActivityLabel } from '../constants/eventActivity';
-import { EVENT_TIME_ZONE, hasEventStarted, parseEventDateTime } from '../lib/eventDateTime';
+import { EVENT_TIME_ZONE, getEventRegistrationLabel, getEventRegistrationState, isEventRegistrationAvailable, parseEventDateTime } from '../lib/eventDateTime';
 import { getConsentPendingCopy, getConsentSubmissionMessage } from '../lib/eventRegistration';
 import { ConsentResponseField } from '../components/event/ConsentResponseField';
 import {
@@ -68,6 +68,7 @@ export default function EventDetail({ eventId, onBack, isGuestApplication = fals
     const [currentTime, setCurrentTime] = useState(Date.now());
     const latestDraftPayloadRef = useRef<ConsentResponseInput[]>([]);
     const draftSaveQueueRef = useRef<Promise<unknown>>(Promise.resolve());
+    const joinInFlightRef = useRef(false);
 
     const fetchEventDetail = useCallback(async (knownEvent?: Event) => {
         try {
@@ -215,8 +216,11 @@ export default function EventDetail({ eventId, onBack, isGuestApplication = fals
     }, [event?.applicationStartsAt]);
 
     const handleJoinAction = async () => {
-        if (!event) return;
-        if (hasEventStarted(event.startsAt)) return;
+        if (!event || joinInFlightRef.current) return;
+        if (!isEventRegistrationAvailable(event)) {
+            setCurrentTime(Date.now());
+            return;
+        }
 
         // Check phone sharing consent preference
         const consentPref = localStorage.getItem('phone_sharing_consent_preference') || 'each_time';
@@ -229,7 +233,13 @@ export default function EventDetail({ eventId, onBack, isGuestApplication = fals
     };
 
     const executeJoinAction = async () => {
-        if (!event) return;
+        if (!event || joinInFlightRef.current) return;
+        // A dialog may have stayed open beyond an admission boundary. Never trust its old render.
+        if (!isEventRegistrationAvailable(event)) {
+            setCurrentTime(Date.now());
+            return;
+        }
+        joinInFlightRef.current = true;
         try {
             setActionLoading(true);
             const participant = await joinEvent(event.id);
@@ -250,15 +260,20 @@ export default function EventDetail({ eventId, onBack, isGuestApplication = fals
                 alert('참가 신청에 실패했습니다.');
             }
         } finally {
+            joinInFlightRef.current = false;
             setActionLoading(false);
         }
     };
 
     const handleConfirmConsent = async (always: boolean) => {
+        setShowPhoneConsentModal(false);
+        if (!event || !isEventRegistrationAvailable(event)) {
+            setCurrentTime(Date.now());
+            return;
+        }
         if (always) {
             localStorage.setItem('phone_sharing_consent_preference', 'always');
         }
-        setShowPhoneConsentModal(false);
         await executeJoinAction();
     };
 
@@ -394,19 +409,16 @@ export default function EventDetail({ eventId, onBack, isGuestApplication = fals
     if (!event) return null;
 
     const isClosed = event.status === 'CLOSED' || event.status === 'CANCELLED';
-    const isFull = event.capacity <= (event.joinedCount || 0);
+    const registrationState = getEventRegistrationState(event, currentTime);
+    const isInvitation = event.joinPolicy === 'INVITE_ONLY' && event.currentUserStatus === 'PENDING';
     const hasJoined = event.currentUserStatus === 'JOINED';
-    const isPending = event.currentUserStatus === 'PENDING';
+    const isPending = event.currentUserStatus === 'PENDING' && !isInvitation;
     const isConsentPending = event.currentUserStatus === 'CONSENT_PENDING';
     const consentCopy = getConsentPendingCopy(event.joinPolicy);
     const requiredConsentItems = consentState?.items.filter(item => item.required) || [];
     const completedRequiredItems = requiredConsentItems.filter(item => (
         isConsentItemComplete(item, consentAnswers[item.id])
     )).length;
-    const applicationNotOpen = Boolean(
-        event.applicationStartsAt
-        && parseEventDateTime(event.applicationStartsAt).getTime() > currentTime,
-    );
 
     return (
         <div className="flex-1 flex flex-col h-full overflow-hidden bg-[#FAF8F3] relative">
@@ -516,7 +528,7 @@ export default function EventDetail({ eventId, onBack, isGuestApplication = fals
                         <div className="flex items-center justify-between text-sm">
                             <span className="text-zinc-500 font-medium">참가 승인 정책</span>
                             <span className="font-bold text-zinc-800">
-                                {event.joinPolicy === 'INSTANT' ? '즉시 승인' : '호스트 승인 필요'}
+                                {event.joinPolicy === 'INVITE_ONLY' ? '초대 전용' : event.joinPolicy === 'APPROVAL_REQUIRED' ? '호스트 승인 필요' : '즉시 승인'}
                             </span>
                         </div>
 
@@ -773,7 +785,9 @@ export default function EventDetail({ eventId, onBack, isGuestApplication = fals
 
             {/* Bottom Actions Bar */}
             <div className="absolute bottom-0 left-0 right-0 bg-white border-t border-zinc-100 px-5 py-4 z-10 flex flex-col justify-center">
-                {isClosed ? (
+                {registrationState === 'DRAFT' ? (
+                    <Button disabled className="w-full h-12 rounded-full font-bold">준비 중인 이벤트</Button>
+                ) : isClosed ? (
                     <Button disabled className="w-full h-12 bg-zinc-300 border-zinc-300 text-zinc-500 rounded-full font-bold">
                         {event.status === 'CANCELLED' ? '취소된 모임' : '마감된 모임'}
                     </Button>
@@ -822,15 +836,11 @@ export default function EventDetail({ eventId, onBack, isGuestApplication = fals
                             신청 취소하기
                         </Button>
                     </div>
-                ) : hasEventStarted(event.startsAt, currentTime) ? (
-                    <Button disabled className="w-full h-12 rounded-full font-bold">신청 마감</Button>
-                ) : applicationNotOpen ? (
-                    <Button disabled className="w-full h-12 bg-amber-100 border-amber-200 text-amber-800 rounded-full font-bold">
-                        {formatDate(event.applicationStartsAt!)} 신청 시작
-                    </Button>
-                ) : isFull ? (
-                    <Button disabled className="w-full h-12 bg-zinc-300 border-zinc-300 text-zinc-500 rounded-full font-bold">
-                        정원이 모두 찼습니다
+                ) : registrationState !== 'AVAILABLE' ? (
+                    <Button disabled className="w-full h-12 bg-zinc-100 border-zinc-200 text-zinc-500 rounded-full font-bold">
+                        {registrationState === 'NOT_OPEN'
+                            ? `${formatDate(event.applicationStartsAt!)} 신청 시작`
+                            : getEventRegistrationLabel(registrationState)}
                     </Button>
                 ) : (
                     <Button
@@ -839,7 +849,7 @@ export default function EventDetail({ eventId, onBack, isGuestApplication = fals
                         disabled={actionLoading}
                         className="w-full h-12 bg-[#162660] hover:bg-[#1e3a8a] text-white border-none rounded-full font-bold shadow-md hover:scale-[1.01] transition-all"
                     >
-                        {actionLoading ? '신청 중...' : isGuestApplication ? '게스트로 신청하기' : '참여 신청하기'}
+                        {actionLoading ? '신청 중...' : isInvitation ? '초대 수락하기' : isGuestApplication ? '게스트로 신청하기' : '참여 신청하기'}
                     </Button>
                 )}
             </div>
@@ -862,6 +872,7 @@ export default function EventDetail({ eventId, onBack, isGuestApplication = fals
                         <div className="flex flex-col gap-2">
                             <Button
                                 onClick={() => handleConfirmConsent(true)}
+                                disabled={actionLoading || registrationState !== 'AVAILABLE'}
                                 className="w-full h-11 text-sm font-bold bg-[#162660] text-white rounded-xl"
                             >
                                 항상 동의하고 진행
@@ -869,6 +880,7 @@ export default function EventDetail({ eventId, onBack, isGuestApplication = fals
                             <Button
                                 variant="outline"
                                 onClick={() => handleConfirmConsent(false)}
+                                disabled={actionLoading || registrationState !== 'AVAILABLE'}
                                 className="w-full h-11 text-sm font-bold rounded-xl"
                             >
                                 이번만 동의하고 진행
