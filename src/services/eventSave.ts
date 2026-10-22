@@ -22,7 +22,7 @@ type EventSaveInput = {
     refundPolicy: string;
 } & (
     | { eventId?: null; payload: CreateEventPayload; onCreated: (id: number) => void }
-    | { eventId: number; payload: UpdateEventPayload; onCreated?: never }
+    | { eventId: number; payload: UpdateEventPayload; onCreated?: never; configurationLocked?: boolean }
 );
 
 /** Each endpoint commits separately. Never race writes to the versioned Event row. */
@@ -37,6 +37,7 @@ export async function saveEventConfiguration(input: EventSaveInput): Promise<num
             input.onCreated(eventId);
         } else {
             await updateEvent(input.eventId, input.payload);
+            if (input.configurationLocked) return input.eventId;
         }
         stage = 'consents';
         await configureEventConsents(eventId!, input.consentConfiguration);
