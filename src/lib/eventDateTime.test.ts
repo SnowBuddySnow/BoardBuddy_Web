@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { EVENT_TIME_ZONE, formatEventDateTime, formatEventDateTimeInput, isEventRegistrationAvailable, parseEventDateTime } from './eventDateTime';
+import { EVENT_TIME_ZONE, formatEventDateTime, formatEventDateTimeInput, getEventRegistrationState, isEventRegistrationAvailable, parseEventDateTime } from './eventDateTime';
 
 describe('event API timestamps', () => {
     it.each([
@@ -57,5 +57,35 @@ describe('event API timestamps', () => {
         { startsAt: 'invalid' }, { applicationStartsAt: 'invalid' },
     ])('never advertises an unavailable event: %o', change => {
         expect(isEventRegistrationAvailable({ ...openEvent, ...change }, Date.parse('2026-10-25T09:00:00Z'))).toBe(false);
+    });
+
+    it.each([
+        [{ currentUserStatus: 'JOINED' as const }, 'JOINED'],
+        [{ currentUserStatus: 'CONSENT_PENDING' as const }, 'CONSENT_PENDING'],
+        [{ currentUserStatus: 'PENDING' as const, joinPolicy: 'APPROVAL_REQUIRED' as const }, 'PENDING'],
+        [{ currentUserStatus: 'REMOVED' as const }, 'REMOVED'],
+        [{ joinPolicy: 'INVITE_ONLY' as const }, 'INVITE_REQUIRED'],
+        [{ paymentRequired: true, paymentDeadlineAt: '2026-10-25T18:00:00' }, 'PAYMENT_CLOSED'],
+        [{ paymentRequired: true, paymentDeadlineAt: 'invalid' }, 'UNAVAILABLE'],
+        [{ capacity: Number.NaN }, 'UNAVAILABLE'], [{ capacity: 0 }, 'UNAVAILABLE'],
+        [{ joinedCount: -1 }, 'UNAVAILABLE'],
+    ])('aligns new-admission state and count for %o', (change, expected) => {
+        const candidate = { ...openEvent, ...change };
+        const now = Date.parse('2026-10-25T09:00:00Z');
+        expect(getEventRegistrationState(candidate, now)).toBe(expected);
+        expect(isEventRegistrationAvailable(candidate, now)).toBe(false);
+    });
+
+    it('keeps invitation acceptance and cancelled-user reapplication available when otherwise eligible', () => {
+        const now = Date.parse('2026-10-25T09:00:00Z');
+        expect(isEventRegistrationAvailable({ ...openEvent, joinPolicy: 'INVITE_ONLY', currentUserStatus: 'PENDING' }, now)).toBe(true);
+        expect(isEventRegistrationAvailable({ ...openEvent, currentUserStatus: 'CANCELLED' }, now)).toBe(true);
+    });
+
+    it('closes payment-required admission exactly at the Korean deadline, not before or for free events', () => {
+        const paid = { ...openEvent, paymentRequired: true, paymentDeadlineAt: '2026-10-25T19:00:00' };
+        expect(isEventRegistrationAvailable(paid, Date.parse('2026-10-25T09:59:59Z'))).toBe(true);
+        expect(isEventRegistrationAvailable(paid, Date.parse('2026-10-25T10:00:00Z'))).toBe(false);
+        expect(isEventRegistrationAvailable({ ...paid, paymentRequired: false }, Date.parse('2026-10-25T10:00:00Z'))).toBe(true);
     });
 });
