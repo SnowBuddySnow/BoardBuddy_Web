@@ -1,5 +1,8 @@
 export type OperatingMode = 'SEASON' | 'OFF_SEASON' | 'BOTH';
 
+// Release hold: reopening requires an explicit reviewed change, not a date or browser override.
+export const SEASON_HOUSE_RESERVATIONS_ENABLED: boolean = false;
+
 const DEV_OPERATING_MODE_KEY = 'dev_operating_mode';
 
 const envOverride = (
@@ -17,6 +20,7 @@ const normalizeMode = (value?: string | null): OperatingMode | null => {
 };
 
 export const getOperatingMode = (date = new Date()): OperatingMode => {
+  if (!SEASON_HOUSE_RESERVATIONS_ENABLED) return 'OFF_SEASON';
   if (import.meta.env.DEV) {
     const devOverride = normalizeMode(localStorage.getItem(DEV_OPERATING_MODE_KEY));
     if (devOverride) return devOverride;
@@ -30,8 +34,8 @@ export const getOperatingMode = (date = new Date()): OperatingMode => {
 };
 
 export const getOperatingFeatures = (mode: OperatingMode) => ({
-  season: mode === 'SEASON' || mode === 'BOTH',
-  offSeason: mode === 'OFF_SEASON' || mode === 'BOTH',
+  season: SEASON_HOUSE_RESERVATIONS_ENABLED && (mode === 'SEASON' || mode === 'BOTH'),
+  offSeason: !SEASON_HOUSE_RESERVATIONS_ENABLED || mode === 'OFF_SEASON' || mode === 'BOTH',
 });
 
 export const operatingModeCopy: Record<OperatingMode, { label: string; description: string }> = {
