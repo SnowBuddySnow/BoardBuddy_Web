@@ -15,6 +15,7 @@ describe('real catalogue and detail admission controls with synthetic HTTP', () 
     let container: HTMLDivElement;
     let event: Record<string, unknown>;
     let expectedPosts: number;
+    const openEvent = vi.fn();
     beforeEach(() => {
         vi.resetAllMocks(); vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
         vi.useFakeTimers(); vi.setSystemTime(new Date('2035-08-18T00:59:59Z'));
@@ -35,7 +36,7 @@ describe('real catalogue and detail admission controls with synthetic HTTP', () 
     });
     const buttons = () => Array.from(container.querySelectorAll('button'));
     const render = async (detail: boolean) => act(async () => {
-        root.render(detail ? <EventDetail eventId={1} onBack={vi.fn()} /> : <Parties onBack={vi.fn()} onEventClick={vi.fn()} />);
+        root.render(detail ? <EventDetail eventId={1} onBack={vi.fn()} /> : <Parties onBack={vi.fn()} onEventClick={openEvent} />);
     });
 
     it.each([false, true])('closes admission at the exact start without reload (detail=%s)', async detail => {
@@ -131,24 +132,28 @@ describe('real catalogue and detail admission controls with synthetic HTTP', () 
         expect(http.post).toHaveBeenCalledWith('/events/1/join');
     });
 
-    it.each([false, true])('allows one request for rapid repeated joins (detail=%s)', async detail => {
+    it.each([false, true])('rapid actions route catalogue clicks without writes or send one detail join (detail=%s)', async detail => {
         localStorage.setItem('phone_sharing_consent_preference', 'always');
         let resolveJoin!: (value: unknown) => void;
         http.post.mockImplementation(() => new Promise(resolve => { resolveJoin = resolve; }));
         await render(detail);
         const join = buttons().find(button => button.textContent === (detail ? '참여 신청하기' : '신청'))!;
-        expectedPosts = 1;
+        expectedPosts = detail ? 1 : 0;
         await act(async () => { join.click(); join.click(); });
+        if (!detail) {
+            expect(openEvent).toHaveBeenCalledWith(1); expect(http.post).not.toHaveBeenCalled(); return;
+        }
         expect(http.post).toHaveBeenCalledTimes(1);
         await act(async () => resolveJoin({ data: { data: { id: 101, status: 'JOINED' } } }));
     });
 
-    it.each([false, true])('accepts a pending invitation through the normal join endpoint (detail=%s)', async detail => {
+    it.each([false, true])('routes a pending invitation to detail before normal acceptance (detail=%s)', async detail => {
         event.joinPolicy = 'INVITE_ONLY'; event.currentUserStatus = 'PENDING';
         localStorage.setItem('phone_sharing_consent_preference', 'always');
-        await render(detail); expectedPosts = 1;
+        await render(detail); expectedPosts = detail ? 1 : 0;
         await act(async () => buttons().find(button => button.textContent === (detail ? '초대 수락하기' : '초대 수락'))!.click());
-        expect(http.post).toHaveBeenCalledWith('/events/1/join');
+        if (detail) expect(http.post).toHaveBeenCalledWith('/events/1/join');
+        else { expect(openEvent).toHaveBeenCalledWith(1); expect(http.post).not.toHaveBeenCalled(); }
     });
 
     it('preserves an approval-pending applicant’s cancellation controls after start', async () => {
