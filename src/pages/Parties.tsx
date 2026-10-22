@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { formatEventDateTime, hasEventStarted, isEventRegistrationAvailable, parseEventDateTime } from '../lib/eventDateTime';
+import { useState, useEffect, useRef } from 'react';
+import { formatEventDateTime, getEventRegistrationLabel, getEventRegistrationState, isEventRegistrationAvailable } from '../lib/eventDateTime';
 import { Button } from '../components/Button';
 import { listParties, joinEvent } from '../services/event';
 import { Event } from '../types/api';
@@ -21,6 +21,7 @@ export default function Parties({ onBack, onEventClick, onCreateClick, canCreate
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedTag, setSelectedTag] = useState('ALL');
     const [joiningIds, setJoiningIds] = useState<number[]>([]);
+    const joiningIdsRef = useRef(new Set<number>());
     const [currentTime, setCurrentTime] = useState(Date.now());
 
     useEffect(() => {
@@ -49,10 +50,11 @@ export default function Parties({ onBack, onEventClick, onCreateClick, canCreate
 
     const handleJoin = async (e: React.MouseEvent, eventId: number) => {
         e.stopPropagation(); // Avoid navigating to details
-        if (joiningIds.includes(eventId)) return;
+        if (joiningIdsRef.current.has(eventId)) return;
         const event = parties.find(item => item.id === eventId);
         if (!event || !isEventRegistrationAvailable(event)) return;
 
+        joiningIdsRef.current.add(eventId);
         try {
             setJoiningIds(prev => [...prev, eventId]);
             await joinEvent(eventId);
@@ -69,6 +71,7 @@ export default function Parties({ onBack, onEventClick, onCreateClick, canCreate
                 alert('이벤트 참여 신청에 실패했습니다.');
             }
         } finally {
+            joiningIdsRef.current.delete(eventId);
             setJoiningIds(prev => prev.filter(id => id !== eventId));
         }
     };
@@ -162,15 +165,11 @@ export default function Parties({ onBack, onEventClick, onCreateClick, canCreate
                     <div className="grid gap-4 pt-1 lg:grid-cols-2">
                         {filteredParties.map(event => {
                             const isClosed = event.status === 'CLOSED' || event.status === 'CANCELLED';
-                            const isFull = event.capacity <= (event.joinedCount || 0);
+                            const registrationState = getEventRegistrationState(event, currentTime);
+                            const isInvitation = event.joinPolicy === 'INVITE_ONLY' && event.currentUserStatus === 'PENDING';
                             const hasJoined = event.currentUserStatus === 'JOINED';
-                            const isPending = event.currentUserStatus === 'PENDING';
+                            const isPending = event.currentUserStatus === 'PENDING' && !isInvitation;
                             const isConsentPending = event.currentUserStatus === 'CONSENT_PENDING';
-                            const started = hasEventStarted(event.startsAt, currentTime);
-                            const applicationNotOpen = Boolean(
-                                event.applicationStartsAt
-                                && parseEventDateTime(event.applicationStartsAt).getTime() > currentTime,
-                            );
 
                             return (
                                 <div
@@ -240,15 +239,11 @@ export default function Parties({ onBack, onEventClick, onCreateClick, canCreate
                                             <span className="text-xs font-bold text-amber-600 px-3 py-1.5 bg-amber-50 rounded-full border border-amber-100 animate-pulse">
                                                 승인 대기
                                             </span>
-                                        ) : started ? (
-                                            <span className="text-xs font-bold text-zinc-500 px-3 py-1.5 bg-zinc-100 rounded-full">신청 마감</span>
-                                        ) : applicationNotOpen ? (
-                                            <span className="text-xs font-bold text-amber-700 px-3 py-1.5 bg-amber-50 rounded-full border border-amber-100">
-                                                {formatDate(event.applicationStartsAt!)} 신청 시작
-                                            </span>
-                                        ) : isFull ? (
-                                            <span className="text-xs font-bold text-zinc-400 px-3 py-1.5 bg-zinc-50 rounded-full border border-zinc-200/50">
-                                                정원 마감
+                                        ) : registrationState !== 'AVAILABLE' ? (
+                                            <span className="text-xs font-bold text-zinc-500 px-3 py-1.5 bg-zinc-100 rounded-full">
+                                                {registrationState === 'NOT_OPEN'
+                                                    ? `${formatDate(event.applicationStartsAt!)} 신청 시작`
+                                                    : getEventRegistrationLabel(registrationState)}
                                             </span>
                                         ) : (
                                             <button
@@ -256,7 +251,7 @@ export default function Parties({ onBack, onEventClick, onCreateClick, canCreate
                                                 disabled={joiningIds.includes(event.id)}
                                                 className="min-h-11 min-w-11 bg-[#162660] hover:bg-[#1e3a8a] text-white text-xs font-bold px-4.5 py-2 rounded-2xl shadow-sm transition-all hover:scale-[1.02] disabled:opacity-50"
                                             >
-                                                {joiningIds.includes(event.id) ? '신청 중...' : '신청'}
+                                                {joiningIds.includes(event.id) ? '신청 중...' : isInvitation ? '초대 수락' : '신청'}
                                             </button>
                                         )}
                                     </div>

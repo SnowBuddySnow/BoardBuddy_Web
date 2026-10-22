@@ -17,6 +17,11 @@ const base = { capacity: 15, joinedCount: 1, joinPolicy: 'INSTANT', visibilityTy
 const events = [
     { ...base, id: 11, title: '테스트 전용 · 지난 이벤트 (신청 불가)', startsAt: '2026-09-09T19:33:00', endsAt: '2026-09-11T18:33:00' },
     { ...base, id: 12, title: '테스트 전용 · 아주 긴 제목의 모바일 이벤트 참가 화면 확인', startsAt: '2099-10-25T20:00:00', endsAt: '2099-10-25T22:00:00' },
+    { ...base, id: 13, title: '테스트 전용 · 준비 중인 이벤트', status: 'DRAFT', startsAt: '2099-10-25T20:00:00' },
+    { ...base, id: 14, title: '테스트 전용 · 참가 제한', currentUserStatus: 'REMOVED', startsAt: '2099-10-25T20:00:00' },
+    { ...base, id: 15, title: '테스트 전용 · 입금 기한 마감', paymentRequired: true, paymentDeadlineAt: '2020-01-01T18:00:00', startsAt: '2099-10-25T20:00:00' },
+    { ...base, id: 16, title: '테스트 전용 · 초대 필요', joinPolicy: 'INVITE_ONLY', startsAt: '2099-10-25T20:00:00' },
+    { ...base, id: 17, title: '테스트 전용 · 받은 초대', joinPolicy: 'INVITE_ONLY', currentUserStatus: 'PENDING', startsAt: '2099-10-25T20:00:00' },
 ];
 const consent = { configurationLocked: true, consentWindowMinutes: 10, items: [{ id: 101, category: 'OTHER',
     title: '테스트 전용 안내', content: '실제 동의서가 아닙니다.', responseType: 'CHECKBOX', required: true,

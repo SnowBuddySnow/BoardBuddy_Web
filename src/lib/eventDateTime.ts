@@ -38,10 +38,53 @@ export const hasEventStarted = (startsAt: string, now = Date.now()): boolean =>
     // Invalid dates fail closed as well: no admission until the schedule can be verified.
     !(parseEventDateTime(startsAt).getTime() > now);
 
-export const isEventRegistrationAvailable = (
-    event: Pick<Event, 'status' | 'startsAt' | 'applicationStartsAt' | 'joinedCount' | 'capacity'>,
-    now = Date.now(),
-): boolean => event.status === 'OPEN'
-    && !hasEventStarted(event.startsAt, now)
-    && (!event.applicationStartsAt || parseEventDateTime(event.applicationStartsAt).getTime() <= now)
-    && (event.joinedCount ?? 0) < event.capacity;
+type RegistrationEvent = Pick<Event, 'status' | 'startsAt' | 'applicationStartsAt' | 'joinedCount' | 'capacity'>
+    & Partial<Pick<Event, 'paymentRequired' | 'paymentDeadlineAt' | 'currentUserStatus' | 'joinPolicy'>>;
+
+export type EventRegistrationState = 'AVAILABLE' | 'DRAFT' | 'CLOSED' | 'CANCELLED' | 'UNAVAILABLE'
+    | 'JOINED' | 'CONSENT_PENDING' | 'PENDING' | 'REMOVED' | 'STARTED' | 'NOT_OPEN'
+    | 'PAYMENT_CLOSED' | 'FULL' | 'INVITE_REQUIRED';
+
+/** Shared presentation guard; the API still owns authorization and atomic capacity checks. */
+export const getEventRegistrationState = (event: RegistrationEvent, now = Date.now()): EventRegistrationState => {
+    if (event.status === 'DRAFT') return 'DRAFT';
+    if (event.status === 'CLOSED' || event.status === 'CANCELLED') return event.status;
+    if (event.status !== 'OPEN' || !Number.isFinite(now)) return 'UNAVAILABLE';
+    if (event.currentUserStatus === 'REMOVED') return 'REMOVED';
+    if (event.currentUserStatus === 'JOINED' || event.currentUserStatus === 'CONSENT_PENDING') return event.currentUserStatus;
+    // For invite-only events PENDING is an actionable invitation, not an approval request.
+    if (event.currentUserStatus === 'PENDING' && event.joinPolicy !== 'INVITE_ONLY') return 'PENDING';
+    if (hasEventStarted(event.startsAt, now)) return 'STARTED';
+    if (event.applicationStartsAt) {
+        const opensAt = parseEventDateTime(event.applicationStartsAt).getTime();
+        if (!Number.isFinite(opensAt)) return 'UNAVAILABLE';
+        if (opensAt > now) return 'NOT_OPEN';
+    }
+    if (event.paymentRequired && event.paymentDeadlineAt) {
+        const deadline = parseEventDateTime(event.paymentDeadlineAt).getTime();
+        if (!Number.isFinite(deadline)) return 'UNAVAILABLE';
+        if (deadline <= now) return 'PAYMENT_CLOSED';
+    }
+    const occupied = event.joinedCount ?? 0;
+    if (!Number.isSafeInteger(event.capacity) || event.capacity < 1 || !Number.isSafeInteger(occupied) || occupied < 0) return 'UNAVAILABLE';
+    if (occupied >= event.capacity) return 'FULL';
+    if (event.joinPolicy === 'INVITE_ONLY' && event.currentUserStatus !== 'PENDING') return 'INVITE_REQUIRED';
+    return 'AVAILABLE';
+};
+
+export const getEventRegistrationLabel = (state: EventRegistrationState): string => {
+    switch (state) {
+        case 'DRAFT': return '준비 중인 이벤트';
+        case 'CLOSED': return '마감된 모임';
+        case 'CANCELLED': return '취소된 모임';
+        case 'STARTED': return '신청 마감';
+        case 'PAYMENT_CLOSED': return '입금 기한 마감';
+        case 'FULL': return '정원이 모두 찼습니다';
+        case 'REMOVED': return '참가할 수 없는 이벤트';
+        case 'INVITE_REQUIRED': return '초대가 필요합니다';
+        default: return '현재 신청할 수 없습니다';
+    }
+};
+
+export const isEventRegistrationAvailable = (event: RegistrationEvent, now = Date.now()): boolean =>
+    getEventRegistrationState(event, now) === 'AVAILABLE';
