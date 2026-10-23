@@ -349,6 +349,7 @@ export interface ConsentItemInput {
 export interface ConsentConfiguration {
     consentWindowMinutes: number | null;
     items: ConsentItem[];
+    configurationLocked?: boolean;
 }
 
 export interface ConsentConfigurationInput {

@@ -7,6 +7,7 @@ import { getSchools, type SchoolOption } from '../services/schools';
 import { CrewInfoUpdateRequest } from '../types/api';
 import { isCrewCaptainRole } from '../constants/crewRole';
 import Promote from './Promote';
+import { SEASON_HOUSE_RESERVATIONS_ENABLED } from '../constants/operatingSeason';
 
 interface CrewSettingsProps {
     onBack: () => void;
@@ -116,6 +117,14 @@ export default function CrewSettings({ onBack, onCaptainGuideClick }: CrewSettin
             ...formData,
             id: crewId,
         };
+        if (!SEASON_HOUSE_RESERVATIONS_ENABLED) {
+            delete payload.reservationOpenDay;
+            delete payload.reservationOpenTime;
+            delete payload.reservationOpenOffsetDays;
+            delete payload.reservationPeriodLimitDays;
+            delete payload.dailyCapacity;
+            delete payload.isCapacityLimited;
+        }
 
         if (!isCaptain) {
             delete payload.crewName;
@@ -336,6 +345,7 @@ export default function CrewSettings({ onBack, onCaptainGuideClick }: CrewSettin
                     </section>
 
                     {/* Updated Reservation Scheme */}
+                    {SEASON_HOUSE_RESERVATIONS_ENABLED && <>
                     <div className="p-4 rounded-xl border border-zinc-200 bg-white space-y-4">
                         <div className="flex items-center gap-2 mb-2">
                             <h3 className="text-sm font-bold text-zinc-900">예약 오픈 설정</h3>
@@ -444,6 +454,7 @@ export default function CrewSettings({ onBack, onCaptainGuideClick }: CrewSettin
                     </div>
 
                     {/* Save Button */}
+                    </>}
                     <button
                         onClick={handleSave}
                         className="w-full py-4 bg-zinc-900 text-white rounded-2xl font-bold text-lg mt-8 hover:bg-zinc-800 transition-colors flex items-center justify-center gap-2"

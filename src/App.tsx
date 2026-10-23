@@ -491,7 +491,7 @@ function App() {
           title="시즌방 예약을 이용할 수 없습니다"
           description={operatingFeatures.season
             ? '소속 크루의 시즌방이 아직 오픈되지 않았습니다.'
-            : '현재는 오프시즌 운영 중입니다. 시즌 운영이 시작되면 예약 기능이 열립니다.'}
+            : '현재 시즌방 예약은 운영하지 않습니다.'}
           onBack={() => setCurrentView('home')}
         />
       );

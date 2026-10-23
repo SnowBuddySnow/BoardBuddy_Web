@@ -34,7 +34,7 @@ import {
 import { getApiErrorMessage, getApiErrorStatus } from '../lib/apiError';
 import { PlanningModeBadge } from '../components/event/PlanningModeBadge';
 import { getEventActivityLabel } from '../constants/eventActivity';
-import { EVENT_TIME_ZONE, parseEventDateTime } from '../lib/eventDateTime';
+import { EVENT_TIME_ZONE, getEventRegistrationLabel, getEventRegistrationState, isEventRegistrationAvailable, parseEventDateTime } from '../lib/eventDateTime';
 import { getConsentPendingCopy, getConsentSubmissionMessage } from '../lib/eventRegistration';
 import { ConsentResponseField } from '../components/event/ConsentResponseField';
 import {
@@ -56,6 +56,33 @@ export default function EventDetail({ eventId, onBack, isGuestApplication = fals
     const [errorMsg, setErrorMsg] = useState<string | null>(null);
     const [actionLoading, setActionLoading] = useState(false);
     const [showPhoneConsentModal, setShowPhoneConsentModal] = useState(false);
+    const phoneConsentDialogRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        if (!showPhoneConsentModal) return;
+        const previousFocus = document.activeElement as HTMLElement | null;
+        const dialog = phoneConsentDialogRef.current;
+        dialog?.focus();
+        const handleKeyDown = (keyEvent: KeyboardEvent) => {
+            if (keyEvent.key === 'Escape') {
+                keyEvent.preventDefault(); setShowPhoneConsentModal(false); return;
+            }
+            if (keyEvent.key !== 'Tab') return;
+            const controls = Array.from(dialog?.querySelectorAll<HTMLElement>('button:not(:disabled)') || []);
+            const first = controls[0]; const last = controls[controls.length - 1];
+            const outside = !dialog?.contains(document.activeElement) || document.activeElement === dialog;
+            if (keyEvent.shiftKey && (outside || document.activeElement === first)) {
+                keyEvent.preventDefault(); last?.focus();
+            } else if (!keyEvent.shiftKey && (outside || document.activeElement === last)) {
+                keyEvent.preventDefault(); first?.focus();
+            }
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => {
+            window.removeEventListener('keydown', handleKeyDown);
+            if (previousFocus?.isConnected) previousFocus.focus();
+        };
+    }, [showPhoneConsentModal]);
     const [chatAccess, setChatAccess] = useState<EventChatAccess | null>(null);
     const [consentState, setConsentState] = useState<ParticipantConsentState | null>(null);
     const [consentAnswers, setConsentAnswers] = useState<Record<number, ConsentDraft>>({});
@@ -68,6 +95,7 @@ export default function EventDetail({ eventId, onBack, isGuestApplication = fals
     const [currentTime, setCurrentTime] = useState(Date.now());
     const latestDraftPayloadRef = useRef<ConsentResponseInput[]>([]);
     const draftSaveQueueRef = useRef<Promise<unknown>>(Promise.resolve());
+    const joinInFlightRef = useRef(false);
 
     const fetchEventDetail = useCallback(async (knownEvent?: Event) => {
         try {
@@ -191,6 +219,12 @@ export default function EventDetail({ eventId, onBack, isGuestApplication = fals
     }, [draftHydrated, eventId]);
 
     useEffect(() => {
+        if (!event) return;
+        const timer = window.setInterval(() => setCurrentTime(Date.now()), 1000);
+        return () => window.clearInterval(timer);
+    }, [event]);
+
+    useEffect(() => {
         if (!event?.applicationStartsAt) return;
         const opensAt = parseEventDateTime(event.applicationStartsAt).getTime();
         if (!Number.isFinite(opensAt)) return;
@@ -209,7 +243,11 @@ export default function EventDetail({ eventId, onBack, isGuestApplication = fals
     }, [event?.applicationStartsAt]);
 
     const handleJoinAction = async () => {
-        if (!event) return;
+        if (!event || joinInFlightRef.current) return;
+        if (!isEventRegistrationAvailable(event)) {
+            setCurrentTime(Date.now());
+            return;
+        }
 
         // Check phone sharing consent preference
         const consentPref = localStorage.getItem('phone_sharing_consent_preference') || 'each_time';
@@ -222,14 +260,24 @@ export default function EventDetail({ eventId, onBack, isGuestApplication = fals
     };
 
     const executeJoinAction = async () => {
-        if (!event) return;
+        if (!event || joinInFlightRef.current) return;
+        // A dialog may have stayed open beyond an admission boundary. Never trust its old render.
+        if (!isEventRegistrationAvailable(event)) {
+            setCurrentTime(Date.now());
+            return;
+        }
+        joinInFlightRef.current = true;
         try {
             setActionLoading(true);
             const participant = await joinEvent(event.id);
             if (participant.status === 'CONSENT_PENDING') {
                 alert(getConsentPendingCopy(event.joinPolicy).alert);
+            } else if (participant.status === 'PENDING') {
+                alert('참여 신청이 접수되었습니다. 호스트 승인 후 참가가 확정됩니다.');
+            } else if (participant.status === 'JOINED') {
+                alert('이벤트 참가가 확정되었습니다.');
             } else {
-                alert(event.joinPolicy === 'APPROVAL_REQUIRED' ? '게스트 참여 신청이 대기 상태로 접수되었습니다.' : '게스트 참여가 접수되었습니다.');
+                alert('신청 결과를 확인했습니다. 최신 참가 상태를 확인해 주세요.');
             }
             await fetchEventDetail(); // Refresh
         } catch (error: unknown) {
@@ -243,15 +291,20 @@ export default function EventDetail({ eventId, onBack, isGuestApplication = fals
                 alert('참가 신청에 실패했습니다.');
             }
         } finally {
+            joinInFlightRef.current = false;
             setActionLoading(false);
         }
     };
 
     const handleConfirmConsent = async (always: boolean) => {
+        setShowPhoneConsentModal(false);
+        if (!event || !isEventRegistrationAvailable(event)) {
+            setCurrentTime(Date.now());
+            return;
+        }
         if (always) {
             localStorage.setItem('phone_sharing_consent_preference', 'always');
         }
-        setShowPhoneConsentModal(false);
         await executeJoinAction();
     };
 
@@ -387,19 +440,16 @@ export default function EventDetail({ eventId, onBack, isGuestApplication = fals
     if (!event) return null;
 
     const isClosed = event.status === 'CLOSED' || event.status === 'CANCELLED';
-    const isFull = event.capacity <= (event.joinedCount || 0);
+    const registrationState = getEventRegistrationState(event, currentTime);
+    const isInvitation = event.joinPolicy === 'INVITE_ONLY' && event.currentUserStatus === 'PENDING';
     const hasJoined = event.currentUserStatus === 'JOINED';
-    const isPending = event.currentUserStatus === 'PENDING';
+    const isPending = event.currentUserStatus === 'PENDING' && !isInvitation;
     const isConsentPending = event.currentUserStatus === 'CONSENT_PENDING';
     const consentCopy = getConsentPendingCopy(event.joinPolicy);
     const requiredConsentItems = consentState?.items.filter(item => item.required) || [];
     const completedRequiredItems = requiredConsentItems.filter(item => (
         isConsentItemComplete(item, consentAnswers[item.id])
     )).length;
-    const applicationNotOpen = Boolean(
-        event.applicationStartsAt
-        && parseEventDateTime(event.applicationStartsAt).getTime() > currentTime,
-    );
 
     return (
         <div className="flex-1 flex flex-col h-full overflow-hidden bg-[#FAF8F3] relative">
@@ -408,8 +458,8 @@ export default function EventDetail({ eventId, onBack, isGuestApplication = fals
                 <Button
                     variant="ghost"
                     onClick={onBack}
-                    aria-label="돌아가기"
-                    className="p-2 bg-white/95 dark:bg-zinc-900/95 shadow-sm rounded-full text-zinc-800 shrink-0"
+                    aria-label="뒤로 가기"
+                    className="min-h-11 min-w-11 p-2 bg-white/95 dark:bg-zinc-900/95 shadow-sm rounded-full text-zinc-800 shrink-0"
                 >
                     <ChevronLeft className="w-5 h-5" />
                 </Button>
@@ -420,15 +470,15 @@ export default function EventDetail({ eventId, onBack, isGuestApplication = fals
             {/* Content Container */}
             <div className="flex-1 overflow-y-auto pb-[130px]">
                 {/* Hero / Cover Visual Panel */}
-                <div className="w-full h-44 bg-gradient-to-br from-[#162660] via-[#1e3a8a] to-[#2563eb] relative flex items-end p-5">
+                <div className="w-full min-h-52 bg-gradient-to-br from-[#162660] via-[#1e3a8a] to-[#2563eb] relative flex items-end px-5 pb-5 pt-16">
                     <div className="absolute inset-0 bg-black/10"></div>
-                    <div className="z-10 flex flex-col gap-1.5">
+                    <div className="z-10 flex w-full min-w-0 flex-col items-start gap-1.5">
                         {isGuestApplication && <span className="w-max rounded-full bg-amber-300 px-2.5 py-1 text-[10px] font-black text-[#162660]">게스트 초대</span>}
                         <PlanningModeBadge mode={event.planningMode} />
                         <span className="text-[10px] uppercase font-black text-blue-200 tracking-widest px-3 py-1 bg-white/10 backdrop-blur-md rounded-full w-max">
                             {getEventActivityLabel(event.activityType)}
                         </span>
-                        <h1 className="text-xl font-bold text-white leading-tight">
+                        <h1 className="text-xl font-bold text-white leading-tight [overflow-wrap:anywhere]">
                             {event.title}
                         </h1>
                     </div>
@@ -509,7 +559,7 @@ export default function EventDetail({ eventId, onBack, isGuestApplication = fals
                         <div className="flex items-center justify-between text-sm">
                             <span className="text-zinc-500 font-medium">참가 승인 정책</span>
                             <span className="font-bold text-zinc-800">
-                                {event.joinPolicy === 'INSTANT' ? '즉시 승인' : '호스트 승인 필요'}
+                                {event.joinPolicy === 'INVITE_ONLY' ? '초대 전용' : event.joinPolicy === 'APPROVAL_REQUIRED' ? '호스트 승인 필요' : '즉시 승인'}
                             </span>
                         </div>
 
@@ -766,7 +816,9 @@ export default function EventDetail({ eventId, onBack, isGuestApplication = fals
 
             {/* Bottom Actions Bar */}
             <div className="absolute bottom-0 left-0 right-0 bg-white border-t border-zinc-100 px-5 py-4 z-10 flex flex-col justify-center">
-                {isClosed ? (
+                {registrationState === 'DRAFT' ? (
+                    <Button disabled className="w-full h-12 rounded-full font-bold">준비 중인 이벤트</Button>
+                ) : isClosed ? (
                     <Button disabled className="w-full h-12 bg-zinc-300 border-zinc-300 text-zinc-500 rounded-full font-bold">
                         {event.status === 'CANCELLED' ? '취소된 모임' : '마감된 모임'}
                     </Button>
@@ -815,13 +867,11 @@ export default function EventDetail({ eventId, onBack, isGuestApplication = fals
                             신청 취소하기
                         </Button>
                     </div>
-                ) : applicationNotOpen ? (
-                    <Button disabled className="w-full h-12 bg-amber-100 border-amber-200 text-amber-800 rounded-full font-bold">
-                        {formatDate(event.applicationStartsAt!)} 신청 시작
-                    </Button>
-                ) : isFull ? (
-                    <Button disabled className="w-full h-12 bg-zinc-300 border-zinc-300 text-zinc-500 rounded-full font-bold">
-                        정원이 모두 찼습니다
+                ) : registrationState !== 'AVAILABLE' ? (
+                    <Button disabled className="w-full h-12 bg-zinc-100 border-zinc-200 text-zinc-500 rounded-full font-bold">
+                        {registrationState === 'NOT_OPEN'
+                            ? `${formatDate(event.applicationStartsAt!)} 신청 시작`
+                            : getEventRegistrationLabel(registrationState)}
                     </Button>
                 ) : (
                     <Button
@@ -830,7 +880,7 @@ export default function EventDetail({ eventId, onBack, isGuestApplication = fals
                         disabled={actionLoading}
                         className="w-full h-12 bg-[#162660] hover:bg-[#1e3a8a] text-white border-none rounded-full font-bold shadow-md hover:scale-[1.01] transition-all"
                     >
-                        {actionLoading ? '신청 중...' : isGuestApplication ? '게스트로 신청하기' : '참여 신청하기'}
+                        {actionLoading ? '신청 중...' : isInvitation ? '초대 수락하기' : isGuestApplication ? '게스트로 신청하기' : '참여 신청하기'}
                     </Button>
                 )}
             </div>
@@ -839,11 +889,11 @@ export default function EventDetail({ eventId, onBack, isGuestApplication = fals
             {showPhoneConsentModal && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
                     <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setShowPhoneConsentModal(false)} />
-                    <div className="bg-white dark:bg-zinc-900 rounded-2xl w-full max-w-sm p-6 shadow-xl relative z-10 animate-in fade-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
-                        <h3 className="text-lg font-bold text-zinc-900 dark:text-zinc-100 mb-3 text-center">
+                    <div ref={phoneConsentDialogRef} role="dialog" aria-modal="true" aria-labelledby="phone-sharing-consent-title" aria-describedby="phone-sharing-consent-description" tabIndex={-1} className="bg-white dark:bg-zinc-900 rounded-2xl w-full max-w-sm max-h-[calc(100dvh-2rem)] overflow-y-auto p-6 shadow-xl relative z-10 animate-in fade-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
+                        <h3 id="phone-sharing-consent-title" className="text-lg font-bold text-zinc-900 dark:text-zinc-100 mb-3 text-center">
                             전화번호 제공 동의
                         </h3>
-                        <p className="text-sm text-zinc-600 dark:text-zinc-400 mb-6 text-center leading-relaxed">
+                        <p id="phone-sharing-consent-description" className="text-sm text-zinc-600 dark:text-zinc-400 mb-6 text-center leading-relaxed">
                             예약 확인, 안내 및 안전 연락 등 원활한 이벤트 운영을 위해 호스트에게 본인의 전화번호를 제공하시겠습니까?
                             <br />
                             <span className="text-xs text-zinc-400 dark:text-zinc-500 block mt-2.5 leading-normal">
@@ -853,6 +903,7 @@ export default function EventDetail({ eventId, onBack, isGuestApplication = fals
                         <div className="flex flex-col gap-2">
                             <Button
                                 onClick={() => handleConfirmConsent(true)}
+                                disabled={actionLoading || registrationState !== 'AVAILABLE'}
                                 className="w-full h-11 text-sm font-bold bg-[#162660] text-white rounded-xl"
                             >
                                 항상 동의하고 진행
@@ -860,6 +911,7 @@ export default function EventDetail({ eventId, onBack, isGuestApplication = fals
                             <Button
                                 variant="outline"
                                 onClick={() => handleConfirmConsent(false)}
+                                disabled={actionLoading || registrationState !== 'AVAILABLE'}
                                 className="w-full h-11 text-sm font-bold rounded-xl"
                             >
                                 이번만 동의하고 진행

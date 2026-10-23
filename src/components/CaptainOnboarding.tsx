@@ -18,6 +18,7 @@ import {
   UsersRound,
   X,
 } from 'lucide-react';
+import { SEASON_HOUSE_RESERVATIONS_ENABLED } from '../constants/operatingSeason';
 
 export type CaptainOnboardingDestination =
   | 'crew_settings'
@@ -49,7 +50,7 @@ interface OnboardingStep {
   };
 }
 
-const steps: OnboardingStep[] = [
+const allSteps: OnboardingStep[] = [
   {
     id: 'role-stack',
     navigationLabel: '역할 구조',
@@ -83,7 +84,7 @@ const steps: OnboardingStep[] = [
     description: '사람의 서열이 아니라 맡길 업무를 기준으로 크루 매니저와 이벤트 그룹 매니저를 부여하세요.',
     icon: UserCog,
     points: [
-      '예약·가입·결제 운영은 크루 매니저에게 맡겨요.',
+      SEASON_HOUSE_RESERVATIONS_ENABLED ? '예약·가입·결제 운영은 크루 매니저에게 맡겨요.' : '크루 가입 운영은 크루 매니저에게 맡겨요.',
       '호스트 그룹·이벤트·참가자 운영은 이벤트 그룹 매니저에게 맡겨요.',
     ],
     action: { label: '역할 관리 열기', destination: 'crew_permissions' },
@@ -124,12 +125,13 @@ const steps: OnboardingStep[] = [
     points: [
       '크루 정보와 가입 PIN을 확인했어요.',
       '두 매니저 역할을 업무에 맞게 배치했어요.',
-      '예약과 이벤트의 담당자를 정했어요.',
+      SEASON_HOUSE_RESERVATIONS_ENABLED ? '예약과 이벤트의 담당자를 정했어요.' : '크루 가입과 이벤트의 담당자를 정했어요.',
       '개인정보를 필요한 범위에서만 다루기로 했어요.',
       '운영진에게 각자 시작할 화면을 알려줬어요.',
     ],
   },
 ];
+const steps = allSteps.filter(step => SEASON_HOUSE_RESERVATIONS_ENABLED || step.id !== 'season-operations');
 
 function RoleStackVisual() {
   return (

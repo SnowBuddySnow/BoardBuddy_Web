@@ -326,6 +326,7 @@ export default function DashboardEventNew({ onBack, onSuccess }: DashboardEventN
                                 <input
                                     type="datetime-local"
                                     value={applicationStartsAt}
+                                    aria-label="신청 시작 일시 (한국 시간)"
                                     max={startsAt || undefined}
                                     onChange={e => setApplicationStartsAt(e.target.value)}
                                     className="w-full px-4 py-2.5 bg-white border border-zinc-200 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-[#162660]/20 text-zinc-800"
@@ -336,6 +337,7 @@ export default function DashboardEventNew({ onBack, onSuccess }: DashboardEventN
                                 <input
                                     type="datetime-local"
                                     value={startsAt}
+                                    aria-label="시작 일시 (한국 시간)"
                                     onChange={e => setStartsAt(e.target.value)}
                                     className="w-full px-4 py-2.5 bg-white border border-zinc-200 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-[#162660]/20 text-zinc-800"
                                     required
@@ -347,6 +349,7 @@ export default function DashboardEventNew({ onBack, onSuccess }: DashboardEventN
                                 <input
                                     type="datetime-local"
                                     value={endsAt}
+                                    aria-label="종료 일시 (한국 시간)"
                                     onChange={e => setEndsAt(e.target.value)}
                                     className="w-full px-4 py-2.5 bg-white border border-zinc-200 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-[#162660]/20 text-zinc-800"
                                 />

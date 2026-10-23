@@ -12,25 +12,21 @@ export function PlanningModeBadge({ mode }: PlanningModeBadgeProps) {
     const memberPlanned = mode === 'MEMBER_PLANNED';
     const copy = PLANNING_MODE_COPY[mode];
     return (
-        <span
-            className={`relative inline-flex items-center gap-1 whitespace-nowrap px-2 py-1 text-[11px] font-bold border rounded ${memberPlanned
+        <button
+            type="button"
+            aria-label={`${copy.label} 설명 보기`}
+            aria-expanded={isOpen}
+            onClick={(event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                setIsOpen(current => !current);
+            }}
+            className={`relative inline-flex min-h-11 items-center gap-1 whitespace-nowrap px-2 py-1 text-[11px] font-bold border rounded focus:outline-none focus:ring-2 focus:ring-current/30 ${memberPlanned
             ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
             : 'border-blue-200 bg-blue-50 text-blue-700'}`}
         >
             {copy.label}
-            <button
-                type="button"
-                aria-label={`${copy.label} 설명 보기`}
-                aria-expanded={isOpen}
-                onClick={(event) => {
-                    event.preventDefault();
-                    event.stopPropagation();
-                    setIsOpen(current => !current);
-                }}
-                className="-mr-1 flex h-6 w-6 items-center justify-center rounded-full text-current hover:bg-black/10 focus:outline-none focus:ring-2 focus:ring-current/30"
-            >
-                <Info className="h-3 w-3" aria-hidden="true" />
-            </button>
+            <Info className="h-3 w-3" aria-hidden="true" />
             {isOpen && (
                 <span
                     role="tooltip"
@@ -40,6 +36,6 @@ export function PlanningModeBadge({ mode }: PlanningModeBadgeProps) {
                     {copy.details}
                 </span>
             )}
-        </span>
+        </button>
     );
 }

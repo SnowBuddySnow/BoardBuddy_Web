@@ -15,7 +15,7 @@ const result = (data: unknown = {}) => ({ data: { data } });
 const event = { id: 1, title: 'STG synthetic draft', startsAt: '2026-10-25T18:00:00',
     endsAt: '2026-10-25T20:00:00', capacity: 2, visibilityType: 'LINK_ONLY', joinPolicy: 'INSTANT',
     planningMode: 'MANAGER_PLANNED', organizerGroupId: 2, status: 'DRAFT', kusbfAssociated: false };
-const consent = { consentWindowMinutes: 10, items: [{ id: 101, category: 'OTHER', title: 'TEST ONLY',
+const consent = { configurationLocked: false, consentWindowMinutes: 10, items: [{ id: 101, category: 'OTHER', title: 'TEST ONLY',
     content: 'No legal effect.', responseType: 'CHECKBOX', required: true, displayOrder: 0 }] };
 function deferred() {
     let resolve!: (value: ReturnType<typeof result>) => void;
@@ -76,6 +76,19 @@ describe('rendered create/edit forms with real save orchestration and synthetic 
         await fill(container.querySelector<HTMLTextAreaElement>('textarea[placeholder="참가자에게 보여줄 설명 또는 안내문"]')!, 'No legal effect.');
         await fill(container.querySelector<HTMLTextAreaElement>('textarea[placeholder^="템플릿을 선택하거나"]')!, 'TEST ONLY no payment');
     };
+
+    it.each([true, undefined])('locks historical or unknown document configuration (%s) and saves ordinary edits without configuration writes', async locked => {
+        const get = http.get.getMockImplementation()!;
+        http.get.mockImplementation(path => path.endsWith('/consents')
+            ? Promise.resolve(result({ ...consent, configurationLocked: locked })) : get(path));
+        await act(async () => root.render(<DashboardEventEdit eventId={1} onBack={back} onSuccess={success} />));
+        expect(container.querySelector('input[placeholder="항목 제목"]')?.matches(':disabled')).toBe(true);
+        expect(container.querySelector('textarea[placeholder^="템플릿을 선택하거나"]')?.matches(':disabled')).toBe(true);
+        await fill(container.querySelector<HTMLInputElement>('input[type="text"][required]')!, 'Ordinary title edit');
+        await submit();
+        expect(http.patch).toHaveBeenCalledWith('/dashboard/events/1', expect.objectContaining({ title: 'Ordinary title edit' }));
+        expect(http.put).not.toHaveBeenCalled(); expect(success).toHaveBeenCalledOnce();
+    });
 
     it('creates once, blocks double submits, and never overlaps consent/refund writes', async () => {
         const pending = deferred(); http.put.mockReturnValueOnce(pending.promise).mockResolvedValue(result());
