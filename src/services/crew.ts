@@ -27,6 +27,12 @@ export interface DiscoverableCrew {
     memberCount: number;
     profileImageUrl: string | null;
     schoolVerificationRequired: boolean;
+    verifiedSchoolAutoJoinEnabled?: boolean;
+}
+
+export interface CrewJoinResult {
+    crewId: number;
+    status: 'JOINED' | 'PENDING';
 }
 
 // --- Missing / TBD Crew Endpoints ---
@@ -57,6 +63,7 @@ export const getCrewInfo = async (crewId: number): Promise<CrewDetail> => {
             isCapacityLimited: true,
             seasonHouseActive: true,
             schoolVerificationRequired: localStorage.getItem(`dev_crew_school_verification_required_${crewId}`) === 'true',
+            verifiedSchoolAutoJoinEnabled: localStorage.getItem(`dev_crew_auto_join_${crewId}`) === 'true',
         };
     }
 
@@ -113,12 +120,14 @@ export const resetCrewPin = async (crewId: number): Promise<string> => {
     return response.data.data.pin || response.data.data.crewPin || '2026';
 };
 
-export const applyToCrew = async (crewId: number, crewPIN: string): Promise<void> => {
+export const applyToCrew = async (crewId: number, crewPIN: string): Promise<CrewJoinResult> => {
     if (hasDevOverride()) {
-        if (crewPIN.length !== 4) throw new Error('PIN must be 4 digits');
-        return;
+        if (!/^[0-9]{4}$/.test(crewPIN)) throw new Error('PIN must be 4 digits');
+        return { crewId, status: 'PENDING' };
     }
-    await apiClient.post(`/crews/${crewId}/applications`, { crewPIN });
+    const response = await apiClient.post<ApiResponse<CrewJoinResult | null>>(`/crews/${crewId}/applications`, { crewPIN });
+    // Older backends return an empty body after creating a pending application.
+    return response.data.data ?? { crewId, status: 'PENDING' };
 };
 
 export const discoverCrews = async (query = ''): Promise<DiscoverableCrew[]> => {
@@ -133,6 +142,7 @@ export const discoverCrews = async (query = ''): Promise<DiscoverableCrew[]> => 
                 memberCount: 42,
                 profileImageUrl: '',
                 schoolVerificationRequired: true,
+                verifiedSchoolAutoJoinEnabled: localStorage.getItem('dev_crew_auto_join_101') === 'true',
             },
             {
                 crewId: 102,
@@ -181,6 +191,9 @@ export const updateCrew = async (crewId: number, data: Partial<CrewInfoUpdateReq
                 `dev_crew_school_verification_required_${crewId}`,
                 String(data.schoolVerificationRequired),
             );
+        }
+        if (typeof data.verifiedSchoolAutoJoinEnabled === 'boolean') {
+            localStorage.setItem(`dev_crew_auto_join_${crewId}`, String(data.verifiedSchoolAutoJoinEnabled));
         }
         return;
     }
