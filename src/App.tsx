@@ -1,3 +1,4 @@
+import { isSchoolEmailActivationEntry } from './lib/schoolEmailActivation';
 import { lazy, useState, useEffect, useRef } from 'react';
 import { LowerMenuBar } from './components/LowerMenuBar';
 import Home from './pages/Home';
@@ -190,6 +191,7 @@ const getInitialView = (): View => {
   const requestedView = parseView(params.get('view'));
   const hasOrganizerInvite = params.has('organizerInvite');
   if (hasOrganizerInvite) return 'organizer_invite';
+  if (isSchoolEmailActivationEntry(requestedView, params.get('token'))) return 'student_verification';
   if (requestedView && publicEntryViews.has(requestedView)) return requestedView;
   if (requestedView && getAccessToken()) return requestedView;
   if (requestedView && signupViews.has(requestedView) && getSignupToken()) return requestedView;
@@ -691,7 +693,7 @@ function App() {
           />
         );
       case 'event_detail':
-        return <EventDetail eventId={selectedEventId || 0} onBack={() => setCurrentView(isGuestEventApplication ? 'guest_access' : 'parties')} isGuestApplication={isGuestEventApplication} />;
+        return <EventDetail eventId={selectedEventId || 0} onBack={() => setCurrentView(isGuestEventApplication ? 'guest_access' : 'parties')} isGuestApplication={isGuestEventApplication} onOpenEvent={(id) => openEventDetail(id)} />;
       case 'my_parties':
         return <MyParties onBack={() => setCurrentView('home')} onEventClick={(id) => openEventDetail(id)} />;
       case 'operations_center':
@@ -729,6 +731,7 @@ function App() {
             eventId={selectedEventId || 0}
             onBack={() => setCurrentView('dashboard_parties')}
             onEditClick={(id) => openEventDetail(id, 'dashboard_event_edit')}
+            onOpenEvent={(id) => openEventDetail(id, 'dashboard_event_detail')}
           />
         );
       case 'dashboard_event_edit':

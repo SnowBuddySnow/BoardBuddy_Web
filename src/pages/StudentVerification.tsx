@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { BadgeCheckIcon, GraduationCapIcon, MailCheckIcon } from 'lucide-react';
 import { Button } from '../components/Button';
 import { getApiErrorMessage } from '../lib/apiError';
@@ -16,7 +16,8 @@ interface StudentVerificationProps {
 }
 
 export default function StudentVerification({ onDone }: StudentVerificationProps) {
-    const token = new URLSearchParams(window.location.search).get('token');
+    const [token] = useState(() => new URLSearchParams(window.location.search).get('token')?.trim() || null);
+    const activation = useRef<ReturnType<typeof activateSchoolEmailLink> | null>(null);
     const [status, setStatus] = useState<SchoolEmailVerificationStatus | null>(null);
     const [challengeId, setChallengeId] = useState<string | null>(null);
     const [code, setCode] = useState('');
@@ -26,24 +27,43 @@ export default function StudentVerification({ onDone }: StudentVerificationProps
     const [verifying, setVerifying] = useState(false);
     const [verified, setVerified] = useState(false);
     const [error, setError] = useState('');
+    const [retryUntil, setRetryUntil] = useState(0);
+    const [now, setNow] = useState(Date.now);
+    const retrySeconds = Math.max(0, Math.ceil((retryUntil - now) / 1000));
+
+    useEffect(() => {
+        if (retryUntil <= Date.now()) return;
+        const interval = window.setInterval(() => {
+            setNow(Date.now());
+            if (Date.now() >= retryUntil) window.clearInterval(interval);
+        }, 1000);
+        return () => window.clearInterval(interval);
+    }, [retryUntil]);
 
     useEffect(() => {
         let cancelled = false;
         const load = async () => {
-            if (!SCHOOL_EMAIL_AUTH_AVAILABLE) {
+            if (!SCHOOL_EMAIL_AUTH_AVAILABLE && !token) {
                 setLoading(false);
                 return;
             }
             try {
                 if (token) {
-                    await activateSchoolEmailLink(token);
-                    if (!cancelled) setVerified(true);
+                    activation.current ??= activateSchoolEmailLink(token);
+                    await activation.current;
+                    if (!cancelled) {
+                        setVerified(true);
+                        const url = new URL(window.location.href);
+                        url.searchParams.delete('token');
+                        window.history.replaceState(null, '', url.pathname + url.search + url.hash);
+                    }
                     return;
                 }
                 const current = await getSchoolEmailVerificationStatus();
                 if (cancelled) return;
                 setStatus(current);
                 setChallengeId(current.challengeId);
+                setRetryUntil(Date.now() + (current.retryAfterSeconds ?? 0) * 1000);
                 setVerified(current.status === 'VERIFIED');
             } catch (requestError: unknown) {
                 if (!cancelled) setError(getApiErrorMessage(requestError) || '학교 이메일 인증 정보를 불러오지 못했습니다.');
@@ -61,6 +81,8 @@ export default function StudentVerification({ onDone }: StudentVerificationProps
         try {
             const challenge = await requestSchoolEmailVerification(schoolEmail.trim() || undefined);
             setChallengeId(challenge.challengeId);
+            setNow(Date.now());
+            setRetryUntil(Date.now() + challenge.retryAfterSeconds * 1000);
             setStatus(current => current ? {
                 ...current,
                 status: 'PENDING',
@@ -118,7 +140,7 @@ export default function StudentVerification({ onDone }: StudentVerificationProps
         );
     }
 
-    if (!SCHOOL_EMAIL_AUTH_AVAILABLE) {
+    if (!SCHOOL_EMAIL_AUTH_AVAILABLE && !token) {
         return (
             <div className="flex h-full overflow-y-auto bg-[#F5F4F0] px-5 py-8">
                 <main className="m-auto w-full max-w-lg rounded-[2rem] border border-amber-200 bg-white p-8 text-center shadow-xl">
@@ -204,16 +226,17 @@ export default function StudentVerification({ onDone }: StudentVerificationProps
                     <p className="text-xs leading-5 text-zinc-500">활성화 링크를 누르면 인증번호를 입력하지 않아도 같은 학생 인증이 완료됩니다.</p>
                 </div>
 
-                {error && <p className="mt-4 rounded-2xl bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">{error}</p>}
+                {error && <p role="alert" className="mt-4 rounded-2xl bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">{error}</p>}
+                {token && error && <Button fullWidth onClick={onDone} className="mt-4">서비스로 돌아가기</Button>}
 
                 {status?.configured && status.deliveryAvailable && (
                     <button
                         type="button"
                         onClick={() => void sendAgain()}
-                        disabled={sending}
+                        disabled={sending || retrySeconds > 0}
                         className="mt-5 w-full rounded-xl border-0 bg-transparent py-2 text-sm font-bold text-[#162660] disabled:text-zinc-400"
                     >
-                        {sending ? '이메일 보내는 중...' : challengeId ? '인증 이메일 다시 보내기' : '인증 이메일 보내기'}
+                        {sending ? '이메일 보내는 중...' : retrySeconds > 0 ? `${retrySeconds}초 후 다시 보내기` : challengeId ? '인증 이메일 다시 보내기' : '인증 이메일 보내기'}
                     </button>
                 )}
                 {!token && (

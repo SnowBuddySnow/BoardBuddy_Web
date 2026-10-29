@@ -172,6 +172,7 @@ export interface CreateEventPayload {
     locationName?: string;
     locationAddress?: string;
     capacity: number;
+    capacityLimited?: boolean;
     crewMemberLimit?: number | null;
     kusbfAssociated?: boolean;
     visibilityType: VisibilityType;
