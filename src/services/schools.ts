@@ -17,12 +17,14 @@ const DEV_SCHOOLS: SchoolOption[] = [
     { id: 5, schoolCode: 'HGU', name: '한강대학교', aliases: ['한강대', 'HGU'], emailDomains: ['hangang.ac.kr'] },
 ];
 
-export const getSchools = async (): Promise<SchoolOption[]> => {
+export const getSchools = async (
+    { allowDevFallback = true }: { allowDevFallback?: boolean } = {},
+): Promise<SchoolOption[]> => {
     try {
         const response = await apiClient.get<ApiResponse<SchoolOption[]>>('/schools');
         return response.data.data;
     } catch (error) {
-        if (import.meta.env.DEV) {
+        if (import.meta.env.DEV && allowDevFallback) {
             return DEV_SCHOOLS;
         }
         throw error;

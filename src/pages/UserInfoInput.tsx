@@ -15,6 +15,7 @@ import { confirmPhoneVerification, requestPhoneVerification } from '../services/
 import { getSchools, type SchoolOption } from '../services/schools';
 import { getApiErrorMessage, getApiErrorStatus } from '../lib/apiError';
 import { SCHOOL_EMAIL_AUTH_AVAILABLE } from '../config/features';
+import { getSignupPolicy, type SignupPolicy } from '../services/signupPolicy';
 
 interface UserInfoInputProps {
     onBack: () => void;
@@ -25,7 +26,6 @@ interface UserInfoInputProps {
 // Delete this constant, the skip handler, and the development-only button to restore verification-only UI.
 const CAN_SKIP_PHONE_VERIFICATION = import.meta.env.DEV;
 
-// Keep the temporary signup default in one place so a developer-controlled setting can replace it later.
 const DEFAULT_SIGNUP_PROFILE_TYPE: 'GENERAL' | 'STUDENT' = 'STUDENT';
 
 const TERMS_CONTENT = {
@@ -93,6 +93,25 @@ export default function UserInfoInput({ onBack, onSuccess }: UserInfoInputProps)
     const [showSchoolDropdown, setShowSchoolDropdown] = useState(false);
     const [schoolsLoading, setSchoolsLoading] = useState(false);
     const schoolInputRef = useRef<HTMLDivElement>(null);
+    const [signupPolicy, setSignupPolicy] = useState<SignupPolicy | null>(null);
+    const [policyError, setPolicyError] = useState('');
+    const [policyAttempt, setPolicyAttempt] = useState(0);
+    const signupAllowed = !!signupPolicy && (profileType === 'STUDENT' ? signupPolicy.studentEnabled : signupPolicy.regularEnabled);
+
+    useEffect(() => {
+        let cancelled = false;
+        getSignupPolicy().then(policy => {
+            if (cancelled) return;
+            setSignupPolicy(policy);
+            if (policy.studentEnabled !== policy.regularEnabled) {
+                setProfileType(policy.studentEnabled ? 'STUDENT' : 'GENERAL');
+                setName('');
+            }
+        }).catch(() => {
+            if (!cancelled) setPolicyError('가입 접수 상태를 불러오지 못했습니다. 다시 시도해 주세요.');
+        });
+        return () => { cancelled = true; };
+    }, [policyAttempt]);
 
     useEffect(() => {
         if (profileType !== 'STUDENT' || schools.length > 0) return;
@@ -225,6 +244,7 @@ export default function UserInfoInput({ onBack, onSuccess }: UserInfoInputProps)
     };
 
     const selectProfileType = (nextType: 'GENERAL' | 'STUDENT') => {
+        if (!signupPolicy || !(nextType === 'STUDENT' ? signupPolicy.studentEnabled : signupPolicy.regularEnabled)) return;
         if (nextType !== profileType) setName('');
         setProfileType(nextType);
         if (nextType === 'GENERAL') {
@@ -259,6 +279,10 @@ export default function UserInfoInput({ onBack, onSuccess }: UserInfoInputProps)
     };
 
     const handleSubmit = async () => {
+        if (!signupAllowed) {
+            alert('선택한 유형의 신규 가입은 일시 중단되었습니다.');
+            return;
+        }
         // Granular Validation
         if (!name.trim()) {
             alert(profileType === 'STUDENT' ? '실명을 입력해주세요.' : '닉네임을 입력해주세요.');
@@ -356,10 +380,30 @@ export default function UserInfoInput({ onBack, onSuccess }: UserInfoInputProps)
         } catch (error) {
             console.error('Signup error:', error);
             alert(getApiErrorMessage(error) || '서버 연결 중 오류가 발생했습니다.');
+            if (getApiErrorStatus(error) === 403) {
+                setSignupPolicy(null);
+                setPolicyError('');
+                setPolicyAttempt(value => value + 1);
+            }
         } finally {
             setIsLoading(false);
         }
     };
+
+    if (!signupPolicy || (!signupPolicy.regularEnabled && !signupPolicy.studentEnabled)) {
+        return (
+            <div className="flex h-full flex-1 items-center justify-center bg-[#F5F4F0] p-6">
+                <main className="w-full max-w-md rounded-2xl bg-white p-6 text-center shadow-sm">
+                    <h1 className="text-xl font-black">회원가입 안내</h1>
+                    <p role={policyError ? 'alert' : 'status'} className="mt-4 text-sm leading-6 text-zinc-600">
+                        {policyError || (signupPolicy ? '현재 신규 회원가입을 일시 중단했습니다. 기존 회원은 계속 로그인할 수 있습니다.' : '가입 접수 상태를 확인하는 중...')}
+                    </p>
+                    {policyError && <Button onClick={() => { setPolicyError(''); setPolicyAttempt(value => value + 1); }} className="mt-5">다시 시도</Button>}
+                    <Button variant="ghost" onClick={onBack} className="mt-5">로그인으로 돌아가기</Button>
+                </main>
+            </div>
+        );
+    }
 
     return (
         <div className="flex-1 flex flex-col h-full overflow-hidden bg-white dark:bg-zinc-950 relative">
@@ -389,8 +433,9 @@ export default function UserInfoInput({ onBack, onSuccess }: UserInfoInputProps)
                                 <button
                                     type="button"
                                     aria-pressed={profileType === 'STUDENT'}
+                                    disabled={!signupPolicy.studentEnabled}
                                     onClick={() => selectProfileType('STUDENT')}
-                                    className={`flex min-h-24 items-center gap-3 rounded-2xl border-2 p-4 text-left transition ${
+                                    className={`flex min-h-24 items-center gap-3 rounded-2xl border-2 p-4 text-left transition disabled:cursor-not-allowed disabled:opacity-50 ${
                                         profileType === 'STUDENT'
                                             ? 'border-[#162660] bg-white shadow-sm'
                                             : 'border-transparent bg-white/55 text-zinc-600'
@@ -403,14 +448,15 @@ export default function UserInfoInput({ onBack, onSuccess }: UserInfoInputProps)
                                     </span>
                                     <span>
                                         <span className="block text-sm font-black text-zinc-900">학생</span>
-                                        <span className="mt-1 block text-xs leading-4">학교 정보를 등록합니다.</span>
+                                        <span className="mt-1 block text-xs leading-4">{signupPolicy.studentEnabled ? '학교 정보를 등록합니다.' : '신규 가입 일시 중단'}</span>
                                     </span>
                                 </button>
                                 <button
                                     type="button"
                                     aria-pressed={profileType === 'GENERAL'}
+                                    disabled={!signupPolicy.regularEnabled}
                                     onClick={() => selectProfileType('GENERAL')}
-                                    className={`flex min-h-24 items-center gap-3 rounded-2xl border-2 p-4 text-left transition ${
+                                    className={`flex min-h-24 items-center gap-3 rounded-2xl border-2 p-4 text-left transition disabled:cursor-not-allowed disabled:opacity-50 ${
                                         profileType === 'GENERAL'
                                             ? 'border-[#162660] bg-white shadow-sm'
                                             : 'border-transparent bg-white/55 text-zinc-600'
@@ -423,7 +469,7 @@ export default function UserInfoInput({ onBack, onSuccess }: UserInfoInputProps)
                                     </span>
                                     <span>
                                         <span className="block text-sm font-black text-zinc-900">일반</span>
-                                        <span className="mt-1 block text-xs leading-4">학교 정보 없이 가입합니다.</span>
+                                        <span className="mt-1 block text-xs leading-4">{signupPolicy.regularEnabled ? '학교 정보 없이 가입합니다.' : '신규 가입 일시 중단'}</span>
                                     </span>
                                 </button>
                             </div>
@@ -719,7 +765,7 @@ export default function UserInfoInput({ onBack, onSuccess }: UserInfoInputProps)
                     <Button
                         className="w-full h-14 text-lg font-bold rounded-2xl bg-[#000000] hover:bg-zinc-800 text-white"
                         onClick={handleSubmit}
-                        disabled={isLoading}
+                        disabled={isLoading || !signupAllowed}
                     >
                         {isLoading ? '처리중...' : '확인'}
                     </Button>

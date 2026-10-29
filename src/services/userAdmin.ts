@@ -32,6 +32,23 @@ export const searchAdminUsers = async (query: string): Promise<AdminUser[]> => {
     return response.data.data;
 };
 
+export interface StudentProfileInput {
+    displayName: string;
+    schoolId: number;
+    studentNumber: string;
+}
+
+export const convertAdminUserToStudent = async (
+    accountId: number,
+    input: StudentProfileInput,
+): Promise<AdminUser> => {
+    const response = await apiClient.patch<ApiResponse<AdminUser>>(
+        `/admin/users/${accountId}/student-profile`,
+        input,
+    );
+    return response.data.data;
+};
+
 export const updatePlatformAdmin = async (
     accountId: number,
     platformAdmin: boolean,
