@@ -42,6 +42,7 @@ export default function CrewSettings({ onBack, onCaptainGuideClick }: CrewSettin
         isCapacityLimited: false,
         reservationPeriodLimitDays: 7,
         schoolVerificationRequired: false,
+        verifiedSchoolAutoJoinEnabled: false,
     });
 
     const [crewPin, setCrewPin] = useState('');
@@ -92,6 +93,7 @@ export default function CrewSettings({ onBack, onCaptainGuideClick }: CrewSettin
                         isCapacityLimited: info.isCapacityLimited,
                         reservationPeriodLimitDays: info.reservationPeriodLimitDays || 7,
                         schoolVerificationRequired: info.schoolVerificationRequired,
+                        verifiedSchoolAutoJoinEnabled: info.verifiedSchoolAutoJoinEnabled ?? false,
                     });
                     setCrewPin(info.crewPin || '');
                 }
@@ -325,6 +327,28 @@ export default function CrewSettings({ onBack, onCaptainGuideClick }: CrewSettin
 
                     <section className="rounded-xl border border-zinc-200 bg-white p-4">
                         <label className="flex cursor-pointer items-start gap-3">
+                            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700">
+                                <BadgeCheckIcon className="h-5 w-5" />
+                            </span>
+                            <span className="min-w-0 flex-1">
+                                <span className="block text-sm font-bold text-zinc-900">학교 인증 멤버 자동 가입</span>
+                                <span className="mt-1 block text-xs leading-5 text-zinc-500">
+                                    가입 PIN이 맞고 크루 소속 학교 인증을 완료한 멤버는 바로 가입합니다.
+                                    미인증 또는 다른 학교 멤버의 신청은 운영진이 검토합니다.
+                                    크루에 연동된 학교가 없으면 모든 신청을 운영진이 검토합니다.
+                                </span>
+                            </span>
+                            <input
+                                type="checkbox"
+                                checked={formData.verifiedSchoolAutoJoinEnabled ?? false}
+                                onChange={(event) => handleChange('verifiedSchoolAutoJoinEnabled', event.target.checked)}
+                                className="mt-2 h-5 w-5 rounded border-zinc-300 text-[#162660] focus:ring-[#162660]"
+                            />
+                        </label>
+                    </section>
+
+                    <section className="rounded-xl border border-zinc-200 bg-white p-4">
+                        <label className="flex cursor-pointer items-start gap-3">
                             <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-[#162660]">
                                 <BadgeCheckIcon className="h-5 w-5" />
                             </span>
@@ -333,11 +357,13 @@ export default function CrewSettings({ onBack, onCaptainGuideClick }: CrewSettin
                                 <span className="mt-1 block text-xs leading-5 text-zinc-500">
                                     켜면 학교 인증을 완료한 계정만 새로 가입하거나 승인받을 수 있습니다.
                                     이미 승인된 현재 멤버는 영향을 받지 않습니다.
+                                    {formData.verifiedSchoolAutoJoinEnabled && ' 자동 가입이 켜져 있어 이 제한은 적용되지 않고, 미인증 멤버도 운영진 검토로 가입할 수 있습니다.'}
                                 </span>
                             </span>
                             <input
                                 type="checkbox"
                                 checked={formData.schoolVerificationRequired}
+                                disabled={formData.verifiedSchoolAutoJoinEnabled}
                                 onChange={(event) => handleChange('schoolVerificationRequired', event.target.checked)}
                                 className="mt-2 h-5 w-5 rounded border-zinc-300 text-[#162660] focus:ring-[#162660]"
                             />
