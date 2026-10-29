@@ -114,7 +114,7 @@ export default function UserInfoInput({ onBack, onSuccess }: UserInfoInputProps)
     }, [policyAttempt]);
 
     useEffect(() => {
-        if (profileType !== 'STUDENT' || schools.length > 0) return;
+        if (!signupPolicy?.studentEnabled || profileType !== 'STUDENT' || schools.length > 0) return;
 
         let cancelled = false;
         setSchoolsLoading(true);
@@ -129,7 +129,7 @@ export default function UserInfoInput({ onBack, onSuccess }: UserInfoInputProps)
                 if (!cancelled) setSchoolsLoading(false);
             });
         return () => { cancelled = true; };
-    }, [profileType, schools.length]);
+    }, [profileType, schools.length, signupPolicy?.studentEnabled]);
 
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
