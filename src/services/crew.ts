@@ -27,6 +27,8 @@ export interface DiscoverableCrew {
     memberCount: number;
     profileImageUrl: string | null;
     schoolVerificationRequired: boolean;
+    schoolVerificationEnforcementEnabled?: boolean;
+    configuredSchoolVerificationRequired?: boolean;
     verifiedSchoolAutoJoinEnabled?: boolean;
 }
 
@@ -62,7 +64,9 @@ export const getCrewInfo = async (crewId: number): Promise<CrewDetail> => {
             profile_image_url: null,
             isCapacityLimited: true,
             seasonHouseActive: true,
-            schoolVerificationRequired: localStorage.getItem(`dev_crew_school_verification_required_${crewId}`) === 'true',
+            schoolVerificationRequired: false,
+            schoolVerificationEnforcementEnabled: false,
+            configuredSchoolVerificationRequired: localStorage.getItem(`dev_crew_school_verification_required_${crewId}`) === 'true',
             verifiedSchoolAutoJoinEnabled: localStorage.getItem(`dev_crew_auto_join_${crewId}`) === 'true',
         };
     }

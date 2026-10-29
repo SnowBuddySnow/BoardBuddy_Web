@@ -29,6 +29,7 @@ export default function CrewSettings({ onBack, onCaptainGuideClick }: CrewSettin
     const [crewId, setCrewId] = useState<number | null>(null);
     const [showPromote, setShowPromote] = useState(false);
     const [isCaptain, setIsCaptain] = useState(false);
+    const [verificationEnforced, setVerificationEnforced] = useState(false);
     const [schools, setSchools] = useState<SchoolOption[]>([]);
     const [selectedSchoolId, setSelectedSchoolId] = useState('');
     const [affiliatedSchoolName, setAffiliatedSchoolName] = useState('');
@@ -78,6 +79,7 @@ export default function CrewSettings({ onBack, onCaptainGuideClick }: CrewSettin
                     ]);
 
                     setSchools(schoolOptions);
+                    setVerificationEnforced(info.schoolVerificationEnforcementEnabled === true);
                     if (info.kusbfAssociated && info.univ) {
                         setAffiliatedSchoolName(info.univ);
                         const affiliatedSchool = schoolOptions.find((school) => school.name === info.univ);
@@ -92,7 +94,7 @@ export default function CrewSettings({ onBack, onCaptainGuideClick }: CrewSettin
                         dailyCapacity: info.dailyCapacity,
                         isCapacityLimited: info.isCapacityLimited,
                         reservationPeriodLimitDays: info.reservationPeriodLimitDays || 7,
-                        schoolVerificationRequired: info.schoolVerificationRequired,
+                        schoolVerificationRequired: info.configuredSchoolVerificationRequired ?? info.schoolVerificationRequired,
                         verifiedSchoolAutoJoinEnabled: info.verifiedSchoolAutoJoinEnabled ?? false,
                     });
                     setCrewPin(info.crewPin || '');
@@ -133,6 +135,7 @@ export default function CrewSettings({ onBack, onCaptainGuideClick }: CrewSettin
         } else {
             payload.name = formData.crewName;
         }
+        if (!verificationEnforced) delete payload.schoolVerificationRequired;
 
         const confirmed = window.confirm(`설정을 저장하시겠습니까?`);
         if (!confirmed) return;
@@ -353,17 +356,18 @@ export default function CrewSettings({ onBack, onCaptainGuideClick }: CrewSettin
                                 <BadgeCheckIcon className="h-5 w-5" />
                             </span>
                             <span className="min-w-0 flex-1">
-                                <span className="block text-sm font-bold text-zinc-900">학교 인증 필수 가입</span>
+                                <span className="block text-sm font-bold text-zinc-900">학교 인증 필수 가입{!verificationEnforced && ' (일시 중지)'}</span>
                                 <span className="mt-1 block text-xs leading-5 text-zinc-500">
-                                    켜면 학교 인증을 완료한 계정만 새로 가입하거나 승인받을 수 있습니다.
-                                    이미 승인된 현재 멤버는 영향을 받지 않습니다.
+                                    {!verificationEnforced
+                                        ? '학교 이메일 인증 준비 기간에는 모든 학교에서 이 제한을 적용하지 않습니다. 학교 인증 없이 PIN으로 신청하고 운영진 승인을 받을 수 있습니다.'
+                                        : '켜면 학교 인증을 완료한 계정만 새로 가입하거나 승인받을 수 있습니다. 이미 승인된 현재 멤버는 영향을 받지 않습니다.'}
                                     {formData.verifiedSchoolAutoJoinEnabled && ' 자동 가입이 켜져 있어 이 제한은 적용되지 않고, 미인증 멤버도 운영진 검토로 가입할 수 있습니다.'}
                                 </span>
                             </span>
                             <input
                                 type="checkbox"
-                                checked={formData.schoolVerificationRequired}
-                                disabled={formData.verifiedSchoolAutoJoinEnabled}
+                                checked={verificationEnforced && formData.schoolVerificationRequired}
+                                disabled={!verificationEnforced || formData.verifiedSchoolAutoJoinEnabled}
                                 onChange={(event) => handleChange('schoolVerificationRequired', event.target.checked)}
                                 className="mt-2 h-5 w-5 rounded border-zinc-300 text-[#162660] focus:ring-[#162660]"
                             />
