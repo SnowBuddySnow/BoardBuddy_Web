@@ -33,6 +33,8 @@ export interface CrewDetail {
     kusbfAssociated?: boolean;
     seasonHouseActive?: boolean;
     schoolVerificationRequired: boolean;
+    schoolVerificationEnforcementEnabled?: boolean;
+    configuredSchoolVerificationRequired?: boolean;
     verifiedSchoolAutoJoinEnabled?: boolean;
 }
 
