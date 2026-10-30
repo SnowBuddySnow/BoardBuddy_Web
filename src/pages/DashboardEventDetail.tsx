@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import { formatEventDateTime } from '../lib/eventDateTime';
 import { Button } from '../components/Button';
 import { getEventChatAccess, getEventDashboard, updateEvent, listParticipants, updateParticipantManagement, updateParticipantStatus, updateEventChatAccess } from '../services/event';
 import { Event, EventChatAccess, EventParticipant, PaymentStatus } from '../types/api';
@@ -27,7 +28,7 @@ export default function DashboardEventDetail({ eventId, onBack, onEditClick }: D
     });
     const [chatAccessSaving, setChatAccessSaving] = useState(false);
 
-    const fetchDetailData = async () => {
+    const fetchDetailData = useCallback(async () => {
         try {
             setLoading(true);
             const eventData = await getEventDashboard(eventId);
@@ -41,11 +42,11 @@ export default function DashboardEventDetail({ eventId, onBack, onEditClick }: D
         } finally {
             setLoading(false);
         }
-    };
+    }, [eventId]);
 
     useEffect(() => {
         fetchDetailData();
-    }, [eventId]);
+    }, [fetchDetailData]);
 
     const handleOpenRegistration = async () => {
         try {
@@ -132,23 +133,8 @@ export default function DashboardEventDetail({ eventId, onBack, onEditClick }: D
         }
     };
 
-    const formatDate = (dateStr: string) => {
-        const d = new Date(dateStr);
-        return d.toLocaleDateString('ko-KR', {
-            year: 'numeric',
-            month: '2-digit',
-            day: '2-digit',
-            hour: '2-digit',
-            minute: '2-digit',
-            hour12: false
-        });
-    };
-
-    const formatCompactDate = (dateStr: string) => {
-        const date = new Date(dateStr);
-        const pad = (value: number) => String(value).padStart(2, '0');
-        return `${pad(date.getMonth() + 1)}.${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
-    };
+    const formatDate = formatEventDateTime;
+    const formatCompactDate = formatEventDateTime;
 
     if (loading) {
         return (

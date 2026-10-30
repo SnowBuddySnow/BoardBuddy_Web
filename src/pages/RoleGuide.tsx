@@ -7,6 +7,7 @@ import {
   Sparkles,
   UserRound,
 } from 'lucide-react';
+import { SEASON_HOUSE_RESERVATIONS_ENABLED } from '../constants/operatingSeason';
 
 interface RoleGuideProps {
   onBack: () => void;
@@ -14,18 +15,18 @@ interface RoleGuideProps {
 
 const basePermissions = [
   '크루 정보·멤버 확인',
-  '예약 신청·취소',
+  ...(SEASON_HOUSE_RESERVATIONS_ENABLED ? ['예약 신청·취소'] : []),
   '모임 조회·참가',
-  '내 달력·활동 확인',
+  SEASON_HOUSE_RESERVATIONS_ENABLED ? '내 달력·활동 확인' : '내 이벤트 활동 확인',
 ] as const;
 
-const crewManagerPermissions = [
+const crewManagerPermissions = SEASON_HOUSE_RESERVATIONS_ENABLED ? [
   '예약 현황·참가자 관리',
   '결제 상태·관리 메모 수정',
   '가입 신청 승인·반려',
   '예약 일정·정원 설정',
   '크루 이용 통계 확인',
-] as const;
+] as const : ['가입 신청 승인·반려'] as const;
 
 const eventManagerPermissions = [
   '이벤트 그룹 생성·참여',

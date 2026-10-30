@@ -6,6 +6,7 @@ import { getUserInfo, getMyReservations } from '../services/user';
 import { UserDetail, MyReservation } from '../types/api';
 import { clearAuthSession } from '../lib/session';
 import { isCrewCaptainRole, normalizeCrewRole } from '../constants/crewRole';
+import { SEASON_HOUSE_RESERVATIONS_ENABLED } from '../constants/operatingSeason';
 
 interface MyPageProps {
     onBack: () => void;
@@ -28,7 +29,7 @@ export default function MyPage({ onBack, onAccountInfoClick, onRoleGuideClick, o
                 setUserInfo(data);
 
                 // Fetch reservations
-                try {
+                if (SEASON_HOUSE_RESERVATIONS_ENABLED) try {
                     const reservationsData = await getMyReservations();
                     setReservations(reservationsData);
 
@@ -149,6 +150,7 @@ export default function MyPage({ onBack, onAccountInfoClick, onRoleGuideClick, o
                 </div>
 
                 {/* Usage Count Section */}
+                {SEASON_HOUSE_RESERVATIONS_ENABLED && <>
                 <div className="px-6 mb-4">
                     <div className="bg-[#EDF2FF] dark:bg-[#1E3A8A]/20 rounded-2xl p-4">
                         <div className="text-sm font-semibold text-zinc-700 dark:text-zinc-300">
@@ -221,6 +223,7 @@ export default function MyPage({ onBack, onAccountInfoClick, onRoleGuideClick, o
                     )}
                 </div>
 
+                </>}
                 {/* Captain Onboarding Menu */}
                 {isCrewCaptainRole(userInfo.role) && onCaptainOnboardingClick && (
                     <div className="px-6 mb-4">

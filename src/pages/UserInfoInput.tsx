@@ -14,6 +14,8 @@ import {
 import { confirmPhoneVerification, requestPhoneVerification } from '../services/phoneVerification';
 import { getSchools, type SchoolOption } from '../services/schools';
 import { getApiErrorMessage, getApiErrorStatus } from '../lib/apiError';
+import { SCHOOL_EMAIL_AUTH_AVAILABLE } from '../config/features';
+import { getSignupPolicy, type SignupPolicy } from '../services/signupPolicy';
 
 interface UserInfoInputProps {
     onBack: () => void;
@@ -24,7 +26,6 @@ interface UserInfoInputProps {
 // Delete this constant, the skip handler, and the development-only button to restore verification-only UI.
 const CAN_SKIP_PHONE_VERIFICATION = import.meta.env.DEV;
 
-// Keep the temporary signup default in one place so a developer-controlled setting can replace it later.
 const DEFAULT_SIGNUP_PROFILE_TYPE: 'GENERAL' | 'STUDENT' = 'STUDENT';
 
 const TERMS_CONTENT = {
@@ -48,7 +49,7 @@ const TERMS_CONTENT = {
 - 서비스 오류 발생 시 공지 및 대응
 
 2. 개인정보 수집 항목
-- 성명 또는 닉네임, 성별, 휴대전화번호, 이메일(일반 프로필은 선택, 학교 이메일 인증을 사용하는 학생 프로필은 필수)
+- 성명 또는 닉네임, 성별, 휴대전화번호, 이메일(선택, 학교 이메일 인증 기능은 현재 준비 중)
 - 학생 프로필의 경우 학교, 학번(필수)
 
 3. 개인정보 제3자 제공 동의 (휴대전화번호 제공)
@@ -56,8 +57,8 @@ const TERMS_CONTENT = {
 - 귀하는 제공 시마다 매번 확인 동의를 하거나, 매번 묻지 않도록 '항상 동의' 설정을 선택할 수 있습니다. 동의 여부는 마이페이지 계정 관리에서 언제든지 변경 가능합니다.
 
 4. 보유 및 이용 기간
-- 회원 탈퇴 시 혹은 서비스 종료 시까지 즉시 파기
-(단, 관계 법령에 의하여 보존할 필요가 있는 경우 해당 기간 보존)
+- 회원 탈퇴 시 로그인, 프로필, 연락처 정보를 삭제합니다.
+- 예약, 동의, 운영 및 보안 이력은 서비스 무결성과 관계 법령에 따라 계정 식별 정보가 제거된 상태로 보존될 수 있습니다.
 
 5. 동의 거부 권리
 - 귀하는 개인정보 수집 및 이용에 동의를 거부할 권리가 있습니다. 필수 동의 사항을 거부하실 경우 서비스 이용이 제한됩니다.`
@@ -92,9 +93,28 @@ export default function UserInfoInput({ onBack, onSuccess }: UserInfoInputProps)
     const [showSchoolDropdown, setShowSchoolDropdown] = useState(false);
     const [schoolsLoading, setSchoolsLoading] = useState(false);
     const schoolInputRef = useRef<HTMLDivElement>(null);
+    const [signupPolicy, setSignupPolicy] = useState<SignupPolicy | null>(null);
+    const [policyError, setPolicyError] = useState('');
+    const [policyAttempt, setPolicyAttempt] = useState(0);
+    const signupAllowed = !!signupPolicy && (profileType === 'STUDENT' ? signupPolicy.studentEnabled : signupPolicy.regularEnabled);
 
     useEffect(() => {
-        if (profileType !== 'STUDENT' || schools.length > 0) return;
+        let cancelled = false;
+        getSignupPolicy().then(policy => {
+            if (cancelled) return;
+            setSignupPolicy(policy);
+            if (policy.studentEnabled !== policy.regularEnabled) {
+                setProfileType(policy.studentEnabled ? 'STUDENT' : 'GENERAL');
+                setName('');
+            }
+        }).catch(() => {
+            if (!cancelled) setPolicyError('가입 접수 상태를 불러오지 못했습니다. 다시 시도해 주세요.');
+        });
+        return () => { cancelled = true; };
+    }, [policyAttempt]);
+
+    useEffect(() => {
+        if (!signupPolicy?.studentEnabled || profileType !== 'STUDENT' || schools.length > 0) return;
 
         let cancelled = false;
         setSchoolsLoading(true);
@@ -109,7 +129,7 @@ export default function UserInfoInput({ onBack, onSuccess }: UserInfoInputProps)
                 if (!cancelled) setSchoolsLoading(false);
             });
         return () => { cancelled = true; };
-    }, [profileType, schools.length]);
+    }, [profileType, schools.length, signupPolicy?.studentEnabled]);
 
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
@@ -224,6 +244,7 @@ export default function UserInfoInput({ onBack, onSuccess }: UserInfoInputProps)
     };
 
     const selectProfileType = (nextType: 'GENERAL' | 'STUDENT') => {
+        if (!signupPolicy || !(nextType === 'STUDENT' ? signupPolicy.studentEnabled : signupPolicy.regularEnabled)) return;
         if (nextType !== profileType) setName('');
         setProfileType(nextType);
         if (nextType === 'GENERAL') {
@@ -258,6 +279,10 @@ export default function UserInfoInput({ onBack, onSuccess }: UserInfoInputProps)
     };
 
     const handleSubmit = async () => {
+        if (!signupAllowed) {
+            alert('선택한 유형의 신규 가입은 일시 중단되었습니다.');
+            return;
+        }
         // Granular Validation
         if (!name.trim()) {
             alert(profileType === 'STUDENT' ? '실명을 입력해주세요.' : '닉네임을 입력해주세요.');
@@ -278,7 +303,7 @@ export default function UserInfoInput({ onBack, onSuccess }: UserInfoInputProps)
 
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         if (email && !emailRegex.test(email)) { alert('이메일 형식이 올바르지 않습니다.'); return; }
-        if (profileType === 'STUDENT' && selectedSchool && selectedSchool.emailDomains.length > 0) {
+        if (SCHOOL_EMAIL_AUTH_AVAILABLE && profileType === 'STUDENT' && selectedSchool && selectedSchool.emailDomains.length > 0) {
             if (!email.trim()) {
                 alert('학생 인증을 위해 학교 이메일을 입력해주세요.');
                 return;
@@ -318,7 +343,7 @@ export default function UserInfoInput({ onBack, onSuccess }: UserInfoInputProps)
             const response = await apiClient.put(`/accounts/${accountId}/profile`, {
                 userType: profileType === 'STUDENT' ? 'KUSBF' : 'REGULAR',
                 displayName: name.trim(),
-                email: email.trim() || undefined,
+                email: profileType === 'STUDENT' && !SCHOOL_EMAIL_AUTH_AVAILABLE ? undefined : email.trim() || undefined,
                 schoolId: profileType === 'STUDENT' ? selectedSchool?.id : undefined,
                 studentNumber: profileType === 'STUDENT' ? studentNumber.trim() : undefined,
                 gender: gender === 'male' ? 'MALE' : 'FEMALE',
@@ -347,7 +372,7 @@ export default function UserInfoInput({ onBack, onSuccess }: UserInfoInputProps)
                 }
 
                 if (onSuccess) {
-                    onSuccess(completedProfile.universityVerificationStatus === 'PENDING');
+                    onSuccess(SCHOOL_EMAIL_AUTH_AVAILABLE && completedProfile.universityVerificationStatus === 'PENDING');
                 } else {
                     onBack();
                 }
@@ -355,10 +380,30 @@ export default function UserInfoInput({ onBack, onSuccess }: UserInfoInputProps)
         } catch (error) {
             console.error('Signup error:', error);
             alert(getApiErrorMessage(error) || '서버 연결 중 오류가 발생했습니다.');
+            if (getApiErrorStatus(error) === 403) {
+                setSignupPolicy(null);
+                setPolicyError('');
+                setPolicyAttempt(value => value + 1);
+            }
         } finally {
             setIsLoading(false);
         }
     };
+
+    if (!signupPolicy || (!signupPolicy.regularEnabled && !signupPolicy.studentEnabled)) {
+        return (
+            <div className="flex h-full flex-1 items-center justify-center bg-[#F5F4F0] p-6">
+                <main className="w-full max-w-md rounded-2xl bg-white p-6 text-center shadow-sm">
+                    <h1 className="text-xl font-black">회원가입 안내</h1>
+                    <p role={policyError ? 'alert' : 'status'} className="mt-4 text-sm leading-6 text-zinc-600">
+                        {policyError || (signupPolicy ? '현재 신규 회원가입을 일시 중단했습니다. 기존 회원은 계속 로그인할 수 있습니다.' : '가입 접수 상태를 확인하는 중...')}
+                    </p>
+                    {policyError && <Button onClick={() => { setPolicyError(''); setPolicyAttempt(value => value + 1); }} className="mt-5">다시 시도</Button>}
+                    <Button variant="ghost" onClick={onBack} className="mt-5">로그인으로 돌아가기</Button>
+                </main>
+            </div>
+        );
+    }
 
     return (
         <div className="flex-1 flex flex-col h-full overflow-hidden bg-white dark:bg-zinc-950 relative">
@@ -388,8 +433,9 @@ export default function UserInfoInput({ onBack, onSuccess }: UserInfoInputProps)
                                 <button
                                     type="button"
                                     aria-pressed={profileType === 'STUDENT'}
+                                    disabled={!signupPolicy.studentEnabled}
                                     onClick={() => selectProfileType('STUDENT')}
-                                    className={`flex min-h-24 items-center gap-3 rounded-2xl border-2 p-4 text-left transition ${
+                                    className={`flex min-h-24 items-center gap-3 rounded-2xl border-2 p-4 text-left transition disabled:cursor-not-allowed disabled:opacity-50 ${
                                         profileType === 'STUDENT'
                                             ? 'border-[#162660] bg-white shadow-sm'
                                             : 'border-transparent bg-white/55 text-zinc-600'
@@ -402,14 +448,15 @@ export default function UserInfoInput({ onBack, onSuccess }: UserInfoInputProps)
                                     </span>
                                     <span>
                                         <span className="block text-sm font-black text-zinc-900">학생</span>
-                                        <span className="mt-1 block text-xs leading-4">학교 정보를 등록합니다.</span>
+                                        <span className="mt-1 block text-xs leading-4">{signupPolicy.studentEnabled ? '학교 정보를 등록합니다.' : '신규 가입 일시 중단'}</span>
                                     </span>
                                 </button>
                                 <button
                                     type="button"
                                     aria-pressed={profileType === 'GENERAL'}
+                                    disabled={!signupPolicy.regularEnabled}
                                     onClick={() => selectProfileType('GENERAL')}
-                                    className={`flex min-h-24 items-center gap-3 rounded-2xl border-2 p-4 text-left transition ${
+                                    className={`flex min-h-24 items-center gap-3 rounded-2xl border-2 p-4 text-left transition disabled:cursor-not-allowed disabled:opacity-50 ${
                                         profileType === 'GENERAL'
                                             ? 'border-[#162660] bg-white shadow-sm'
                                             : 'border-transparent bg-white/55 text-zinc-600'
@@ -422,7 +469,7 @@ export default function UserInfoInput({ onBack, onSuccess }: UserInfoInputProps)
                                     </span>
                                     <span>
                                         <span className="block text-sm font-black text-zinc-900">일반</span>
-                                        <span className="mt-1 block text-xs leading-4">학교 정보 없이 가입합니다.</span>
+                                        <span className="mt-1 block text-xs leading-4">{signupPolicy.regularEnabled ? '학교 정보 없이 가입합니다.' : '신규 가입 일시 중단'}</span>
                                     </span>
                                 </button>
                             </div>
@@ -451,17 +498,25 @@ export default function UserInfoInput({ onBack, onSuccess }: UserInfoInputProps)
                         <div className="space-y-2">
                             <label className="text-sm font-bold text-zinc-800 ml-1">
                                 이메일 <span className="font-normal text-zinc-500">
-                                    {profileType === 'STUDENT' && schools.find(option => option.name === school)?.emailDomains.length
-                                        ? '(학교 인증용)' : '(선택)'}
+                                    {profileType === 'STUDENT' && !SCHOOL_EMAIL_AUTH_AVAILABLE
+                                        ? '(학교 인증 준비 중)'
+                                        : profileType === 'STUDENT' && schools.find(option => option.name === school)?.emailDomains.length
+                                            ? '(학교 인증용)' : '(선택)'}
                                 </span>
                             </label>
                             <input
                                 type="email"
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
-                                className="w-full h-12 rounded-[16px] border-none px-4 text-zinc-900 focus:ring-2 focus:ring-blue-400 outline-none shadow-sm bg-white"
-                                placeholder="name@example.com"
+                                disabled={profileType === 'STUDENT' && !SCHOOL_EMAIL_AUTH_AVAILABLE}
+                                className="w-full h-12 rounded-[16px] border-none px-4 text-zinc-900 focus:ring-2 focus:ring-blue-400 outline-none shadow-sm bg-white disabled:bg-zinc-100 disabled:text-zinc-400"
+                                placeholder={profileType === 'STUDENT' && !SCHOOL_EMAIL_AUTH_AVAILABLE ? '아직 사용할 수 없습니다' : 'name@example.com'}
                             />
+                            {profileType === 'STUDENT' && !SCHOOL_EMAIL_AUTH_AVAILABLE && (
+                                <p className="ml-1 text-xs font-semibold leading-5 text-amber-700">
+                                    학교 이메일 인증은 아직 준비 중입니다. 이메일 없이 가입할 수 있습니다.
+                                </p>
+                            )}
                         </div>
 
                         {profileType === 'STUDENT' && (
@@ -710,7 +765,7 @@ export default function UserInfoInput({ onBack, onSuccess }: UserInfoInputProps)
                     <Button
                         className="w-full h-14 text-lg font-bold rounded-2xl bg-[#000000] hover:bg-zinc-800 text-white"
                         onClick={handleSubmit}
-                        disabled={isLoading}
+                        disabled={isLoading || !signupAllowed}
                     >
                         {isLoading ? '처리중...' : '확인'}
                     </Button>

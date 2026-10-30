@@ -7,6 +7,8 @@ import { UserDetail } from '../types/api';
 import { APP_VERSION, COPYRIGHT_TEXT } from '../version';
 import { clearAuthSession } from '../lib/session';
 import { isCrewCaptainRole } from '../constants/crewRole';
+import { SCHOOL_EMAIL_AUTH_AVAILABLE } from '../config/features';
+import { getApiErrorMessage } from '../lib/apiError';
 
 interface AccountInfoProps {
     onBack: () => void;
@@ -126,13 +128,15 @@ export default function AccountInfo({ onBack, onStudentVerificationClick }: Acco
                                         <div className="text-xs text-zinc-500 mb-1">학생 인증</div>
                                         <div className="flex items-center justify-between gap-3">
                                             <div className="text-base font-medium">
-                                                {userInfo.universityVerificationStatus === 'VERIFIED'
+                                                {!SCHOOL_EMAIL_AUTH_AVAILABLE
+                                                    ? '학교 이메일 인증 준비 중'
+                                                    : userInfo.universityVerificationStatus === 'VERIFIED'
                                                     ? '인증 완료'
                                                     : userInfo.universityVerificationStatus === 'PENDING'
                                                         ? '이메일 확인 대기 중'
                                                         : '미인증'}
                                             </div>
-                                            {userInfo.universityVerificationStatus !== 'VERIFIED' && onStudentVerificationClick && (
+                                            {SCHOOL_EMAIL_AUTH_AVAILABLE && userInfo.universityVerificationStatus !== 'VERIFIED' && onStudentVerificationClick && (
                                                 <button
                                                     type="button"
                                                     onClick={onStudentVerificationClick}
@@ -247,23 +251,30 @@ export default function AccountInfo({ onBack, onStudentVerificationClick }: Acco
                         type="button"
                         disabled={actionBusy !== null}
                         onClick={async () => {
-                            if (!confirm('정말 회원 탈퇴를 하시겠습니까?\n탈퇴 처리 후 계정으로 다시 로그인할 수 없습니다. 먼저 개인정보를 내려받는 것을 권장합니다.')) return;
+                            if (!confirm('회원 탈퇴할까요?\n탈퇴 후 같은 카카오 계정으로 언제든 새로 가입할 수 있습니다.')) return;
                             setActionBusy('delete');
                             setActionError('');
                             try {
                                 await deleteAccount();
                                 clearAuthSession();
-                                alert('회원 탈퇴가 완료되었습니다.');
+                                alert('회원 탈퇴가 완료되었습니다. 다시 가입하면 새 계정으로 시작합니다.');
                                 window.location.href = '/';
-                            } catch (error) {
+                            } catch (error: unknown) {
                                 console.error('회원 탈퇴 실패:', error);
-                                setActionError('회원 탈퇴에 실패했습니다. 다시 시도해 주세요.');
+                                const message = getApiErrorMessage(error);
+                                setActionError(message?.includes('captain role')
+                                    ? '크루장 권한을 다른 멤버에게 이전한 후 탈퇴해 주세요.'
+                                    : '회원 탈퇴에 실패했습니다. 다시 시도해 주세요.');
                                 setActionBusy(null);
                             }
                         }}
                         className="flex w-full items-center gap-3 rounded-xl border border-red-200 bg-white px-4 py-3 text-left text-sm font-bold text-red-600 disabled:opacity-40 dark:bg-zinc-800"
                     >
-                        <Trash2 className="h-4 w-4" /> 회원 탈퇴
+                        <Trash2 className="h-4 w-4" />
+                        <span>
+                            <span className="block">회원 탈퇴</span>
+                            <span className="mt-0.5 block text-[10px] font-medium text-zinc-400">프로필과 로그인 정보 삭제 · 재가입 가능</span>
+                        </span>
                     </button>
 
                     {actionError && <p className="rounded-xl border border-red-100 bg-red-50 p-3 text-xs font-bold text-red-600">{actionError}</p>}

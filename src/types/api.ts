@@ -33,6 +33,9 @@ export interface CrewDetail {
     kusbfAssociated?: boolean;
     seasonHouseActive?: boolean;
     schoolVerificationRequired: boolean;
+    schoolVerificationEnforcementEnabled?: boolean;
+    configuredSchoolVerificationRequired?: boolean;
+    verifiedSchoolAutoJoinEnabled?: boolean;
 }
 
 export interface CrewSimple {
@@ -143,6 +146,7 @@ export interface CrewInfoUpdateRequest {
     dailyCapacity: number;
     isCapacityLimited: boolean;
     schoolVerificationRequired: boolean;
+    verifiedSchoolAutoJoinEnabled?: boolean;
 }
 
 export interface CrewUsageStatistic {
@@ -349,6 +353,7 @@ export interface ConsentItemInput {
 export interface ConsentConfiguration {
     consentWindowMinutes: number | null;
     items: ConsentItem[];
+    configurationLocked?: boolean;
 }
 
 export interface ConsentConfigurationInput {

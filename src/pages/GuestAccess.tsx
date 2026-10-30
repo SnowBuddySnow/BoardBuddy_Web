@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { ChevronLeft, Keyboard, ScanLine, Sparkles } from 'lucide-react';
+import { SEASON_HOUSE_RESERVATIONS_ENABLED } from '../constants/operatingSeason';
 
 interface GuestAccessProps {
     onBack: () => void;
@@ -14,13 +15,16 @@ type GuestDestination = { type: 'SEASON'; id: number } | { type: 'EVENT'; id: nu
 const parseGuestCode = (rawCode: string): GuestDestination | null => {
     const code = rawCode.trim();
     const match = code.match(/^(?:BB:)?(SEASON|EVENT)[:\-/](\d+)$/i);
-    if (match) return { type: match[1].toUpperCase() as 'SEASON' | 'EVENT', id: Number(match[2]) };
+    if (match) {
+        const id = Number(match[2]);
+        return Number.isSafeInteger(id) && id > 0 ? { type: match[1].toUpperCase() as 'SEASON' | 'EVENT', id } : null;
+    }
 
     try {
         const url = new URL(code);
         const type = url.searchParams.get('type')?.toUpperCase();
         const id = Number(url.searchParams.get('id'));
-        if ((type === 'SEASON' || type === 'EVENT') && Number.isInteger(id) && id > 0) return { type, id };
+        if ((type === 'SEASON' || type === 'EVENT') && Number.isSafeInteger(id) && id > 0) return { type, id };
     } catch {
         // The code may be a short code rather than a URL.
     }
@@ -56,7 +60,7 @@ export default function GuestAccess({ onBack, onSeasonHouseAccess, onEventAccess
         }
         stopScanner();
         if (destination.type === 'SEASON') {
-            if (!seasonAvailable) {
+            if (!SEASON_HOUSE_RESERVATIONS_ENABLED || !seasonAvailable) {
                 setError('현재는 오프시즌 운영 중이라 시즌방 게스트 예약을 이용할 수 없습니다.');
                 return;
             }

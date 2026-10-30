@@ -1,9 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import { formatEventDateTime, getEventRegistrationLabel, getEventRegistrationState, isEventRegistrationAvailable } from '../lib/eventDateTime';
 import { Button } from '../components/Button';
-import { listParties, joinEvent } from '../services/event';
+import { listParties } from '../services/event';
 import { Event } from '../types/api';
 import { ChevronLeft, Calendar, MapPin, Users, Search, Sparkles, AlertCircle } from 'lucide-react';
-import { getApiErrorMessage, getApiErrorStatus } from '../lib/apiError';
 import { PlanningModeBadge } from '../components/event/PlanningModeBadge';
 import { getEventActivityLabel, EVENT_ACTIVITY_OPTIONS } from '../constants/eventActivity';
 
@@ -19,11 +19,18 @@ export default function Parties({ onBack, onEventClick, onCreateClick, canCreate
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedTag, setSelectedTag] = useState('ALL');
-    const [joiningIds, setJoiningIds] = useState<number[]>([]);
+    const [loadError, setLoadError] = useState('');
+    const [currentTime, setCurrentTime] = useState(Date.now());
 
-    const fetchAllParties = async () => {
+    useEffect(() => {
+        const timer = window.setInterval(() => setCurrentTime(Date.now()), 1000);
+        return () => window.clearInterval(timer);
+    }, []);
+
+    const fetchAllParties = useCallback(async () => {
         try {
             setLoading(true);
+            setLoadError('');
             const data = await listParties();
             // Filter to show OPEN parties prominently, and closed/cancelled visually de-emphasized
             // DRAFT parties shouldn't appear for normal users (handled by API, but double check)
@@ -31,57 +38,28 @@ export default function Parties({ onBack, onEventClick, onCreateClick, canCreate
             setParties(visible);
         } catch (error) {
             console.error('Failed to fetch parties:', error);
+            setLoadError('이벤트를 불러오지 못했습니다. 연결을 확인하고 다시 시도해 주세요.');
         } finally {
             setLoading(false);
         }
-    };
-
-    useEffect(() => {
-        fetchAllParties();
     }, []);
 
-    const handleJoin = async (e: React.MouseEvent, eventId: number) => {
-        e.stopPropagation(); // Avoid navigating to details
-        if (joiningIds.includes(eventId)) return;
+    useEffect(() => {
+        void fetchAllParties();
+    }, [fetchAllParties]);
 
-        try {
-            setJoiningIds(prev => [...prev, eventId]);
-            await joinEvent(eventId);
-            alert('이벤트 신청이 완료되었습니다!');
-            fetchAllParties(); // Refresh details
-        } catch (error: unknown) {
-            console.error('Failed to join event:', error);
-            const apiMessage = getApiErrorMessage(error);
-            if (getApiErrorStatus(error) === 403) {
-                alert('이 이벤트에 참여할 권한이 없습니다.');
-            } else if (apiMessage) {
-                alert(apiMessage);
-            } else {
-                alert('이벤트 참여 신청에 실패했습니다.');
-            }
-        } finally {
-            setJoiningIds(prev => prev.filter(id => id !== eventId));
-        }
+    const handleJoin = (e: React.MouseEvent, eventId: number) => {
+        e.stopPropagation(); // Do not also fire the enclosing card's navigation.
+        const event = parties.find(item => item.id === eventId);
+        if (!event || !isEventRegistrationAvailable(event)) return;
+        // One admission path owns phone confirmation, join results and required responses.
+        onEventClick(eventId);
     };
 
-    const formatDate = (dateStr: string) => {
-        const d = new Date(dateStr);
-        const month = d.getMonth() + 1;
-        const date = d.getDate();
-        const hour = String(d.getHours()).padStart(2, '0');
-        const min = String(d.getMinutes()).padStart(2, '0');
-        const dayNames = ['일', '월', '화', '수', '목', '금', '토'];
-        const day = dayNames[d.getDay()];
-        return `${month}월 ${date}일 (${day}) ${hour}:${min}`;
-    };
+    const formatDate = formatEventDateTime;
 
     const activityTags = ['ALL', ...EVENT_ACTIVITY_OPTIONS.map(option => option.value)];
-    const availableEventCount = parties.filter(event => (
-        event.status === 'OPEN'
-        && new Date(event.startsAt).getTime() > Date.now()
-        && (!event.applicationStartsAt || new Date(event.applicationStartsAt).getTime() <= Date.now())
-        && (event.joinedCount || 0) < event.capacity
-    )).length;
+    const availableEventCount = parties.filter(event => isEventRegistrationAvailable(event, currentTime)).length;
 
     const filteredParties = parties.filter(event => {
         const matchesSearch = event.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -99,18 +77,19 @@ export default function Parties({ onBack, onEventClick, onCreateClick, canCreate
         <div className="flex-1 flex flex-col h-full overflow-hidden bg-[#FAF8F3] relative">
             {/* Header */}
             <header className="px-4 pt-3 pb-3 flex items-center justify-between border-b border-zinc-100 bg-[#FAF8F3]">
-                <Button variant="ghost" onClick={onBack} className="-ml-2 gap-1 text-zinc-800 hover:bg-transparent">
+                <Button variant="ghost" aria-label="뒤로 가기" onClick={onBack} className="-ml-2 min-h-11 min-w-11 gap-1 text-zinc-800 hover:bg-transparent">
                     <ChevronLeft className="w-6 h-6" />
                 </Button>
                 <div className="text-center">
                     <h1 className="text-lg font-bold text-zinc-900">이벤트 둘러보기</h1>
-                    <p className="text-[11px] font-bold text-zinc-500">현재 참가 가능 {availableEventCount}개</p>
+                    <p className="text-[11px] font-bold text-zinc-500">{loading ? '이벤트 불러오는 중...' : loadError ? '이벤트 목록 확인 필요' : `현재 참가 가능 ${availableEventCount}개`}</p>
                 </div>
                 <div className="w-10">
                     {canCreate && onCreateClick && (
                         <button
                             onClick={onCreateClick}
-                            className="bg-[#162660] text-white p-2 rounded-full hover:bg-blue-900 transition-colors shadow-sm"
+                            aria-label="이벤트 만들기"
+                            className="min-h-11 min-w-11 bg-[#162660] text-white p-2 rounded-full hover:bg-blue-900 transition-colors shadow-sm"
                         >
                             <Sparkles className="w-4 h-4" />
                         </button>
@@ -137,7 +116,7 @@ export default function Parties({ onBack, onEventClick, onCreateClick, canCreate
                         <button
                             key={tag}
                             onClick={() => setSelectedTag(tag)}
-                            className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all shrink-0 border ${
+                            className={`min-h-11 min-w-11 px-3.5 py-1.5 rounded-full text-xs font-bold transition-all shrink-0 border ${
                                 selectedTag === tag
                                     ? 'bg-[#162660] text-white border-[#162660] shadow-sm'
                                     : 'bg-white text-zinc-600 border-zinc-200 hover:bg-zinc-50'
@@ -156,24 +135,26 @@ export default function Parties({ onBack, onEventClick, onCreateClick, canCreate
                         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#162660] mb-3"></div>
                         <p className="text-sm">이벤트 정보를 불러오는 중...</p>
                     </div>
+                ) : loadError ? (
+                    <div role="alert" className="flex flex-col items-center gap-4 py-20 text-center">
+                        <p className="text-sm font-bold text-red-700">{loadError}</p>
+                        <Button onClick={() => void fetchAllParties()} className="min-h-11 px-5">다시 시도</Button>
+                    </div>
                 ) : filteredParties.length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-20 text-center text-zinc-400">
                         <AlertCircle className="w-12 h-12 stroke-[1.5] mb-2 text-zinc-300" />
-                        <p className="text-base font-bold">등록된 이벤트가 없습니다</p>
+                        <p className="text-base font-bold">{parties.length ? '검색 조건에 맞는 이벤트가 없습니다' : '등록된 이벤트가 없습니다'}</p>
                         <p className="text-xs mt-1">새로운 액티비티 모임을 제안하거나 필터를 변경해보세요.</p>
                     </div>
                 ) : (
                     <div className="grid gap-4 pt-1 lg:grid-cols-2">
                         {filteredParties.map(event => {
                             const isClosed = event.status === 'CLOSED' || event.status === 'CANCELLED';
-                            const isFull = event.capacity <= (event.joinedCount || 0);
+                            const registrationState = getEventRegistrationState(event, currentTime);
+                            const isInvitation = event.joinPolicy === 'INVITE_ONLY' && event.currentUserStatus === 'PENDING';
                             const hasJoined = event.currentUserStatus === 'JOINED';
-                            const isPending = event.currentUserStatus === 'PENDING';
+                            const isPending = event.currentUserStatus === 'PENDING' && !isInvitation;
                             const isConsentPending = event.currentUserStatus === 'CONSENT_PENDING';
-                            const applicationNotOpen = Boolean(
-                                event.applicationStartsAt
-                                && new Date(event.applicationStartsAt).getTime() > Date.now(),
-                            );
 
                             return (
                                 <div
@@ -243,21 +224,18 @@ export default function Parties({ onBack, onEventClick, onCreateClick, canCreate
                                             <span className="text-xs font-bold text-amber-600 px-3 py-1.5 bg-amber-50 rounded-full border border-amber-100 animate-pulse">
                                                 승인 대기
                                             </span>
-                                        ) : applicationNotOpen ? (
-                                            <span className="text-xs font-bold text-amber-700 px-3 py-1.5 bg-amber-50 rounded-full border border-amber-100">
-                                                {formatDate(event.applicationStartsAt!)} 신청 시작
-                                            </span>
-                                        ) : isFull ? (
-                                            <span className="text-xs font-bold text-zinc-400 px-3 py-1.5 bg-zinc-50 rounded-full border border-zinc-200/50">
-                                                정원 마감
+                                        ) : registrationState !== 'AVAILABLE' ? (
+                                            <span className="text-xs font-bold text-zinc-500 px-3 py-1.5 bg-zinc-100 rounded-full">
+                                                {registrationState === 'NOT_OPEN'
+                                                    ? `${formatDate(event.applicationStartsAt!)} 신청 시작`
+                                                    : getEventRegistrationLabel(registrationState)}
                                             </span>
                                         ) : (
                                             <button
                                                 onClick={(e) => handleJoin(e, event.id)}
-                                                disabled={joiningIds.includes(event.id)}
-                                                className="bg-[#162660] hover:bg-[#1e3a8a] text-white text-xs font-bold px-4.5 py-2 rounded-2xl shadow-sm transition-all hover:scale-[1.02] disabled:opacity-50"
+                                                className="min-h-11 min-w-11 bg-[#162660] hover:bg-[#1e3a8a] text-white text-xs font-bold px-4.5 py-2 rounded-2xl shadow-sm transition-all hover:scale-[1.02] disabled:opacity-50"
                                             >
-                                                {joiningIds.includes(event.id) ? '신청 중...' : '신청'}
+                                                {isInvitation ? '초대 수락' : '신청'}
                                             </button>
                                         )}
                                     </div>

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Button } from '../components/Button';
 import { ChevronLeftIcon } from 'lucide-react';
 import { Calendar } from '../components/Calendar';
@@ -86,7 +86,7 @@ export default function Reservation({ onBack, isGuest = false, guestCrewId }: Re
     const [crew, setCrew] = useState<CrewDetail | null>(null);
 
     // Fetch User Info -> Crew ID -> Crew Detail
-    const fetchAllData = async () => {
+    const fetchAllData = useCallback(async () => {
         try {
             if (isGuest && guestCrewId) {
                 setCrewId(guestCrewId);
@@ -113,11 +113,11 @@ export default function Reservation({ onBack, isGuest = false, guestCrewId }: Re
         } catch (error) {
             console.error("Failed to load data:", error);
         }
-    };
+    }, [guestCrewId, isGuest]);
 
     useEffect(() => {
         fetchAllData();
-    }, [guestCrewId, isGuest]);
+    }, [fetchAllData]);
 
     // Derived state: reserved days for the current month view
     const reservedDays = myReservations

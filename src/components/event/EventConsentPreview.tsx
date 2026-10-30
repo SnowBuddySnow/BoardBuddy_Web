@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Clock3, Eye, Info, ShieldCheck, X } from 'lucide-react';
 import type { ConsentItemInput } from '../../types/api';
@@ -14,16 +14,35 @@ interface EventConsentPreviewProps {
 
 export function EventConsentPreview({ items, consentWindowMinutes, open, onClose }: EventConsentPreviewProps) {
     const [drafts, setDrafts] = useState<Record<number, ConsentDraft>>({});
+    const dialogRef = useRef<HTMLElement>(null);
+    const onCloseRef = useRef(onClose);
+    useEffect(() => { onCloseRef.current = onClose; }, [onClose]);
 
     useEffect(() => {
         if (!open) return;
         setDrafts({});
+        const previousFocus = document.activeElement as HTMLElement | null;
+        const controls = () => Array.from(dialogRef.current?.querySelectorAll<HTMLElement>(
+            'button:not(:disabled), input:not(:disabled), textarea:not(:disabled), select:not(:disabled), [tabindex="0"]',
+        ) || []);
+        controls()[0]?.focus();
         const handleKeyDown = (event: KeyboardEvent) => {
-            if (event.key === 'Escape') onClose();
+            if (event.key === 'Escape') onCloseRef.current();
+            if (event.key !== 'Tab') return;
+            const focusable = controls();
+            const first = focusable[0]; const last = focusable[focusable.length - 1];
+            if (event.shiftKey && (document.activeElement === first || !dialogRef.current?.contains(document.activeElement))) {
+                event.preventDefault(); last?.focus();
+            } else if (!event.shiftKey && (document.activeElement === last || !dialogRef.current?.contains(document.activeElement))) {
+                event.preventDefault(); first?.focus();
+            }
         };
         window.addEventListener('keydown', handleKeyDown);
-        return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [onClose, open]);
+        return () => {
+            window.removeEventListener('keydown', handleKeyDown);
+            if (previousFocus?.isConnected) previousFocus.focus();
+        };
+    }, [open]);
 
     if (!open) return null;
 
@@ -42,6 +61,7 @@ export function EventConsentPreview({ items, consentWindowMinutes, open, onClose
             }}
         >
             <section
+                ref={dialogRef}
                 role="dialog"
                 aria-modal="true"
                 aria-labelledby="event-consent-preview-title"
@@ -60,7 +80,7 @@ export function EventConsentPreview({ items, consentWindowMinutes, open, onClose
                     <button
                         type="button"
                         onClick={onClose}
-                        className="rounded-full p-2 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-700"
+                        className="min-h-11 min-w-11 rounded-full p-2 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-700"
                         aria-label="미리보기 닫기"
                     >
                         <X className="h-5 w-5" />

@@ -73,8 +73,7 @@ export default function MyReservations({ onBack, onCrewClick }: MyReservationsPr
                 if (userData.crew && userData.crew.crewId) {
                     const cId = userData.crew.crewId;
                     setCrewId(cId);
-                    // 2. Fetch Reservations using crewId
-                    await fetchReservations(cId, viewDate);
+                    // The crewId/viewDate effect below owns the calendar fetch (once, not twice).
                 }
             } catch (error) {
                 console.error("Failed to fetch user info:", error);

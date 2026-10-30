@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import { formatEventDateTime } from '../lib/eventDateTime';
 import { Button } from '../components/Button';
 import { listParties } from '../services/event';
 import { Event } from '../types/api';
@@ -13,10 +14,12 @@ interface MyPartiesProps {
 export default function MyParties({ onBack, onEventClick }: MyPartiesProps) {
     const [joinedParties, setJoinedParties] = useState<Event[]>([]);
     const [loading, setLoading] = useState(true);
+    const [loadError, setLoadError] = useState('');
 
-    const fetchMyPlans = async () => {
+    const fetchMyPlans = useCallback(async () => {
         try {
             setLoading(true);
+            setLoadError('');
             const data = await listParties();
             const plans = data.filter(p => (
                 p.currentUserStatus === 'JOINED'
@@ -26,31 +29,23 @@ export default function MyParties({ onBack, onEventClick }: MyPartiesProps) {
             setJoinedParties(plans);
         } catch (error) {
             console.error('Failed to fetch my plans:', error);
+            setLoadError('내 이벤트를 불러오지 못했습니다. 연결을 확인하고 다시 시도해 주세요.');
         } finally {
             setLoading(false);
         }
-    };
-
-    useEffect(() => {
-        fetchMyPlans();
     }, []);
 
-    const formatDate = (dateStr: string) => {
-        const d = new Date(dateStr);
-        const month = d.getMonth() + 1;
-        const date = d.getDate();
-        const hour = String(d.getHours()).padStart(2, '0');
-        const min = String(d.getMinutes()).padStart(2, '0');
-        const dayNames = ['일', '월', '화', '수', '목', '금', '토'];
-        const day = dayNames[d.getDay()];
-        return `${month}월 ${date}일 (${day}) ${hour}:${min}`;
-    };
+    useEffect(() => {
+        void fetchMyPlans();
+    }, [fetchMyPlans]);
+
+    const formatDate = formatEventDateTime;
 
     return (
         <div className="flex-1 flex flex-col h-full overflow-hidden bg-[#FAF8F3] relative">
             {/* Header */}
             <header className="px-4 pt-3 pb-3 flex items-center justify-between border-b border-zinc-100 bg-[#FAF8F3]">
-                <Button variant="ghost" onClick={onBack} className="-ml-2 gap-1 text-zinc-800 hover:bg-transparent">
+                <Button variant="ghost" aria-label="뒤로 가기" onClick={onBack} className="-ml-2 min-h-11 min-w-11 gap-1 text-zinc-800 hover:bg-transparent">
                     <ChevronLeft className="w-6 h-6" />
                 </Button>
                 <h1 className="text-lg font-bold text-zinc-900">나의 이벤트</h1>
@@ -64,6 +59,11 @@ export default function MyParties({ onBack, onEventClick }: MyPartiesProps) {
                         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#162660] mb-3"></div>
                         <p className="text-sm">로딩 중...</p>
                     </div>
+                ) : loadError ? (
+                    <div role="alert" className="flex flex-col items-center gap-4 py-20 text-center">
+                        <p className="text-sm font-bold text-red-700">{loadError}</p>
+                        <Button onClick={() => void fetchMyPlans()} className="min-h-11 px-5">다시 시도</Button>
+                    </div>
                 ) : joinedParties.length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-20 text-center text-zinc-400">
                         <Heart className="w-12 h-12 stroke-[1.5] mb-2 text-zinc-300" />
@@ -74,12 +74,21 @@ export default function MyParties({ onBack, onEventClick }: MyPartiesProps) {
                     <div className="grid gap-4 lg:grid-cols-2">
                         {joinedParties.map(event => {
                             const isPending = event.currentUserStatus === 'PENDING';
+                            const isInvitation = isPending && event.joinPolicy === 'INVITE_ONLY';
                             const isConsentPending = event.currentUserStatus === 'CONSENT_PENDING';
 
                             return (
                                 <div
                                     key={event.id}
+                                    role="button"
+                                    tabIndex={0}
+                                    aria-label={`이벤트 상세 보기: ${event.title}`}
                                     onClick={() => onEventClick(event.id)}
+                                    onKeyDown={keyEvent => {
+                                        if (keyEvent.key === 'Enter' || keyEvent.key === ' ') {
+                                            keyEvent.preventDefault(); onEventClick(event.id);
+                                        }
+                                    }}
                                     className="bg-white rounded-3xl p-5 border border-zinc-100 shadow-sm hover:shadow-md transition-all active:scale-[0.99] cursor-pointer flex flex-col justify-between min-h-[140px]"
                                 >
                                     <div>
@@ -93,7 +102,7 @@ export default function MyParties({ onBack, onEventClick }: MyPartiesProps) {
                                                 </span>
                                             ) : isPending ? (
                                                 <span className="text-xs font-bold text-amber-600 px-2.5 py-1 bg-amber-50 rounded-full border border-amber-100">
-                                                    승인 대기
+                                                    {isInvitation ? '초대 수락 필요' : '승인 대기'}
                                                 </span>
                                             ) : (
                                                 <span className="text-xs font-bold text-emerald-600 px-2.5 py-1 bg-emerald-50 rounded-full border border-emerald-100">
