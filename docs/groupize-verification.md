@@ -11,6 +11,12 @@ are directed to the host instead of being offered independent signup into anothe
 capacity is explicit and is displayed as such throughout the event flow. Both planning modes use
 the same Groupize controls.
 
+Inactive child participation uses the backend's `groupizeAdmissionAllowed` flag. After reassignment,
+the old child shows host-assignment guidance even if a historical CANCELLED participation exists.
+A member who cancels their currently assigned child may rejoin while the assignment and parent
+application remain eligible. Active participation and ordinary root-event reapplication keep their
+existing presentation. Deploy the companion admission-flag backend before this web build.
+
 The companion backend implements the HTTP contracts in `src/services/groupize.ts`; deploy it before
 this web build. Groupize data and host mutations are always authorized and validated by that backend.
 
