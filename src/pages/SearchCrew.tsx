@@ -3,6 +3,7 @@ import { BadgeCheck, ChevronLeftIcon, Search, ShieldCheck, UsersRound, X } from 
 import { Button } from '../components/Button';
 import { applyToCrew, discoverCrews, type DiscoverableCrew } from '../services/crew';
 import { getApiErrorMessage } from '../lib/apiError';
+import { isCrewSchoolVerificationRequired } from '../lib/crewSchoolVerification';
 
 interface SearchCrewProps {
     onBack: () => void;
@@ -136,7 +137,7 @@ export default function SearchCrew({ onBack, onJoined }: SearchCrewProps) {
                                             <span className="mt-2 inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-1 text-[10px] font-bold text-emerald-800">
                                                 <BadgeCheck className="h-3 w-3" /> 소속 학교 인증 시 바로 가입
                                             </span>
-                                        ) : crew.schoolVerificationRequired && (
+                                        ) : isCrewSchoolVerificationRequired(crew) && (
                                             <span className="mt-2 inline-flex items-center gap-1 rounded-full bg-blue-50 px-2 py-1 text-[10px] font-bold text-[#162660]">
                                                 <BadgeCheck className="h-3 w-3" /> 학교 인증 필수
                                             </span>
@@ -182,7 +183,7 @@ export default function SearchCrew({ onBack, onJoined }: SearchCrewProps) {
                                 <BadgeCheck className="mt-0.5 h-4 w-4 shrink-0" />
                                 <span>크루 소속 학교 인증을 완료했다면 PIN 확인 후 바로 가입합니다. 미인증 또는 다른 학교 멤버의 신청은 운영진이 검토합니다.</span>
                             </div>
-                        ) : selectedCrew.schoolVerificationRequired && (
+                        ) : isCrewSchoolVerificationRequired(selectedCrew) && (
                             <div className="mt-5 flex items-start gap-2 rounded-2xl border border-blue-100 bg-blue-50 px-4 py-3 text-xs leading-5 text-[#162660]">
                                 <BadgeCheck className="mt-0.5 h-4 w-4 shrink-0" />
                                 <span>이 크루는 학교 인증을 완료한 계정만 가입할 수 있습니다.</span>
