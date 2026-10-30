@@ -6,6 +6,7 @@ import { getCrewInfo, getCrewManagers, getCrewMembers, getApplicants, manageAppl
 import { CrewApplicant } from '../types/api';
 import { type CrewRole, normalizeCrewRole } from '../constants/crewRole';
 import { getApiErrorMessage } from '../lib/apiError';
+import { isCrewSchoolVerificationRequired } from '../lib/crewSchoolVerification';
 import type { UniversityVerificationStatus } from '../types/api';
 
 interface CrewMemberProps {
@@ -61,7 +62,7 @@ export default function CrewMember({ onBack }: CrewMemberProps) {
                 console.log("DEBUG: CrewInfo", crewInfo);
                 console.log("DEBUG: Managers", managers);
                 console.log("DEBUG: RegularMembers", regularMembers);
-                setSchoolVerificationRequired(crewInfo.schoolVerificationRequired);
+                setSchoolVerificationRequired(isCrewSchoolVerificationRequired(crewInfo));
 
                 // Determine Role
                 let isAdmin = false;

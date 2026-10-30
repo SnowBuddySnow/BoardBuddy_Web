@@ -253,6 +253,7 @@ function App() {
   const [availableEventCount, setAvailableEventCount] = useState(0);
   const [crewDetail, setCrewDetail] = useState<CrewDetailData | null>(null);
   const [isCaptain, setIsCaptain] = useState(false);
+  const [crewAccessRevision, setCrewAccessRevision] = useState(0);
   const [captainUserId, setCaptainUserId] = useState<number | null>(null);
   const [captainOnboardingOpen, setCaptainOnboardingOpen] = useState(false);
   const [captainOnboardingDismissed, setCaptainOnboardingDismissed] = useState(false);
@@ -311,7 +312,7 @@ function App() {
 
     void loadCrewAccess();
     return () => { cancelled = true; };
-  }, [shouldLoadPermissions]);
+  }, [shouldLoadPermissions, crewAccessRevision]);
 
   useEffect(() => {
     if (!shouldLoadPermissions || !managementAccessResolved || !isCaptain || captainUserId == null) return;
@@ -595,7 +596,12 @@ function App() {
       case 'crew_member':
         return <CrewMember onBack={() => setCurrentView('crew_detail')} />;
       case 'search_crew':
-        return <SearchCrew onBack={() => setCurrentView('home')} />;
+        return <SearchCrew onBack={() => setCurrentView('home')} onJoined={() => {
+          setHasCrew(true);
+          setHasPendingCrewApplication(false);
+          setCrewAccessRevision(revision => revision + 1);
+          setCurrentView('crew_detail');
+        }} />;
       case 'user_info':
         return (
           <UserInfoInput
