@@ -39,7 +39,7 @@ export const hasEventStarted = (startsAt: string, now = Date.now()): boolean =>
     !(parseEventDateTime(startsAt).getTime() > now);
 
 type RegistrationEvent = Pick<Event, 'status' | 'startsAt' | 'applicationStartsAt' | 'joinedCount' | 'capacity'>
-    & Partial<Pick<Event, 'paymentRequired' | 'paymentDeadlineAt' | 'currentUserStatus' | 'joinPolicy' | 'capacityLimited' | 'parentEventId'>>;
+    & Partial<Pick<Event, 'paymentRequired' | 'paymentDeadlineAt' | 'currentUserStatus' | 'joinPolicy' | 'capacityLimited' | 'parentEventId' | 'groupizeAdmissionAllowed'>>;
 
 export type EventRegistrationState = 'AVAILABLE' | 'DRAFT' | 'CLOSED' | 'CANCELLED' | 'UNAVAILABLE'
     | 'JOINED' | 'CONSENT_PENDING' | 'PENDING' | 'REMOVED' | 'STARTED' | 'NOT_OPEN'
@@ -54,7 +54,7 @@ export const getEventRegistrationState = (event: RegistrationEvent, now = Date.n
     if (event.currentUserStatus === 'JOINED' || event.currentUserStatus === 'CONSENT_PENDING') return event.currentUserStatus;
     // For invite-only events PENDING is an actionable invitation, not an approval request.
     if (event.currentUserStatus === 'PENDING' && event.joinPolicy !== 'INVITE_ONLY') return 'PENDING';
-    if (event.parentEventId && !event.currentUserStatus) return 'ASSIGNMENT_REQUIRED';
+    if (event.parentEventId != null && event.groupizeAdmissionAllowed !== true) return 'ASSIGNMENT_REQUIRED';
     if (hasEventStarted(event.startsAt, now)) return 'STARTED';
     if (event.applicationStartsAt) {
         const opensAt = parseEventDateTime(event.applicationStartsAt).getTime();

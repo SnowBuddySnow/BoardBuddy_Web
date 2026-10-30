@@ -102,4 +102,23 @@ describe('Groupize admission presentation', () => {
         expect(getEventRegistrationState({ status: 'OPEN', startsAt: date, capacity: 2,
             parentEventId: 42, currentUserStatus: null }, now)).toBe('ASSIGNMENT_REQUIRED');
     });
+    const child = { status: 'OPEN' as const, startsAt: date, capacity: 2, parentEventId: 42 };
+    it.each([false, undefined, null])('blocks historical cancelled participation without a current assignment: %s', allowed => {
+        expect(getEventRegistrationState({ ...child, currentUserStatus: 'CANCELLED',
+            groupizeAdmissionAllowed: allowed }, now)).toBe('ASSIGNMENT_REQUIRED');
+    });
+    it('lets a self-cancelled member rejoin their still-assigned child', () => {
+        expect(getEventRegistrationState({ ...child, currentUserStatus: 'CANCELLED',
+            groupizeAdmissionAllowed: true }, now)).toBe('AVAILABLE');
+    });
+    it('requires current assignment eligibility when accepting a child invitation', () => {
+        expect(getEventRegistrationState({ ...child, joinPolicy: 'INVITE_ONLY', currentUserStatus: 'PENDING',
+            groupizeAdmissionAllowed: false }, now)).toBe('ASSIGNMENT_REQUIRED');
+        expect(getEventRegistrationState({ ...child, joinPolicy: 'INVITE_ONLY', currentUserStatus: 'PENDING',
+            groupizeAdmissionAllowed: true }, now)).toBe('AVAILABLE');
+    });
+    it.each(['JOINED', 'CONSENT_PENDING', 'PENDING'] as const)('retains the active participation display: %s', status => {
+        expect(getEventRegistrationState({ ...child, currentUserStatus: status,
+            groupizeAdmissionAllowed: false }, now)).toBe(status);
+    });
 });
