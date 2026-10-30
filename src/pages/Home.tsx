@@ -342,7 +342,7 @@ export default function Home({
                                                     {event.locationName || '참가자와 장소 협의'}
                                                 </span>
                                             </span>
-                                            <span className="shrink-0 text-xs font-black text-zinc-500">{event.joinedCount || 0}/{event.capacity}</span>
+                                            <span className="shrink-0 text-xs font-black text-zinc-500">{event.joinedCount || 0}/{event.capacityLimited === false ? '제한 없음' : event.capacity}</span>
                                             <ChevronRight className="h-4 w-4 shrink-0 text-zinc-300" />
                                         </button>
                                     ))}
