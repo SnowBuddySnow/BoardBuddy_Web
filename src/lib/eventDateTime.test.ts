@@ -89,3 +89,17 @@ describe('event API timestamps', () => {
         expect(isEventRegistrationAvailable({ ...paid, paymentRequired: false }, Date.parse('2026-10-25T10:00:00Z'))).toBe(true);
     });
 });
+
+
+describe('Groupize admission presentation', () => {
+    const date = '2035-08-18T10:00:00';
+    const now = Date.parse('2035-08-17T00:00:00Z');
+    it('does not mark an unlimited applicant pool full at its stored numeric capacity', () => {
+        expect(getEventRegistrationState({ status: 'OPEN', startsAt: date, capacity: 1,
+            capacityLimited: false, joinedCount: 100 }, now)).toBe('AVAILABLE');
+    });
+    it('directs unassigned members to host allocation instead of advertising child signup', () => {
+        expect(getEventRegistrationState({ status: 'OPEN', startsAt: date, capacity: 2,
+            parentEventId: 42, currentUserStatus: null }, now)).toBe('ASSIGNMENT_REQUIRED');
+    });
+});

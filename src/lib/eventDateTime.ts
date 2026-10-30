@@ -39,11 +39,11 @@ export const hasEventStarted = (startsAt: string, now = Date.now()): boolean =>
     !(parseEventDateTime(startsAt).getTime() > now);
 
 type RegistrationEvent = Pick<Event, 'status' | 'startsAt' | 'applicationStartsAt' | 'joinedCount' | 'capacity'>
-    & Partial<Pick<Event, 'paymentRequired' | 'paymentDeadlineAt' | 'currentUserStatus' | 'joinPolicy'>>;
+    & Partial<Pick<Event, 'paymentRequired' | 'paymentDeadlineAt' | 'currentUserStatus' | 'joinPolicy' | 'capacityLimited' | 'parentEventId'>>;
 
 export type EventRegistrationState = 'AVAILABLE' | 'DRAFT' | 'CLOSED' | 'CANCELLED' | 'UNAVAILABLE'
     | 'JOINED' | 'CONSENT_PENDING' | 'PENDING' | 'REMOVED' | 'STARTED' | 'NOT_OPEN'
-    | 'PAYMENT_CLOSED' | 'FULL' | 'INVITE_REQUIRED';
+    | 'PAYMENT_CLOSED' | 'FULL' | 'INVITE_REQUIRED' | 'ASSIGNMENT_REQUIRED';
 
 /** Shared presentation guard; the API still owns authorization and atomic capacity checks. */
 export const getEventRegistrationState = (event: RegistrationEvent, now = Date.now()): EventRegistrationState => {
@@ -54,6 +54,7 @@ export const getEventRegistrationState = (event: RegistrationEvent, now = Date.n
     if (event.currentUserStatus === 'JOINED' || event.currentUserStatus === 'CONSENT_PENDING') return event.currentUserStatus;
     // For invite-only events PENDING is an actionable invitation, not an approval request.
     if (event.currentUserStatus === 'PENDING' && event.joinPolicy !== 'INVITE_ONLY') return 'PENDING';
+    if (event.parentEventId && !event.currentUserStatus) return 'ASSIGNMENT_REQUIRED';
     if (hasEventStarted(event.startsAt, now)) return 'STARTED';
     if (event.applicationStartsAt) {
         const opensAt = parseEventDateTime(event.applicationStartsAt).getTime();
@@ -67,12 +68,13 @@ export const getEventRegistrationState = (event: RegistrationEvent, now = Date.n
     }
     const occupied = event.joinedCount ?? 0;
     if (!Number.isSafeInteger(event.capacity) || event.capacity < 1 || !Number.isSafeInteger(occupied) || occupied < 0) return 'UNAVAILABLE';
-    if (occupied >= event.capacity) return 'FULL';
+    if (event.capacityLimited !== false && occupied >= event.capacity) return 'FULL';
     if (event.joinPolicy === 'INVITE_ONLY' && event.currentUserStatus !== 'PENDING') return 'INVITE_REQUIRED';
     return 'AVAILABLE';
 };
 
 export const getEventRegistrationLabel = (state: EventRegistrationState): string => {
+    if (state === 'ASSIGNMENT_REQUIRED') return '호스트 배정 대기';
     switch (state) {
         case 'DRAFT': return '준비 중인 이벤트';
         case 'CLOSED': return '마감된 모임';
