@@ -8,6 +8,8 @@ import {
 } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 import { Button } from '../components/Button';
+import StudentProfileDialog from '../components/StudentProfileDialog';
+import SignupPolicySettings from '../components/SignupPolicySettings';
 import { getApiErrorMessage } from '../lib/apiError';
 import {
     searchAdminUsers,
@@ -68,6 +70,7 @@ export default function UserAdmin({ onBack }: UserAdminProps) {
     const [error, setError] = useState('');
     const [notice, setNotice] = useState('');
     const [pendingConfirmation, setPendingConfirmation] = useState<PendingConfirmation | null>(null);
+    const [studentTarget, setStudentTarget] = useState<AdminUser | null>(null);
 
     const load = useCallback(async (searchQuery: string) => {
         setLoading(true);
@@ -256,10 +259,14 @@ export default function UserAdmin({ onBack }: UserAdminProps) {
 
             <main className="min-h-0 flex-1 overflow-y-auto">
                 <div className="mx-auto max-w-7xl space-y-5 p-4 pb-28 lg:p-8">
+                    <SignupPolicySettings />
                     <section className="rounded-2xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-900">
                         <p className="font-black">권한 범위를 분리해서 관리합니다</p>
                         <p className="mt-1 leading-6 text-blue-800">
                             크루장 지정, 크루 매니저, 이벤트 그룹 매니저, 플랫폼 관리자는 서로 독립적입니다. 진하게 표시된 항목만 현재 부여된 권한입니다.
+                        </p>
+                        <p className="mt-2 leading-6 text-blue-800">
+                            활성 일반회원은 실명·학교·학번을 등록해 학생으로 변경할 수 있습니다. 학생 유형과 학교 이메일 인증은 별개이며, 회원 유형만으로 관리 권한이 부여되지는 않습니다.
                         </p>
                     </section>
 
@@ -322,6 +329,12 @@ export default function UserAdmin({ onBack }: UserAdminProps) {
                                                     <td className="px-5 py-4">
                                                         <p className="font-black text-zinc-900">{user.name || '이름 미등록'}</p>
                                                         <p className="mt-1 text-xs text-zinc-500">{userTypeCopy[user.userType]} · {formatDate(user.createdAt)} 가입</p>
+                                                        {user.accountStatus === 'ACTIVE' && user.userType !== 'KUSBF' && (
+                                                            <button type="button" onClick={() => setStudentTarget(user)} disabled={changingKey !== null}
+                                                                className="mt-2 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-black text-[#162660] disabled:opacity-40">
+                                                                학생으로 변경
+                                                            </button>
+                                                        )}
                                                     </td>
                                                     <td className="px-5 py-4 font-mono text-xs text-zinc-600">
                                                         <p>{user.userCode}</p>
@@ -406,6 +419,12 @@ export default function UserAdmin({ onBack }: UserAdminProps) {
                                                 <AccountStatusBadge status={user.accountStatus} />
                                             </div>
                                             <p className="text-xs font-semibold text-zinc-500">{userTypeCopy[user.userType]} · {formatDate(user.createdAt)} 가입</p>
+                                            {user.accountStatus === 'ACTIVE' && user.userType !== 'KUSBF' && (
+                                                <button type="button" onClick={() => setStudentTarget(user)} disabled={changingKey !== null}
+                                                    className="rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-black text-[#162660] disabled:opacity-40">
+                                                    학생으로 변경
+                                                </button>
+                                            )}
                                             <div className="space-y-2 rounded-xl bg-zinc-50 p-3">
                                                 <p className="text-[10px] font-black uppercase tracking-wider text-zinc-400">크루 역할</p>
                                                 {user.crewMemberships.length === 0 ? (
@@ -472,6 +491,19 @@ export default function UserAdmin({ onBack }: UserAdminProps) {
                     </section>
                 </div>
             </main>
+
+            {studentTarget && (
+                <StudentProfileDialog
+                    key={studentTarget.accountId}
+                    user={studentTarget}
+                    onClose={() => setStudentTarget(null)}
+                    onConverted={updated => {
+                        setUsers(current => current.map(user => user.accountId === updated.accountId ? updated : user));
+                        setStudentTarget(null);
+                        setNotice(`${updated.name} 사용자를 학생으로 변경했습니다. 학교 이메일 인증 상태는 미인증입니다.`);
+                    }}
+                />
+            )}
 
             {pendingConfirmation && (
                 <div
