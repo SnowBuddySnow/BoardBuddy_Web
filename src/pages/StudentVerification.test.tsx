@@ -47,11 +47,20 @@ describe('school email verification entry and availability', () => {
         expect(done).toHaveBeenCalledOnce();
     });
     it('shows the server cooldown and preserves leading zeroes in a code', async () => {
-        api.getSchoolEmailVerificationStatus.mockResolvedValue({ status: 'PENDING', configured: true,
-            deliveryAvailable: true, challengeId: 'challenge', retryAfterSeconds: 60 });
+        vi.useFakeTimers();
+        vi.setSystemTime(new Date('2026-10-30T00:00:00Z'));
+        let finishStatus!: (status: unknown) => void;
+        api.getSchoolEmailVerificationStatus.mockImplementation(() => new Promise(resolve => { finishStatus = resolve; }));
         api.confirmSchoolEmailCode.mockResolvedValue({ status: 'VERIFIED' });
         await act(async () => root.render(<StudentVerification onDone={vi.fn()} />));
+        await act(async () => {
+            vi.advanceTimersByTime(1500);
+            finishStatus({ status: 'PENDING', configured: true, deliveryAvailable: true,
+                challengeId: 'challenge', retryAfterSeconds: 60 });
+        });
         expect(container.textContent).toContain('60초 후 다시 보내기');
+        await act(async () => { vi.advanceTimersByTime(1000); });
+        expect(container.textContent).toContain('59초 후 다시 보내기');
         const input = container.querySelector<HTMLInputElement>('input[placeholder="000000"]')!;
         await act(async () => {
             Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(input, '012345');

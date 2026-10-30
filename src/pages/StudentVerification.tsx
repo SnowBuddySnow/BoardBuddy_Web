@@ -63,7 +63,9 @@ export default function StudentVerification({ onDone }: StudentVerificationProps
                 if (cancelled) return;
                 setStatus(current);
                 setChallengeId(current.challengeId);
-                setRetryUntil(Date.now() + (current.retryAfterSeconds ?? 0) * 1000);
+                const receivedAt = Date.now();
+                setNow(receivedAt);
+                setRetryUntil(receivedAt + (current.retryAfterSeconds ?? 0) * 1000);
                 setVerified(current.status === 'VERIFIED');
             } catch (requestError: unknown) {
                 if (!cancelled) setError(getApiErrorMessage(requestError) || '학교 이메일 인증 정보를 불러오지 못했습니다.');
@@ -81,8 +83,9 @@ export default function StudentVerification({ onDone }: StudentVerificationProps
         try {
             const challenge = await requestSchoolEmailVerification(schoolEmail.trim() || undefined);
             setChallengeId(challenge.challengeId);
-            setNow(Date.now());
-            setRetryUntil(Date.now() + challenge.retryAfterSeconds * 1000);
+            const receivedAt = Date.now();
+            setNow(receivedAt);
+            setRetryUntil(receivedAt + challenge.retryAfterSeconds * 1000);
             setStatus(current => current ? {
                 ...current,
                 status: 'PENDING',
