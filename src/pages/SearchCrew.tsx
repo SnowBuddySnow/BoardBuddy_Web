@@ -3,12 +3,14 @@ import { BadgeCheck, ChevronLeftIcon, Search, ShieldCheck, UsersRound, X } from 
 import { Button } from '../components/Button';
 import { applyToCrew, discoverCrews, type DiscoverableCrew } from '../services/crew';
 import { getApiErrorMessage } from '../lib/apiError';
+import { isCrewSchoolVerificationRequired } from '../lib/crewSchoolVerification';
 
 interface SearchCrewProps {
     onBack: () => void;
+    onJoined?: () => void;
 }
 
-export default function SearchCrew({ onBack }: SearchCrewProps) {
+export default function SearchCrew({ onBack, onJoined }: SearchCrewProps) {
     const [crews, setCrews] = useState<DiscoverableCrew[]>([]);
     const [query, setQuery] = useState('');
     const [selectedCrew, setSelectedCrew] = useState<DiscoverableCrew | null>(null);
@@ -17,6 +19,7 @@ export default function SearchCrew({ onBack }: SearchCrewProps) {
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState('');
     const [appliedCrewId, setAppliedCrewId] = useState<number | null>(null);
+    const [joined, setJoined] = useState(false);
 
     useEffect(() => {
         let cancelled = false;
@@ -57,10 +60,12 @@ export default function SearchCrew({ onBack }: SearchCrewProps) {
         setSubmitting(true);
         setError('');
         try {
-            await applyToCrew(selectedCrew.crewId, pin);
+            const result = await applyToCrew(selectedCrew.crewId, pin);
             setAppliedCrewId(selectedCrew.crewId);
+            setJoined(result.status === 'JOINED');
             setSelectedCrew(null);
             setPin('');
+            if (result.status === 'JOINED') onJoined?.();
         } catch (requestError) {
             const message = getApiErrorMessage(requestError);
             setError(message === 'Invalid crew PIN'
@@ -98,7 +103,7 @@ export default function SearchCrew({ onBack }: SearchCrewProps) {
                     {appliedCrewId != null && (
                         <div className="mt-4 flex items-center gap-2 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-bold text-emerald-800">
                             <ShieldCheck className="h-4 w-4" />
-                            가입 신청을 보냈습니다. 크루 운영진의 승인을 기다려 주세요.
+                            {joined ? '크루에 가입했습니다.' : '가입 신청을 보냈습니다. 크루 운영진의 승인을 기다려 주세요.'}
                         </div>
                     )}
                     {error && !selectedCrew && (
@@ -128,7 +133,11 @@ export default function SearchCrew({ onBack }: SearchCrewProps) {
                                         <h2 className="truncate text-base font-black text-zinc-900">{crew.crewName}</h2>
                                         <p className="mt-1 truncate text-xs text-zinc-500">{crew.schoolName || '학교 미지정'}</p>
                                         <p className="mt-1 text-xs font-semibold text-zinc-400">{crew.crewCode} · 멤버 {crew.memberCount}명</p>
-                                        {crew.schoolVerificationRequired && (
+                                        {crew.verifiedSchoolAutoJoinEnabled ? (
+                                            <span className="mt-2 inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-1 text-[10px] font-bold text-emerald-800">
+                                                <BadgeCheck className="h-3 w-3" /> 소속 학교 인증 시 바로 가입
+                                            </span>
+                                        ) : isCrewSchoolVerificationRequired(crew) && (
                                             <span className="mt-2 inline-flex items-center gap-1 rounded-full bg-blue-50 px-2 py-1 text-[10px] font-bold text-[#162660]">
                                                 <BadgeCheck className="h-3 w-3" /> 학교 인증 필수
                                             </span>
@@ -169,7 +178,12 @@ export default function SearchCrew({ onBack }: SearchCrewProps) {
                                 <X className="h-4 w-4" />
                             </button>
                         </div>
-                        {selectedCrew.schoolVerificationRequired && (
+                        {selectedCrew.verifiedSchoolAutoJoinEnabled ? (
+                            <div className="mt-5 flex items-start gap-2 rounded-2xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-xs leading-5 text-emerald-800">
+                                <BadgeCheck className="mt-0.5 h-4 w-4 shrink-0" />
+                                <span>크루 소속 학교 인증을 완료했다면 PIN 확인 후 바로 가입합니다. 미인증 또는 다른 학교 멤버의 신청은 운영진이 검토합니다.</span>
+                            </div>
+                        ) : isCrewSchoolVerificationRequired(selectedCrew) && (
                             <div className="mt-5 flex items-start gap-2 rounded-2xl border border-blue-100 bg-blue-50 px-4 py-3 text-xs leading-5 text-[#162660]">
                                 <BadgeCheck className="mt-0.5 h-4 w-4 shrink-0" />
                                 <span>이 크루는 학교 인증을 완료한 계정만 가입할 수 있습니다.</span>
