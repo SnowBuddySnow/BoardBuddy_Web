@@ -1,3 +1,5 @@
+import { GroupizePanel } from '../components/event/GroupizePanel';
+import { EventFamilyLinks } from '../components/event/EventFamilyLinks';
 import { useState, useEffect, useCallback } from 'react';
 import { formatEventDateTime } from '../lib/eventDateTime';
 import { Button } from '../components/Button';
@@ -12,9 +14,11 @@ interface DashboardEventDetailProps {
     eventId: number;
     onBack: () => void;
     onEditClick: (eventId: number) => void;
+    onOpenEvent?: (eventId: number) => void;
 }
 
-export default function DashboardEventDetail({ eventId, onBack, onEditClick }: DashboardEventDetailProps) {
+export default function DashboardEventDetail({ eventId, onBack, onEditClick, onOpenEvent }: DashboardEventDetailProps) {
+    const [showGroupize, setShowGroupize] = useState(false);
     const [event, setEvent] = useState<Event | null>(null);
     const [participants, setParticipants] = useState<EventParticipant[]>([]);
     const [loading, setLoading] = useState(true);
@@ -198,6 +202,7 @@ export default function DashboardEventDetail({ eventId, onBack, onEditClick }: D
                     <div className="bg-white rounded-3xl p-6 border border-zinc-100 shadow-sm space-y-4">
                         <h2 className="text-base font-bold text-zinc-900">모임 요약</h2>
                         <PlanningModeBadge mode={event.planningMode} />
+                        <EventFamilyLinks event={event} onOpen={onOpenEvent} />
                         <div className="grid grid-cols-2 gap-4 text-sm">
                             <div>
                                 <span className="text-zinc-400 font-bold block text-xs uppercase">신청 시작</span>
@@ -234,7 +239,13 @@ export default function DashboardEventDetail({ eventId, onBack, onEditClick }: D
 
                     {/* Participant Management panel */}
                     <div className="bg-white rounded-3xl p-6 border border-zinc-100 shadow-sm space-y-4">
-                        <div className="flex items-center justify-between">
+                        {!event.parentEventId && <div className="space-y-3">
+                        <button className="rounded-xl bg-[#162660] px-5 py-3 text-sm font-bold text-white"
+                            onClick={() => setShowGroupize(current => !current)}>{showGroupize ? 'Groupize 접기' : 'Groupize · 소모임 편성'}</button>
+                        {showGroupize && <GroupizePanel key={event.id} eventId={event.id} onOpenEvent={onOpenEvent ?? onEditClick}
+                            onChanged={() => { void getEventDashboard(eventId).then(setEvent); }} />}
+                    </div>}
+                    <div className="flex items-center justify-between">
                             <h2 className="text-base font-bold text-zinc-900">참가자 목록 ({participants.length})</h2>
                         </div>
 
@@ -365,17 +376,17 @@ export default function DashboardEventDetail({ eventId, onBack, onEditClick }: D
                             <div className="flex justify-between text-sm">
                                 <span className="text-zinc-500 font-medium">참여율</span>
                                 <span className="font-bold text-zinc-800">
-                                    {Math.round(((event.joinedCount || 0) / event.capacity) * 100)}%
+                                    {event.capacityLimited === false ? '제한 없음' : `${Math.round(((event.joinedCount || 0) / event.capacity) * 100)}%`}
                                 </span>
                             </div>
-                            <div className="w-full bg-zinc-100 h-2.5 rounded-full overflow-hidden">
+                            <div hidden={event.capacityLimited === false} className="w-full bg-zinc-100 h-2.5 rounded-full overflow-hidden">
                                 <div
                                     className="bg-[#162660] h-full rounded-full transition-all duration-300"
                                     style={{ width: `${Math.min(100, ((event.joinedCount || 0) / event.capacity) * 100)}%` }}
                                 ></div>
                             </div>
                             <div className="flex justify-between text-xs text-zinc-400 pt-1">
-                                <span>정원: {event.capacity}명</span>
+                                <span>정원: {event.capacityLimited === false ? '제한 없음' : `${event.capacity}명`}</span>
                                 <span>확정: {event.joinedCount || 0}명</span>
                             </div>
                             {event.crewMemberLimit != null && (

@@ -578,6 +578,7 @@ export default function UserInfoInput({ onBack, onSuccess }: UserInfoInputProps)
                             <div className="flex gap-2">
                                 <input
                                     type="tel"
+                                    aria-describedby="phone-verification-sender"
                                     value={phoneNumber}
                                     onChange={handlePhoneChange}
                                     disabled={phoneVerified}
@@ -602,6 +603,9 @@ export default function UserInfoInput({ onBack, onSuccess }: UserInfoInputProps)
                                                     : phoneChallengeId ? '재전송' : '인증요청'}
                                 </button>
                             </div>
+                            <p id="phone-verification-sender" className="ml-1 text-xs leading-5 text-zinc-600">
+                                <span className="whitespace-nowrap font-semibold">070-5275-5703</span>에서 인증 문자(SMS)가 발송됩니다.
+                            </p>
                             {phoneChallengeId && !phoneVerified && (
                                 <div className="flex gap-2">
                                     <input
