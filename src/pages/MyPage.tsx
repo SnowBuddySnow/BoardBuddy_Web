@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { BadgeCheck, ChevronLeftIcon, ChevronRightIcon, UserIcon, Pencil, ExternalLink, Crown, Waypoints, Map } from 'lucide-react';
+import { BadgeCheck, ChevronLeftIcon, ChevronRightIcon, UserIcon, Pencil, ExternalLink, Crown, Waypoints, Map, Sparkles } from 'lucide-react';
 import { Button } from '../components/Button';
 import { Calendar } from '../components/Calendar';
 import { getUserInfo, getMyReservations } from '../services/user';
@@ -13,9 +13,10 @@ interface MyPageProps {
     onAccountInfoClick?: () => void;
     onRoleGuideClick?: () => void;
     onCaptainOnboardingClick?: () => void;
+    onEventManagerOnboardingClick?: () => void;
 }
 
-export default function MyPage({ onBack, onAccountInfoClick, onRoleGuideClick, onCaptainOnboardingClick }: MyPageProps) {
+export default function MyPage({ onBack, onAccountInfoClick, onRoleGuideClick, onCaptainOnboardingClick, onEventManagerOnboardingClick }: MyPageProps) {
     const [userInfo, setUserInfo] = useState<UserDetail | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [reservations, setReservations] = useState<MyReservation[]>([]);
@@ -241,6 +242,25 @@ export default function MyPage({ onBack, onAccountInfoClick, onRoleGuideClick, o
                                 </div>
                             </div>
                             <ChevronRightIcon className="w-5 h-5 text-amber-800" />
+                        </button>
+                    </div>
+                )}
+
+                {onEventManagerOnboardingClick && (
+                    <div className="px-6 mb-4">
+                        <button
+                            type="button"
+                            onClick={onEventManagerOnboardingClick}
+                            className="w-full rounded-[20px] border border-indigo-200 bg-indigo-50 p-5 flex items-center justify-between gap-3 hover:bg-indigo-100 transition-colors"
+                        >
+                            <div className="flex items-center gap-3 text-left">
+                                <Sparkles className="h-5 w-5 shrink-0 text-indigo-800" />
+                                <div>
+                                    <span className="block font-black text-indigo-950">이벤트 그룹 매니저 시작 가이드</span>
+                                    <span className="mt-0.5 block text-xs text-indigo-800">호스트 그룹부터 모집·참가자 관리까지</span>
+                                </div>
+                            </div>
+                            <ChevronRightIcon className="h-5 w-5 shrink-0 text-indigo-800" />
                         </button>
                     </div>
                 )}
