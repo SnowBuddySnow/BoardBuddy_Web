@@ -20,7 +20,7 @@ it('opens a school-email activation URL without requiring a login or identity lo
         await act(async () => { await vi.dynamicImportSettled(); });
         expect(http.post).toHaveBeenCalledExactlyOnceWith('/accounts/school-email-verifications/activate', { token: 'synthetic-link-proof' });
         expect(http.get.mock.calls.some(([path]) => path === '/users/me')).toBe(false);
-        expect(container.textContent).toContain('학생 인증이 완료되었습니다');
+        expect(container.textContent).toContain('학교 이메일 인증이 완료되었습니다');
     } finally {
         await act(async () => root.unmount()); container.remove(); localStorage.clear();
         window.history.replaceState(null, '', '/'); vi.unstubAllGlobals();
