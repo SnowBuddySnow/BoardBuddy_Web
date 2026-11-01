@@ -22,6 +22,7 @@ export default function DashboardEventDetail({ eventId, onBack, onEditClick, onO
     const [event, setEvent] = useState<Event | null>(null);
     const [participants, setParticipants] = useState<EventParticipant[]>([]);
     const [loading, setLoading] = useState(true);
+    const [loadFailed, setLoadFailed] = useState(false);
     const [actionLoading, setActionLoading] = useState(false);
     const [participantActionId, setParticipantActionId] = useState<number | null>(null);
     const [participantManagementId, setParticipantManagementId] = useState<number | null>(null);
@@ -35,13 +36,15 @@ export default function DashboardEventDetail({ eventId, onBack, onEditClick, onO
     const fetchDetailData = useCallback(async () => {
         try {
             setLoading(true);
-            const eventData = await getEventDashboard(eventId);
+            setLoadFailed(false);
+            const [eventData, partsData, eventChatAccess] = await Promise.all([
+                getEventDashboard(eventId), listParticipants(eventId), getEventChatAccess(eventId),
+            ]);
             setEvent(eventData);
-
-            const partsData = await listParticipants(eventId);
             setParticipants(partsData);
-            setChatAccess(await getEventChatAccess(eventId));
+            setChatAccess(eventChatAccess);
         } catch (error) {
+            setLoadFailed(true);
             console.error('Failed to fetch dashboard event detail data:', error);
         } finally {
             setLoading(false);
@@ -149,7 +152,17 @@ export default function DashboardEventDetail({ eventId, onBack, onEditClick, onO
         );
     }
 
-    if (!event) return null;
+    if (loadFailed || !event) {
+        return (
+            <div className="flex-1 flex flex-col h-full bg-[#FAF8F3] items-center justify-center gap-4 px-6 text-center">
+                <p role="alert" className="text-sm font-medium text-zinc-700">이벤트 관리 정보를 불러오지 못했어요. 잠시 후 다시 시도해 주세요.</p>
+                <div className="flex gap-3">
+                    <Button onClick={() => void fetchDetailData()}>다시 시도</Button>
+                    <Button variant="outline" onClick={onBack}>이벤트 목록으로</Button>
+                </div>
+            </div>
+        );
+    }
 
     const isDraft = event.status === 'DRAFT';
     const isOpen = event.status === 'OPEN';
