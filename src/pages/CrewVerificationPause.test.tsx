@@ -3,11 +3,11 @@ import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-const api = vi.hoisted(() => ({ getCrewInfo: vi.fn(), updateCrew: vi.fn(), resetCrewPin: vi.fn(),
+const api = vi.hoisted(() => ({ getUserInfo: vi.fn(), getCrewInfo: vi.fn(), updateCrew: vi.fn(), resetCrewPin: vi.fn(),
     discoverCrews: vi.fn(), applyToCrew: vi.fn(), getCrewManagers: vi.fn(), getCrewMembers: vi.fn(),
     getApplicants: vi.fn(), manageApplicant: vi.fn() }));
 vi.mock('../services/crew', () => api);
-vi.mock('../services/user', () => ({ getUserInfo: async () => ({ userId: 1, role: 'CREW_CAPTAIN', crew: { crewId: 11 } }) }));
+vi.mock('../services/user', () => ({ getUserInfo: api.getUserInfo }));
 vi.mock('../services/schools', () => ({ getSchools: async () => [] }));
 vi.mock('./Promote', () => ({ default: () => null }));
 import SearchCrew from './SearchCrew';
@@ -18,6 +18,7 @@ describe('temporary school-verification requirement pause', () => {
     let root: Root; let container: HTMLDivElement;
     beforeEach(() => {
         vi.resetAllMocks(); vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+        api.getUserInfo.mockResolvedValue({ userId: 1, role: 'CREW_CAPTAIN', crew: { crewId: 11 } });
         vi.stubGlobal('confirm', () => true); vi.stubGlobal('alert', vi.fn());
         container = document.createElement('div'); document.body.append(container); root = createRoot(container);
     });
@@ -49,6 +50,28 @@ describe('temporary school-verification requirement pause', () => {
         await act(async () => save.click());
         expect(api.updateCrew).toHaveBeenCalledOnce();
         expect(api.updateCrew.mock.calls[0][1]).not.toHaveProperty('schoolVerificationRequired');
+    });
+
+    it.each([
+        ['CREW_CAPTAIN', false], ['CREW_CAPTAIN', true],
+        ['CREW_MANAGER', false], ['CREW_MANAGER', true],
+    ])('lets %s save the automatic approval option from %s to its opposite', async (role, enabled) => {
+        api.getUserInfo.mockResolvedValue({ userId: 1, role, crew: { crewId: 11 } });
+        api.getCrewInfo.mockResolvedValue({ name: 'Test Crew', schoolVerificationRequired: false,
+            schoolVerificationEnforcementEnabled: false, verifiedSchoolAutoJoinEnabled: enabled,
+            dailyCapacity: 10, isCapacityLimited: true });
+        api.updateCrew.mockResolvedValue(undefined);
+        await act(async () => root.render(<CrewSettings onBack={vi.fn()} />));
+        const label = Array.from(container.querySelectorAll('label')).find(node => node.textContent?.includes('학교 이메일 인증 시 자동 승인'))!;
+        expect(label.textContent).toContain('가입 신청 후 인증을 완료해도');
+        const checkbox = label.querySelector('input')!;
+        expect(checkbox.checked).toBe(enabled);
+        expect(checkbox.disabled).toBe(false);
+        await act(async () => checkbox.click());
+        const save = Array.from(container.querySelectorAll('button')).find(node => node.textContent?.trim() === '저장하기')!;
+        await act(async () => save.click());
+        expect(api.updateCrew).toHaveBeenCalledOnce();
+        expect(api.updateCrew.mock.calls[0][1].verifiedSchoolAutoJoinEnabled).toBe(!enabled);
     });
 
     it('allows managers to approve unverified applicants during the pause', async () => {
