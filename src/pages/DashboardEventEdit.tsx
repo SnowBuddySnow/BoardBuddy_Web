@@ -43,6 +43,7 @@ export default function DashboardEventEdit({ eventId, onBack, onSuccess }: Dashb
     const [endsAt, setEndsAt] = useState('');
     const [locationName, setLocationName] = useState('');
     const [locationAddress, setLocationAddress] = useState('');
+    const [capacityLimited, setCapacityLimited] = useState(true);
     const [capacity, setCapacity] = useState<number>(15);
     const [crewMemberLimitEnabled, setCrewMemberLimitEnabled] = useState(false);
     const [crewMemberLimit, setCrewMemberLimit] = useState<number>(3);
@@ -101,6 +102,7 @@ export default function DashboardEventEdit({ eventId, onBack, onSuccess }: Dashb
                 setLocationName(eventData.locationName || '');
                 setLocationAddress(eventData.locationAddress || '');
                 setCapacity(eventData.capacity);
+                setCapacityLimited(eventData.capacityLimited !== false);
                 setCrewMemberLimitEnabled(eventData.crewMemberLimit != null);
                 setCrewMemberLimit(eventData.crewMemberLimit ?? 3);
                 setKusbfAssociated(eventData.kusbfAssociated ?? true);
@@ -133,7 +135,7 @@ export default function DashboardEventEdit({ eventId, onBack, onSuccess }: Dashb
         if (capacity < 1) return alert('모집인원은 최소 1명 이상이어야 합니다.');
         if ((visibilityType === 'PUBLIC' || visibilityType === 'CREW_LIMITED')
             && crewMemberLimitEnabled
-            && (crewMemberLimit < 1 || crewMemberLimit > capacity)) {
+            && (crewMemberLimit < 1 || (capacityLimited && crewMemberLimit > capacity))) {
             return alert('크루별 참가 인원은 1명 이상, 전체 정원 이하여야 합니다.');
         }
         if (!organizerGroupId) return alert('호스트 그룹을 선택해 주세요.');
@@ -160,6 +162,7 @@ export default function DashboardEventEdit({ eventId, onBack, onSuccess }: Dashb
                 locationName: locationName.trim() || undefined,
                 locationAddress: locationAddress.trim() || undefined,
                 capacity,
+                capacityLimited,
                 crewMemberLimit: (visibilityType === 'PUBLIC' || visibilityType === 'CREW_LIMITED') && crewMemberLimitEnabled
                     ? crewMemberLimit
                     : null,
@@ -250,11 +253,16 @@ export default function DashboardEventEdit({ eventId, onBack, onSuccess }: Dashb
                                 <input
                                     type="number"
                                     min="1"
+                                    disabled={!capacityLimited}
                                     value={capacity}
                                     onChange={e => setCapacity(Number(e.target.value))}
                                     className="w-full px-4 py-2.5 bg-white border border-zinc-200 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-[#162660]/20 text-zinc-800"
                                     required
                                 />
+                                <label className="mt-2 flex items-center gap-2 text-xs text-zinc-600">
+                                    <input type="checkbox" checked={!capacityLimited} onChange={e => setCapacityLimited(!e.target.checked)} />
+                                    전체 정원 제한 없음
+                                </label>
                             </div>
 
                             <div className="space-y-1.5">

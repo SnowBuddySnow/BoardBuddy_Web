@@ -1,5 +1,6 @@
-import { CalendarDays, Sparkles, ShieldCheck, UsersRound } from 'lucide-react';
+import { ArrowRight, CalendarDays, Sparkles, ShieldCheck, UsersRound } from 'lucide-react';
 import type { OperationPermission } from '../services/operations';
+import { hasEventManagementAccess } from '../lib/eventManagerOnboarding';
 import { getOperatingFeatures, OperatingMode, operatingModeCopy } from '../constants/operatingSeason';
 
 interface OperationsCenterProps {
@@ -10,6 +11,7 @@ interface OperationsCenterProps {
   onPartiesClick: () => void;
   onGroupsClick: () => void;
   onCrewClick: () => void;
+  onEventManagerOnboardingClick?: () => void;
 }
 
 const hasAny = (permissions: OperationPermission[], required: OperationPermission[]) =>
@@ -23,6 +25,7 @@ export default function OperationsCenter({
   onPartiesClick,
   onGroupsClick,
   onCrewClick,
+  onEventManagerOnboardingClick,
 }: OperationsCenterProps) {
   const features = getOperatingFeatures(operatingMode);
   const canManageReservations = hasAny(permissions, ['RESERVATIONS_MANAGE']);
@@ -83,6 +86,22 @@ export default function OperationsCenter({
       </header>
 
       <main className="flex-1 overflow-y-auto p-6">
+        {features.offSeason && hasEventManagementAccess(permissions) && onEventManagerOnboardingClick && (
+          <button
+            type="button"
+            onClick={onEventManagerOnboardingClick}
+            className="mb-5 flex w-full items-center justify-between gap-4 rounded-2xl border border-indigo-200 bg-indigo-50 p-5 text-left hover:bg-indigo-100"
+          >
+            <span className="flex items-center gap-3">
+              <Sparkles className="h-6 w-6 shrink-0 text-indigo-700" />
+              <span>
+                <span className="block text-sm font-black text-indigo-950">이벤트 그룹 매니저 시작 가이드</span>
+                <span className="mt-1 block text-xs text-indigo-800">호스트 그룹부터 모집·참가자 관리까지</span>
+              </span>
+            </span>
+            <ArrowRight className="h-5 w-5 shrink-0 text-indigo-700" />
+          </button>
+        )}
         <div className="grid gap-3 sm:grid-cols-2">
           {modules.map(({ id, title, description, icon: Icon, onClick, priority }) => (
             <button

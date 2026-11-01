@@ -1,3 +1,4 @@
+import { EventFamilyLinks } from '../components/event/EventFamilyLinks';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Button } from '../components/Button';
 import {
@@ -45,12 +46,13 @@ import {
 } from '../lib/consentResponse';
 
 interface EventDetailProps {
+    onOpenEvent?: (id: number) => void;
     eventId: number;
     onBack: () => void;
     isGuestApplication?: boolean;
 }
 
-export default function EventDetail({ eventId, onBack, isGuestApplication = false }: EventDetailProps) {
+export default function EventDetail({ eventId, onBack, isGuestApplication = false, onOpenEvent }: EventDetailProps) {
     const [event, setEvent] = useState<Event | null>(null);
     const [loading, setLoading] = useState(true);
     const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -486,6 +488,7 @@ export default function EventDetail({ eventId, onBack, isGuestApplication = fals
 
                 {/* Details Section */}
                 <div className="p-5 space-y-6">
+                    <EventFamilyLinks event={event} onOpen={onOpenEvent} />
                     {/* Description */}
                     {event.description && (
                         <div className="bg-white rounded-3xl p-5 border border-zinc-100 shadow-sm space-y-3">
@@ -533,9 +536,9 @@ export default function EventDetail({ eventId, onBack, isGuestApplication = fals
                             <div>
                                 <h3 className="text-xs text-zinc-400 font-bold uppercase tracking-wider">모집 인원</h3>
                                 <p className="text-sm font-bold text-zinc-800 mt-1">
-                                    {event.joinedCount || 0} / {event.capacity} 명 참여 중
+                                    {event.joinedCount || 0} / {event.capacityLimited === false ? '제한 없음' : event.capacity} 명 참여 중
                                 </p>
-                                <div className="w-full bg-zinc-100 h-1.5 rounded-full mt-2 overflow-hidden">
+                                <div hidden={event.capacityLimited === false} className="w-full bg-zinc-100 h-1.5 rounded-full mt-2 overflow-hidden">
                                     <div
                                         className="bg-[#162660] h-full rounded-full transition-all duration-300"
                                         style={{ width: `${Math.min(100, ((event.joinedCount || 0) / event.capacity) * 100)}%` }}

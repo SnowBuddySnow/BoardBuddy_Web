@@ -10,8 +10,10 @@ const api = vi.hoisted(() => ({
     updateAdminEventManager: vi.fn(), updatePlatformAdmin: vi.fn(),
 }));
 const schools = vi.hoisted(() => ({ getSchools: vi.fn() }));
+const features = vi.hoisted(() => ({ SCHOOL_EMAIL_AUTH_AVAILABLE: false }));
 vi.mock('../services/userAdmin', () => api);
 vi.mock('../services/schools', () => schools);
+vi.mock('../config/features', () => features);
 vi.mock('../components/SignupPolicySettings', () => ({ default: () => null }));
 import UserAdmin from './UserAdmin';
 

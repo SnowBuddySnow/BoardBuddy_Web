@@ -17,6 +17,7 @@ export interface SchoolEmailVerificationStatus {
     maskedEmail: string;
     challengeId: string | null;
     expiresAt: string | null;
+    retryAfterSeconds?: number;
 }
 
 export interface SchoolEmailVerificationResult {

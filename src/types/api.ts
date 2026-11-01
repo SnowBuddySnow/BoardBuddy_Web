@@ -287,6 +287,11 @@ export interface Event {
     locationName: string | null;
     locationAddress: string | null;
     capacity: number;
+    capacityLimited?: boolean;
+    groupizeEnabled?: boolean;
+    parentEventId?: number | null;
+    parentEventTitle?: string | null;
+    groupizeAdmissionAllowed?: boolean | null;
     crewMemberLimit?: number | null;
     consentWindowMinutes?: number | null;
     paymentRequired?: boolean;

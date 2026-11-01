@@ -219,7 +219,7 @@ export default function DashboardParties({
                                                 <td className="px-6 py-4.5">
                                                     <div className="flex items-center gap-2 font-bold text-zinc-800">
                                                         <Users className="w-4 h-4 text-zinc-400" />
-                                                        <span>{event.joinedCount || 0} / {event.capacity} 명</span>
+                                                        <span>{event.joinedCount || 0} / {event.capacityLimited === false ? '제한 없음' : event.capacity} 명</span>
                                                     </div>
                                                 </td>
                                                 <td className="px-6 py-4.5 text-right">
