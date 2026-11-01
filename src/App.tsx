@@ -1,3 +1,5 @@
+import { claimEventManagerOnboarding, completeEventManagerOnboarding, dismissEventManagerOnboarding, hasEventManagementAccess } from './lib/eventManagerOnboarding';
+import EventManagerOnboarding, { EventManagerOnboardingReturnButton, type EventManagerOnboardingDestination } from './components/EventManagerOnboarding';
 import { isSchoolEmailActivationEntry } from './lib/schoolEmailActivation';
 import { lazy, useState, useEffect, useRef } from 'react';
 import { LowerMenuBar } from './components/LowerMenuBar';
@@ -134,6 +136,7 @@ const knownViews = new Set<View>([
 
 const publicEntryViews = new Set<View>(['login', 'guest_access']);
 const signupViews = new Set<View>(['user_info', 'profile_type_confirmation', 'student_verification']);
+const eventGuideEntryViews = new Set<View>(['home', 'my_page', 'operations_center', 'dashboard_groups', 'dashboard_parties']);
 
 const parseView = (value: string | null): View | null => {
   if (!value || !knownViews.has(value as View)) return null;
@@ -256,11 +259,15 @@ function App() {
   const [crewDetail, setCrewDetail] = useState<CrewDetailData | null>(null);
   const [isCaptain, setIsCaptain] = useState(false);
   const [crewAccessRevision, setCrewAccessRevision] = useState(0);
-  const [captainUserId, setCaptainUserId] = useState<number | null>(null);
+  const [onboardingUserId, setOnboardingUserId] = useState<number | null>(null);
   const [captainOnboardingOpen, setCaptainOnboardingOpen] = useState(false);
   const [captainOnboardingDismissed, setCaptainOnboardingDismissed] = useState(false);
   const [captainOnboardingStep, setCaptainOnboardingStep] = useState(0);
   const [captainGuideReturnVisible, setCaptainGuideReturnVisible] = useState(false);
+  const [eventManagerOnboardingOpen, setEventManagerOnboardingOpen] = useState(false);
+  const [eventManagerOnboardingDismissed, setEventManagerOnboardingDismissed] = useState(false);
+  const [eventManagerOnboardingStep, setEventManagerOnboardingStep] = useState(0);
+  const [eventManagerGuideReturnVisible, setEventManagerGuideReturnVisible] = useState(false);
   const isDesktop = useDesktopViewport();
   const usedDesktopLanding = useRef(false);
   const shouldLoadPermissions = !['login', 'user_info', 'profile_type_confirmation', 'student_verification'].includes(currentView);
@@ -271,6 +278,12 @@ function App() {
     && !hasPendingCrewApplication
     && crewDetail !== null
     && crewDetail.seasonHouseActive !== false;
+
+  const canUseEventManagerGuide = shouldLoadPermissions
+    && managementAccessResolved
+    && onboardingUserId !== null
+    && operatingFeatures.offSeason
+    && hasEventManagementAccess(operationPermissions);
 
   // Check for auto-login on app start
   useEffect(() => {
@@ -290,7 +303,7 @@ function App() {
           return;
         }
         setIsCaptain(isCrewCaptainRole(user.role));
-        setCaptainUserId(user.userId);
+        setOnboardingUserId(user.userId);
         setHasCrew(Boolean(user.crew));
         if (user.crew) {
           setHasPendingCrewApplication(false);
@@ -307,7 +320,7 @@ function App() {
           setHasPendingCrewApplication(false);
           setCrewDetail(null);
           setIsCaptain(false);
-          setCaptainUserId(null);
+          setOnboardingUserId(null);
         }
       }
     };
@@ -317,20 +330,33 @@ function App() {
   }, [shouldLoadPermissions, crewAccessRevision]);
 
   useEffect(() => {
-    if (!shouldLoadPermissions || !managementAccessResolved || !isCaptain || captainUserId == null) return;
-    if (captainOnboardingDismissed || captainOnboardingOpen) return;
-    if (claimCaptainOnboarding(captainUserId)) {
+    if (!shouldLoadPermissions || !managementAccessResolved || !isCaptain || onboardingUserId == null) return;
+    if (captainOnboardingDismissed || captainOnboardingOpen || eventManagerOnboardingOpen) return;
+    if (claimCaptainOnboarding(onboardingUserId)) {
       setCaptainOnboardingStep(0);
       setCaptainOnboardingOpen(true);
     }
   }, [
     captainOnboardingDismissed,
     captainOnboardingOpen,
-    captainUserId,
+    eventManagerOnboardingOpen,
+    onboardingUserId,
     isCaptain,
     managementAccessResolved,
     shouldLoadPermissions,
   ]);
+
+  useEffect(() => {
+    // Captains keep their existing first-run guide and can open the event guide
+    // manually. Invitations and in-progress event edits must not be interrupted.
+    if (!canUseEventManagerGuide || isCaptain || onboardingUserId === null) return;
+    if (!eventGuideEntryViews.has(currentView) || captainOnboardingOpen || eventManagerOnboardingOpen || eventManagerOnboardingDismissed) return;
+    if (claimEventManagerOnboarding(onboardingUserId)) {
+      setEventManagerOnboardingStep(0);
+      setEventManagerOnboardingOpen(true);
+    }
+  }, [canUseEventManagerGuide, isCaptain, onboardingUserId, currentView, captainOnboardingOpen, eventManagerOnboardingOpen, eventManagerOnboardingDismissed]);
+
 
   useEffect(() => {
     if (!shouldLoadPermissions) {
@@ -448,14 +474,14 @@ function App() {
   };
 
   const handleCaptainOnboardingClose = () => {
-    if (captainUserId != null) dismissCaptainOnboarding(captainUserId);
+    if (onboardingUserId != null) dismissCaptainOnboarding(onboardingUserId);
     setCaptainOnboardingOpen(false);
     setCaptainOnboardingDismissed(true);
     setCaptainGuideReturnVisible(false);
   };
 
   const handleCaptainOnboardingComplete = () => {
-    if (captainUserId != null) completeCaptainOnboarding(captainUserId);
+    if (onboardingUserId != null) completeCaptainOnboarding(onboardingUserId);
     setCaptainOnboardingOpen(false);
     setCaptainOnboardingDismissed(true);
     setCaptainGuideReturnVisible(false);
@@ -470,9 +496,41 @@ function App() {
   };
 
   const openCaptainOnboarding = () => {
+    setEventManagerOnboardingOpen(false);
+    setEventManagerGuideReturnVisible(false);
     setCaptainOnboardingStep(0);
     setCaptainGuideReturnVisible(false);
     setCaptainOnboardingOpen(true);
+  };
+
+  const handleEventManagerOnboardingClose = () => {
+    if (onboardingUserId !== null) dismissEventManagerOnboarding(onboardingUserId);
+    setEventManagerOnboardingOpen(false);
+    setEventManagerOnboardingDismissed(true);
+    setEventManagerGuideReturnVisible(false);
+  };
+
+  const handleEventManagerOnboardingComplete = () => {
+    if (onboardingUserId !== null) completeEventManagerOnboarding(onboardingUserId);
+    setEventManagerOnboardingOpen(false);
+    setEventManagerOnboardingDismissed(true);
+    setEventManagerGuideReturnVisible(false);
+  };
+
+  const handleEventManagerOnboardingNavigate = (destination: EventManagerOnboardingDestination, stepIndex: number) => {
+    setEventManagerOnboardingStep(stepIndex);
+    setEventManagerOnboardingOpen(false);
+    setEventManagerOnboardingDismissed(true);
+    setEventManagerGuideReturnVisible(true);
+    setCurrentView(destination);
+  };
+
+  const openEventManagerOnboarding = () => {
+    setCaptainOnboardingOpen(false);
+    setCaptainGuideReturnVisible(false);
+    setEventManagerOnboardingStep(0);
+    setEventManagerGuideReturnVisible(false);
+    setEventManagerOnboardingOpen(true);
   };
 
   const openEventDetail = (id: number, destination: View = 'event_detail') => {
@@ -653,6 +711,7 @@ function App() {
             onAccountInfoClick={() => setCurrentView('account_info')}
             onRoleGuideClick={() => setCurrentView('role_guide')}
             onCaptainOnboardingClick={isCaptain ? openCaptainOnboarding : undefined}
+            onEventManagerOnboardingClick={canUseEventManagerGuide ? openEventManagerOnboarding : undefined}
           />
         );
       case 'account_info':
@@ -706,6 +765,7 @@ function App() {
             onPartiesClick={() => setCurrentView('dashboard_parties')}
             onGroupsClick={() => setCurrentView('dashboard_groups')}
             onCrewClick={() => setCurrentView('crew_permissions')}
+            onEventManagerOnboardingClick={canUseEventManagerGuide ? openEventManagerOnboarding : undefined}
           />
         );
       case 'dashboard_parties':
@@ -844,6 +904,26 @@ function App() {
           onComplete={handleCaptainOnboardingComplete}
           onNavigate={handleCaptainOnboardingNavigate}
         />
+
+        <EventManagerOnboarding
+          open={canUseEventManagerGuide && eventManagerOnboardingOpen && !captainOnboardingOpen}
+          isDesktop={isDesktop}
+          canCreateEvents={operationPermissions.includes('PARTIES_CREATE')}
+          initialStep={eventManagerOnboardingStep}
+          onClose={handleEventManagerOnboardingClose}
+          onComplete={handleEventManagerOnboardingComplete}
+          onNavigate={handleEventManagerOnboardingNavigate}
+        />
+
+        {canUseEventManagerGuide && eventManagerGuideReturnVisible && !eventManagerOnboardingOpen && !captainOnboardingOpen && (
+          <EventManagerOnboardingReturnButton
+            onReturn={() => {
+              setEventManagerGuideReturnVisible(false);
+              setEventManagerOnboardingOpen(true);
+            }}
+            onDismiss={() => setEventManagerGuideReturnVisible(false)}
+          />
+        )}
 
         {isCaptain && captainGuideReturnVisible && !captainOnboardingOpen && (
           <CaptainOnboardingReturnButton
