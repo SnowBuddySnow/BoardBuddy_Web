@@ -181,7 +181,7 @@ export default function SearchCrew({ onBack, onJoined }: SearchCrewProps) {
                         {selectedCrew.verifiedSchoolAutoJoinEnabled ? (
                             <div className="mt-5 flex items-start gap-2 rounded-2xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-xs leading-5 text-emerald-800">
                                 <BadgeCheck className="mt-0.5 h-4 w-4 shrink-0" />
-                                <span>크루 소속 학교 인증을 완료했다면 PIN 확인 후 바로 가입합니다. 미인증 또는 다른 학교 멤버의 신청은 운영진이 검토합니다.</span>
+                                <span>크루 소속 학교 인증을 완료했다면 PIN 확인 후 바로 가입합니다. 미인증 또는 다른 학교 멤버의 신청은 운영진이 검토합니다. 가입 신청 후 같은 학교 이메일 인증을 완료하면 자동 승인이 켜져 있는 동안 대기 중인 신청이 자동 승인됩니다.</span>
                             </div>
                         ) : isCrewSchoolVerificationRequired(selectedCrew) && (
                             <div className="mt-5 flex items-start gap-2 rounded-2xl border border-blue-100 bg-blue-50 px-4 py-3 text-xs leading-5 text-[#162660]">

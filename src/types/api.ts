@@ -316,7 +316,7 @@ export interface EventParticipant {
     eventEventId?: number;
     eventId?: number;
     userId: number;
-    userName?: string;
+    userName?: string | null;
     status: ParticipantStatus;
     paymentStatus?: PaymentStatus | null;
     managerMemo?: string | null;

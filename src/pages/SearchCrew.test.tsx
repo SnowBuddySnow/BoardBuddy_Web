@@ -48,6 +48,7 @@ describe('crew admission outcomes', () => {
         const join = Array.from(container.querySelectorAll('button')).find(button => button.textContent === '가입')!;
         await act(async () => join.click());
         expect(container.textContent).toContain('미인증 또는 다른 학교 멤버의 신청은 운영진이 검토합니다.');
+        expect(container.textContent).toContain('가입 신청 후 같은 학교 이메일 인증을 완료하면');
     });
 
     it('refreshes membership through the callback only after immediate admission', async () => {

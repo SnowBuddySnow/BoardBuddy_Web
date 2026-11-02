@@ -334,11 +334,13 @@ export default function CrewSettings({ onBack, onCaptainGuideClick }: CrewSettin
                                 <BadgeCheckIcon className="h-5 w-5" />
                             </span>
                             <span className="min-w-0 flex-1">
-                                <span className="block text-sm font-bold text-zinc-900">학교 인증 멤버 자동 가입</span>
+                                <span className="block text-sm font-bold text-zinc-900">학교 이메일 인증 시 자동 승인</span>
                                 <span className="mt-1 block text-xs leading-5 text-zinc-500">
-                                    가입 PIN이 맞고 크루 소속 학교 인증을 완료한 멤버는 바로 가입합니다.
+                                    켜면 가입 PIN이 맞고 크루 소속 학교 이메일 인증을 완료한 멤버는 바로 가입합니다.
+                                    가입 신청 후 인증을 완료해도 대기 중인 신청이 자동 승인됩니다.
                                     미인증 또는 다른 학교 멤버의 신청은 운영진이 검토합니다.
                                     크루에 연동된 학교가 없으면 모든 신청을 운영진이 검토합니다.
+                                    끄면 이후 가입 신청은 운영진 승인으로 처리되며, 기존 멤버는 유지됩니다.
                                 </span>
                             </span>
                             <input

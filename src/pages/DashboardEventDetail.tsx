@@ -21,6 +21,7 @@ export default function DashboardEventDetail({ eventId, onBack, onEditClick, onO
     const [showGroupize, setShowGroupize] = useState(false);
     const [event, setEvent] = useState<Event | null>(null);
     const [participants, setParticipants] = useState<EventParticipant[]>([]);
+    const [showParticipantHistory, setShowParticipantHistory] = useState(false);
     const [loading, setLoading] = useState(true);
     const [loadFailed, setLoadFailed] = useState(false);
     const [actionLoading, setActionLoading] = useState(false);
@@ -142,6 +143,9 @@ export default function DashboardEventDetail({ eventId, onBack, onEditClick, onO
 
     const formatDate = formatEventDateTime;
     const formatCompactDate = formatEventDateTime;
+    const activeParticipants = participants.filter(part => ['JOINED', 'PENDING', 'CONSENT_PENDING'].includes(part.status));
+    const historicalParticipants = participants.filter(part => !['JOINED', 'PENDING', 'CONSENT_PENDING'].includes(part.status));
+    const visibleParticipants = showParticipantHistory ? historicalParticipants : activeParticipants;
 
     if (loading) {
         return (
@@ -259,12 +263,23 @@ export default function DashboardEventDetail({ eventId, onBack, onEditClick, onO
                             onChanged={() => { void getEventDashboard(eventId).then(setEvent); }} />}
                     </div>}
                     <div className="flex items-center justify-between">
-                            <h2 className="text-base font-bold text-zinc-900">참가자 목록 ({participants.length})</h2>
+                            <h2 className="text-base font-bold text-zinc-900">참가자 목록 ({activeParticipants.length})</h2>
+                        </div>
+                        <p className="text-xs text-zinc-500">
+                            참가 확정 {participants.filter(part => part.status === 'JOINED').length}명 · 승인 대기 {participants.filter(part => part.status === 'PENDING').length}명 · 동의 대기 {participants.filter(part => part.status === 'CONSENT_PENDING').length}명
+                        </p>
+                        <div className="flex gap-2" aria-label="참가자 목록 필터">
+                            <Button variant={showParticipantHistory ? 'outline' : 'primary'} aria-pressed={!showParticipantHistory} onClick={() => setShowParticipantHistory(false)}>
+                                진행 중 ({activeParticipants.length})
+                            </Button>
+                            <Button variant={showParticipantHistory ? 'primary' : 'outline'} aria-pressed={showParticipantHistory} onClick={() => setShowParticipantHistory(true)}>
+                                취소·내보냄 ({historicalParticipants.length})
+                            </Button>
                         </div>
 
-                        {participants.length === 0 ? (
+                        {visibleParticipants.length === 0 ? (
                             <div className="text-center py-10 text-zinc-400 text-sm">
-                                아직 등록을 원하거나 가입된 멤버가 없습니다.
+                                {showParticipantHistory ? '취소·내보냄 내역이 없습니다.' : '현재 참가 확정 또는 대기 중인 멤버가 없습니다.'}
                             </div>
                         ) : (
                             <div className="overflow-x-auto">
@@ -280,7 +295,7 @@ export default function DashboardEventDetail({ eventId, onBack, onEditClick, onO
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-zinc-50">
-                                        {participants.map(part => {
+                                        {visibleParticipants.map(part => {
                                             const isPending = part.status === 'PENDING';
                                             const isJoined = part.status === 'JOINED';
                                             const isDisabled = participantActionId === part.userId;

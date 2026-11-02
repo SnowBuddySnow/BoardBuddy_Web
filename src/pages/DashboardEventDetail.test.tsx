@@ -44,3 +44,48 @@ it.each(['event', 'participants', 'chat'])('recovers after a failed %s request w
         await act(async () => root.unmount()); container.remove();
     }
 });
+
+it('keeps four cancelled registrations out of the active count and shows their names in history', async () => {
+    api.listParticipants.mockResolvedValue(Array.from({ length: 4 }, (_, index) => ({
+        id: index + 1, userId: index + 10, userName: `취소 회원 ${index + 1}`,
+        status: 'CANCELLED', joinedAt: '2026-11-03T12:00:00',
+    })));
+    const container = document.createElement('div'); document.body.append(container);
+    const root = createRoot(container);
+    try {
+        await act(async () => root.render(<DashboardEventDetail eventId={10} onBack={vi.fn()} onEditClick={vi.fn()} />));
+        expect(container.textContent).toContain('참가자 목록 (0)');
+        expect(container.textContent).toContain('참가 확정 0명');
+        expect(container.querySelector('tbody')).toBeNull();
+        const history = Array.from(container.querySelectorAll('button')).find(button => button.textContent === '취소·내보냄 (4)')!;
+        await act(async () => history.click());
+        expect(history.getAttribute('aria-pressed')).toBe('true');
+        expect(container.querySelectorAll('tbody tr')).toHaveLength(4);
+        expect(container.textContent).not.toContain('이름 없음');
+        for (let index = 1; index <= 4; index++) expect(container.textContent).toContain(`취소 회원 ${index}`);
+    } finally {
+        await act(async () => root.unmount()); container.remove();
+    }
+});
+
+it('counts confirmed and pending registrations separately and preserves removed members in history', async () => {
+    api.listParticipants.mockResolvedValue(['JOINED', 'PENDING', 'CONSENT_PENDING', 'CANCELLED', 'REMOVED'].map((status, index) => ({
+        id: index + 1, userId: index + 10, userName: `회원 ${index + 1}`,
+        status, joinedAt: '2026-11-03T12:00:00',
+    })));
+    const container = document.createElement('div'); document.body.append(container);
+    const root = createRoot(container);
+    try {
+        await act(async () => root.render(<DashboardEventDetail eventId={10} onBack={vi.fn()} onEditClick={vi.fn()} />));
+        expect(container.textContent).toContain('참가자 목록 (3)');
+        expect(container.textContent).toContain('참가 확정 1명 · 승인 대기 1명 · 동의 대기 1명');
+        expect(container.querySelectorAll('tbody tr')).toHaveLength(3);
+        const history = Array.from(container.querySelectorAll('button')).find(button => button.textContent === '취소·내보냄 (2)')!;
+        await act(async () => history.click());
+        expect(container.querySelectorAll('tbody tr')).toHaveLength(2);
+        expect(container.textContent).toContain('회원 4');
+        expect(container.textContent).toContain('회원 5');
+    } finally {
+        await act(async () => root.unmount()); container.remove();
+    }
+});
