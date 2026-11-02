@@ -49,6 +49,20 @@ describe('event entry points, required next steps and recovery (synthetic HTTP)'
         input.dispatchEvent(new Event('input', { bubbles: true }));
     });
 
+    it.each(['2035-08-18T15:00:00Z', '2035-08-19T00:00:00+09:00', '2035-08-19T00:00:00'])(
+        'keeps catalogue, My Events and detail in Korean time for %s', async startsAt => {
+            event.startsAt = startsAt;
+            await renderCatalogue();
+            expect(container.textContent).toContain('2035. 08. 19. 00:00 한국표준시');
+            event.currentUserStatus = 'JOINED';
+            await renderMine();
+            expect(container.textContent).toContain('2035. 08. 19. 00:00 한국표준시');
+            await act(async () => root.render(<EventDetail eventId={1} onBack={vi.fn()} />));
+            expect(container.textContent).toContain('8월 19일 (일) 00:00 한국표준시');
+            expect(container.textContent).not.toMatch(/UTC|GMT|[+]0?9/);
+        },
+    );
+
     it.each(['INSTANT', 'APPROVAL_REQUIRED', 'INVITE_ONLY'])('catalogue %s action opens detail and never joins or claims success', async policy => {
         event.joinPolicy = policy; if (policy === 'INVITE_ONLY') event.currentUserStatus = 'PENDING';
         localStorage.setItem('phone_sharing_consent_preference', 'always');
