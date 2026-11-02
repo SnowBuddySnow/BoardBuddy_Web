@@ -1,3 +1,4 @@
+import { formatEventDateTime } from '../lib/eventDateTime';
 import { useEffect, useState } from 'react';
 import { CheckCircle2, Link2, ShieldCheck, XCircle } from 'lucide-react';
 import { Button } from '../components/Button';
@@ -127,7 +128,7 @@ export default function OrganizerInviteAccept({
                             <div className="mt-5 rounded-2xl bg-zinc-50 p-4">
                                 <p className="text-xs text-zinc-400">링크 만료</p>
                                 <p className="mt-1 text-sm font-bold text-zinc-800">
-                                    {new Date(preview.expiresAt).toLocaleString('ko-KR')}
+                                    {formatEventDateTime(preview.expiresAt)}
                                 </p>
                             </div>
 

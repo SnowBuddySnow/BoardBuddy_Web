@@ -1,3 +1,4 @@
+import { formatEventDateTime } from '../lib/eventDateTime';
 import { useCallback, useEffect, useState } from 'react';
 import { Button } from '../components/Button';
 import {
@@ -331,7 +332,7 @@ export default function DashboardGroupDetail({ groupId, developerAccess, onBack 
                                         {eventGroupRoleLabel[link.proposedRole]}
                                     </p>
                                     <p className="mt-1 text-xs text-zinc-400">
-                                        {new Date(link.expiresAt).toLocaleString('ko-KR')} 만료
+                                        {formatEventDateTime(link.expiresAt)} 만료
                                         {' · '}
                                         {link.usedCount}/{link.maxUses ?? '∞'}회 사용
                                     </p>

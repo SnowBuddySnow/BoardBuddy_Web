@@ -148,6 +148,6 @@ describe('real App management navigation with synthetic HTTP', () => {
         expect(eventTab).toBeTruthy(); await act(async () => (eventTab as HTMLButtonElement).click()); await settle();
         expect(container.textContent?.replace(/\s/g, '')).toContain(`참가가능${count}개`);
         expect(container.textContent).toContain('20:00');
-        expect(container.textContent).toContain('GMT+9');
+        expect(container.textContent).toContain('한국표준시');
     });
 });
