@@ -35,7 +35,7 @@ import {
 import { getApiErrorMessage, getApiErrorStatus } from '../lib/apiError';
 import { PlanningModeBadge } from '../components/event/PlanningModeBadge';
 import { getEventActivityLabel } from '../constants/eventActivity';
-import { EVENT_TIME_ZONE, getEventRegistrationLabel, getEventRegistrationState, isEventRegistrationAvailable, parseEventDateTime } from '../lib/eventDateTime';
+import { formatEventDateTime, getEventRegistrationLabel, getEventRegistrationState, isEventRegistrationAvailable, parseEventDateTime } from '../lib/eventDateTime';
 import { getConsentPendingCopy, getConsentSubmissionMessage } from '../lib/eventRegistration';
 import { ConsentResponseField } from '../components/event/ConsentResponseField';
 import {
@@ -398,19 +398,12 @@ export default function EventDetail({ eventId, onBack, isGuestApplication = fals
         }
     };
 
-    const formatDate = (dateStr: string) => {
-        const d = parseEventDateTime(dateStr);
-        const options: Intl.DateTimeFormatOptions = {
-            month: 'long',
-            day: 'numeric',
-            weekday: 'short',
-            hour: '2-digit',
-            minute: '2-digit',
-            hour12: false,
-            timeZone: EVENT_TIME_ZONE,
-        };
-        return d.toLocaleDateString('ko-KR', options);
-    };
+    const formatDate = (dateStr: string) => formatEventDateTime(dateStr, {
+        year: undefined,
+        month: 'long',
+        day: 'numeric',
+        weekday: 'short',
+    });
 
     const formatMoney = (amount?: number | null, currency?: string | null) => {
         if (amount == null) return '금액 미정';
