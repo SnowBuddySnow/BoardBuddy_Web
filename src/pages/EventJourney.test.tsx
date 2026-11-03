@@ -53,13 +53,13 @@ describe('event entry points, required next steps and recovery (synthetic HTTP)'
         'keeps catalogue, My Events and detail in Korean time for %s', async startsAt => {
             event.startsAt = startsAt;
             await renderCatalogue();
-            expect(container.textContent).toContain('2035. 08. 19. 00:00 한국표준시');
+            expect(container.textContent).toContain('2035. 08. 19. 00:00');
             event.currentUserStatus = 'JOINED';
             await renderMine();
-            expect(container.textContent).toContain('2035. 08. 19. 00:00 한국표준시');
+            expect(container.textContent).toContain('2035. 08. 19. 00:00');
             await act(async () => root.render(<EventDetail eventId={1} onBack={vi.fn()} />));
-            expect(container.textContent).toContain('8월 19일 (일) 00:00 한국표준시');
-            expect(container.textContent).not.toMatch(/UTC|GMT|[+]0?9/);
+            expect(container.textContent).toContain('8월 19일 (일) 00:00');
+            expect(container.textContent).not.toMatch(/한국표준시|UTC|GMT|[+]0?9/);
         },
     );
 

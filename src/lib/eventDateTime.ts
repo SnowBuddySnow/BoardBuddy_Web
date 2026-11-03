@@ -13,14 +13,14 @@ export const parseEventDateTime = (value: string): Date => {
     return new Date(Number.NaN);
 };
 
-/** Keep the timezone label consistent across browsers, including Safari. */
+/** Event dates use Korean time without a visible timezone suffix. */
 export const formatEventDateTime = (value: string, options: Intl.DateTimeFormatOptions = {}): string => {
     const date = parseEventDateTime(value);
     if (!Number.isFinite(date.getTime())) return '일시 확인 필요';
     return new Intl.DateTimeFormat('ko-KR', {
         year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit',
-        hourCycle: 'h23', ...options, timeZone: EVENT_TIME_ZONE, timeZoneName: 'short',
-    }).formatToParts(date).map(part => part.type === 'timeZoneName' ? '한국표준시' : part.value).join('');
+        hourCycle: 'h23', ...options, timeZone: EVENT_TIME_ZONE, timeZoneName: undefined,
+    }).format(date);
 };
 
 /** datetime-local has no offset: its wall-clock fields always represent Korean event time. */

@@ -38,10 +38,10 @@ describe('event API timestamps', () => {
         expect(formatEventDateTimeInput(input)).toBe(expected);
     });
 
-    it('formats list/manager timestamps consistently, with an explicit timezone and invalid fallback', () => {
+    it('formats list/manager timestamps consistently without a suffix and with invalid fallback', () => {
         expect(formatEventDateTime('2026-10-25T09:00:00Z')).toBe(formatEventDateTime('2026-10-25T18:00:00'));
         expect(formatEventDateTime('2026-10-25T09:00:00Z')).toContain('18:00');
-        expect(formatEventDateTime('2026-10-25T09:00:00Z')).toContain('한국표준시');
+        expect(formatEventDateTime('2026-10-25T09:00:00Z')).not.toMatch(/한국표준시|UTC|GMT/);
         expect(formatEventDateTime('invalid')).toBe('일시 확인 필요');
     });
 
@@ -50,16 +50,16 @@ describe('event API timestamps', () => {
         '2026-11-05T06:00:00Z',
         '2026-11-05T15:00:00+09:00',
         '2026-11-04T22:00:00-08:00',
-    ])('shows %s as the same Korean time with a Korean label', value => {
+    ])('shows %s as the same Korean time without a timezone label', value => {
         const result = formatEventDateTime(value);
-        expect(result).toBe('2026. 11. 05. 15:00 한국표준시');
-        expect(result).not.toMatch(/UTC|GMT|[+]0?9/);
+        expect(result).toBe('2026. 11. 05. 15:00');
+        expect(result).not.toMatch(/한국표준시|UTC|GMT|[+]0?9/);
     });
 
     it('keeps midnight on the correct Korean date even if options request another timezone', () => {
         expect(formatEventDateTime('2026-11-04T15:00:00Z', {
             timeZone: 'America/Los_Angeles', timeZoneName: 'long',
-        })).toBe('2026. 11. 05. 00:00 한국표준시');
+        })).toBe('2026. 11. 05. 00:00');
     });
 
     const openEvent = { status: 'OPEN' as const, startsAt: '2026-10-25T20:00:00',
