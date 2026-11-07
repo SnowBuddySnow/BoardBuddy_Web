@@ -838,6 +838,7 @@ function App() {
             onSeeAllPartiesClick={() => setCurrentView('parties')}
             onMyPlansClick={() => setCurrentView('my_parties')}
             onDashboardClick={() => setCurrentView('operations_center')}
+            onStudentVerificationClick={() => setCurrentView('student_verification')}
             operatingMode={operatingMode}
             crewDetail={crewDetail}
           />
