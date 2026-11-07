@@ -70,6 +70,7 @@ export default function StudentVerification({ onDone }: StudentVerificationProps
                     setRequiresStudentProfile(true);
                     return;
                 }
+                setSchoolEmail(profile.email || '');
                 const current = await getSchoolEmailVerificationStatus();
                 if (cancelled) return;
                 setStatus(current);
@@ -93,7 +94,7 @@ export default function StudentVerification({ onDone }: StudentVerificationProps
         setSending(true);
         setError('');
         try {
-            const challenge = await requestSchoolEmailVerification(schoolEmail.trim() || undefined);
+            const challenge = await requestSchoolEmailVerification(schoolEmail.trim());
             setChallengeId(challenge.challengeId);
             const receivedAt = Date.now();
             setNow(receivedAt);
@@ -105,7 +106,6 @@ export default function StudentVerification({ onDone }: StudentVerificationProps
                 challengeId: challenge.challengeId,
                 expiresAt: challenge.expiresAt,
             } : current);
-            setSchoolEmail('');
         } catch (requestError: unknown) {
             setError(getApiErrorMessage(requestError) || '인증 이메일을 보내지 못했습니다.');
         } finally {
@@ -152,7 +152,6 @@ export default function StudentVerification({ onDone }: StudentVerificationProps
                             {[verifiedIdentity?.schoolName, verifiedIdentity?.maskedEmail].filter(Boolean).join(' · ')}
                         </p>
                     )}
-                    <p className="mt-3 text-sm leading-6 text-zinc-500">인증을 요청한 계정의 학교 이메일이 확인되었습니다. 회원 유형은 변경되지 않습니다.</p>
                     <Button fullWidth onClick={onDone} className="mt-7 h-12 rounded-2xl border-[#162660] bg-[#162660] font-black">
                         계속하기
                     </Button>
@@ -166,7 +165,6 @@ export default function StudentVerification({ onDone }: StudentVerificationProps
             <div className="flex h-full overflow-y-auto bg-[#F5F4F0] px-5 py-8">
                 <main className="m-auto w-full max-w-lg rounded-[2rem] border border-zinc-200 bg-white p-8 text-center shadow-xl">
                     <h1 className="text-2xl font-black text-zinc-950">학생 프로필에서 이용할 수 있습니다</h1>
-                    <p className="mt-3 text-sm leading-6 text-zinc-500">학교 이메일 인증은 학생 프로필의 학교 이메일을 확인하는 절차입니다. 현재 회원 유형은 변경되지 않습니다.</p>
                     <Button fullWidth onClick={onDone} className="mt-7">서비스로 돌아가기</Button>
                 </main>
             </div>
@@ -198,30 +196,55 @@ export default function StudentVerification({ onDone }: StudentVerificationProps
                 <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-50 text-[#162660]">
                     <GraduationCapIcon className="h-7 w-7" />
                 </span>
-                <h1 className="mt-5 text-2xl font-black text-zinc-950">학교 이메일을 확인해주세요</h1>
+                <h1 className="mt-5 text-2xl font-black text-zinc-950">학교 이메일 인증</h1>
                 <p className="mt-3 text-sm leading-6 text-zinc-500">
-                    {status?.maskedEmail
-                        ? `${status.maskedEmail}로 인증번호와 활성화 링크를 함께 보냈습니다.`
-                        : '이메일의 6자리 번호 또는 활성화 링크 중 편한 방법 하나를 사용하세요.'}
+                    학교 인증을 위해 학교 이메일을 입력해주세요. 입력한 학교 이메일은 계정 이메일로 설정됩니다.
                 </p>
 
                 {status && !status.configured && (
                     <div className="mt-5 rounded-2xl bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-800">
-                        이 학교는 아직 인증 이메일 도메인이 등록되지 않았습니다. 등록 후 이 화면에서 다시 요청할 수 있습니다.
+                        아직 이 학교의 이메일 인증을 지원하지 않습니다.
                     </div>
                 )}
 
                 {status?.configured && !status.deliveryAvailable && (
                     <div className="mt-5 rounded-2xl bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-800">
-                        학교 인증 이메일 서비스가 아직 준비되지 않았습니다. 회원가입은 완료되었으며, 이메일 서비스가 열리면 이 화면에서 인증할 수 있습니다.
+                        지금은 인증 이메일을 보낼 수 없습니다. 잠시 후 다시 시도해주세요.
                     </div>
+                )}
+
+                {status?.configured && status.deliveryAvailable && (
+                    <form className="mt-5" onSubmit={event => { event.preventDefault(); void sendAgain(); }}>
+                        <label htmlFor="school-email" className="ml-1 text-sm font-bold text-zinc-800">학교 이메일</label>
+                        <input
+                            id="school-email"
+                            type="email"
+                            required
+                            value={schoolEmail}
+                            onChange={event => setSchoolEmail(event.target.value)}
+                            maxLength={150}
+                            placeholder="학교 이메일 주소"
+                            autoComplete="email"
+                            className="mt-2 h-12 w-full rounded-2xl border border-zinc-200 px-4 text-sm outline-none focus:border-[#162660]"
+                        />
+                        <Button
+                            type="submit"
+                            fullWidth
+                            disabled={sending || retrySeconds > 0}
+                            className="mt-4 h-12 rounded-2xl border-[#162660] bg-[#162660] font-black"
+                        >
+                            {sending ? '이메일 보내는 중...' : retrySeconds > 0 ? `${retrySeconds}초 후 다시 보내기` : challengeId ? '인증 이메일 다시 보내기' : '인증 이메일 보내기'}
+                        </Button>
+                    </form>
                 )}
 
                 {challengeId && (
                     <div className="mt-6">
-                        <label className="ml-1 text-sm font-bold text-zinc-800">6자리 인증번호</label>
+                        {status?.maskedEmail && <p role="status" className="mb-4 text-sm text-zinc-600">{status.maskedEmail}로 인증번호를 보냈습니다.</p>}
+                        <label htmlFor="school-email-code" className="ml-1 text-sm font-bold text-zinc-800">6자리 인증번호</label>
                         <div className="mt-2 flex gap-2">
                             <input
+                                id="school-email-code"
                                 value={code}
                                 onChange={event => setCode(event.target.value.replace(/\D/g, '').slice(0, 6))}
                                 inputMode="numeric"
@@ -236,42 +259,9 @@ export default function StudentVerification({ onDone }: StudentVerificationProps
                     </div>
                 )}
 
-                {status?.configured && status.deliveryAvailable && (
-                    <div className="mt-5">
-                        <label className="ml-1 text-sm font-bold text-zinc-800">학교 이메일 변경 또는 추가</label>
-                        <input
-                            type="email"
-                            value={schoolEmail}
-                            onChange={event => setSchoolEmail(event.target.value)}
-                            maxLength={150}
-                            placeholder="student@school.ac.kr"
-                            autoComplete="email"
-                            className="mt-2 h-12 w-full rounded-2xl border border-zinc-200 px-4 text-sm outline-none focus:border-[#162660]"
-                        />
-                        <p className="ml-1 mt-2 text-xs leading-5 text-zinc-500">
-                            비워두면 현재 계정 이메일로 보내고, 입력하면 계정 이메일도 함께 변경합니다.
-                        </p>
-                    </div>
-                )}
-
-                <div className="mt-5 flex items-start gap-3 rounded-2xl bg-zinc-50 p-4">
-                    <MailCheckIcon className="mt-0.5 h-5 w-5 shrink-0 text-zinc-500" />
-                    <p className="text-xs leading-5 text-zinc-500">활성화 링크를 누르면 인증번호를 입력하지 않아도 같은 학교 이메일 인증이 완료됩니다.</p>
-                </div>
-
                 {error && <p role="alert" className="mt-4 rounded-2xl bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">{error}</p>}
                 {token && error && <Button fullWidth onClick={onDone} className="mt-4">서비스로 돌아가기</Button>}
 
-                {status?.configured && status.deliveryAvailable && (
-                    <button
-                        type="button"
-                        onClick={() => void sendAgain()}
-                        disabled={sending || retrySeconds > 0}
-                        className="mt-5 w-full rounded-xl border-0 bg-transparent py-2 text-sm font-bold text-[#162660] disabled:text-zinc-400"
-                    >
-                        {sending ? '이메일 보내는 중...' : retrySeconds > 0 ? `${retrySeconds}초 후 다시 보내기` : challengeId ? '인증 이메일 다시 보내기' : '인증 이메일 보내기'}
-                    </button>
-                )}
                 {!token && (
                     <button type="button" onClick={onDone} className="mt-1 w-full border-0 bg-transparent py-2 text-xs text-zinc-400">
                         나중에 인증하기

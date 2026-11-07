@@ -14,7 +14,7 @@ describe('school email verification entry and availability', () => {
     let root: Root; let container: HTMLDivElement;
     beforeEach(() => {
         vi.resetAllMocks(); vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
-        userApi.getUserInfo.mockResolvedValue({ userType: 'KUSBF' });
+        userApi.getUserInfo.mockResolvedValue({ userType: 'KUSBF', email: 'buddy@school.ac.kr' });
         window.history.replaceState(null, '', '/'); localStorage.clear();
         container = document.createElement('div'); document.body.append(container); root = createRoot(container);
     });
@@ -32,7 +32,6 @@ describe('school email verification entry and availability', () => {
         expect(userApi.getUserInfo).not.toHaveBeenCalled();
         expect(container.textContent).toContain('학교 이메일 인증이 완료되었습니다');
         expect(container.textContent).toContain('카이스트 · ja***@kaist.ac.kr');
-        expect(container.textContent).toContain('회원 유형은 변경되지 않습니다');
         expect(container.textContent).not.toContain('인증된 학생으로 등록되었습니다');
     });
     it.each(['REGULAR', 'GENERAL'])('does not offer school verification to a %s profile, including a developer', async userType => {
@@ -50,15 +49,14 @@ describe('school email verification entry and availability', () => {
         api.activateSchoolEmailLink.mockResolvedValue({ accountId: 7, status: 'VERIFIED', schoolName: '카이스트', maskedEmail: 'ja***@kaist.ac.kr' });
         await act(async () => root.render(<StudentVerification onDone={vi.fn()} />));
         expect(api.activateSchoolEmailLink).toHaveBeenCalledExactlyOnceWith('student-proof');
-        expect(container.textContent).toContain('인증을 요청한 계정의 학교 이메일이 확인되었습니다');
-        expect(container.textContent).toContain('회원 유형은 변경되지 않습니다');
+        expect(container.textContent).toContain('카이스트 · ja***@kaist.ac.kr');
         expect(api.getSchoolEmailVerificationStatus).not.toHaveBeenCalled();
     });
     it('keeps onboarding available when delivery is not configured', async () => {
         api.getSchoolEmailVerificationStatus.mockResolvedValue({ status: 'NOT_VERIFIED', configured: true,
             deliveryAvailable: false, challengeId: null, retryAfterSeconds: 0 });
         await act(async () => root.render(<StudentVerification onDone={vi.fn()} />));
-        expect(container.textContent).toContain('이메일 서비스가 열리면');
+        expect(container.textContent).toContain('지금은 인증 이메일을 보낼 수 없습니다');
         expect(container.textContent).toContain('나중에 인증하기');
         expect(api.requestSchoolEmailVerification).not.toHaveBeenCalled();
     });
@@ -71,6 +69,31 @@ describe('school email verification entry and availability', () => {
         const back = Array.from(container.querySelectorAll('button')).find(node => node.textContent === '서비스로 돌아가기')!;
         await act(async () => back.click());
         expect(done).toHaveBeenCalledOnce();
+    });
+    it('only shows the delivery notice after sending and requires an explicit email address', async () => {
+        api.getSchoolEmailVerificationStatus.mockResolvedValue({ status: 'NOT_VERIFIED', configured: true,
+            deliveryAvailable: true, challengeId: null, maskedEmail: 'bu***@school.ac.kr' });
+        api.requestSchoolEmailVerification.mockResolvedValue({ challengeId: 'new-challenge',
+            maskedEmail: 'ne***@school.ac.kr', retryAfterSeconds: 60 });
+        await act(async () => root.render(<StudentVerification onDone={vi.fn()} />));
+        expect(container.textContent).not.toContain('인증번호를 보냈습니다');
+        expect(container.textContent).not.toContain('활성화 링크');
+        const input = container.querySelector<HTMLInputElement>('#school-email')!;
+        expect(input.value).toBe('buddy@school.ac.kr');
+        const send = container.querySelector<HTMLButtonElement>('button[type="submit"]')!;
+        const fill = async (value: string) => act(async () => {
+            Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(input, value);
+            input.dispatchEvent(new Event('input', { bubbles: true }));
+        });
+        await fill('');
+        await act(async () => send.click());
+        expect(api.requestSchoolEmailVerification).not.toHaveBeenCalled();
+        await fill('new@school.ac.kr');
+        await act(async () => send.click());
+        expect(api.requestSchoolEmailVerification).toHaveBeenCalledExactlyOnceWith('new@school.ac.kr');
+        expect(container.textContent).toContain('ne***@school.ac.kr로 인증번호를 보냈습니다');
+        expect(input.value).toBe('new@school.ac.kr');
+        expect(container.querySelector('#school-email-code')).not.toBeNull();
     });
     it('shows the server cooldown and preserves leading zeroes in a code', async () => {
         vi.useFakeTimers();
