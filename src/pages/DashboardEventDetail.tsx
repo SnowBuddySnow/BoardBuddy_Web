@@ -258,7 +258,7 @@ export default function DashboardEventDetail({ eventId, onBack, onEditClick, onO
                     <div className="bg-white rounded-3xl p-6 border border-zinc-100 shadow-sm space-y-4">
                         {!event.parentEventId && <div className="space-y-3">
                         <button className="rounded-xl bg-[#162660] px-5 py-3 text-sm font-bold text-white"
-                            onClick={() => setShowGroupize(current => !current)}>{showGroupize ? 'Groupize 접기' : 'Groupize · 소모임 편성'}</button>
+                            onClick={() => setShowGroupize(current => !current)}>{showGroupize ? '소모임 편성 접기' : '소모임 편성'}</button>
                         {showGroupize && <GroupizePanel key={event.id} eventId={event.id} onOpenEvent={onOpenEvent ?? onEditClick}
                             onChanged={() => { void getEventDashboard(eventId).then(setEvent); }} />}
                     </div>}
@@ -325,7 +325,7 @@ export default function DashboardEventDetail({ eventId, onBack, onEditClick, onO
                                                                 paymentStatus: (event.target.value || null) as PaymentStatus | null,
                                                             })}
                                                             className="w-24 px-2 py-2 bg-white border border-zinc-200 rounded-lg text-xs font-semibold text-zinc-700 focus:outline-none focus:ring-2 focus:ring-[#162660]/20"
-                                                            aria-label={`User ${part.userId} 입금 상태`}
+                                                            aria-label={`${part.userName || '이름 없는 참가자'} 입금 상태`}
                                                         >
                                                             <option value="">미설정</option>
                                                             <option value="UNPAID">미입금</option>
@@ -340,7 +340,7 @@ export default function DashboardEventDetail({ eventId, onBack, onEditClick, onO
                                                             placeholder="호스트만 보는 메모"
                                                             maxLength={1000}
                                                             className="w-36 px-2.5 py-2 bg-white border border-zinc-200 rounded-lg text-xs text-zinc-700 focus:outline-none focus:ring-2 focus:ring-[#162660]/20"
-                                                            aria-label={`User ${part.userId} 호스트 메모`}
+                                                            aria-label={`${part.userName || '이름 없는 참가자'} 호스트 메모`}
                                                         />
                                                     </td>
                                                     <td className="px-2 py-3.5 text-right">
@@ -350,7 +350,7 @@ export default function DashboardEventDetail({ eventId, onBack, onEditClick, onO
                                                                 disabled={participantManagementId === part.id}
                                                                 className="p-1 text-[#162660] hover:bg-blue-50 rounded-full border border-zinc-200 transition-colors disabled:opacity-50"
                                                                 title="입금 상태와 메모 저장"
-                                                                aria-label={`User ${part.userId} 관리 정보 저장`}
+                                                                aria-label={`${part.userName || '이름 없는 참가자'} 관리 정보 저장`}
                                                             >
                                                                 <Save className="w-4 h-4" />
                                                             </button>
@@ -479,9 +479,9 @@ export default function DashboardEventDetail({ eventId, onBack, onEditClick, onO
                     <div className="bg-white rounded-3xl p-6 border border-zinc-100 shadow-sm space-y-4">
                         <h2 className="text-base font-bold text-zinc-900">도움말 / 팁</h2>
                         <ul className="text-xs text-zinc-500 space-y-2 list-disc pl-4 leading-relaxed">
-                            <li>생성 직후에는 <strong>DRAFT (초안)</strong> 상태로 저장됩니다. 초안 상태에서는 일반 모바일 멤버가 모임을 볼 수 없습니다.</li>
-                            <li><strong>"모집 오픈"</strong> 버튼을 누르면 일반 이용자가 보고 즉시 참가 또는 승인 대기가 가능해집니다.</li>
-                            <li>모집 정책이 호스트 승인 필요인 경우, 멤버들이 참가 신청을 보내면 좌측 리스트에 <strong>PENDING</strong> 상태로 나타나게 됩니다. Check(승인) 버튼을 눌러 확정처리 하세요.</li>
+                            <li>새 이벤트는 <strong>준비 중</strong>으로 저장됩니다. 모집을 열기 전에는 참가자에게 공개되지 않습니다.</li>
+                            <li><strong>모집 오픈</strong>을 누르면 설정한 신청 시작 시간부터 참가 신청을 받을 수 있습니다.</li>
+                            <li>승인이 필요한 신청은 <strong>승인 대기</strong>로 표시됩니다. 명단에서 승인 버튼을 눌러 참가를 확정하세요.</li>
                         </ul>
                     </div>
                 </div>

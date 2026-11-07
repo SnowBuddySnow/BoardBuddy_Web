@@ -57,15 +57,15 @@ export function GroupizePanel({ eventId, onOpenEvent, onChanged }: Props) {
     const field = 'w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm';
     const button = 'rounded-lg border border-[#162660] px-4 py-2 text-sm font-bold text-[#162660] disabled:opacity-40';
 
-    if (!state) return <section className="rounded-2xl border border-zinc-200 bg-white p-5" aria-label="Groupize">
+    if (!state) return <section className="rounded-2xl border border-zinc-200 bg-white p-5" aria-label="소모임 편성">
         <p role="status">{error || '그룹 편성 정보를 불러오는 중...'}</p>
         {error && <button className={`${button} mt-3`} onClick={() => void run(async () => accept(await getGroupize(eventId)))}>다시 불러오기</button>}
     </section>;
 
     const eligible = state.applicants.filter(item => item.eligible);
-    return <section className="space-y-5 rounded-2xl border border-zinc-200 bg-white p-5" aria-label="Groupize">
+    return <section className="space-y-5 rounded-2xl border border-zinc-200 bg-white p-5" aria-label="소모임 편성">
         <div>
-            <h2 className="text-lg font-black text-zinc-900">Groupize · 소모임 편성</h2>
+            <h2 className="text-lg font-black text-zinc-900">소모임 편성</h2>
             <p className="mt-1 text-sm leading-6 text-zinc-500">신청자를 소모임으로 나누고 멤버를 직접 배정하거나 무작위로 편성하세요. 호스트 기획형과 멤버 자율형 모두 사용할 수 있습니다.</p>
         </div>
         {error && <p role="alert" className="rounded-xl bg-red-50 p-3 text-sm text-red-800">{error}</p>}
@@ -77,15 +77,15 @@ export function GroupizePanel({ eventId, onOpenEvent, onChanged }: Props) {
             </label>
             <button className={button} disabled={busy} onClick={() => void run(async () => {
                 const limit = maximum.trim() ? Number(maximum) : null;
-                if (limit != null && (!Number.isSafeInteger(limit) || limit < 1)) throw new Error('Invalid maximum');
+                if (limit != null && (!Number.isSafeInteger(limit) || limit < 1)) throw new Error('최대 신청 인원은 1명 이상으로 입력해주세요.');
                 accept(await configureGroupize(eventId, limit, state.revisionToken)); onChanged?.();
                 setNotice('신청 인원 설정이 저장되었습니다.');
-            })}>{state.enabled ? '신청 인원 설정 저장' : 'Groupize 시작'}</button>
+            })}>{state.enabled ? '신청 인원 설정 저장' : '소모임 편성 시작'}</button>
         </div>
         {state.enabled && <>
             <div className="rounded-xl bg-zinc-50 p-4">
                 <h3 className="text-sm font-bold">소모임 만들기</h3>
-                <p className="mt-1 text-xs leading-5 text-zinc-500">설명, 날짜, 장소, 공개 범위, 동의서, 결제·취소 안내를 부모 모임에서 가져옵니다. 생성 후 각 소모임의 관리 화면에서 수정할 수 있습니다.</p>
+                <p className="mt-1 text-xs leading-5 text-zinc-500">설명, 날짜, 장소, 공개 범위, 동의서, 결제·취소 안내를 전체 모임에서 가져옵니다. 생성 후 각 소모임의 관리 화면에서 수정할 수 있습니다.</p>
                 <div className="mt-3 flex flex-wrap items-end gap-3">
                     <label className="w-28 text-sm">추가할 개수<input className={`${field} mt-1`} aria-label="소모임 개수" type="number" min="1" max="50"
                         value={count} onChange={event => setCount(Number(event.target.value))} disabled={busy} /></label>
@@ -94,7 +94,7 @@ export function GroupizePanel({ eventId, onOpenEvent, onChanged }: Props) {
                     <button className={button} disabled={busy || count < 1 || !Number.isInteger(count) || state.children.length + count > 50}
                         onClick={() => void run(async () => {
                             const capacity = childCapacity ? Number(childCapacity) : undefined;
-                            if (capacity !== undefined && (!Number.isSafeInteger(capacity) || capacity < 1)) throw new Error('Invalid capacity');
+                            if (capacity !== undefined && (!Number.isSafeInteger(capacity) || capacity < 1)) throw new Error('소모임 정원은 1명 이상으로 입력해주세요.');
                             accept(await createSubevents(eventId, state.revisionToken, Array.from({ length: count }, (_, index) => ({
                                 title: `${state.parentTitle.slice(0, 88)} · ${state.children.length + index + 1}`,
                                 capacity, capacityLimited: capacity !== undefined,
@@ -114,7 +114,7 @@ export function GroupizePanel({ eventId, onOpenEvent, onChanged }: Props) {
                 <button className={button} disabled={busy || state.children.length === 0} onClick={() => void preview(true)}>무작위 편성</button>
                 <button className={button} disabled={busy || state.children.length === 0} onClick={() => void preview(false)}>편성 미리보기</button>
             </div>
-            <p className="text-xs leading-5 text-zinc-500">직접 배정한 멤버는 기본적으로 고정됩니다. 고정을 해제하면 무작위 편성에 포함됩니다. 배정하지 않은 신청자는 부모 모임에 남습니다. 소모임 동의서는 별도로 작성하며, 같은 금액의 부모 모임 납부 내역은 중복 청구 없이 적용됩니다.</p>
+            <p className="text-xs leading-5 text-zinc-500">직접 배정한 멤버는 기본적으로 고정됩니다. 고정을 해제하면 무작위 편성에 포함됩니다. 배정하지 않은 신청자는 전체 모임에 남습니다. 소모임 동의서는 별도로 작성하며, 같은 금액의 전체 모임 납부 내역은 중복 청구 없이 적용됩니다.</p>
             <div className="max-h-[32rem] space-y-2 overflow-y-auto">
                 {state.applicants.length === 0 && <p className="py-4 text-sm text-zinc-500">아직 신청자가 없습니다.</p>}
                 {state.applicants.map(applicant => {

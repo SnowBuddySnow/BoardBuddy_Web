@@ -1,5 +1,5 @@
 import { Button } from '../components/Button';
-import { ChevronLeftIcon, ChevronRightIcon, Crown, UserPlusIcon, SettingsIcon } from 'lucide-react';
+import { ChevronLeftIcon, ChevronRightIcon, Crown, GraduationCap, UsersRound, SettingsIcon } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { getCrewInfo, getCrewManagers } from '../services/crew';
 import { getUserInfo } from '../services/user';
@@ -21,8 +21,6 @@ export default function CrewDetail({ onBack, onCalendarClick, onMemberClick, onS
     const [loading, setLoading] = useState(true);
     const [isManager, setIsManager] = useState(false);
     const [showStats, setShowStats] = useState(false);
-
-    console.log('CrewDetail rendered, isManager:', isManager);
 
     useEffect(() => {
         const fetchData = async () => {
@@ -60,7 +58,7 @@ export default function CrewDetail({ onBack, onCalendarClick, onMemberClick, onS
     }, []);
 
     if (loading) {
-        return <div className="flex-1 flex items-center justify-center h-full bg-white dark:bg-zinc-950">Loading...</div>;
+        return <div className="flex-1 flex items-center justify-center h-full bg-[#FAF8F3] text-sm text-zinc-500 dark:bg-zinc-950">크루 정보를 불러오는 중...</div>;
     }
 
     if (!crewInfo) {
@@ -80,101 +78,101 @@ export default function CrewDetail({ onBack, onCalendarClick, onMemberClick, onS
     }
 
     return (
-        <div className="flex-1 flex flex-col h-full overflow-hidden bg-white dark:bg-zinc-950">
+        <div className="flex-1 flex flex-col h-full overflow-hidden bg-[#FAF8F3] dark:bg-zinc-950">
             {/* Header */}
-            <header className="px-4 pt-2 pb-2 flex items-center justify-between relative">
-                <Button variant="ghost" onClick={onBack} className="-ml-2 text-zinc-900 dark:text-zinc-100">
+            <header className="px-4 py-3 flex items-center justify-between relative border-b border-zinc-100 bg-white dark:border-zinc-800 dark:bg-zinc-950">
+                <Button variant="ghost" onClick={onBack} aria-label="뒤로 가기" className="-ml-2 text-zinc-900 dark:text-zinc-100">
                     <ChevronLeftIcon className="w-6 h-6" />
                 </Button>
-                <h1 className="text-xl font-bold absolute left-1/2 -translate-x-1/2" style={{ fontFamily: '"Joti One", serif' }}>My Crew</h1>
+                <h1 className="text-lg font-black text-zinc-900 dark:text-zinc-100 absolute left-1/2 -translate-x-1/2">내 크루</h1>
                 <div className="w-10" /> {/* Spacer for centering */}
             </header>
 
-            <main className="flex-1 overflow-y-auto px-6 pt-4 pb-[120px] flex flex-col items-center">
+            <main className="flex-1 overflow-y-auto px-5 pt-6 pb-[120px] sm:px-8 sm:pt-8">
+                <div className="mx-auto w-full max-w-3xl">
 
-                {/* Main Card */}
-                <div className="w-full bg-[#FCD34D] dark:bg-[#FCD34D]/60 rounded-[30px] p-6 shadow-sm mb-6">
-                    {/* Inner White Card */}
-                    <div className="bg-white dark:bg-zinc-800 rounded-[20px] p-5 flex items-center gap-4 mb-6">
-                        {/* Placeholder Icon */}
-                        {crewInfo.profile_image_url ? (
-                            <img src={crewInfo.profile_image_url} alt={crewInfo.name} className="w-16 h-16 rounded-full object-cover shrink-0" />
-                        ) : (
-                            <div className="w-16 h-16 rounded-full bg-gradient-to-br from-pink-200 to-blue-200 dark:from-pink-600 dark:to-blue-600 flex items-center justify-center shrink-0">
-                                {/* Fallback/Placeholder */}
+                    {/* Main Card */}
+                    <section aria-labelledby="crew-name" className="overflow-hidden rounded-[28px] border border-zinc-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+                        <div className="flex items-start gap-4 bg-[#162660] px-6 py-7 sm:gap-5 sm:px-8 sm:py-8">
+                            {crewInfo.profile_image_url ? (
+                                <img src={crewInfo.profile_image_url} alt="" className="h-16 w-16 shrink-0 rounded-2xl border border-white/20 object-cover sm:h-20 sm:w-20" />
+                            ) : (
+                                <div aria-hidden="true" className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl border border-white/20 bg-white/10 text-3xl font-black text-white sm:h-20 sm:w-20 sm:text-4xl">
+                                    {Array.from(crewInfo.name.trim())[0] || <UsersRound className="h-8 w-8" />}
+                                </div>
+                            )}
+
+                            <div className="min-w-0 flex-1">
+                                {crewInfo.univ && <p className="mb-2 flex items-start gap-1.5 text-xs font-semibold leading-5 text-blue-100">
+                                    <GraduationCap className="mt-0.5 h-4 w-4 shrink-0" />
+                                    <span className="break-keep [overflow-wrap:anywhere]">{crewInfo.univ}</span>
+                                </p>}
+                                <h2 id="crew-name" className="break-keep text-2xl font-black leading-tight tracking-tight text-white [overflow-wrap:anywhere] sm:text-3xl">{crewInfo.name}</h2>
                             </div>
-                        )}
-
-                        <div>
-                            <h2 className="text-xl font-bold text-zinc-900 dark:text-zinc-100">{crewInfo.name}</h2>
-                            <p className="text-sm text-zinc-500 dark:text-zinc-400 font-medium">{crewInfo.univ}</p>
                         </div>
-                    </div>
 
-                    {/* Stats Row */}
-                    <div className="flex items-center justify-around px-2">
-                        <div className="flex items-center gap-2">
-                            <Crown className="w-5 h-5 text-zinc-800 dark:text-white" />
-                            <span className="text-sm font-medium text-zinc-800 dark:text-white">{crewInfo.president_name}</span>
+                        {/* Stats Row */}
+                        <div className="grid grid-cols-2 divide-x divide-zinc-100 dark:divide-zinc-800">
+                            <div className="min-w-0 px-5 py-5 sm:px-8">
+                                <p className="flex items-center gap-1.5 text-xs font-semibold text-zinc-500 dark:text-zinc-400"><Crown className="h-4 w-4" />크루장</p>
+                                <p className="mt-2 break-keep text-base font-bold leading-6 text-zinc-900 [overflow-wrap:anywhere] dark:text-zinc-100">{crewInfo.president_name || '미지정'}</p>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={onMemberClick}
+                                aria-label={`멤버 ${crewInfo.member_count}명 보기`}
+                                className="min-w-0 px-5 py-5 text-left transition-colors hover:bg-zinc-50 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[#162660] dark:hover:bg-zinc-800 sm:px-8"
+                            >
+                                <span className="flex items-center gap-1.5 text-xs font-semibold text-zinc-500 dark:text-zinc-400"><UsersRound className="h-4 w-4" />멤버</span>
+                                <span className="mt-2 flex items-center justify-between gap-2 text-zinc-900 dark:text-zinc-100">
+                                    <span className="text-xl font-black leading-6 tabular-nums">{crewInfo.member_count}<span className="ml-1 text-sm font-semibold">명</span></span>
+                                    <ChevronRightIcon className="h-4 w-4 shrink-0 text-zinc-400" />
+                                </span>
+                            </button>
                         </div>
-                        <button
-                            onClick={onMemberClick}
-                            className="flex items-center gap-2 hover:opacity-70 transition-opacity"
-                        >
-                            <UserPlusIcon className="w-5 h-5 text-zinc-800 dark:text-white" />
-                            <span className="text-sm font-medium text-zinc-800 dark:text-white">부원수 : {crewInfo.member_count}명</span>
-                        </button>
-                    </div>
+                    </section>
 
                     {/* Manager Settings Button */}
                     {isManager && (
-                        <div className="mt-6 pt-6 border-t border-black/10 dark:border-white/20 flex justify-center">
-                            <button
-                                onClick={onSettingsClick}
-                                className="flex items-center gap-2 px-4 py-2 bg-white/50 dark:bg-white/20 hover:bg-white/80 dark:hover:bg-white/30 rounded-full transition-colors"
-                            >
-                                <SettingsIcon className="w-4 h-4 text-zinc-800 dark:text-white" />
-                                <span className="text-sm font-bold text-zinc-800 dark:text-white">크루 설정</span>
-                            </button>
-                        </div>
+                        <button
+                            type="button"
+                            onClick={onSettingsClick}
+                            className="mt-4 flex w-full items-center justify-between gap-3 rounded-2xl border border-zinc-200 bg-white px-5 py-4 text-left transition-colors hover:bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900 dark:hover:bg-zinc-800"
+                        >
+                            <span className="flex items-center gap-3"><SettingsIcon className="h-5 w-5 text-zinc-500 dark:text-zinc-400" /><span className="text-sm font-bold text-zinc-800 dark:text-zinc-100">크루 설정</span></span>
+                            <ChevronRightIcon className="h-4 w-4 text-zinc-400" />
+                        </button>
                     )}
+
+                    {/* Season-only actions */}
+                    {seasonAvailable && (
+                        <>
+                            <button
+                                onClick={onCalendarClick}
+                                className="mt-4 w-full bg-white border border-zinc-200 dark:border-zinc-800 dark:bg-zinc-900 rounded-2xl p-5 flex items-center justify-between hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors mb-4"
+                            >
+                                <span className="font-bold text-zinc-600 dark:text-zinc-300">크루 달력</span>
+                                <div className="flex items-center gap-1 text-zinc-500 dark:text-zinc-400">
+                                    <span className="text-sm font-medium">확인하기</span>
+                                    <ChevronRightIcon className="w-5 h-5" />
+                                </div>
+                            </button>
+
+                            <button
+                                onClick={() => setShowStats(true)}
+                                className="w-full bg-white border border-zinc-200 dark:border-zinc-800 dark:bg-zinc-900 rounded-2xl p-5 flex items-center justify-between hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors"
+                            >
+                                <span className="font-bold text-zinc-600 dark:text-zinc-300">시즌방 사용 기록</span>
+                                <div className="flex items-center gap-1 text-zinc-500 dark:text-zinc-400">
+                                    <span className="text-sm font-medium">확인하기</span>
+                                    <ChevronRightIcon className="w-5 h-5" />
+                                </div>
+                            </button>
+                        </>
+                    )}
+
                 </div>
-
-                {/* Season-only actions */}
-                {seasonAvailable && (
-                    <>
-                        <button
-                            onClick={onCalendarClick}
-                            className="w-full bg-zinc-100 dark:bg-zinc-800 rounded-[20px] p-5 flex items-center justify-between hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors mb-4"
-                        >
-                            <span className="font-bold text-zinc-600 dark:text-zinc-300">크루 달력</span>
-                            <div className="flex items-center gap-1 text-zinc-500 dark:text-zinc-400">
-                                <span className="text-sm font-medium">확인하기</span>
-                                <ChevronRightIcon className="w-5 h-5" />
-                            </div>
-                        </button>
-
-                        <button
-                            onClick={() => setShowStats(true)}
-                            className="w-full bg-zinc-100 dark:bg-zinc-800 rounded-[20px] p-5 flex items-center justify-between hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors mb-auto"
-                        >
-                            <span className="font-bold text-zinc-600 dark:text-zinc-300">시즌방 사용 기록</span>
-                            <div className="flex items-center gap-1 text-zinc-500 dark:text-zinc-400">
-                                <span className="text-sm font-medium">확인하기</span>
-                                <ChevronRightIcon className="w-5 h-5" />
-                            </div>
-                        </button>
-                    </>
-                )}
-
-                {/* Footer Text */}
-                {/* <div className="mb-8 text-center">
-                    <p className="text-xs text-zinc-400 dark:text-zinc-500 font-medium">
-                        나의 크루에 가입하고 다양한 정보를 확인하세요!
-                    </p>
-                </div> */}
-
-            </main >
+            </main>
         </div >
     );
 }

@@ -148,7 +148,7 @@ export default function DashboardEventNew({ onBack, onSuccess }: DashboardEventN
             const eventId = await saveEventConfiguration(createdDraftId.current == null
                 ? { ...configuration, onCreated: id => { createdDraftId.current = id; setRecoveryDraftId(id); } }
                 : { ...configuration, eventId: createdDraftId.current });
-            alert('이벤트가 DRAFT 상태로 정상 개설되었습니다. 등록을 진행하려면 목록이나 상세조회에서 "오픈"을 클릭하세요.');
+            alert('이벤트가 준비 중으로 저장되었습니다. 설정을 확인한 뒤 모집 오픈을 눌러주세요.');
             onSuccess(eventId);
         } catch (error: unknown) {
             console.error('Failed to create event:', error);
@@ -456,7 +456,7 @@ export default function DashboardEventNew({ onBack, onSuccess }: DashboardEventN
                                 className="bg-[#162660] hover:bg-[#1e3a8a] text-white border-none rounded-full px-6 font-bold flex items-center gap-1.5 shadow-sm"
                             >
                                 <Save className="w-4 h-4" />
-                                {submitLoading ? '저장 중...' : recoveryDraftId == null ? 'DRAFT 저장하기' : `초안 #${recoveryDraftId} 다시 저장`}
+                                {submitLoading ? '저장 중...' : recoveryDraftId == null ? '준비 중으로 저장하기' : `초안 #${recoveryDraftId} 다시 저장`}
                             </Button>
                         </div>
                         </fieldset>

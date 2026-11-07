@@ -119,7 +119,7 @@ describe('rendered create/edit forms with real save orchestration and synthetic 
         http.post.mockRejectedValue(httpError(status));
         await renderNew(); await submit(); await submit();
         expect(http.post).toHaveBeenCalledTimes(1);
-        expect(button('DRAFT 저장하기').disabled).toBe(true);
+        expect(button('준비 중으로 저장하기').disabled).toBe(true);
         expect(container.querySelector('[role="alert"]')?.textContent).toContain('목록에서');
         await act(async () => button('목록에서 확인').click());
         expect(back).toHaveBeenCalledOnce(); expect(success).not.toHaveBeenCalled();
@@ -129,7 +129,7 @@ describe('rendered create/edit forms with real save orchestration and synthetic 
         http.post.mockRejectedValueOnce(httpError(400)).mockResolvedValue(result(event));
         await renderNew(); await submit();
         expect(container.querySelector('[role="alert"]')?.textContent).toContain('Synthetic failure');
-        expect(button('DRAFT 저장하기').disabled).toBe(false);
+        expect(button('준비 중으로 저장하기').disabled).toBe(false);
         await submit(); expect(success).toHaveBeenCalledWith(1);
     });
 

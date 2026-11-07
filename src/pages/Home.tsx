@@ -9,6 +9,7 @@ import { getWeather, WeatherData } from '../services/weather';
 import { getEventActivityLabel } from '../constants/eventActivity';
 import { getOperatingFeatures, OperatingMode } from '../constants/operatingSeason';
 import boardBuddyLogo from '../assets/boardbuddy-logo.png';
+import { PendingCrewVerificationNotice } from '../components/PendingCrewVerificationNotice';
 import { formatEventDateTime, isEventRegistrationAvailable, parseEventDateTime } from '../lib/eventDateTime';
 
 interface HomeProps {
@@ -24,6 +25,7 @@ interface HomeProps {
     onSeeAllPartiesClick: () => void;
     onMyPlansClick: () => void;
     onDashboardClick: () => void;
+    onStudentVerificationClick: () => void;
     operatingMode: OperatingMode;
     crewDetail: CrewDetail | null;
 }
@@ -40,6 +42,7 @@ export default function Home({
     onSeeAllPartiesClick,
     onMyPlansClick,
     onDashboardClick,
+    onStudentVerificationClick,
     operatingMode,
     crewDetail,
 }: HomeProps) {
@@ -212,6 +215,7 @@ export default function Home({
                                 <h2 className="mt-1 text-xl font-black tracking-tight">{pendingApplication.crew_name}</h2>
                                 <p className="mt-2 text-xs leading-5 text-blue-100">크루 운영진이 신청을 확인하고 있어요. 승인되면 크루 예약과 파티 기능을 이용할 수 있습니다.</p>
                             </div>
+                            {userInfo && <PendingCrewVerificationNotice crewId={pendingApplication.crew_id} user={userInfo} onVerify={onStudentVerificationClick} />}
                             <div className="flex items-center justify-between gap-4 px-5 py-4">
                                 <div className="flex min-w-0 items-center gap-2 text-xs font-semibold text-zinc-500">
                                     <ShieldCheck className="h-4 w-4 shrink-0 text-emerald-600" />
