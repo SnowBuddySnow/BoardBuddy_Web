@@ -1,5 +1,6 @@
+import { ReservationLayout } from '../components/reservation/ReservationLayout';
 import { Button } from '../components/Button';
-import { BadgeCheckIcon, CheckCircle2Icon, ChevronLeftIcon, ChevronRightIcon, CopyIcon, KeyRoundIcon, Link2Icon, MapIcon, RefreshCwIcon, SaveIcon } from 'lucide-react';
+import { BadgeCheckIcon, CheckCircle2Icon, ChevronRightIcon, CopyIcon, KeyRoundIcon, Link2Icon, MapIcon, RefreshCwIcon, SaveIcon } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { getCrewInfo, resetCrewPin, updateCrew } from '../services/crew';
 import { getUserInfo } from '../services/user';
@@ -147,7 +148,7 @@ export default function CrewSettings({ onBack, onCaptainGuideClick }: CrewSettin
             onBack();
         } catch (error) {
             console.error("Failed to update crew", error);
-            alert("저장 중 오류가 발생했습니다. (Console을 확인해주세요)");
+            alert("설정을 저장하지 못했습니다. 잠시 후 다시 시도해주세요.");
         }
     };
 
@@ -204,17 +205,9 @@ export default function CrewSettings({ onBack, onCaptainGuideClick }: CrewSettin
     }
 
     return (
-        <div className="flex-1 flex flex-col h-full overflow-hidden bg-white dark:bg-zinc-950">
-            {/* Header */}
-            <header className="px-4 pt-2 pb-2 flex items-center justify-between relative bg-white dark:bg-zinc-950 z-10">
-                <Button variant="ghost" onClick={onBack} className="-ml-2 text-zinc-900 dark:text-zinc-100">
-                    <ChevronLeftIcon className="w-6 h-6" />
-                </Button>
-                <h1 className="flex-1 text-center text-lg font-bold text-zinc-900">크루 설정</h1>
-                <div className="w-10" />
-            </header>
+        <ReservationLayout title="크루 설정" onBack={onBack}>
 
-            <main className="flex-1 overflow-y-auto px-6 py-6 pb-28">
+            <main className="reservation-content reservation-settings-content">
                 <div className="space-y-6">
                     {/* Crew Name */}
                     <div className="space-y-2">
@@ -224,7 +217,7 @@ export default function CrewSettings({ onBack, onCaptainGuideClick }: CrewSettin
                             value={formData.crewName}
                             onChange={(e) => handleChange('crewName', e.target.value)}
                             disabled={!isCaptain}
-                            className={`w-full px-4 py-3 rounded-xl border-none focus:ring-2 focus:ring-black/5 ${!isCaptain ? 'bg-zinc-100 text-zinc-500 cursor-not-allowed' : 'bg-zinc-50'
+                            className={`w-full px-4 py-3 rounded-xl border-none focus:ring-2 focus:ring-blue-500/20 ${!isCaptain ? 'bg-zinc-100 text-zinc-500 cursor-not-allowed' : 'bg-zinc-50'
                                 }`}
                         />
                     </div>
@@ -256,21 +249,21 @@ export default function CrewSettings({ onBack, onCaptainGuideClick }: CrewSettin
                         <button
                             type="button"
                             onClick={onCaptainGuideClick}
-                            className="flex w-full items-center gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-left transition-colors hover:bg-amber-100"
+                            className="flex w-full items-center gap-3 rounded-2xl border border-blue-200 bg-blue-50 p-4 text-left transition-colors hover:bg-blue-100"
                         >
-                            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-200 text-amber-900">
+                            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-100 text-blue-900">
                                 <MapIcon className="h-5 w-5" />
                             </span>
                             <span className="min-w-0 flex-1">
-                                <span className="block text-sm font-black text-amber-950">크루장 시작 가이드</span>
-                                <span className="mt-1 block text-xs leading-5 text-amber-800">필요할 때 크루 운영 흐름을 다시 확인하세요.</span>
+                                <span className="block text-sm font-black text-blue-950">크루장 시작 가이드</span>
+                                <span className="mt-1 block text-xs leading-5 text-blue-800">필요할 때 크루 운영 흐름을 다시 확인하세요.</span>
                             </span>
-                            <ChevronRightIcon className="h-5 w-5 shrink-0 text-amber-800" />
+                            <ChevronRightIcon className="h-5 w-5 shrink-0 text-blue-800" />
                         </button>
                     )}
 
                     {/* School affiliation */}
-                    <section className="space-y-4 rounded-xl border border-zinc-200 bg-white p-4">
+                    <section className="reservation-panel space-y-4">
                         <div className="flex items-start gap-3">
                             <div className="rounded-lg bg-blue-50 p-2 text-[#162660]">
                                 <Link2Icon className="h-5 w-5" />
@@ -302,7 +295,7 @@ export default function CrewSettings({ onBack, onCaptainGuideClick }: CrewSettin
                                     <select
                                         value={selectedSchoolId}
                                         onChange={(event) => setSelectedSchoolId(event.target.value)}
-                                        className="mt-1.5 w-full rounded-xl border-none bg-zinc-50 px-3 py-3 text-sm text-zinc-900 focus:ring-2 focus:ring-black/5"
+                                        className="mt-1.5 w-full rounded-xl border-none bg-zinc-50 px-3 py-3 text-sm text-zinc-900 focus:ring-2 focus:ring-blue-500/20"
                                     >
                                         <option value="">학교를 선택해 주세요</option>
                                         {schools.map((school) => (
@@ -323,12 +316,12 @@ export default function CrewSettings({ onBack, onCaptainGuideClick }: CrewSettin
                             </div>
                         ) : (
                             <p className="rounded-lg bg-zinc-50 px-3 py-3 text-xs leading-5 text-zinc-500">
-                                학교 연동 요청은 CAPTAIN 배지가 있는 계정만 진행할 수 있습니다.
+                                학교 연동 요청은 크루장만 진행할 수 있습니다.
                             </p>
                         )}
                     </section>
 
-                    <section className="rounded-xl border border-zinc-200 bg-white p-4">
+                    <section className="reservation-panel">
                         <label className="flex cursor-pointer items-start gap-3">
                             <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700">
                                 <BadgeCheckIcon className="h-5 w-5" />
@@ -352,7 +345,7 @@ export default function CrewSettings({ onBack, onCaptainGuideClick }: CrewSettin
                         </label>
                     </section>
 
-                    <section className="rounded-xl border border-zinc-200 bg-white p-4">
+                    <section className="reservation-panel">
                         <label className="flex cursor-pointer items-start gap-3">
                             <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-[#162660]">
                                 <BadgeCheckIcon className="h-5 w-5" />
@@ -378,7 +371,7 @@ export default function CrewSettings({ onBack, onCaptainGuideClick }: CrewSettin
 
                     {/* Updated Reservation Scheme */}
                     {SEASON_HOUSE_RESERVATIONS_ENABLED && <>
-                    <div className="p-4 rounded-xl border border-zinc-200 bg-white space-y-4">
+                    <div className="reservation-panel space-y-4">
                         <div className="flex items-center gap-2 mb-2">
                             <h3 className="text-sm font-bold text-zinc-900">예약 오픈 설정</h3>
                         </div>
@@ -393,7 +386,7 @@ export default function CrewSettings({ onBack, onCaptainGuideClick }: CrewSettin
                                     setIsAlwaysOpen(e.target.checked);
                                     // Should we reset offset? For now, we keep it as is or default
                                 }}
-                                className="rounded border-zinc-300 text-zinc-900 focus:ring-zinc-900"
+                                className="rounded border-zinc-300 text-blue-700 focus:ring-blue-500"
                             />
                             <label htmlFor="isAlwaysOpen" className="text-sm font-bold text-zinc-900 cursor-pointer">
                                 예약 상시 오픈 (날짜 제한 없음)
@@ -409,7 +402,7 @@ export default function CrewSettings({ onBack, onCaptainGuideClick }: CrewSettin
                                         value={formData.reservationOpenTime}
                                         onChange={(e) => handleChange('reservationOpenTime', e.target.value)}
                                         disabled={isAlwaysOpen}
-                                        className="w-full px-3 py-2 rounded-xl bg-zinc-50 border-none focus:ring-2 focus:ring-black/5 text-sm"
+                                        className="w-full px-3 py-2 rounded-xl bg-blue-50/50 border border-blue-100 focus:ring-2 focus:ring-blue-500/20 text-sm"
                                     />
                                 </div>
                                 <div className="space-y-2">
@@ -418,7 +411,7 @@ export default function CrewSettings({ onBack, onCaptainGuideClick }: CrewSettin
                                         value={formData.reservationOpenDay}
                                         onChange={(e) => handleChange('reservationOpenDay', e.target.value)}
                                         disabled={isAlwaysOpen}
-                                        className="w-full px-3 py-2 rounded-xl bg-zinc-50 border-none focus:ring-2 focus:ring-black/5 text-sm"
+                                        className="w-full px-3 py-2 rounded-xl bg-blue-50/50 border border-blue-100 focus:ring-2 focus:ring-blue-500/20 text-sm"
                                     >
                                         {['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY', 'SUNDAY'].map(day => (
                                             <option key={day} value={day}>{DAY_TO_KR[day]}</option>
@@ -439,7 +432,7 @@ export default function CrewSettings({ onBack, onCaptainGuideClick }: CrewSettin
                                     value={formData.reservationOpenOffsetDays}
                                     onChange={(e) => handleChange('reservationOpenOffsetDays', parseInt(e.target.value) || 0)}
                                     disabled={isAlwaysOpen}
-                                    className="w-full px-4 py-3 rounded-xl bg-zinc-50 border-none focus:ring-2 focus:ring-black/5 text-sm"
+                                    className="w-full px-4 py-3 rounded-xl bg-blue-50/50 border border-blue-100 focus:ring-2 focus:ring-blue-500/20 text-sm"
                                 />
                             </div>
 
@@ -470,7 +463,7 @@ export default function CrewSettings({ onBack, onCaptainGuideClick }: CrewSettin
                                     type="checkbox"
                                     checked={formData.isCapacityLimited}
                                     onChange={(e) => handleChange('isCapacityLimited', e.target.checked)}
-                                    className="rounded border-zinc-300 text-zinc-900 focus:ring-zinc-900"
+                                    className="rounded border-zinc-300 text-blue-700 focus:ring-blue-500"
                                 />
                                 정원 제한
                             </label>
@@ -480,7 +473,7 @@ export default function CrewSettings({ onBack, onCaptainGuideClick }: CrewSettin
                             value={formData.dailyCapacity}
                             onChange={(e) => handleChange('dailyCapacity', parseInt(e.target.value) || 0)}
                             disabled={!formData.isCapacityLimited}
-                            className={`w-full px-4 py-3 rounded-xl bg-zinc-50 border-none focus:ring-2 focus:ring-black/5 ${!formData.isCapacityLimited ? 'opacity-50' : ''
+                            className={`w-full px-4 py-3 rounded-xl bg-blue-50/50 border border-blue-100 focus:ring-2 focus:ring-blue-500/20 ${!formData.isCapacityLimited ? 'opacity-50' : ''
                                 }`}
                         />
                     </div>
@@ -489,18 +482,17 @@ export default function CrewSettings({ onBack, onCaptainGuideClick }: CrewSettin
                     </>}
                     <button
                         onClick={handleSave}
-                        className="w-full py-4 bg-zinc-900 text-white rounded-2xl font-bold text-lg mt-8 hover:bg-zinc-800 transition-colors flex items-center justify-center gap-2"
+                        className="reservation-primary w-full py-4 mt-8 flex items-center justify-center gap-2"
                     >
                         <SaveIcon className="w-5 h-5" />
                         저장하기
                     </button>
 
-
                     {/* Manage Managers Button */}
                     {isCaptain && (
                         <button
                             onClick={() => setShowPromote(true)}
-                            className="w-full py-4 bg-white border-2 border-zinc-100 text-zinc-900 rounded-2xl font-bold text-lg hover:bg-zinc-50 transition-colors"
+                            className="reservation-secondary w-full py-4 text-sm"
                         >
                             운영진 관리
                         </button>
@@ -509,7 +501,7 @@ export default function CrewSettings({ onBack, onCaptainGuideClick }: CrewSettin
                     <div className="h-10" />
                 </div>
             </main>
-        </div>
+        </ReservationLayout>
     );
 }
 
@@ -578,7 +570,7 @@ const SimulatedCalendar = ({ targetDay, daysBefore, targetTime }: { targetDay: s
 
         // Colors
         const bgTarget = "#D0E6FD"; // Light Blue for Target
-        const textOpen = "#EF4444";
+        const textOpen = "#2b63df";
         const textTarget = "#162660";
 
         let svgContent = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" style="font-family: sans-serif; background: white;">
@@ -625,7 +617,7 @@ const SimulatedCalendar = ({ targetDay, daysBefore, targetTime }: { targetDay: s
             // Open Label / Time
             if (isOpenDate) {
                 svgContent += `<rect x="${x + 5}" y="${y + 30}" width="${cellWidth - 10}" height="14" rx="4" fill="${textOpen}" />`;
-                svgContent += `<text x="${x + cellWidth / 2}" y="${y + 40}" text-anchor="middle" font-size="8" fill="white" font-weight="bold">OPEN ${targetTime || ''}</text>`;
+                svgContent += `<text x="${x + cellWidth / 2}" y="${y + 40}" text-anchor="middle" font-size="8" fill="white" font-weight="bold">오픈 ${targetTime || ''}</text>`;
             }
         });
 
@@ -659,7 +651,7 @@ const SimulatedCalendar = ({ targetDay, daysBefore, targetTime }: { targetDay: s
                 <div className="text-xs font-bold text-zinc-900">
                     {realOpenDate.getMonth() + 1}월 {realOpenDate.getDate()}일 예약 오픈 예시
                 </div>
-                <Button variant="ghost" size="small" onClick={handleDownload} className="h-6 text-[10px] px-2 bg-zinc-100 hover:bg-zinc-200 text-zinc-600">
+                <Button variant="ghost" size="small" onClick={handleDownload} className="reservation-secondary text-[10px] px-2">
                     이미지 다운로드
                 </Button>
             </div>
@@ -698,11 +690,11 @@ const SimulatedCalendar = ({ targetDay, daysBefore, targetTime }: { targetDay: s
 
                     return (
                         <div key={idx} className={`relative flex flex-col items-center justify-start py-1 min-h-[50px] ${bgClass} ${textClass}`}>
-                            <span className={`text-xs ${isOpenDate ? 'text-red-500 font-bold' : ''}`}>{date.getDate()}</span>
+                            <span className={`text-xs ${isOpenDate ? 'text-blue-700 font-bold' : ''}`}>{date.getDate()}</span>
                             {isOpenDate && (
                                 <div className="mt-1 flex flex-col items-center">
-                                    <span className="text-[10px] bg-red-500 text-white font-bold px-1.5 py-0.5 rounded-full leading-none mb-0.5">OPEN</span>
-                                    <span className="text-[9px] text-red-500 font-bold leading-none">{targetTime}</span>
+                                    <span className="text-[10px] bg-blue-700 text-white font-bold px-1.5 py-0.5 rounded-full leading-none mb-0.5">오픈</span>
+                                    <span className="text-[9px] text-blue-700 font-bold leading-none">{targetTime}</span>
                                 </div>
                             )}
                         </div>
