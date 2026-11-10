@@ -1,7 +1,7 @@
+import { ReservationLayout, ReservationSummary } from '../components/reservation/ReservationLayout';
 // Member Statistics Page
-import { ChevronLeftIcon, UserIcon, DownloadIcon } from "lucide-react";
+import { UserIcon, DownloadIcon } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
-import { Button } from "../components/Button";
 import { getCrewUsageStatistics } from "../services/crew";
 import { CrewUsageStatistic } from "../types/api";
 
@@ -34,30 +34,6 @@ export default function MemberStats({ crewId, onBack }: MemberStatsProps) {
         fetchData();
     }, [fetchData]);
 
-    // Handle search separately to avoid too many API calls if we want debounce, 
-    // but for simplicity let's just fetch when enter is pressed or just include it in effect if not high traffic.
-    // The user didn't specify interaction details, so let's stick to simple Effect for now or maybe just handle client side filtering if the API returns all?
-    // The API signature suggests server side filtering: `search=""`.
-    // Let's rely on effect with a small timeout or just on enter/submit if we had a button.
-    // The screenshot has a search/dropdown.
-    // Let's trigger fetch on dependency change.
-
-    // Actually, let's just add search to dependency, maybe user types and waits?
-    // Or maybe the standard approach in this app is client side?
-    // The API request specifically asks for search param.
-
-
-
-
-    // Toggle logic: Name ASC -> Name DESC -> Usage DESC -> Usage ASC? 
-    // Or just a simple dropdown. Screenshot shows "가나다 순 v", indicating a dropdown or toggler.
-    // Let's implement a simple dropdown or cycler.
-    // User request: Sort option : name (default) / usageCount, asc / desc
-
-    // For simplicity and matching screenshot "Order v", maybe a select or bottom sheet.
-    // Let's use a standard HTML select for now styled invisibly or minimal.
-
-
     const handleDownloadExcel = () => {
         const header = "#,name,usagecount";
         const rows = stats.map((stat, index) => `${index + 1},${stat.name},${stat.usage_count}`);
@@ -77,52 +53,45 @@ export default function MemberStats({ crewId, onBack }: MemberStatsProps) {
     };
 
     return (
-        <div className="flex-1 flex flex-col h-full overflow-hidden bg-white dark:bg-zinc-950">
-            {/* Header */}
-            <header className="px-4 pt-2 pb-2 flex items-center justify-between relative bg-white dark:bg-zinc-950 z-10 border-b border-zinc-100 dark:border-zinc-900">
-                <Button variant="ghost" onClick={onBack} className="-ml-2 text-zinc-900 dark:text-zinc-100">
-                    <ChevronLeftIcon className="w-6 h-6" />
-                </Button>
-                <h1 className="flex-1 text-center text-lg font-bold text-zinc-900 dark:text-zinc-100">시즌방 사용 기록</h1>
-                <div className="w-10" />
-            </header>
+        <ReservationLayout title="시즌방 이용 기록" onBack={onBack}>
 
-            {/* Sort and Control Header */}
-            <div className="px-6 py-4 flex justify-end">
-                <div className="relative">
-                    <select
-                        className="appearance-none bg-transparent text-sm font-medium text-zinc-500 pr-6 focus:outline-none"
-                        value={`${sortBy}-${sortOrder}`}
-                        onChange={(e) => {
-                            const [newSort, newOrder] = e.target.value.split('-');
-                            setSortBy(newSort as 'name' | 'usageCount');
-                            setSortOrder(newOrder as 'asc' | 'desc');
-                        }}
-                    >
-                        <option value="name-asc">가나다 순</option>
-                        <option value="name-desc">가나다 역순</option>
-                        <option value="usageCount-desc">사용 많은 순</option>
-                        <option value="usageCount-asc">사용 적은 순</option>
-                    </select>
-                    <span className="absolute right-0 top-1/2 -translate-y-1/2 pointer-events-none text-zinc-500">
-                        ⌄
-                    </span>
+            <main className="reservation-content">
+                <ReservationSummary title="시즌방 이용 기록" description={`${stats.length}명의 이용 내역`} value={`${stats.reduce((total, item) => total + item.usage_count, 0)}박`} />
+                {/* Sort and Control Header */}
+                <div className="mb-4 flex justify-end">
+                    <div className="relative">
+                        <select
+                            className="reservation-input appearance-none text-sm font-medium pr-6"
+                            aria-label="이용 기록 정렬"
+                            value={`${sortBy}-${sortOrder}`}
+                            onChange={(e) => {
+                                const [newSort, newOrder] = e.target.value.split('-');
+                                setSortBy(newSort as 'name' | 'usageCount');
+                                setSortOrder(newOrder as 'asc' | 'desc');
+                            }}
+                        >
+                            <option value="name-asc">가나다 순</option>
+                            <option value="name-desc">가나다 역순</option>
+                            <option value="usageCount-desc">사용 많은 순</option>
+                            <option value="usageCount-asc">사용 적은 순</option>
+                        </select>
+                        <span className="absolute right-0 top-1/2 -translate-y-1/2 pointer-events-none text-zinc-500">
+                            ⌄
+                        </span>
+                    </div>
                 </div>
-            </div>
-
-            <main className="flex-1 overflow-y-auto px-6 pb-28">
                 {loading ? (
                     <div className="flex items-center justify-center py-20">로딩 중...</div>
                 ) : (
-                    <div className="space-y-6">
+                    <div className="reservation-panel space-y-3">
                         {stats.map(stat => (
-                            <div key={stat.user_id} className="flex items-center justify-between">
+                            <div key={stat.user_id} className="flex items-center justify-between gap-4 rounded-2xl bg-blue-50/50 px-4 py-3">
                                 <div className="flex items-center gap-3">
                                     {stat.profile_image_url ? (
                                         <img src={stat.profile_image_url} alt={stat.name} className="w-10 h-10 rounded-full object-cover bg-zinc-100" />
                                     ) : (
-                                        <div className="w-10 h-10 rounded-full bg-zinc-200 dark:bg-zinc-800 flex items-center justify-center">
-                                            <UserIcon className="w-6 h-6 text-zinc-400 dark:text-zinc-500" />
+                                        <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
+                                            <UserIcon className="w-6 h-6 text-blue-600" />
                                         </div>
                                     )}
                                     <span className="font-bold text-zinc-900 dark:text-zinc-100">{stat.name}</span>
@@ -139,7 +108,7 @@ export default function MemberStats({ crewId, onBack }: MemberStatsProps) {
                             <div className="pt-8 pb-4">
                                 <button
                                     onClick={handleDownloadExcel}
-                                    className="w-full flex items-center justify-center gap-2 py-3 bg-zinc-100 dark:bg-zinc-800 rounded-xl text-zinc-900 dark:text-zinc-100 font-bold hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors"
+                                    className="reservation-secondary w-full flex items-center justify-center gap-2 py-3"
                                 >
                                     <DownloadIcon className="w-5 h-5" />
                                     엑셀 다운로드
@@ -149,6 +118,6 @@ export default function MemberStats({ crewId, onBack }: MemberStatsProps) {
                     </div>
                 )}
             </main>
-        </div>
+        </ReservationLayout>
     );
 }

@@ -1,5 +1,7 @@
+import { getReservationSeason } from '../lib/reservationSeason';
+import { ReservationLayout, ReservationSummary } from '../components/reservation/ReservationLayout';
 import { useState, useEffect, useCallback } from 'react';
-import { ChevronLeftIcon, ChevronRightIcon, Smile, ChevronDown, Save, Trash2 } from 'lucide-react';
+import { ChevronRightIcon, Smile, ChevronDown, Save, Trash2 } from 'lucide-react';
 import { Button } from '../components/Button';
 import { Calendar } from '../components/Calendar';
 import { getCrewInfo, getReservationDetail, getCrewCalendar, createReservation, cancelReservation, deleteReservation, updateReservationManagement } from '../services/crew';
@@ -15,20 +17,10 @@ interface ReservationStatsProps {
 
 
 export default function ReservationStats({ onBack, onMyCalendarClick, onReservationClick }: ReservationStatsProps) {
-    // ... (lines 16-317)
-    {/* Change Link */ }
-    <div className="w-full flex justify-end mb-6 pr-2">
-        <button
-            onClick={onReservationClick}
-            className="text-xs font-medium text-zinc-500 flex items-center gap-1 hover:text-zinc-800 transition-colors"
-        >
-            예약 변경하러 가기 <ChevronRightIcon className="w-3 h-3" />
-        </button>
-    </div>
     const todayDate = new Date();
 
     // Default to current date
-    const [viewDate, setViewDate] = useState(new Date());
+    const [viewDate, setViewDate] = useState(() => getReservationSeason().initialDate);
     const currentYear = viewDate.getFullYear();
     const currentMonthIndex = viewDate.getMonth(); // 0-11
 
@@ -36,11 +28,7 @@ export default function ReservationStats({ onBack, onMyCalendarClick, onReservat
     const isCurrentMonthView = todayDate.getFullYear() === currentYear && todayDate.getMonth() === currentMonthIndex;
     const todayDay = todayDate.getDate();
 
-    const monthNames = [
-        "January", "February", "March", "April", "May", "June",
-        "July", "August", "September", "October", "November", "December"
-    ];
-    const currentMonthName = monthNames[currentMonthIndex];
+    const currentMonthName = `${currentMonthIndex + 1}월`;
 
     // Calculate days in current month
     const daysInMonth = new Date(currentYear, currentMonthIndex + 1, 0).getDate();
@@ -247,8 +235,7 @@ export default function ReservationStats({ onBack, onMyCalendarClick, onReservat
     };
 
     // Navigation Bounds
-    const minDate = new Date(2025, 9, 1); // October 2025
-    const maxDate = new Date(2026, 4, 31); // May 2026
+    const { start: minDate, end: maxDate } = getReservationSeason(todayDate);
 
     const handlePrevMonth = () => {
         const newDate = new Date(currentYear, currentMonthIndex - 1, 1);
@@ -283,10 +270,10 @@ export default function ReservationStats({ onBack, onMyCalendarClick, onReservat
         const status = getOccupancyStatus(day);
 
         switch (status) {
-            case 'LOW': return 'bg-[#4CAF50]'; // Green
-            case 'MEDIUM': return 'bg-[#F6C555]'; // Yellow
-            case 'HIGH': return 'bg-[#FF6B6B]'; // Red
-            default: return 'bg-[#4CAF50]';
+            case 'LOW': return 'reservation-dot-low';
+            case 'MEDIUM': return 'reservation-dot-medium';
+            case 'HIGH': return 'reservation-dot-high';
+            default: return 'reservation-dot-low';
         }
     };
 
@@ -303,257 +290,240 @@ export default function ReservationStats({ onBack, onMyCalendarClick, onReservat
     });
 
     return (
-        <div className="flex-1 flex flex-col h-full overflow-hidden bg-white dark:bg-zinc-950">
-            {/* Header */}
-            <header className="px-4 pt-2 pb-2 flex items-center justify-between z-10">
-                <div className="w-20 flex justify-start">
-                    <Button variant="ghost" onClick={onBack} className="-ml-2 gap-1 text-zinc-900 dark:text-zinc-100 hover:bg-transparent">
-                        <ChevronLeftIcon className="w-6 h-6" />
-                    </Button>
-                </div>
-                <h1 className="flex-1 text-center text-lg font-bold text-zinc-900 dark:text-zinc-100">
-                    크루 달력
-                </h1>
-                <div className="w-20 flex justify-end">
-                    <Button
-                        variant="ghost"
-                        onClick={onMyCalendarClick}
-                        className="text-xs text-zinc-400 dark:text-zinc-500 hover:text-zinc-600 dark:hover:text-zinc-400 font-medium px-0 gap-0"
-                    >
-                        나의 달력 <ChevronRightIcon className="w-4 h-4" />
-                    </Button>
-                </div>
-            </header>
+        <ReservationLayout title="크루 달력" onBack={onBack} action={onMyCalendarClick && <button type="button" onClick={onMyCalendarClick}>내 예약 →</button>}>
 
-            <main className="flex-1 overflow-y-auto px-4 pb-[120px] flex flex-col items-center">
+            <main className="reservation-content">
 
-                <Calendar
-                    className="mb-3"
-                    month={currentMonthName}
-                    year={currentYear}
-                    startDayOfWeek={firstDayOfMonth}
-                    totalDays={daysInMonth}
-                    expandable={false}
-                    hideHeader={false}
-                    selectedDays={[selectedDay]}
-                    isCollapsed={isExpanded}
-                    onDayClick={handleDayClick}
-                    onPrevMonth={canGoPrev ? handlePrevMonth : undefined}
-                    onNextMonth={canGoNext ? handleNextMonth : undefined}
-                    headerRight={
-                        <div className="flex items-center gap-2">
-                            <span className="text-xs font-bold text-zinc-500 dark:text-zinc-400">내 일정</span>
-                            <div
-                                onClick={() => setShowMySchedule(!showMySchedule)}
-                                className={`w-10 h-6 rounded-full p-1 relative cursor-pointer transition-colors duration-200 ${showMySchedule ? 'bg-[#4CAF50]' : 'bg-zinc-300 dark:bg-zinc-700'}`}
-                            >
-                                <div className={`w-4 h-4 bg-white dark:bg-zinc-300 rounded-full shadow-sm transition-transform duration-200 ${showMySchedule ? 'translate-x-4' : 'translate-x-0'}`} />
+                <ReservationSummary title="시즌방 현황" description="날짜를 선택해 예약 현황을 확인하세요." />
+                <div className="reservation-workspace">
+                    <Calendar
+                        className="mb-3"
+                        month={currentMonthName}
+                        year={currentYear}
+                        startDayOfWeek={firstDayOfMonth}
+                        totalDays={daysInMonth}
+                        expandable={false}
+                        hideHeader={false}
+                        selectedDays={[selectedDay]}
+                        isCollapsed={isExpanded}
+                        onDayClick={handleDayClick}
+                        onPrevMonth={canGoPrev ? handlePrevMonth : undefined}
+                        onNextMonth={canGoNext ? handleNextMonth : undefined}
+                        headerRight={
+                            <div className="flex items-center gap-2">
+                                <span className="text-xs font-bold text-zinc-500 dark:text-zinc-400">내 일정</span>
+                                <div
+                                    onClick={() => setShowMySchedule(!showMySchedule)}
+                                    role="switch" aria-checked={showMySchedule} aria-label="내 일정 표시" tabIndex={0}
+                                    onKeyDown={event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); setShowMySchedule(current => !current); } }}
+                                    className={`reservation-toggle w-10 h-6 rounded-full p-1 relative cursor-pointer ${showMySchedule ? 'is-on' : ''}`}
+                                >
+                                    <div className={`w-4 h-4 bg-white dark:bg-zinc-300 rounded-full shadow-sm transition-transform duration-200 ${showMySchedule ? 'translate-x-4' : 'translate-x-0'}`} />
+                                </div>
                             </div>
-                        </div>
-                    }
-                    renderDay={(day) => {
-                        const isSelected = selectedDay === day;
-                        const isToday = day === todayDay && isCurrentMonthView;
-                        const colorClass = getCrewDayColor(day);
-
-                        const isConfirmed = showMySchedule && confirmedDays.includes(day);
-                        const isPending = showMySchedule && pendingDays.includes(day);
-
-                        // Base classes
-                        let containerClasses = "w-full h-full flex flex-col items-center justify-start pt-1.5 transition-all duration-200 cursor-pointer text-sm font-bold rounded-[10px] overflow-visible";
-
-                        if (isSelected) {
-                            containerClasses += " bg-[#333333] dark:bg-zinc-700 text-white shadow-lg";
-                        } else if (isToday) {
-                            containerClasses += " bg-[#F4F4F5] dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100";
-                        } else {
-                            containerClasses += " text-zinc-500 dark:text-zinc-400 hover:bg-zinc-100/50 dark:hover:bg-zinc-800/50";
                         }
+                        renderDay={(day) => {
+                            const isSelected = selectedDay === day;
+                            const isToday = day === todayDay && isCurrentMonthView;
+                            const colorClass = getCrewDayColor(day);
 
-                        // Number Element (Circle if reserved)
-                        let numberElement = <span className="text-sm font-bold">{day}</span>;
-                        if (isConfirmed || isPending) {
-                            const bg = isConfirmed ? 'bg-[#1E3A8A]' : 'bg-[#9CA3AF]';
-                            const textColor = 'text-white';
-                            // Note: If selected, container is Black.
-                            // If we render a Navy Circle inside a Black Box, it works.
-                            numberElement = (
-                                <div className={`w-8 h-8 -mt-1 rounded-full ${bg} ${textColor} flex items-center justify-center text-sm font-bold shadow-sm`}>
-                                    {day}
+                            const isConfirmed = showMySchedule && confirmedDays.includes(day);
+                            const isPending = showMySchedule && pendingDays.includes(day);
+
+                            // Base classes
+                            let containerClasses = "reservation-date-cell";
+
+                            if (isSelected) {
+                                containerClasses += " is-selected";
+                            } else if (isToday) {
+                                containerClasses += " is-today";
+                            } else {
+                                containerClasses += " text-zinc-500 dark:text-zinc-400 hover:bg-zinc-100/50 dark:hover:bg-zinc-800/50";
+                            }
+
+                            // Number Element (Circle if reserved)
+                            let numberElement = <span className="text-sm font-bold">{day}</span>;
+                            if (isConfirmed || isPending) {
+                                const bg = isConfirmed ? 'reservation-confirmed' : 'reservation-pending';
+                                numberElement = (
+                                    <div className={`w-8 h-8 -mt-1 rounded-full ${bg} flex items-center justify-center text-sm font-bold shadow-sm`}>
+                                        {day}
+                                    </div>
+                                );
+                            }
+
+                            return (
+                                <div className={containerClasses}>
+                                    {numberElement}
+                                    <div className={`w-2 h-2 rounded-full ${colorClass} mt-1`} />
                                 </div>
                             );
-                        }
+                        }}
+                    />
 
-                        return (
-                            <div className={containerClasses}>
-                                {numberElement}
-                                <div className={`w-2 h-2 rounded-full ${colorClass} mt-1`} />
-                            </div>
-                        );
-                    }}
-                />
+                    <aside className="reservation-detail-column">
+                        {/* Bottom Section: Legend or Expanded View */}
+                        {isExpanded ? (
+                            <div className="w-full animate-in fade-in slide-in-from-bottom-4 duration-300">
+                                {/* Expanded User List Card */}
+                                <div className="reservation-panel w-full mb-3">
+                                    {/* Card Header */}
+                                    <div className="flex items-center gap-2 mb-6">
+                                        <div className="w-7 h-7 bg-[#1E3A8A] rounded-[8px] flex items-center justify-center shadow-sm">
+                                            <Smile className="w-4 h-4 text-white" strokeWidth={2.5} />
+                                        </div>
+                                        <span className="font-bold text-zinc-900 dark:text-zinc-100 text-sm">예약 완료</span>
+                                        <span className="text-xs text-zinc-400 dark:text-zinc-500 mt-0.5">{currentMemberCount}명/{crewCapacity}</span>
 
-                {/* Bottom Section: Legend or Expanded View */}
-                {isExpanded ? (
-                    <div className="w-full animate-in fade-in slide-in-from-bottom-4 duration-300">
-                        {/* Expanded User List Card */}
-                        <div className="w-full bg-[#F4F4F5] dark:bg-zinc-800 rounded-[20px] p-6 mb-3">
-                            {/* Card Header */}
-                            <div className="flex items-center gap-2 mb-6">
-                                <div className="w-7 h-7 bg-[#1E3A8A] rounded-[8px] flex items-center justify-center shadow-sm">
-                                    <Smile className="w-4 h-4 text-white" strokeWidth={2.5} />
-                                </div>
-                                <span className="font-bold text-zinc-900 dark:text-zinc-100 text-sm">예약 완료</span>
-                                <span className="text-xs text-zinc-400 dark:text-zinc-500 mt-0.5">{currentMemberCount}명/{crewCapacity}</span>
+                                        <div className="flex-1" /> {/* Spacer */}
 
-                                <div className="flex-1" /> {/* Spacer */}
+                                        <div className="relative">
+                                            <select
+                                                className="reservation-input appearance-none text-xs font-medium pr-6 text-right"
+                                                value={sortOrder}
+                                                onChange={(e) => setSortOrder(e.target.value as 'default' | 'earliest')}
+                                            >
+                                                <option value="default">기본</option>
+                                                <option value="earliest">예약순</option>
+                                            </select>
+                                            <ChevronDown className="absolute right-0 top-1/2 -translate-y-1/2 pointer-events-none text-zinc-500 w-4 h-4" />
+                                        </div>
+                                    </div>
 
-                                <div className="relative">
-                                    <select
-                                        className="appearance-none bg-transparent text-sm font-medium text-zinc-500 pr-6 focus:outline-none text-right"
-                                        value={sortOrder}
-                                        onChange={(e) => setSortOrder(e.target.value as 'default' | 'earliest')}
-                                    >
-                                        <option value="default">기본</option>
-                                        <option value="earliest">예약순</option>
-                                    </select>
-                                    <ChevronDown className="absolute right-0 top-1/2 -translate-y-1/2 pointer-events-none text-zinc-500 w-4 h-4" />
-                                </div>
-                            </div>
-
-                            {/* Users Grid */}
-                            <div className={`grid gap-y-3 gap-x-4 ${currentDetail?.canManageReservations ? 'grid-cols-1' : 'grid-cols-2'}`}>
-                                {currentMemberList.length > 0 ? (
-                                    currentMemberList.map((member) => (
-                                        <div key={member.reservationId} className="flex items-center gap-3 min-w-0">
-                                            <div className="w-10 h-10 bg-zinc-300 dark:bg-zinc-600 rounded-full shrink-0 overflow-hidden relative">
-                                                {/* No profile image available in new DTO yet */}
-                                            </div>
-                                            <div className="flex flex-col items-start gap-0.5 min-w-0">
-                                                <div className="flex items-center gap-1.5">
-                                                    <span className="text-sm font-bold text-zinc-700 dark:text-zinc-300">
-                                                        {member.guestId ? `게스트 #${member.guestId}` : `회원 #${member.participantAccountId}`}
-                                                    </span>
-                                                    {member.guestId && (
-                                                        <div className="px-1.5 py-0.5 bg-yellow-100 rounded-[4px] flex items-center justify-center">
-                                                            <span className="text-[10px] font-bold text-yellow-700">게스트</span>
+                                    {/* Users Grid */}
+                                    <div className={`grid gap-y-3 gap-x-4 ${currentDetail?.canManageReservations ? 'grid-cols-1' : 'grid-cols-2'}`}>
+                                        {currentMemberList.length > 0 ? (
+                                            currentMemberList.map((member) => (
+                                                <div key={member.reservationId} className="reservation-member-row">
+                                                    <div className="w-10 h-10 bg-zinc-300 dark:bg-zinc-600 rounded-full shrink-0 overflow-hidden relative">
+                                                        {/* No profile image available in new DTO yet */}
+                                                    </div>
+                                                    <div className="flex flex-col items-start gap-0.5 min-w-0">
+                                                        <div className="flex items-center gap-1.5">
+                                                            <span className="text-sm font-bold text-zinc-700 dark:text-zinc-300">
+                                                                {member.guestId ? `게스트 #${member.guestId}` : `회원 #${member.participantAccountId}`}
+                                                            </span>
+                                                            {member.guestId && (
+                                                                <div className="px-1.5 py-0.5 bg-blue-50 rounded-[4px] flex items-center justify-center">
+                                                                    <span className="text-[10px] font-bold text-blue-700">게스트</span>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                    {currentDetail?.canManageReservations && (
+                                                        <div className="reservation-member-controls">
+                                                            <select
+                                                                value={member.paymentStatus ?? ''}
+                                                                onChange={event => updateReservationDraft(member.reservationId, {
+                                                                    paymentStatus: (event.target.value || null) as PaymentStatus | null,
+                                                                })}
+                                                                className="reservation-input w-24 text-xs"
+                                                                aria-label={`예약 ${member.reservationId} 입금 상태`}
+                                                            >
+                                                                <option value="">미설정</option>
+                                                                <option value="UNPAID">미입금</option>
+                                                                <option value="PAID">입금 완료</option>
+                                                            </select>
+                                                            <input
+                                                                type="text"
+                                                                value={member.managerMemo ?? ''}
+                                                                onChange={event => updateReservationDraft(member.reservationId, { managerMemo: event.target.value })}
+                                                                placeholder="관리자 메모"
+                                                                maxLength={1000}
+                                                                className="reservation-input text-xs"
+                                                                aria-label={`예약 ${member.reservationId} 관리자 메모`}
+                                                            />
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => handleReservationManagementSave(
+                                                                    member.reservationId,
+                                                                    member.paymentStatus ?? null,
+                                                                    member.managerMemo ?? null,
+                                                                )}
+                                                                disabled={managementSavingId === member.reservationId}
+                                                                className="w-8 h-8 shrink-0 border border-zinc-200 dark:border-zinc-700 rounded-lg flex items-center justify-center text-[#1E3A8A] dark:text-blue-300 hover:bg-white dark:hover:bg-zinc-900 disabled:opacity-50"
+                                                                title="입금 상태와 메모 저장"
+                                                                aria-label={`예약 ${member.reservationId} 관리 정보 저장`}
+                                                            >
+                                                                <Save className="w-4 h-4" />
+                                                            </button>
                                                         </div>
                                                     )}
                                                 </div>
+                                            ))
+                                        ) : (
+                                            <div className="col-span-2 text-center text-zinc-400 dark:text-zinc-500 text-sm py-4">
+                                                예약자가 없습니다.
                                             </div>
-                                            {currentDetail?.canManageReservations && (
-                                                <div className="ml-auto flex items-center gap-2 min-w-0">
-                                                    <select
-                                                        value={member.paymentStatus ?? ''}
-                                                        onChange={event => updateReservationDraft(member.reservationId, {
-                                                            paymentStatus: (event.target.value || null) as PaymentStatus | null,
-                                                        })}
-                                                        className="w-24 px-2 py-2 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-lg text-xs font-semibold text-zinc-700 dark:text-zinc-200 focus:outline-none focus:ring-2 focus:ring-[#1E3A8A]/20"
-                                                        aria-label={`예약 ${member.reservationId} 입금 상태`}
-                                                    >
-                                                        <option value="">미설정</option>
-                                                        <option value="UNPAID">미입금</option>
-                                                        <option value="PAID">입금 완료</option>
-                                                    </select>
-                                                    <input
-                                                        type="text"
-                                                        value={member.managerMemo ?? ''}
-                                                        onChange={event => updateReservationDraft(member.reservationId, { managerMemo: event.target.value })}
-                                                        placeholder="관리자 메모"
-                                                        maxLength={1000}
-                                                        className="min-w-0 flex-1 px-2.5 py-2 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-lg text-xs text-zinc-700 dark:text-zinc-200 focus:outline-none focus:ring-2 focus:ring-[#1E3A8A]/20"
-                                                        aria-label={`예약 ${member.reservationId} 관리자 메모`}
-                                                    />
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => handleReservationManagementSave(
-                                                            member.reservationId,
-                                                            member.paymentStatus ?? null,
-                                                            member.managerMemo ?? null,
-                                                        )}
-                                                        disabled={managementSavingId === member.reservationId}
-                                                        className="w-8 h-8 shrink-0 border border-zinc-200 dark:border-zinc-700 rounded-lg flex items-center justify-center text-[#1E3A8A] dark:text-blue-300 hover:bg-white dark:hover:bg-zinc-900 disabled:opacity-50"
-                                                        title="입금 상태와 메모 저장"
-                                                        aria-label={`예약 ${member.reservationId} 관리 정보 저장`}
-                                                    >
-                                                        <Save className="w-4 h-4" />
-                                                    </button>
-                                                </div>
-                                            )}
-                                        </div>
-                                    ))
-                                ) : (
-                                    <div className="col-span-2 text-center text-zinc-400 dark:text-zinc-500 text-sm py-4">
-                                        예약자가 없습니다.
+                                        )}
                                     </div>
+                                </div>
+
+                                {/* Change Link */}
+                                <div className="w-full flex justify-end mb-6 pr-2">
+                                    <button
+                                        onClick={onReservationClick}
+                                        className="text-xs font-medium text-zinc-500 dark:text-zinc-400 flex items-center gap-1 hover:text-zinc-800 dark:hover:text-zinc-300 transition-colors"
+                                    >
+                                        예약 변경하러 가기 <ChevronRightIcon className="w-3 h-3" />
+                                    </button>
+                                </div>
+
+                                {/* Action Button */}
+                                {confirmedDays.includes(selectedDay) || pendingDays.includes(selectedDay) ? (
+                                    <Button
+                                        variant="outline"
+                                        onClick={handleCancelReservation}
+                                        className="reservation-secondary w-full h-12 text-sm"
+                                    >
+                                        예약 취소하기
+                                    </Button>
+                                ) : (
+                                    <Button
+                                        onClick={handleCreateReservation}
+                                        className="reservation-primary w-full h-14 text-base"
+                                    >
+                                        예약하기
+                                    </Button>
                                 )}
                             </div>
-                        </div>
-
-                        {/* Change Link */}
-                        <div className="w-full flex justify-end mb-6 pr-2">
-                            <button
-                                onClick={onReservationClick}
-                                className="text-xs font-medium text-zinc-500 dark:text-zinc-400 flex items-center gap-1 hover:text-zinc-800 dark:hover:text-zinc-300 transition-colors"
-                            >
-                                예약 변경하러 가기 <ChevronRightIcon className="w-3 h-3" />
-                            </button>
-                        </div>
-
-                        {/* Action Button */}
-                        {confirmedDays.includes(selectedDay) || pendingDays.includes(selectedDay) ? (
-                            <Button
-                                variant="outline"
-                                onClick={handleCancelReservation}
-                                className="w-full h-14 bg-white dark:bg-zinc-700 border border-zinc-400 dark:border-zinc-600 hover:bg-zinc-50 dark:hover:bg-zinc-600 rounded-[20px] text-zinc-500 dark:text-zinc-300 text-lg font-bold shadow-sm transition-all active:scale-[0.98]"
-                            >
-                                예약 취소하기
-                            </Button>
                         ) : (
-                            <Button
-                                onClick={handleCreateReservation}
-                                className="w-full h-14 bg-[#162660] hover:bg-[#1E3A8A] rounded-[20px] text-white text-lg font-bold shadow-md transition-all active:scale-[0.98]"
-                            >
-                                예약하기
-                            </Button>
-                        )}
-                    </div>
-                ) : (
-                    /* Default Legend Section - Simplified for LOW/MEDIUM/HIGH */
-                    <div className="w-full bg-[#F4F4F5] dark:bg-zinc-800 rounded-[20px] p-4 flex items-center justify-between px-2">
-                        <div className="flex items-center gap-2">
-                            <span className="font-bold text-xs text-zinc-900 dark:text-zinc-100 ml-4">혼잡도</span>
-                        </div>
+                            /* Default Legend Section - Simplified for LOW/MEDIUM/HIGH */
+                            <div className="reservation-legend w-full">
+                                <div className="flex items-center gap-2">
+                                    <span className="font-bold text-xs text-zinc-900 dark:text-zinc-100 ml-4">혼잡도</span>
+                                </div>
 
-                        <div className="flex items-center gap-4 mr-2">
-                            <div className="flex items-center gap-1.5">
-                                <div className="w-2 h-2 rounded-full bg-[#4CAF50]" />
-                                <span className="text-[10px] font-medium text-zinc-500 dark:text-zinc-400">
-                                    여유
-                                </span>
+                                <div className="flex items-center gap-4 mr-2">
+                                    <div className="flex items-center gap-1.5">
+                                        <div className="w-2 h-2 rounded-full reservation-dot-low" />
+                                        <span className="text-[10px] font-medium text-zinc-500 dark:text-zinc-400">
+                                            여유
+                                        </span>
+                                    </div>
+                                    <div className="flex items-center gap-1.5">
+                                        <div className="w-2 h-2 rounded-full reservation-dot-medium" />
+                                        <span className="text-[10px] font-medium text-zinc-500 dark:text-zinc-400">
+                                            보통
+                                        </span>
+                                    </div>
+                                    <div className="flex items-center gap-1.5">
+                                        <div className="w-2 h-2 rounded-full reservation-dot-high" />
+                                        <span className="text-[10px] font-medium text-zinc-500 dark:text-zinc-400">
+                                            혼잡
+                                        </span>
+                                    </div>
+                                </div>
                             </div>
-                            <div className="flex items-center gap-1.5">
-                                <div className="w-2 h-2 rounded-full bg-[#F6C555]" />
-                                <span className="text-[10px] font-medium text-zinc-500 dark:text-zinc-400">
-                                    보통
-                                </span>
-                            </div>
-                            <div className="flex items-center gap-1.5">
-                                <div className="w-2 h-2 rounded-full bg-[#FF6B6B]" />
-                                <span className="text-[10px] font-medium text-zinc-500 dark:text-zinc-400">
-                                    혼잡
-                                </span>
-                            </div>
-                        </div>
-                    </div>
-                )}
+                        )}
+                    </aside>
+                </div>
             </main>
 
             {/* Member Detail Modal */}
             {selectedMember && (
                 <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-[2px] p-6 animate-in fade-in duration-200" onClick={() => setSelectedMember(null)}>
-                    <div className="bg-white dark:bg-zinc-800 rounded-[24px] p-6 w-full max-w-[280px] shadow-2xl flex flex-col items-center relative" onClick={(e) => e.stopPropagation()}>
-
+                    <div role="dialog" aria-modal="true" aria-label="예약 정보" className="reservation-modal w-full max-w-sm flex flex-col items-center relative" onClick={(e) => e.stopPropagation()}>
 
 
                         <h3 className="text-lg font-bold text-zinc-900 dark:text-zinc-100 mb-1">{selectedMember.name}</h3>
@@ -617,7 +587,7 @@ export default function ReservationStats({ onBack, onMyCalendarClick, onReservat
                             )}
 
                             <Button
-                                className="w-full bg-[#1E3A8A] text-white rounded-xl py-2.5 text-sm font-bold shadow-md hover:bg-[#172554]"
+                                className="reservation-primary w-full text-sm"
                                 onClick={() => setSelectedMember(null)}
                             >
                                 닫기
@@ -626,6 +596,6 @@ export default function ReservationStats({ onBack, onMyCalendarClick, onReservat
                     </div>
                 </div>
             )}
-        </div>
+        </ReservationLayout>
     );
 }

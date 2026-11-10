@@ -1,6 +1,7 @@
+import { getReservationSeason } from '../lib/reservationSeason';
+import { ReservationLayout, ReservationSummary } from '../components/reservation/ReservationLayout';
 import { useState, useEffect, useCallback } from 'react';
 import { Button } from '../components/Button';
-import { ChevronLeftIcon } from 'lucide-react';
 import { Calendar } from '../components/Calendar';
 import { createReservation, cancelReservation, getCrewInfo } from '../services/crew';
 import { getMyReservations, getUserInfo } from '../services/user';
@@ -24,7 +25,7 @@ export default function Reservation({ onBack, isGuest = false, guestCrewId }: Re
     const todayDate = new Date();
 
     // Dynamic View Date State
-    const [viewDate, setViewDate] = useState(new Date());
+    const [viewDate, setViewDate] = useState(() => getReservationSeason().initialDate);
     const currentYear = viewDate.getFullYear();
     const currentMonthIndex = viewDate.getMonth(); // 0-11
 
@@ -32,11 +33,7 @@ export default function Reservation({ onBack, isGuest = false, guestCrewId }: Re
     const isCurrentMonthView = todayDate.getFullYear() === currentYear && todayDate.getMonth() === currentMonthIndex;
     const todayDay = todayDate.getDate();
 
-    const monthNames = [
-        "January", "February", "March", "April", "May", "June",
-        "July", "August", "September", "October", "November", "December"
-    ];
-    const currentMonthName = monthNames[currentMonthIndex];
+    const currentMonthName = `${currentMonthIndex + 1}월`;
 
     // Calculate days in current month
     const daysInMonth = new Date(currentYear, currentMonthIndex + 1, 0).getDate();
@@ -219,8 +216,7 @@ export default function Reservation({ onBack, isGuest = false, guestCrewId }: Re
     };
 
     // Navigation Bounds
-    const minDate = new Date(2025, 9, 1); // October 2025
-    const maxDate = new Date(2026, 4, 31); // May 2026
+    const { start: minDate, end: maxDate } = getReservationSeason(todayDate);
 
     const handlePrevMonth = () => {
         const newDate = new Date(currentYear, currentMonthIndex - 1, 1);
@@ -297,121 +293,88 @@ export default function Reservation({ onBack, isGuest = false, guestCrewId }: Re
     };
 
     return (
-        <div className="flex-1 flex flex-col h-full overflow-hidden bg-white dark:bg-zinc-950 relative">
-            {/* Header */}
-            <header className="px-4 pt-2 pb-2 flex items-center justify-between z-10">
-                <div className="w-10 flex justify-start">
-                    <Button variant="ghost" onClick={onBack} className="-ml-2 gap-1 text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100">
-                        <ChevronLeftIcon className="w-6 h-6" />
-                    </Button>
-                </div>
-                <div className="flex-1 flex items-center justify-center relative">
-                    <h1 className="text-center text-lg font-bold text-zinc-900 dark:text-zinc-100">{isGuest ? '예약하기' : '예약하기'}</h1>
-                    {isGuest && guestDetail && (
-                        <div className="absolute right-0 top-1/2 -translate-y-1/2 bg-[#F3E5D8] dark:bg-zinc-800 px-3 py-1 rounded-[10px]">
-                            <span className="text-xs font-bold text-zinc-800 dark:text-zinc-200">게스트: {guestDetail.name}</span>
-                        </div>
-                    )}
-                </div>
-                <div className="w-10" />
-            </header>
+        <ReservationLayout title="예약하기" onBack={onBack} action={isGuest && guestDetail ? <span className="reservation-chip px-3 py-2">{guestDetail.name} · 게스트</span> : undefined}>
 
             {/* Content */}
-            <main className="flex-1 overflow-y-auto px-4 pb-8 flex flex-col items-center">
+            <main className="reservation-content">
 
-                {/* Content Area - Calendar is always visible but blocked by modal if open */}
+                <ReservationSummary title={crew?.name || '시즌방 예약'} description={isGuest ? '게스트로 이용할 날짜를 선택해주세요.' : '이용할 날짜를 선택해주세요.'} value={selectedDays.length > 0 ? `${selectedDays.length}일` : undefined} />
+                <div className="reservation-workspace">
+                    <Calendar
+                        className="mb-5"
+                        month={currentMonthName}
+                        year={currentYear}
+                        startDayOfWeek={firstDayOfMonth}
+                        totalDays={daysInMonth}
+                        selectedDays={selectedDays}
+                        hideHeader={false}
+                        onPrevMonth={canGoPrev ? handlePrevMonth : undefined}
+                        onNextMonth={canGoNext ? handleNextMonth : undefined}
+                        renderDay={(day) => {
+                            const isReserved = reservedDays.includes(day);
+                            const isSelected = selectedDays.includes(day);
+                            // Recalculate availability here or pass it in. Check if day is valid.
+                            // Ideally we compute full availability in logic above to keep render clean,
+                            // but local logic 'isDayAvailable' calls are fine if not too heavy.
+                            const isAvailable = isDayAvailable(day);
 
-                {/* INLINE INPUTS REMOVED */}
+                            // "Today" check
+                            // We highlight today specifically if needed, but for availability:
+                            const isToday = day === todayDay && isCurrentMonthView;
 
-                <Calendar
-                    className="mb-8 p-4"
-                    month={currentMonthName}
-                    year={currentYear}
-                    startDayOfWeek={firstDayOfMonth}
-                    totalDays={daysInMonth}
-                    // availableDays={availableDays} // Removed static availableDays
-                    selectedDays={selectedDays}
-                    hideHeader={false}
-                    onPrevMonth={canGoPrev ? handlePrevMonth : undefined}
-                    onNextMonth={canGoNext ? handleNextMonth : undefined}
-                    renderDay={(day) => {
-                        const isReserved = reservedDays.includes(day);
-                        const isSelected = selectedDays.includes(day);
-                        // Recalculate availability here or pass it in. Check if day is valid.
-                        // Ideally we compute full availability in logic above to keep render clean,
-                        // but local logic 'isDayAvailable' calls are fine if not too heavy.
-                        const isAvailable = isDayAvailable(day);
+                            if (isReserved) {
+                                return (
+                                    <button
+                                        onClick={() => toggleDay(day)}
+                                        aria-label={`${currentYear}년 ${currentMonthName} ${day}일 예약 취소`}
+                                        className="reservation-day is-reserved"
+                                    >
+                                        {day}
+                                        <div className="absolute -top-1 -right-1 bg-white rounded-full p-0.5 shadow-sm">
+                                            <CheckIcon className="w-3 h-3 text-[#162660]" />
+                                        </div>
+                                    </button>
+                                );
+                            }
 
-                        // "Today" check
-                        // We highlight today specifically if needed, but for availability:
-                        const isToday = day === todayDay && isCurrentMonthView;
+                            const buttonClasses = `reservation-day ${isSelected ? 'is-selected' : ''} ${isToday ? 'is-today' : ''}`;
 
-                        if (isReserved) {
                             return (
                                 <button
                                     onClick={() => toggleDay(day)}
-                                    className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold text-white shadow-sm bg-[#162660] hover:bg-[#43A047] transition-colors relative"
+                                    disabled={!isAvailable}
+                                    aria-label={`${currentYear}년 ${currentMonthName} ${day}일`}
+                                    aria-pressed={isSelected}
+                                    className={buttonClasses}
                                 >
                                     {day}
-                                    <div className="absolute -top-1 -right-1 bg-white rounded-full p-0.5 shadow-sm">
-                                        <CheckIcon className="w-3 h-3 text-[#162660]" />
-                                    </div>
                                 </button>
                             );
-                        }
+                        }}
+                    />
 
-                        // Base styles
-                        let buttonClasses = "w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium transition-all relative";
-
-                        if (isAvailable) {
-                            // Available Style (Black/Dark)
-                            if (isSelected) {
-                                // Selected State
-                                buttonClasses += " bg-[#F6C555] text-black shadow-sm font-bold scale-110";
-                            } else if (isToday) {
-                                // Today State (Available)
-                                buttonClasses += " bg-zinc-900 dark:bg-zinc-700 text-white font-bold";
-                            } else {
-                                // Normal Available State
-                                buttonClasses += " text-zinc-900 dark:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-800 font-semibold";
-                            }
-                        } else {
-                            // Unavailable Style (Grey)
-                            buttonClasses += " text-zinc-300 dark:text-zinc-700 cursor-default";
-                        }
-
-                        return (
-                            <button
-                                onClick={() => toggleDay(day)}
-                                disabled={!isAvailable}
-                                className={buttonClasses}
+                    <aside className="reservation-detail-column">
+                        <div className="reservation-selection" role="status">
+                            {selectedDays.length ? <><strong>선택한 날짜</strong><br />{[...selectedDays].sort((a, b) => a - b).map(day => `${currentMonthIndex + 1}월 ${day}일`).join(', ')}</> : '예약할 날짜를 선택하면 여기에 표시됩니다.'}
+                        </div>
+                        <div className="w-full flex justify-center">
+                            <Button
+                                disabled={selectedDays.length === 0 || (isGuest && (!guestName || !guestPhone))}
+                                onClick={handleSubmit}
+                                className="reservation-primary w-full h-14 text-base"
                             >
-                                {day}
-                            </button>
-                        );
-                    }}
-                />
+                                {selectedDays.length ? `${selectedDays.length}일 예약 신청` : '날짜를 선택해주세요'}
+                            </Button>
+                        </div>
 
-                <div className="w-full flex justify-center mt-auto">
-                    <Button
-                        disabled={selectedDays.length === 0 || (isGuest && (!guestName || !guestPhone))}
-                        onClick={handleSubmit}
-                        className={`
-                            w-full h-14 bg-[#162660] rounded-[20px] text-white text-lg font-bold
-                            transition-all duration-200 shadow-md
-                            ${selectedDays.length === 0 ? 'opacity-50 cursor-not-allowed' : 'opacity-100 hover:bg-[#7A8C9F] hover:scale-[1.02]'}
-                        `}
-                    >
-                        신청하기
-                    </Button>
+                    </aside>
                 </div>
-
             </main>
 
             {/* Withdrawal Modal */}
             {withdrawDay !== null && (
                 <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-6">
-                    <div className="bg-white dark:bg-zinc-900 rounded-2xl p-6 w-full max-w-xs shadow-xl animate-in fade-in zoom-in duration-200">
+                    <div role="dialog" aria-modal="true" aria-label="예약 취소" className="reservation-modal w-full max-w-sm">
                         <h3 className="text-xl font-bold mb-2">예약 취소</h3>
                         <p className="text-zinc-600 dark:text-zinc-400 mb-6">
                             <span className="font-bold text-zinc-900 dark:text-zinc-100">{currentMonthIndex + 1}월 {withdrawDay}일</span> 예약을 취소하시겠습니까?
@@ -443,37 +406,41 @@ export default function Reservation({ onBack, isGuest = false, guestCrewId }: Re
                     onClick={onBack}
                 >
                     <div
-                        className="bg-[#F0F7FF] rounded-[24px] p-4 sm:p-6 w-full max-w-[280px] min-w-0 shadow-2xl flex flex-col items-center"
+                        role="dialog" aria-modal="true" aria-label="게스트 정보" className="reservation-modal w-full max-w-sm min-w-0 flex flex-col items-center"
                         onClick={(e) => e.stopPropagation()}
                     >
-                        <h3 className="text-xl font-bold text-[#1E3A8A] mb-1">게스트 등록/조회</h3>
+                        <h3 className="text-xl font-bold text-[#1E3A8A] mb-1">게스트 정보</h3>
                         <p className="text-[11px] text-zinc-500 mb-6 text-center leading-tight">
                             게스트로 이용할 사용자의 정보를 입력해주세요.
                         </p>
 
                         <div className="w-full space-y-4 mb-6 min-w-0">
-                            <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-                                <label className="text-sm font-bold text-zinc-900 w-16 sm:w-20 shrink-0 text-right whitespace-nowrap">이름</label>
+                            <div className="space-y-2 min-w-0">
+                                <label htmlFor="reservation-guest-name" className="text-sm font-bold text-zinc-900 block">이름</label>
                                 <input
+                                    id="reservation-guest-name"
                                     type="text"
+                                    autoComplete="name"
                                     value={guestName}
                                     onChange={(e) => setGuestName(e.target.value)}
-                                    className="w-40 sm:w-48 h-10 px-3 rounded-lg border border-transparent bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-[#1E3A8A]"
+                                    className="reservation-input w-full"
                                 />
                             </div>
-                            <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-                                <label className="text-sm font-bold text-zinc-900 w-16 sm:w-20 shrink-0 text-right whitespace-nowrap">전화번호</label>
+                            <div className="space-y-2 min-w-0">
+                                <label htmlFor="reservation-guest-phone" className="text-sm font-bold text-zinc-900 block">전화번호</label>
                                 <input
+                                    id="reservation-guest-phone"
                                     type="tel"
+                                    autoComplete="tel"
                                     value={guestPhone}
                                     onChange={(e) => setGuestPhone(e.target.value)}
-                                    className="w-40 sm:w-48 h-10 px-3 rounded-lg border border-transparent bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-[#1E3A8A]"
+                                    className="reservation-input w-full"
                                 />
                             </div>
                         </div>
 
                         <Button
-                            className="w-full bg-[#1E3A8A] hover:bg-[#172554] text-white rounded-xl py-3 text-sm font-bold shadow-md"
+                            className="reservation-primary w-full text-sm"
                             disabled={!guestName || !guestPhone}
                             onClick={async () => {
                                 try {
@@ -496,7 +463,7 @@ export default function Reservation({ onBack, isGuest = false, guestCrewId }: Re
             {showPhoneConsentModal && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
                     <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setShowPhoneConsentModal(false)} />
-                    <div className="bg-white dark:bg-zinc-900 rounded-2xl w-full max-w-sm p-6 shadow-xl relative z-10 animate-in fade-in zoom-in-95 duration-200">
+                    <div role="dialog" aria-modal="true" aria-label="전화번호 제공 동의" className="reservation-modal w-full max-w-sm relative z-10">
                         <h3 className="text-lg font-bold text-zinc-900 dark:text-zinc-100 mb-3 text-center">
                             전화번호 제공 동의
                         </h3>
@@ -510,14 +477,14 @@ export default function Reservation({ onBack, isGuest = false, guestCrewId }: Re
                         <div className="flex flex-col gap-2">
                             <Button
                                 onClick={() => handleConfirmConsent(true)}
-                                className="w-full h-11 text-sm font-bold bg-[#1E3A8A] text-white rounded-xl"
+                                className="reservation-primary w-full text-sm"
                             >
                                 항상 동의하고 진행
                             </Button>
                             <Button
                                 variant="outline"
                                 onClick={() => handleConfirmConsent(false)}
-                                className="w-full h-11 text-sm font-bold rounded-xl"
+                                className="reservation-secondary w-full h-11 text-sm"
                             >
                                 이번만 동의하고 진행
                             </Button>
@@ -531,6 +498,6 @@ export default function Reservation({ onBack, isGuest = false, guestCrewId }: Re
                     </div>
                 </div>
             )}
-        </div>
+        </ReservationLayout>
     );
 }
