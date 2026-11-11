@@ -10,7 +10,9 @@
     "test": "vitest run",
     "typecheck": "tsc -b",
     "lint": "eslint \"src/**/*.{ts,tsx}\" --max-warnings=0",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "check:contracts": "node scripts/check-api-contract.mjs",
+    "test:browser": "node scripts/test/run-event-browser-smoke.mjs"
   },
   "dependencies": {
     "@sentry/react": "^10.74.0",
@@ -35,6 +37,7 @@
     "eslint-plugin-react-refresh": "^0.4.19",
     "globals": "^15.15.0",
     "jsdom": "^27.4.0",
+    "playwright": "1.65.0",
     "postcss": "^8.5.6",
     "tailwindcss": "^4.1.17",
     "typescript": "~5.7.2",

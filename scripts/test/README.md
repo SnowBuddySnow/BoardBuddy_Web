@@ -1,21 +1,29 @@
 # Local event browser scenarios
 
-## Host configuration regressions — 2026-10-18
+## Host configuration regressions — 2026-11-12
 
 `pnpm test` also runs `DashboardEventSave.test.tsx` in jsdom with the real create/edit components,
 editors, service orchestration and a synthetic HTTP boundary (no browser login or live API).
-Eight cases cover sequential consent/refund writes, duplicate-submit suppression, partial failure
-at either configuration stage, same-DRAFT retry, ambiguous POST reconciliation, ordinary validation
-retry and edit-conflict input preservation. `eventSave.test.ts` adds seven transport-level cases.
+Cases cover atomic configuration writes, duplicate-submit suppression, ambiguous POST
+reconciliation, validation retry and edit-conflict input preservation. Transport tests verify that
+creation returns an identity only after the complete server save succeeds.
 jsdom is development-only. These checks do not replace deployed authenticated acceptance.
 
-The save workflow is intentionally **not a single atomic server transaction**. It serializes three
-commits, retains a returned DRAFT ID in the current page, and reports partial saves honestly.
-After leaving/reloading, use the event list and edit the saved DRAFT; do not recreate it. When the
-initial POST response is ambiguous, the form blocks blind recreation and asks for list inspection.
-Backend optimistic locking remains enabled; separate editing sessions can receive HTTP 409.
+The save workflow uses **one server transaction** for event, consent and refund settings. Backend
+MySQL HTTP tests verify rollback when a later setting is invalid. If the initial POST response is
+ambiguous, the form still blocks blind recreation and asks for list inspection: transaction atomicity
+does not make a lost response safe to retry. Locked historical settings use the ordinary event edit
+route. Optimistic locking remains enabled; separate editing sessions can receive HTTP 409.
 
 ## Participant browser fixtures
+
+Run `pnpm test:browser` for the automated smoke journey. The runner starts its own local Vite
+server on port 5187, creates a fresh browser/context, installs the synthetic boundary and closes
+only its own processes. Local runs use installed Chrome; CI installs pinned Playwright Chromium.
+Use `node scripts/test/run-event-browser-smoke.mjs --existing-server` only with the scenario Vite
+server described below. JSON and screenshot evidence goes to ignored `output/playwright/`.
+The CLI steps below remain available for manual inspection; automated execution uses the same
+fixtures in a persistent Playwright process so native dialog handlers survive across all steps.
 
 These CLI-driven checks render the actual app with a **synthetic HTTP boundary**. They are not
 staging acceptance, real backend authorization/locking tests, OAuth login, email/SMS or payments.
