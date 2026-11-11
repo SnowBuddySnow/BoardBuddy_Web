@@ -19,7 +19,8 @@ route. Optimistic locking remains enabled; separate editing sessions can receive
 
 Run `pnpm test:browser` for the automated smoke journey. The runner starts its own local Vite
 server on port 5187, creates a fresh browser/context, installs the synthetic boundary and closes
-only its own processes. Local runs use installed Chrome; CI installs pinned Playwright Chromium.
+only its own processes. Local runs use installed Chrome; CI uses the matching pinned official
+Playwright image with browser/system dependencies already present, without runtime apt installation.
 Use `node scripts/test/run-event-browser-smoke.mjs --existing-server` only with the scenario Vite
 server described below. JSON and screenshot evidence goes to ignored `output/playwright/`.
 The CLI steps below remain available for manual inspection; automated execution uses the same
