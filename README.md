@@ -4,15 +4,17 @@ BoardBuddy Web is the frontend client for the BoardBuddy application. It is buil
 
 ## Getting Started
 
-1. Install dependencies:
+1. With Node.js 22.13+ installed, activate pinned pnpm and install dependencies:
    ```bash
-   pnpm install
+   corepack enable
+   corepack prepare pnpm@11.9.0 --activate
+   pnpm install --frozen-lockfile
    ```
 
 2. Set up environment variables:
    Copy `.env.example` to `.env` and configure any necessary keys.
    ```bash
-   cp .env.example .env
+   test -e .env || cp .env.example .env
    ```
 
 3. Start the development server:
