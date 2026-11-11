@@ -6,6 +6,7 @@ import { leaveCrew } from '../services/crew';
 import { UserDetail } from '../types/api';
 import { APP_VERSION, COPYRIGHT_TEXT } from '../version';
 import { clearAuthSession } from '../lib/session';
+import { signOut } from '../services/auth';
 import { isCrewCaptainRole } from '../constants/crewRole';
 import { SCHOOL_EMAIL_AUTH_AVAILABLE } from '../config/features';
 import { getApiErrorMessage } from '../lib/apiError';
@@ -239,9 +240,9 @@ export default function AccountInfo({ onBack, onStudentVerificationClick }: Acco
                         </button>
                     )}
 
-                    <button type="button" onClick={() => {
+                    <button type="button" onClick={async () => {
                         if (!confirm('BoardBuddy에서 로그아웃하시겠습니까?')) return;
-                        clearAuthSession();
+                        await signOut();
                         window.location.href = '/';
                     }} disabled={actionBusy !== null} className="flex w-full items-center gap-3 rounded-xl border border-zinc-200 bg-white px-4 py-3 text-left text-sm font-bold text-zinc-700 disabled:opacity-40 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200">
                         <LogOut className="h-4 w-4" /> BoardBuddy 로그아웃

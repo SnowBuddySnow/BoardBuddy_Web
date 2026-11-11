@@ -20,63 +20,60 @@ function deferred() {
     return { promise, resolve };
 }
 
-describe('sequential event configuration transport', () => {
+describe('atomic event configuration transport', () => {
     beforeEach(() => {
         vi.resetAllMocks();
         http.post.mockResolvedValue(result({ id: 1 }));
         http.patch.mockResolvedValue(result({ id: 1 }));
-        http.put.mockResolvedValue(result());
+        http.put.mockResolvedValue(result({ id: 1 }));
     });
 
-    it('retains the created identity before consent, and waits for consent commit before refund', async () => {
-        const consent = deferred();
-        http.put.mockReturnValueOnce(consent.promise).mockResolvedValue(result());
+    it('sends all settings once and publishes the new identity only after success', async () => {
+        const pending = deferred(); http.post.mockReturnValue(pending.promise);
         const onCreated = vi.fn();
         const save = saveEventConfiguration({ ...configuration, onCreated });
-        await vi.waitFor(() => expect(http.put).toHaveBeenCalledTimes(1));
-        expect(onCreated).toHaveBeenCalledWith(1);
-        expect(http.put).toHaveBeenLastCalledWith('/dashboard/events/1/consents', consentConfiguration);
-        consent.resolve(result());
-        await expect(save).resolves.toBe(1);
-        expect(http.put).toHaveBeenLastCalledWith('/dashboard/events/1/refund-policy', { refundPolicy: 'Synthetic notice' });
-    });
-
-    it('waits for the existing event update before either configuration write', async () => {
-        const update = deferred();
-        http.patch.mockReturnValue(update.promise);
-        const save = saveEventConfiguration({ ...configuration, eventId: 1 });
+        expect(onCreated).not.toHaveBeenCalled();
+        expect(http.post).toHaveBeenCalledWith('/dashboard/events/configurations', {
+            event: payload, consents: consentConfiguration, refundPolicy: 'Synthetic notice',
+        });
         expect(http.put).not.toHaveBeenCalled();
-        update.resolve(result({ id: 1 }));
+        pending.resolve(result({ id: 1 }));
         await expect(save).resolves.toBe(1);
-        expect(http.post).not.toHaveBeenCalled();
-        expect(http.patch).toHaveBeenCalledWith('/dashboard/events/1', payload);
+        expect(onCreated).toHaveBeenCalledWith(1);
     });
 
-    it.each(['event', 'consents', 'refund'] as const)('reports a %s failure without pretending the whole workflow is atomic', async stage => {
-        const cause = new Error('Synthetic failure');
-        if (stage === 'event') http.post.mockRejectedValue(cause);
-        else if (stage === 'consents') http.put.mockRejectedValueOnce(cause);
-        else http.put.mockResolvedValueOnce(result()).mockRejectedValueOnce(cause);
+    it('updates the complete configuration with one request', async () => {
+        await expect(saveEventConfiguration({ ...configuration, eventId: 1 })).resolves.toBe(1);
+        expect(http.put).toHaveBeenCalledWith('/dashboard/events/1/configuration', {
+            event: payload, consents: consentConfiguration, refundPolicy: 'Synthetic notice',
+        });
+        expect(http.patch).not.toHaveBeenCalled(); expect(http.post).not.toHaveBeenCalled();
+    });
+
+    it('never reports an invented identity after a failed create', async () => {
+        const cause = new Error('Synthetic failure'); http.post.mockRejectedValue(cause);
         const onCreated = vi.fn();
         const failure = await saveEventConfiguration({ ...configuration, onCreated }).catch(error => error);
         expect(failure).toBeInstanceOf(EventSaveError);
-        expect(failure).toMatchObject({ stage, eventId: stage === 'event' ? null : 1, originalError: cause });
-        expect(onCreated).toHaveBeenCalledTimes(stage === 'event' ? 0 : 1);
-        expect(http.put).toHaveBeenCalledTimes(stage === 'event' ? 0 : stage === 'consents' ? 1 : 2);
+        expect(failure).toMatchObject({ stage: 'event', eventId: null, originalError: cause });
+        expect(onCreated).not.toHaveBeenCalled(); expect(http.put).not.toHaveBeenCalled();
     });
 
-    it('reconciles the same draft after a partial failure, never POSTing a second event', async () => {
-        let eventId: number | null = null;
-        http.put.mockRejectedValueOnce(new Error('Synthetic consent failure'));
-        await expect(saveEventConfiguration({ ...configuration, onCreated: id => { eventId = id; } })).rejects.toBeInstanceOf(EventSaveError);
-        expect(eventId).toBe(1);
-        await expect(saveEventConfiguration({ ...configuration, eventId: eventId! })).resolves.toBe(1);
-        expect(http.post).toHaveBeenCalledTimes(1);
+    it('keeps existing identity for a retry after update failure', async () => {
+        http.put.mockRejectedValueOnce(new Error('Synthetic failure'));
+        await expect(saveEventConfiguration({ ...configuration, eventId: 1 })).rejects.toMatchObject({ eventId: 1 });
+        await expect(saveEventConfiguration({ ...configuration, eventId: 1 })).resolves.toBe(1);
+        expect(http.post).not.toHaveBeenCalled();
+    });
+
+    it('leaves historical evidence alone for locked configurations', async () => {
+        await saveEventConfiguration({ ...configuration, eventId: 1, configurationLocked: true });
         expect(http.patch).toHaveBeenCalledWith('/dashboard/events/1', payload);
+        expect(http.put).not.toHaveBeenCalled();
     });
 
     it('normalizes an empty refund policy to null', async () => {
         await saveEventConfiguration({ ...configuration, eventId: 1, refundPolicy: '  ' });
-        expect(http.put).toHaveBeenLastCalledWith('/dashboard/events/1/refund-policy', { refundPolicy: null });
+        expect(http.put).toHaveBeenCalledWith('/dashboard/events/1/configuration', expect.objectContaining({ refundPolicy: null }));
     });
 });

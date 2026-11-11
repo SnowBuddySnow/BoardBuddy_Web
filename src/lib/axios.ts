@@ -89,7 +89,16 @@ const refreshSession = async (session: AuthSessionSnapshot): Promise<AuthSession
 const getRefreshedSession = (session: AuthSessionSnapshot) => {
     if (pendingRefresh && sameSession(pendingRefresh.session, session)) return pendingRefresh.promise;
 
-    const flight = { session, promise: refreshSession(session) };
+    const run = () => {
+        // Another tab may have refreshed or signed out while we waited for the browser lock.
+        // Cancel the old request instead of spending an already consumed credential.
+        if (!sameSession(session, currentSession())) throw new axios.CanceledError('Authentication session changed');
+        return refreshSession(session);
+    };
+    const promise = typeof navigator !== 'undefined' && navigator.locks
+        ? navigator.locks.request('boardbuddy-token-refresh', run)
+        : Promise.resolve().then(run);
+    const flight = { session, promise };
     pendingRefresh = flight;
     const release = () => { if (pendingRefresh === flight) pendingRefresh = null; };
     // Both handlers consume cleanup without creating an unhandled rejection.
