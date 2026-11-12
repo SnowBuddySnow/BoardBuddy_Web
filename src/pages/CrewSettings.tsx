@@ -9,6 +9,7 @@ import { CrewInfoUpdateRequest } from '../types/api';
 import { isCrewCaptainRole } from '../constants/crewRole';
 import Promote from './Promote';
 import { SEASON_HOUSE_RESERVATIONS_ENABLED } from '../constants/operatingSeason';
+import { CrewInvitationPanel } from '../components/onboarding/CrewInvitationPanel';
 
 interface CrewSettingsProps {
     onBack: () => void;
@@ -209,6 +210,7 @@ export default function CrewSettings({ onBack, onCaptainGuideClick }: CrewSettin
 
             <main className="reservation-content reservation-settings-content">
                 <div className="space-y-6">
+                    {isCaptain && crewId !== null && <CrewInvitationPanel crewId={crewId} />}
                     {/* Crew Name */}
                     <div className="space-y-2">
                         <label className="text-sm font-bold text-zinc-900">크루 이름</label>

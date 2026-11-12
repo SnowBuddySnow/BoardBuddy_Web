@@ -8,9 +8,10 @@ import { isCrewSchoolVerificationRequired } from '../lib/crewSchoolVerification'
 interface SearchCrewProps {
     onBack: () => void;
     onJoined?: () => void;
+    onApplied?: () => void;
 }
 
-export default function SearchCrew({ onBack, onJoined }: SearchCrewProps) {
+export default function SearchCrew({ onBack, onJoined, onApplied }: SearchCrewProps) {
     const [crews, setCrews] = useState<DiscoverableCrew[]>([]);
     const [query, setQuery] = useState('');
     const [selectedCrew, setSelectedCrew] = useState<DiscoverableCrew | null>(null);
@@ -66,6 +67,7 @@ export default function SearchCrew({ onBack, onJoined }: SearchCrewProps) {
             setSelectedCrew(null);
             setPin('');
             if (result.status === 'JOINED') onJoined?.();
+            else onApplied?.();
         } catch (requestError) {
             const message = getApiErrorMessage(requestError);
             setError(message === 'Invalid crew PIN'

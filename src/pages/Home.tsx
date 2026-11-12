@@ -19,6 +19,7 @@ interface HomeProps {
     onTeamClick: () => void;
     onSearchClick: () => void;
     onCreateCrewClick: () => void;
+    onOnboardingClick?: () => void;
     hasCrew?: boolean;
     onJoinCrew?: () => void;
     onEventClick: (eventId: number) => void;
@@ -37,6 +38,7 @@ export default function Home({
     onTeamClick,
     onSearchClick,
     onCreateCrewClick,
+    onOnboardingClick,
     hasCrew: initialHasCrew = true,
     onEventClick,
     onSeeAllPartiesClick,
@@ -186,6 +188,7 @@ export default function Home({
             <main className="flex-1 overflow-y-auto pb-[110px] space-y-5">
 
                 {/* Team Info / Host Metadata (De-emphasized compact row) */}
+                {!hasCrew && onOnboardingClick && <button type="button" onClick={onOnboardingClick} className="mb-5 flex min-h-14 w-full items-center justify-between gap-3 rounded-2xl bg-[#162660] p-4 text-left text-sm font-bold text-white"><span>내 가입·크루 생성 진행 상태 이어보기</span><ChevronRight className="h-4 w-4 shrink-0" /></button>}
                 {(hasCrew && userInfo?.crew || pendingApplication) && (
                     <div className="px-4">
                     {hasCrew && userInfo?.crew ? (

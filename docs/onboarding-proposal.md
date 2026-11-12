@@ -1,7 +1,7 @@
 # Lower-friction onboarding proposal
 
-Status: design proposal for review; no new public endpoints, membership policies or screen theme
-are enabled by this document. Keep the existing navy `#162660`, cream `#FAF8F3`, yellow `#FCCA59`,
+Status: design approved by the owner; implementation is on `feat/member-onboarding` for maintainer
+PR review. See `signup-and-onboarding.md` for behavior and verification boundaries. Keep the existing navy `#162660`, cream `#FAF8F3`, yellow `#FCCA59`,
 rounded surfaces and mobile-first member flow.
 
 ## What the current code actually requires

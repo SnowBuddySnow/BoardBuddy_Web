@@ -67,6 +67,8 @@ jobs:
           pnpm install --frozen-lockfile
       - name: Exercise local browser journeys
         run: pnpm run test:browser
+      - name: Exercise responsive signup and crew onboarding
+        run: pnpm run test:onboarding
       - name: Save synthetic scenario evidence
         if: always()
         uses: actions/upload-artifact@v4

@@ -1,10 +1,12 @@
 import axios from 'axios';
 import { clearAuthSession, getRefreshToken } from '../lib/session';
+import { clearCrewInvitationIntent } from '../lib/onboardingIntent';
 
 /** Clear local access immediately; revoke the server refresh family without replay/interceptors. */
 export const signOut = async (): Promise<void> => {
     const refreshToken = getRefreshToken();
     clearAuthSession();
+    clearCrewInvitationIntent();
     if (!refreshToken) return;
     try {
         await axios.post(`${import.meta.env.VITE_API_BASE_URL || '/api'}/auth/logout`, {}, {

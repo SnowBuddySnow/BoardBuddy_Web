@@ -6,6 +6,7 @@ import kakaoLogin from '../assets/login/kakao.png';
 import boardBuddyLogo from '../assets/boardbuddy-logo.png';
 import apiClient from '../lib/axios';
 import { getApiErrorMessage } from '../lib/apiError';
+import { beginOnboardingLogin, isCurrentOnboardingLogin } from '../lib/onboardingIntent';
 import {
     isAutoLoginEnabled,
     saveAuthTokens,
@@ -49,8 +50,14 @@ export default function LoginLanding({ onLogin, onSignupNeeded, onProfileTypeNee
         }
 
         setIsLoggingIn(true);
+        const continuation = beginOnboardingLogin();
         window.Kakao.Auth.login({
             success: async (authObj) => {
+                if (!isCurrentOnboardingLogin(continuation)) {
+                    setIsLoggingIn(false);
+                    alert('로그인 중 초대가 변경되었습니다. 현재 초대를 확인한 뒤 다시 로그인해 주세요.');
+                    return;
+                }
                 try {
                     const response = await apiClient.post('/auth/social/kakao', undefined, {
                         headers: {
@@ -59,6 +66,12 @@ export default function LoginLanding({ onLogin, onSignupNeeded, onProfileTypeNee
                     });
 
                     const data = response.data;
+
+                    if (!isCurrentOnboardingLogin(continuation)) {
+                        setIsLoggingIn(false);
+                        alert('로그인 중 초대가 변경되었습니다. 현재 초대를 확인한 뒤 다시 로그인해 주세요.');
+                        return;
+                    }
 
                     if (response.status >= 200 && response.status < 300 && data.data) {
                         const { status, userType, accountId, accessToken, refreshToken } = data.data;
