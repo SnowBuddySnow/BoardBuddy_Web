@@ -23,7 +23,7 @@ try {
     browser = await chromium.launch({ headless: true, ...(process.env.CI ? {} : { channel: 'chrome' }) });
     mkdirSync(`${root}/output/playwright`, { recursive: true });
     for (const viewport of [{ width: 320, height: 640 }, { width: 390, height: 844 }, { width: 768, height: 1024 }, { width: 1440, height: 900 }]) {
-        const context = await browser.newContext({ viewport, serviceWorkers: 'block' });
+        const context = await browser.newContext({ viewport, hasTouch: viewport.width < 1024, isMobile: viewport.width < 1024, serviceWorkers: 'block' });
         await context.addInitScript(() => { localStorage.setItem('tempAccessToken', 'synthetic-only'); localStorage.setItem('accountId', '99101'); });
         const page = await context.newPage();
         const boundary = await installOnboardingBoundary(page);
@@ -40,6 +40,10 @@ try {
         const school = page.getByRole('combobox', { name: '학교', exact: true });
         await school.fill('제2캠퍼스'); await school.press('ArrowDown'); await school.press('Enter');
         assert(await school.inputValue() === '한국대학교', 'Keyboard school selection failed');
+        if (viewport.width === 390) {
+            await school.fill('제2캠퍼스'); await page.getByRole('option').tap();
+            assert(await school.inputValue() === '한국대학교', 'Touch school selection failed');
+        }
         await page.getByRole('textbox', { name: /^학번/ }).fill('20260001');
         await page.getByRole('radio', { name: '여자', exact: true }).check();
         assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), `Signup overflows at ${viewport.width}`);
@@ -54,17 +58,25 @@ try {
         const finish = page.getByRole('button', { name: '동의하고 가입 완료', exact: true });
         assert(!await finish.isEnabled(), 'Consent was preselected');
         const read = page.getByRole('button', { name: '보드버디 서비스 이용약관 자세히 보기', exact: true });
+        if (viewport.width === 390) await page.setViewportSize({ width: 390, height: 480 });
         await read.click();
         const dialog = page.getByRole('dialog');
         await dialog.waitFor();
         const box = await dialog.boundingBox();
-        assert(box && box.x >= 0 && box.y >= 0 && box.width <= viewport.width && box.height <= viewport.height, 'Terms dialog clips viewport');
+        assert(box && box.x >= 0 && box.y >= 0 && box.width <= viewport.width && box.height <= (page.viewportSize()?.height || viewport.height), 'Terms dialog clips viewport');
+        if (viewport.width === 390) { const action = await dialog.getByRole('button', { name: '이 약관에 동의', exact: true }).boundingBox(); assert(action && action.y >= 0 && action.y + action.height <= 480, 'Terms action is unreachable in a compact mobile viewport'); }
         const content = dialog.getByRole('region', { name: '약관 본문' });
         await content.focus(); await content.press('End');
         if ([390, 1440].includes(viewport.width)) await page.screenshot({ path: `${root}/output/playwright/signup-terms-${viewport.width}.png` });
         await dialog.getByRole('button', { name: '닫기', exact: true }).click();
         assert(!await page.getByRole('checkbox', { name: /보드버디 서비스 이용약관/ }).isChecked(), 'Reading changed consent');
         assert(await read.evaluate(el => el === document.activeElement), 'Terms focus was not restored');
+        if (viewport.width === 390) {
+            await page.setViewportSize(viewport);
+            const agreement = page.getByRole('checkbox', { name: /보드버디 서비스 이용약관/ });
+            await agreement.tap(); assert(await agreement.isChecked(), 'Touch consent did not toggle');
+            await agreement.tap(); assert(!await agreement.isChecked(), 'Touch consent could not be withdrawn');
+        }
         await read.click(); await dialog.getByRole('button', { name: '이 약관에 동의', exact: true }).click();
         assert(!await finish.isEnabled(), 'One required agreement enabled signup');
         await page.getByRole('checkbox', { name: '필수 약관 모두 동의', exact: true }).check();

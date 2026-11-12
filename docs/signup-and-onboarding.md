@@ -48,7 +48,7 @@ Deploy the backend PR before the web PR. Neither PR is an assertion of staging a
 
 `pnpm test`, `pnpm typecheck`, `pnpm lint`, `pnpm check:contracts`, `pnpm build` and
 `pnpm test:onboarding` cover the implementation. Browser tests use isolated localhost HTTP fixtures
-and block external traffic. They exercise 320/390/768/1440px signup, school keyboard selection and
+and block external traffic. They exercise 320/390/768/1440px signup, touch choice/checking, a 480px-high consent viewport, school keyboard selection and
 identity, phone verification, explicit consent/read/close, modal geometry/focus, new-member invite →
 signup → pending → approval → original event, existing-member login and pending reload, same-tab invitation replacement, and president
 approval → invitation QR → revoke → first host-group setup. Evidence is in ignored `output/playwright`.
