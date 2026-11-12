@@ -4,7 +4,7 @@ import { Button } from '../components/Button';
 import { Calendar } from '../components/Calendar';
 import { getUserInfo, getMyReservations } from '../services/user';
 import { UserDetail, MyReservation } from '../types/api';
-import { clearAuthSession } from '../lib/session';
+import { signOut } from '../services/auth';
 import { isCrewCaptainRole, normalizeCrewRole } from '../constants/crewRole';
 import { SEASON_HOUSE_RESERVATIONS_ENABLED } from '../constants/operatingSeason';
 
@@ -304,9 +304,9 @@ export default function MyPage({ onBack, onAccountInfoClick, onRoleGuideClick, o
                 <div className="mt-auto px-6 mb-24 flex justify-center">
                     <Button
                         variant="outline"
-                        onClick={() => {
+                        onClick={async () => {
                             if (confirm('로그아웃 하시겠습니까?')) {
-                                clearAuthSession();
+                                await signOut();
                                 window.location.href = '/';
                             }
                         }}

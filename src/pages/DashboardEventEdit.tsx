@@ -183,7 +183,7 @@ export default function DashboardEventEdit({ eventId, onBack, onSuccess }: Dashb
             const message = status === 403 ? '이 이벤트를 관리할 권한이 없습니다.'
                 : status === 409 ? '다른 요청과 충돌했습니다. 저장된 정보를 확인한 후 다시 수정해 주세요.'
                     : getApiErrorMessage(cause) || '이벤트 정보 수정에 실패했습니다.';
-            setSaveError(`${message} 일부 변경 사항이 이미 저장되었을 수 있습니다. 현재 입력은 유지됩니다. 나가기 전 입력 내용을 보관하고 저장된 정보를 확인해 주세요.`);
+            setSaveError(`${message} 현재 입력은 유지됩니다. 응답을 확인하지 못했다면 저장된 정보를 확인한 후 다시 시도해 주세요.`);
         } finally {
             submitting.current = false;
             setSubmitLoading(false);

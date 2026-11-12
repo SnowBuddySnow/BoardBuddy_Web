@@ -37,8 +37,39 @@ jobs:
       - name: Run Tests
         run: pnpm run test
 
+      - name: Verify HTTP Contract
+        run: pnpm run check:contracts
+
       - name: Build Web Application
         env:
           VITE_KAKAO_JAVASCRIPT_KEY: ${{ secrets.VITE_KAKAO_JAVASCRIPT_KEY || 'dummy_ci_key' }}
           VITE_API_BASE_URL: /api
         run: pnpm run build
+
+  browser-smoke:
+    name: Synthetic Browser Journeys
+    runs-on: ubuntu-latest
+    # Test runner only; hosted web deployment remains Vercel.
+    container:
+      image: mcr.microsoft.com/playwright:v1.65.0-noble
+    env:
+      PLAYWRIGHT_BROWSERS_PATH: /ms-playwright
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install pinned dependencies
+        run: |
+          corepack enable
+          corepack prepare pnpm@11.9.0 --activate
+          pnpm install --frozen-lockfile
+      - name: Exercise local browser journeys
+        run: pnpm run test:browser
+      - name: Save synthetic scenario evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: synthetic-browser-evidence
+          path: output/playwright/
