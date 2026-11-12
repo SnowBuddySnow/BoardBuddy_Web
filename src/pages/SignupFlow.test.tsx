@@ -107,6 +107,17 @@ describe('signup school, phone and consent flow', () => {
         expect(container.querySelector('[role="alert"]')).not.toBeNull();
         await click(button('동의하고 가입 완료')); expect(success).toHaveBeenCalledOnce();
     });
+    it('returns to personal review when refreshed signup policy changes the profile type', async () => {
+        await render(); await toTerms(); await click(container.querySelector<HTMLInputElement>('input[type="checkbox"]')!);
+        mocks.put.mockRejectedValueOnce({ isAxiosError: true, response: { status: 403 } });
+        mocks.getSignupPolicy.mockResolvedValue({ regularEnabled: true, studentEnabled: false, version: 2 });
+        await click(button('동의하고 가입 완료'));
+        expect(container.textContent).toContain('1 / 3');
+        expect(container.querySelector<HTMLButtonElement>('button[aria-pressed="true"]')!.textContent).toContain('일반');
+        expect(container.querySelector<HTMLInputElement>('input[placeholder="보드버디"]')!.value).toBe('가상 회원');
+        expect(mocks.put).toHaveBeenCalledOnce();
+        expect(success).not.toHaveBeenCalled();
+    });
     it('reuses server-verified identity without sending another SMS', async () => {
         mocks.getOnboardingStatus.mockResolvedValue({ verifiedPhoneNumber: '+821000000000' });
         await render(); await personal(); await click(button('다음'));

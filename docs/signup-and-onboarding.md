@@ -9,6 +9,8 @@ at checked PRs; the maintainer merges and develop pushes deploy staging.
 - Signup uses three steps: personal profile → phone identity → agreements. Navy/cream/yellow and
   rounded surfaces are retained. Data stays in the form while navigating steps or retrying a failed
   request; personal profile inputs are not persisted as browser drafts.
+  A rejected submission that refreshes signup policy returns to personal review before retrying,
+  so a newly selected profile type is visible to the applicant.
 - School selection stores a school ID separately from search text. It supports Korean aliases,
   keyboard navigation/Enter/Escape/IME composition, pointer/touch choice, empty results and retry.
   Editing text invalidates the selected identity. A successful retry clears loading; no fabricated
@@ -18,6 +20,8 @@ at checked PRs; the maintainer merges and develop pushes deploy staging.
   closing never checks consent. “이 약관에 동의” checks only that document. Required-all excludes
   the optional sharing preference, whose default remains confirmation each time. Existing legal
   text is preserved; this change does not introduce a new legal policy or claim a server consent ledger.
+  The optional preference is bound to its account and cleared on logout or account change. Legacy
+  preferences without a known owner reset to confirmation each time on their first app load.
 - The caller's server-verified phone may be reused after interrupted signup. Late recovery responses
   cannot overwrite an edited number or an account switch. Editing a number invalidates local
   verification, and backend profile completion remains authoritative.

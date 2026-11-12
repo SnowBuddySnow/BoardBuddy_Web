@@ -166,7 +166,7 @@ export default function UserInfoInput({ onBack, onSuccess }: UserInfoInputProps)
             else onBack();
         } catch (requestError) {
             setError(getApiErrorMessage(requestError) || '가입을 완료하지 못했습니다. 입력한 정보는 유지됩니다. 다시 시도해 주세요.');
-            if (getApiErrorStatus(requestError) === 403) { setSignupPolicy(null); setPolicyError(''); setPolicyAttempt(value => value + 1); }
+            if (getApiErrorStatus(requestError) === 403) { setStep(0); setSignupPolicy(null); setPolicyError(''); setPolicyAttempt(value => value + 1); }
         } finally { setIsLoading(false); }
     };
 
