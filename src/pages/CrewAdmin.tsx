@@ -26,6 +26,8 @@ import {
 interface CrewAdminProps {
     onBack: () => void;
     mode?: 'create' | 'review';
+    onSearch?: () => void;
+    onRequested?: () => void;
 }
 
 type ReviewFilter = 'PENDING' | 'APPROVED' | 'REJECTED' | 'ALL';
@@ -69,7 +71,7 @@ const schoolsForCrew = (schools: AdminSchool[], crew: AdminCrew) => {
     });
 };
 
-export default function CrewAdmin({ onBack, mode = 'create' }: CrewAdminProps) {
+export default function CrewAdmin({ onBack, mode = 'create', onSearch, onRequested }: CrewAdminProps) {
     const [data, setData] = useState<AdminCrewData | null>(null);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
@@ -145,6 +147,7 @@ export default function CrewAdmin({ onBack, mode = 'create' }: CrewAdminProps) {
                 crews: [...current.crews, crew].sort((left, right) => left.name.localeCompare(right.name)),
             } : current);
             setName('');
+            onRequested?.();
         } catch (saveError) {
             setError(getErrorMessage(saveError));
         } finally {
@@ -466,6 +469,11 @@ export default function CrewAdmin({ onBack, mode = 'create' }: CrewAdminProps) {
 
             <main className="flex-1 overflow-y-auto p-4">
                 <div className="mx-auto max-w-md space-y-5">
+                    <section className="rounded-2xl bg-[#FAF8F3] p-5 text-sm leading-7 text-[#162660]">
+                        <h2 className="font-black">이미 등록된 크루가 있나요?</h2>
+                        <p className="mt-2 text-zinc-600">같은 크루를 다시 만들지 않고 기존 크루에 가입할 수 있어요. 새 요청은 관리자 승인 후 회장 계정에 자동으로 연결됩니다.</p>
+                        {onSearch && <button type="button" onClick={onSearch} className="mt-2 min-h-11 font-bold underline">기존 크루 먼저 찾기</button>}
+                    </section>
                     {error && <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</div>}
 
                     <form onSubmit={handleSubmit} className="space-y-4 rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm">
@@ -486,8 +494,8 @@ export default function CrewAdmin({ onBack, mode = 'create' }: CrewAdminProps) {
                             예약 오픈일과 정원은 크루 승인 후 크루 설정에서 관리합니다.
                         </div>
 
-                        <button disabled={saving || loading} className="w-full rounded-xl bg-zinc-900 py-3 text-sm font-black text-white disabled:cursor-not-allowed disabled:opacity-50">
-                            {saving ? '요청 중...' : '생성 요청 보내기'}
+                        <button disabled={saving || loading || data?.crews.some(crew => crew.approvalStatus === 'PENDING')} className="w-full rounded-xl bg-zinc-900 py-3 text-sm font-black text-white disabled:cursor-not-allowed disabled:opacity-50">
+                            {saving ? '요청 중...' : data?.crews.some(crew => crew.approvalStatus === 'PENDING') ? '기존 요청을 검토 중입니다' : '생성 요청 보내기'}
                         </button>
                     </form>
 

@@ -24,6 +24,7 @@ import { listParties } from './services/event';
 import type { CrewDetail as CrewDetailData } from './types/api';
 import { isCrewCaptainRole } from './constants/crewRole';
 import { isEventRegistrationAvailable } from './lib/eventDateTime';
+import { captureCrewInvitation, CREW_INVITATION_CHANGED, getCrewInvitationIntent } from './lib/onboardingIntent';
 
 // Keep login/home immediate; fetch heavier screens only when their existing route is entered.
 const Reservation = lazy(() => import('./pages/Reservation'));
@@ -35,6 +36,8 @@ const ProfileTypeConfirmation = lazy(() => import('./pages/ProfileTypeConfirmati
 const StudentVerification = lazy(() => import('./pages/StudentVerification'));
 const CrewMember = lazy(() => import('./pages/CrewMember'));
 const SearchCrew = lazy(() => import('./pages/SearchCrew'));
+const CrewInvite = lazy(() => import('./pages/CrewInvite'));
+const Onboarding = lazy(() => import('./pages/Onboarding'));
 const CrewSettings = lazy(() => import('./pages/CrewSettings'));
 const MyPage = lazy(() => import('./pages/MyPage'));
 const AccountInfo = lazy(() => import('./pages/AccountInfo'));
@@ -74,6 +77,14 @@ function FeatureUnavailable({ title, description, onBack }: { title: string; des
 
 function App() {
   const [currentView, setCurrentView] = useState<View>(() => getInitialView());
+  const [crewInviteRevision, setCrewInviteRevision] = useState(0);
+  useEffect(() => {
+    const capture = () => captureCrewInvitation();
+    const changed = () => { setCrewInviteRevision(value => value + 1); setCurrentView('crew_invite'); };
+    window.addEventListener('hashchange', capture);
+    window.addEventListener(CREW_INVITATION_CHANGED, changed);
+    return () => { window.removeEventListener('hashchange', capture); window.removeEventListener(CREW_INVITATION_CHANGED, changed); };
+  }, []);
   const [hasCrew, setHasCrew] = useState(false);
   const [hasPendingCrewApplication, setHasPendingCrewApplication] = useState(false);
   const [selectedEventId, setSelectedEventId] = useState<number | null>(() => {
@@ -115,7 +126,7 @@ function App() {
   const [eventManagerGuideReturnVisible, setEventManagerGuideReturnVisible] = useState(false);
   const isDesktop = useDesktopViewport();
   const usedDesktopLanding = useRef(false);
-  const shouldLoadPermissions = !['login', 'user_info', 'profile_type_confirmation', 'student_verification'].includes(currentView);
+  const shouldLoadPermissions = !['login', 'user_info', 'profile_type_confirmation', 'student_verification', 'crew_invite'].includes(currentView);
   const operatingMode = getOperatingMode();
   const operatingFeatures = getOperatingFeatures(operatingMode);
   const seasonHouseAvailable = operatingFeatures.season
@@ -175,6 +186,7 @@ function App() {
   }, [shouldLoadPermissions, crewAccessRevision]);
 
   useEffect(() => {
+    if (currentView === 'onboarding' || currentView === 'crew_invite') return;
     if (!shouldLoadPermissions || !managementAccessResolved || !isCaptain || onboardingUserId == null) return;
     if (captainOnboardingDismissed || captainOnboardingOpen || eventManagerOnboardingOpen) return;
     if (claimCaptainOnboarding(onboardingUserId)) {
@@ -189,6 +201,7 @@ function App() {
     isCaptain,
     managementAccessResolved,
     shouldLoadPermissions,
+    currentView,
   ]);
 
   useEffect(() => {
@@ -453,7 +466,7 @@ function App() {
       case 'login':
         return (
           <LoginLanding
-            onLogin={() => setCurrentView(organizerInviteToken ? 'organizer_invite' : 'home')}
+            onLogin={() => setCurrentView(getCrewInvitationIntent() ? 'crew_invite' : organizerInviteToken ? 'organizer_invite' : 'home')}
             onSignupNeeded={() => setCurrentView('user_info')}
             onProfileTypeNeeded={() => setCurrentView('profile_type_confirmation')}
             onDebugUserInfo={() => setCurrentView('user_info')}
@@ -501,7 +514,7 @@ function App() {
       case 'crew_member':
         return <CrewMember onBack={() => setCurrentView('crew_detail')} />;
       case 'search_crew':
-        return <SearchCrew onBack={() => setCurrentView('home')} onJoined={() => {
+        return <SearchCrew onBack={() => setCurrentView('onboarding')} onApplied={() => setCurrentView('onboarding')} onJoined={() => {
           setHasCrew(true);
           setHasPendingCrewApplication(false);
           setCrewAccessRevision(revision => revision + 1);
@@ -512,7 +525,7 @@ function App() {
           <UserInfoInput
             onBack={() => setCurrentView('login')}
             onSuccess={(requiresStudentVerification) => setCurrentView(
-              requiresStudentVerification ? 'student_verification' : organizerInviteToken ? 'organizer_invite' : 'home'
+              requiresStudentVerification ? 'student_verification' : getCrewInvitationIntent() ? 'crew_invite' : organizerInviteToken ? 'organizer_invite' : 'onboarding'
             )}
           />
         );
@@ -520,7 +533,7 @@ function App() {
         return (
           <ProfileTypeConfirmation
             onSuccess={(requiresStudentVerification) => setCurrentView(
-              requiresStudentVerification ? 'student_verification' : organizerInviteToken ? 'organizer_invite' : 'home'
+              requiresStudentVerification ? 'student_verification' : getCrewInvitationIntent() ? 'crew_invite' : organizerInviteToken ? 'organizer_invite' : 'home'
             )}
           />
         );
@@ -529,7 +542,7 @@ function App() {
           <StudentVerification
             onDone={() => {
               window.history.replaceState({}, '', window.location.pathname);
-              setCurrentView(getAccessToken() ? (organizerInviteToken ? 'organizer_invite' : 'home') : 'login');
+              setCurrentView(getAccessToken() ? (getCrewInvitationIntent() ? 'crew_invite' : organizerInviteToken ? 'organizer_invite' : 'home') : 'login');
             }}
           />
         );
@@ -571,7 +584,15 @@ function App() {
       case 'crew_admin':
         return <CrewAdmin mode="review" onBack={() => setCurrentView('home')} />;
       case 'crew_create':
-        return <CrewAdmin mode="create" onBack={() => setCurrentView('home')} />;
+        return <CrewAdmin mode="create" onBack={() => setCurrentView('onboarding')} onSearch={() => setCurrentView('search_crew')} onRequested={() => setCurrentView('onboarding')} />;
+      case 'crew_invite':
+        return <CrewInvite key={crewInviteRevision} onLogin={() => setCurrentView('login')} onSignup={() => setCurrentView('user_info')}
+          onExit={() => setCurrentView(getAccessToken() ? 'home' : 'login')} onEvents={() => setCurrentView('parties')}
+          onDone={(eventId) => { setCrewAccessRevision(value => value + 1); setManagementRefreshKey(value => value + 1); if (eventId) openEventDetail(eventId); else setCurrentView('crew_detail'); }} />;
+      case 'onboarding':
+        return <Onboarding onBack={() => setCurrentView('home')} onSearch={() => setCurrentView('search_crew')} onCreate={() => setCurrentView('crew_create')}
+          onEvents={() => setCurrentView('parties')} onFirstEvent={(hasGroup) => setCurrentView(hasGroup ? 'dashboard_event_new' : 'dashboard_groups')}
+          onCrew={(eventId) => { setCrewAccessRevision(value => value + 1); setManagementRefreshKey(value => value + 1); if (eventId) openEventDetail(eventId); else setCurrentView('crew_detail'); }} />;
       case 'school_admin':
         return <SchoolAdmin onBack={() => setCurrentView('home')} />;
       case 'user_admin':
@@ -586,7 +607,7 @@ function App() {
           />
         );
       case 'notifications':
-        return <Notifications onBack={() => setCurrentView(notificationReturnView)} onChanged={() => setNotificationRefreshKey(key => key + 1)} />;
+        return <Notifications onBack={() => setCurrentView(notificationReturnView)} onChanged={() => setNotificationRefreshKey(key => key + 1)} onOnboarding={() => setCurrentView('onboarding')} />;
       case 'parties':
         return (
           <Parties
@@ -677,6 +698,7 @@ function App() {
             onTeamClick={() => setCurrentView('crew_detail')}
             onSearchClick={() => setCurrentView('search_crew')}
             onCreateCrewClick={() => setCurrentView('crew_create')}
+            onOnboardingClick={() => setCurrentView('onboarding')}
             hasCrew={hasCrew}
             onJoinCrew={() => setHasCrew(true)}
             onEventClick={(id) => openEventDetail(id)}
@@ -694,13 +716,13 @@ function App() {
   const usesDesktopShell = isDesktop
     && !isDashboardView
     && !isPublicGuestFlow
-    && !['login', 'user_info', 'profile_type_confirmation', 'student_verification', 'organizer_invite'].includes(currentView);
+    && !['login', 'user_info', 'profile_type_confirmation', 'student_verification', 'organizer_invite', 'crew_invite', 'onboarding'].includes(currentView);
 
   const currentContent = renderCurrentView();
 
   return (
-    <div className="w-full h-screen bg-zinc-100 dark:bg-zinc-900 flex items-center justify-center overflow-hidden">
-      <div className={isDesktop || isDashboardView || usesDesktopShell || (['crew_admin', 'school_admin', 'user_admin', 'signup_audit'].includes(currentView) && canReviewCrews)
+    <div className="w-full h-dvh bg-zinc-100 dark:bg-zinc-900 flex items-center justify-center overflow-hidden">
+      <div className={isDesktop || isDashboardView || usesDesktopShell || ['user_info', 'crew_invite', 'onboarding'].includes(currentView) || (['crew_admin', 'school_admin', 'user_admin', 'signup_audit'].includes(currentView) && canReviewCrews)
         ? "w-full h-full bg-white dark:bg-zinc-950 relative overflow-hidden flex flex-col" 
         : "w-full h-full max-w-md bg-[#FAF8F3] relative shadow-2xl overflow-hidden flex flex-col"
       }>

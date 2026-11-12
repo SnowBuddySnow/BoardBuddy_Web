@@ -1,8 +1,11 @@
 import { getAccessToken, getSignupToken, hasDevOverride, isAutoLoginEnabled } from '../lib/session';
 import { isSchoolEmailActivationEntry } from '../lib/schoolEmailActivation';
+import { captureCrewInvitation } from '../lib/onboardingIntent';
 
 export type Tab = 'home' | 'events' | 'calendar' | 'edit' | 'heart' | 'user';
 export type View =
+  | 'crew_invite'
+  | 'onboarding'
   | 'login'
   | 'home'
   | 'reservation'
@@ -40,6 +43,7 @@ export type View =
   | 'organizer_invite';
 
 const knownViews = new Set<View>([
+  'crew_invite', 'onboarding',
   'login',
   'home',
   'reservation',
@@ -77,7 +81,7 @@ const knownViews = new Set<View>([
   'organizer_invite',
 ]);
 
-const publicEntryViews = new Set<View>(['login', 'guest_access']);
+const publicEntryViews = new Set<View>(['login', 'guest_access', 'crew_invite']);
 const signupViews = new Set<View>(['user_info', 'profile_type_confirmation', 'student_verification']);
 export const eventGuideEntryViews = new Set<View>(['home', 'my_page', 'operations_center', 'dashboard_groups', 'dashboard_parties']);
 
@@ -112,6 +116,7 @@ export const tabViews: Record<Tab, View> = {
 };
 
 export const viewsWithoutBottomNav: View[] = [
+  'crew_invite', 'onboarding',
   'event_detail',
   'login',
   'user_info',
@@ -133,6 +138,7 @@ export const viewsWithoutBottomNav: View[] = [
 ];
 
 export const getInitialView = (): View => {
+  captureCrewInvitation();
   const params = new URLSearchParams(window.location.search);
   const requestedView = parseView(params.get('view'));
   const hasOrganizerInvite = params.has('organizerInvite');

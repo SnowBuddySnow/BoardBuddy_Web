@@ -2,11 +2,11 @@ import { useEffect, useState } from 'react';
 import { ArrowLeft, Bell, Check, LoaderCircle } from 'lucide-react';
 import { getNotifications, markNotificationRead, type NotificationFeed, type NotificationItem } from '../services/notifications';
 
-interface Props { onBack: () => void; onChanged: () => void; }
+interface Props { onBack: () => void; onChanged: () => void; onOnboarding?: () => void; }
 
 const senderLabel = (item: NotificationItem) => item.senderType === 'MANAGER' ? '크루 매니저' : item.senderType === 'DEVELOPER' ? 'BoardBuddy' : '시스템';
 
-export default function Notifications({ onBack, onChanged }: Props) {
+export default function Notifications({ onBack, onChanged, onOnboarding }: Props) {
     const [feed, setFeed] = useState<NotificationFeed | null>(null);
     const [error, setError] = useState('');
 
@@ -18,7 +18,8 @@ export default function Notifications({ onBack, onChanged }: Props) {
             setFeed(current => current ? { unreadCount: Math.max(0, current.unreadCount - 1), items: current.items.map(n => n.id === item.id ? { ...n, read: true } : n) } : current);
             onChanged();
         }
-        if (item.actionUrl?.startsWith('http')) window.location.assign(item.actionUrl);
+        if (item.actionUrl === '?view=onboarding') onOnboarding?.();
+        else if (item.actionUrl?.startsWith('http')) window.location.assign(item.actionUrl);
     };
 
     return (
