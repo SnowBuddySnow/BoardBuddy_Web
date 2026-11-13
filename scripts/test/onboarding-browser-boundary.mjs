@@ -49,7 +49,9 @@ export const installOnboardingBoundary = async page => {
         if (path.startsWith('/crews/17/invitations/') && method === 'DELETE') { state.invitations.find(item => path.endsWith(item.id)).revokedAt = '2026-11-13T01:00:00'; return respond(null); }
         if (path === '/events/9101') return respond({ id: 9101, title: '가상 초대 행사', description: 'Synthetic event', activityType: 'EVENT', planningMode: 'MANAGER_PLANNED', startsAt: '2027-01-01T09:00:00', capacity: 20, joinedCount: 0, status: 'OPEN', visibilityType: 'PUBLIC', joinPolicy: 'APPROVAL_REQUIRED', organizerGroupId: 1, organizerGroupName: 'Synthetic hosts', kusbfAssociated: false, paymentRequired: false, currentUserStatus: null });
         if (path === '/events/9101/refund-policy') return respond({ refundPolicy: '' });
-        if (['/events', '/crews/discover'].includes(path)) return respond([]);
+        if (path === '/crews/discover') return respond([{ crewId: 17, crewName: '가상 크루', crewCode: 'TEST', schoolName: '한국대학교', schoolId: 1, memberCount: 2, schoolVerificationRequired: false }]);
+        if (path === '/crews/17/applications' && method === 'POST') { state.applied = true; return respond({ crewId: 17, status: 'PENDING' }); }
+        if (path === '/events') return respond([]);
         state.unknown.push({ method, path }); return respond(null, 404);
     });
     return state;

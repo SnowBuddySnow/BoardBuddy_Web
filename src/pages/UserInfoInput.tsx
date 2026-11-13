@@ -1,3 +1,4 @@
+import { getSignupPrefill } from '../lib/signupPrefill';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { ArrowLeft, Check, GraduationCap, ShieldCheck, UserRound } from 'lucide-react';
 import { Button } from '../components/Button';
@@ -23,12 +24,17 @@ const steps = ['내 정보', '본인 확인', '약관 동의'];
 export default function UserInfoInput({ onBack, onSuccess }: UserInfoInputProps) {
     const [step, setStep] = useState(0);
     const [profileType, setProfileType] = useState<'GENERAL' | 'STUDENT'>('STUDENT');
-    const [name, setName] = useState('');
+    const [editProviderName, setEditProviderName] = useState(() => !getSignupPrefill().name);
+    const [name, setName] = useState(() => getSignupPrefill().name || '');
     const [school, setSchool] = useState<SchoolOption | null>(null);
     const [studentNumber, setStudentNumber] = useState('');
     const [gender, setGender] = useState<'FEMALE' | 'MALE' | null>(null);
     const [email, setEmail] = useState('');
-    const [phoneNumber, setPhoneNumber] = useState('');
+    const [phoneNumber, setPhoneNumber] = useState(() => {
+        let digits = (getSignupPrefill().phoneNumber || '').replace(/\D/g, '');
+        if (digits.startsWith('82')) digits = '0' + digits.slice(2);
+        return /^010\d{8}$/.test(digits) ? `${digits.slice(0, 3)}-${digits.slice(3, 7)}-${digits.slice(7)}` : '';
+    });
     const [phoneChallengeId, setPhoneChallengeId] = useState<string | null>(null);
     const [phoneCode, setPhoneCode] = useState('');
     const [phoneVerified, setPhoneVerified] = useState(false);
@@ -203,7 +209,9 @@ export default function UserInfoInput({ onBack, onSuccess }: UserInfoInputProps)
                     <h1 ref={titleRef} tabIndex={-1} className="mt-2 scroll-mt-5 text-2xl font-black leading-snug text-[#162660]">{['나를 소개해 주세요.', '본인을 확인할게요.', '동의 내용을 확인해 주세요.'][step]}</h1>
                     <p className="mt-3 text-sm leading-6 text-zinc-600">{['학교 정보는 내 소속 확인에 사용해요. 초대한 크루의 학교와 달라도 내 정보를 입력해 주세요.', '이미 가입했다면 기존 계정에 연결해 중복 가입을 줄여요.', '필수 동의와 선택 설정을 구분했어요. 약관을 읽기만 해서는 동의 처리되지 않아요.'][step]}</p>
                     <form noValidate onSubmit={submit} className="mt-7 space-y-6">
+                        <p className="text-xs text-zinc-500">* 필수 입력 · (선택) 항목은 입력하지 않아도 가입할 수 있어요.</p>
                         {step === 0 && <>
+                            <p className="rounded-2xl bg-[#FAF8F3] p-4 text-sm leading-6">카카오에서 제공한 이름이 있으면 채워드려요. 학생은 실제 이름인지 확인하고, 다르면 수정해 주세요. 닉네임을 실명으로 자동 판단하지 않아요.</p>
                             <div className="grid grid-cols-2 gap-3">
                                 {(['STUDENT', 'GENERAL'] as const).map(type => { const Icon = type === 'STUDENT' ? GraduationCap : UserRound; const allowed = type === 'STUDENT' ? signupPolicy.studentEnabled : signupPolicy.regularEnabled;
                                     return <button key={type} type="button" aria-pressed={profileType === type} disabled={!allowed}
@@ -213,26 +221,28 @@ export default function UserInfoInput({ onBack, onSuccess }: UserInfoInputProps)
                                     </button>;
                                 })}
                             </div>
-                            <label className="block text-sm font-bold text-[#162660]">{profileType === 'STUDENT' ? '실명' : '닉네임'}
-                                <input autoComplete="name" maxLength={50} value={name} onChange={event => setName(event.target.value)} className={inputClass} placeholder={profileType === 'STUDENT' ? '김보드' : '보드버디'} />
+                            <label className="block text-sm font-bold text-[#162660]">{profileType === 'STUDENT' ? '실명' : '닉네임'} *
+                                <input readOnly={!editProviderName} autoComplete="name" maxLength={50} value={name} onChange={event => setName(event.target.value)} className={inputClass} placeholder={profileType === 'STUDENT' ? '김보드' : '보드버디'} />
                             </label>
+                            {!editProviderName && <button type="button" onClick={() => setEditProviderName(true)} className="min-h-11 text-sm font-bold text-[#162660] underline">내 이름이 아니에요 · 수정하기</button>}
                             {profileType === 'STUDENT' && <div className="grid min-w-0 gap-5 sm:grid-cols-2">
                                 <SchoolPicker value={school} options={schools} loading={schoolsLoading} error={schoolsError} onRetry={() => setSchoolsAttempt(value => value + 1)} onChange={setSchool} />
-                                <label className="block min-w-0 text-sm font-bold text-[#162660]">학번<input value={studentNumber} maxLength={30} onChange={event => setStudentNumber(event.target.value)} className={inputClass} placeholder="학교에서 사용하는 학번" /><span className="mt-2 block text-xs font-normal leading-5 text-zinc-600">운영진이 동명이인을 구분할 때 사용해요.</span></label>
+                                <label className="block min-w-0 text-sm font-bold text-[#162660]">학번 *<input value={studentNumber} maxLength={30} onChange={event => setStudentNumber(event.target.value)} className={inputClass} placeholder="학교에서 사용하는 학번" /><span className="mt-2 block text-xs font-normal leading-5 text-zinc-600">운영진이 동명이인을 구분할 때 사용해요.</span></label>
                             </div>}
-                            <fieldset><legend className="text-sm font-bold text-[#162660]">성별</legend><div className="mt-2 flex flex-wrap gap-3">
+                            <fieldset><legend className="text-sm font-bold text-[#162660]">성별 *</legend><div className="mt-2 flex flex-wrap gap-3">
                                 {(['FEMALE', 'MALE'] as const).map(value => <label key={value} className="flex min-h-12 flex-1 items-center gap-3 rounded-2xl border border-zinc-200 px-4 text-sm"><input type="radio" name="gender" checked={gender === value} onChange={() => setGender(value)} className="h-5 w-5 accent-[#162660]" />{value === 'FEMALE' ? '여자' : '남자'}</label>)}
                             </div></fieldset>
-                            {(profileType === 'GENERAL' || SCHOOL_EMAIL_AUTH_AVAILABLE) && <label className="block text-sm font-bold text-[#162660]">이메일 {profileType === 'STUDENT' && school?.emailDomains.length ? '(학교 인증용)' : '(선택)'}<input type="email" autoComplete="email" value={email} onChange={event => setEmail(event.target.value)} className={inputClass} placeholder="name@example.com" /></label>}
+                            {(profileType === 'GENERAL' || SCHOOL_EMAIL_AUTH_AVAILABLE) && <label className="block text-sm font-bold text-[#162660]">이메일 {profileType === 'STUDENT' && school?.emailDomains.length ? '(학교 인증용 · 선택)' : '(선택)'}<input type="email" autoComplete="email" value={email} onChange={event => setEmail(event.target.value)} className={inputClass} placeholder="name@example.com" /></label>}
                         </>}
                         {step === 1 && <>
-                            <label className="block text-sm font-bold text-[#162660]">휴대전화번호
+                            <p className="text-sm leading-6 text-zinc-600">카카오 전화번호가 제공되면 미리 채워드려요. 번호를 확인한 뒤 문자 인증을 완료해 주세요.</p>
+                            <label className="block text-sm font-bold text-[#162660]">휴대전화번호 *
                                 <input type="tel" inputMode="tel" autoComplete="tel-national" value={phoneNumber} disabled={phoneBusy} className={inputClass} placeholder="010-1234-5678"
                                     onChange={event => { phoneEdited.current = true; const digits = event.target.value.replace(/\D/g, '').slice(0, 11); setPhoneNumber(digits.length > 7 ? `${digits.slice(0, 3)}-${digits.slice(3, 7)}-${digits.slice(7)}` : digits.length > 3 ? `${digits.slice(0, 3)}-${digits.slice(3)}` : digits); setPhoneChallengeId(null); setPhoneCode(''); setPhoneVerified(false); setPhoneVerificationSkipped(false); setPhoneNotice(''); }} />
                             </label>
                             {phoneVerified ? <p role="status" className="flex items-center gap-2 rounded-2xl bg-emerald-50 p-4 text-sm font-bold text-emerald-800"><ShieldCheck className="h-5 w-5" />{phoneVerificationSkipped ? '개발환경 인증 생략 상태' : '본인 확인 완료'}</p> : <>
                                 <Button type="button" onClick={sendCode} disabled={phoneBusy || phoneRetryAfter > 0} className="min-h-12 w-full rounded-2xl border-[#162660] bg-[#162660] hover:bg-[#243878]">{phoneBusy ? '확인 중...' : phoneRetryAfter > 0 ? `${phoneRetryAfter}초 후 재전송 가능` : phoneChallengeId ? '인증번호 다시 받기' : '인증번호 받기'}</Button>
-                                {phoneChallengeId && <div className="text-sm font-bold text-[#162660]"><label htmlFor="signup-phone-code">인증번호</label>
+                                {phoneChallengeId && <div className="text-sm font-bold text-[#162660]"><label htmlFor="signup-phone-code">인증번호 *</label>
                                     <input id="signup-phone-code" value={phoneCode} disabled={phoneBusy} inputMode="numeric" autoComplete="one-time-code" maxLength={6} onChange={event => setPhoneCode(event.target.value.replace(/\D/g, '').slice(0, 6))} className={inputClass} placeholder="6자리 인증번호" />
                                     <Button type="button" onClick={confirmCode} disabled={phoneBusy || phoneCode.length !== 6} className="mt-3 min-h-12 w-full rounded-2xl border-[#162660] bg-[#162660] hover:bg-[#243878]">인증번호 확인</Button>
                                 </div>}
@@ -252,7 +262,7 @@ export default function UserInfoInput({ onBack, onSuccess }: UserInfoInputProps)
                             </fieldset>
                         </>}
                         {error && <p role="alert" className="rounded-2xl bg-red-50 p-4 text-sm leading-6 text-red-800">{error}</p>}
-                        <Button type="submit" disabled={busy || !signupAllowed || (step === 2 && (!terms.service || !terms.privacy))} className="min-h-14 w-full rounded-2xl border-[#162660] bg-[#162660] font-bold hover:bg-[#243878]">{isLoading ? '가입 중...' : step === 2 ? '동의하고 가입 완료' : '다음'}</Button>
+                        <Button type="submit" disabled={busy || !signupAllowed || (step === 2 && (!terms.service || !terms.privacy))} className="min-h-14 w-full rounded-2xl border-[#162660] bg-[#162660] font-bold hover:bg-[#243878]">{isLoading ? '가입 중...' : step === 2 ? '필수 약관 전체 동의 후 가입 완료' : '다음'}</Button>
                     </form>
                 </main>
             </div>

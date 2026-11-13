@@ -57,3 +57,29 @@ identity, phone verification, explicit consent/read/close, modal geometry/focus,
 signup → pending → approval → original event, existing-member login and pending reload, same-tab invitation replacement, and president
 approval → invitation QR → revoke → first host-group setup. Evidence is in ignored `output/playwright`.
 These tests create no real account, agreement, SMS, membership or staging event.
+
+## Follow-up: signup without an invitation and provider hints
+
+The ordinary path is signup → choose joining → find a crew → PIN/application → restored approval
+status. The search screen explains all three connection steps; existing school and auto-join policy
+still determine admission. No invitation is required, and the PIN is not removed.
+
+Required inputs use `*`; optional email/sharing uses `(선택)`. The final CTA explicitly refers to
+all required agreements and never includes optional sharing. Kakao's account `name` (not profile
+nickname) and phone can prefill pending signup. A supplied name is shown for confirmation with an
+explicit correction action. No heuristic certifies a nickname as a real name. Phone prefill never
+sets the local verification flag or creates a verified identity. Existing server-verified recovery
+and the SMS/account-linking workflow stay authoritative.
+
+Hints are returned only for PENDING_PROFILE by the authenticated backend provider exchange, marked
+no-store, and kept in memory bound to account and auth revision. Reload falls back to ordinary
+input/recovery rather than persisting new personal drafts. Edits remain possible. Missing, declined
+or unsupported provider scopes fall back to manual input. No unapproved scope is forced into login.
+An operator must confirm Kakao app permission and consent configuration for `name` and `phone_number`
+before expecting live values; code alone cannot grant those permissions.
+
+References checked November 13, 2026:
+- https://developers.kakao.com/docs/ko/kakaologin/utilize : distinct nickname/name/phone scopes and consent permissions.
+- https://ohou.se/normal_users/new : social entry alongside explicit nickname input and individually listed agreements.
+- https://ohou.se/contact_us : social login still has service-side identity/email verification concerns.
+These references inform the design; their authenticated private flows were not inspected.
