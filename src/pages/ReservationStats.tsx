@@ -11,12 +11,13 @@ import { ReservationDayResponse, CrewCalendarResponse, PaymentStatus } from '../
 
 interface ReservationStatsProps {
     onBack: () => void;
+    readOnly?: boolean;
     onMyCalendarClick?: () => void;
     onReservationClick?: () => void;
 }
 
 
-export default function ReservationStats({ onBack, onMyCalendarClick, onReservationClick }: ReservationStatsProps) {
+export default function ReservationStats({ onBack, onMyCalendarClick, onReservationClick, readOnly = false }: ReservationStatsProps) {
     const todayDate = new Date();
 
     // Default to current date
@@ -36,7 +37,7 @@ export default function ReservationStats({ onBack, onMyCalendarClick, onReservat
     // Calculate start day of week (0=Sun, 1=Mon, etc.)
     const firstDayOfMonth = new Date(currentYear, currentMonthIndex, 1).getDay();
 
-    const [selectedDay, setSelectedDay] = useState<number>(isCurrentMonthView ? todayDay : 0);
+    const [selectedDay, setSelectedDay] = useState<number>(readOnly ? 0 : isCurrentMonthView ? todayDay : 0);
     const [isExpanded, setIsExpanded] = useState(false);
     const [showMySchedule, setShowMySchedule] = useState(false);
     const [crewCapacity, setCrewCapacity] = useState<number>(20); // Default, will update
@@ -61,57 +62,37 @@ export default function ReservationStats({ onBack, onMyCalendarClick, onReservat
 
     // Sort order state: 'default' (Role/Name) or 'earliest' (Reservation ID)
     const [sortOrder, setSortOrder] = useState<'default' | 'earliest'>('default');
+    const [loadError, setLoadError] = useState('');
     const [managementSavingId, setManagementSavingId] = useState<number | null>(null);
 
     const formatDate = useCallback((day: number) => {
         return `${currentYear}-${String(currentMonthIndex + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
     }, [currentYear, currentMonthIndex]);
 
-    // 1. Fetch User Info to get Crew ID
-    // 2. Then Fetch Crew Info using that ID
     useEffect(() => {
-        const initData = async () => {
+        let cancelled = false;
+        const load = async () => {
             try {
-                // Import getUserInfo dynamically or if already imported
-                // const { getUserInfo } = await import('../services/user');
-                const userData = await getUserInfo();
-
-                if (userData.crew && userData.crew.crewId) {
-                    const id = userData.crew.crewId;
-                    setCrewId(id);
-
-                    // Now fetch crew info for capacity (still used for expanded view "X/Total")
-                    const crewData = await getCrewInfo(id);
-                    if (crewData && crewData.dailyCapacity) {
-                        setCrewCapacity(crewData.dailyCapacity);
-                    }
-                }
-            } catch (error) {
-                console.error("Failed to initialize stats:", error);
-            }
+                const user = await getUserInfo();
+                if (!user.crew) throw new Error('membership');
+                const crew = await getCrewInfo(user.crew.crewId);
+                if (cancelled) return;
+                setCrewId(user.crew.crewId);
+                if (crew.dailyCapacity) setCrewCapacity(crew.dailyCapacity);
+            } catch { if (!cancelled) setLoadError('크루 정보를 불러오지 못했습니다. 승인된 소속과 연결 상태를 확인해 주세요.'); }
         };
-        initData();
-    }, []); // Run once on mount
+        void load(); return () => { cancelled = true; };
+    }, []);
 
-    // Fetch Calendar Data (Occupancy Statuses) whenever month/year or crewId or showMySchedule changes
     useEffect(() => {
-        const fetchCalendarData = async () => {
-            if (!crewId) return;
-
-            // Use 15th of the month as reference date for fetching the month's calendar
-            const dateStr = `${currentYear}-${String(currentMonthIndex + 1).padStart(2, '0')}-15`;
-
-            try {
-                const data = await getCrewCalendar(crewId, dateStr, showMySchedule);
-                setCalendarData(data);
-            } catch (error) {
-                console.error("Failed to fetch crew calendar:", error);
-            }
-        };
-
-        fetchCalendarData();
+        if (!crewId) return;
+        let cancelled = false;
+        setLoadError(''); setCalendarData(null);
+        getCrewCalendar(crewId, `${currentYear}-${String(currentMonthIndex + 1).padStart(2, '0')}-15`, showMySchedule)
+            .then(data => { if (!cancelled) setCalendarData(data); })
+            .catch(() => { if (!cancelled) setLoadError('달력 현황을 불러오지 못했습니다. 새로고침 후 다시 확인해 주세요.'); });
+        return () => { cancelled = true; };
     }, [crewId, currentYear, currentMonthIndex, showMySchedule]);
-
 
     const fetchDetailForDay = useCallback(async (day: number, refresh = false) => {
         if (!crewId) return; // Wait for crewId
@@ -123,6 +104,7 @@ export default function ReservationStats({ onBack, onMyCalendarClick, onReservat
             const data = await getReservationDetail(crewId, dateStr);
             setDetailsCache(prev => ({ ...prev, [dateStr]: data }));
         } catch (error) {
+            setLoadError("날짜별 이용 현황을 불러오지 못했습니다. 다시 확인해 주세요.");
             console.error(`Failed to fetch detail for ${dateStr}:`, error);
         }
     }, [crewId, detailsCache, formatDate]);
@@ -145,6 +127,7 @@ export default function ReservationStats({ onBack, onMyCalendarClick, onReservat
         .map(r => parseInt(r.date.split('-')[2], 10)) || [];
 
     const handleCreateReservation = async () => {
+        if (readOnly) return;
         if (!crewId) {
             alert("크루 정보를 불러오는 중입니다. 잠시 후 다시 시도해주세요.");
             return;
@@ -167,6 +150,7 @@ export default function ReservationStats({ onBack, onMyCalendarClick, onReservat
     };
 
     const handleCancelReservation = async () => {
+        if (readOnly) return;
         if (!crewId) return;
 
         const dateStr = formatDate(selectedDay);
@@ -211,7 +195,7 @@ export default function ReservationStats({ onBack, onMyCalendarClick, onReservat
     };
 
     const handleReservationManagementSave = async (reservationId: number, paymentStatus: PaymentStatus | null, managerMemo: string | null) => {
-        if (!crewId) return;
+        if (readOnly || !crewId) return;
         try {
             setManagementSavingId(reservationId);
             const updated = await updateReservationManagement(crewId, reservationId, paymentStatus, managerMemo?.trim() || null);
@@ -260,10 +244,10 @@ export default function ReservationStats({ onBack, onMyCalendarClick, onReservat
 
     // Get Occupancy Status from Calendar Data
     const getOccupancyStatus = (day: number) => {
-        if (!calendarData?.calendar) return 'LOW'; // Default
+        if (!calendarData?.calendar) return null;
         const dateStr = formatDate(day);
         const dayData = calendarData.calendar.find(item => item.date === dateStr);
-        return dayData?.occupancy_status || 'LOW';
+        return dayData?.occupancy_status ?? null;
     };
 
     const getCrewDayColor = (day: number) => {
@@ -273,7 +257,7 @@ export default function ReservationStats({ onBack, onMyCalendarClick, onReservat
             case 'LOW': return 'reservation-dot-low';
             case 'MEDIUM': return 'reservation-dot-medium';
             case 'HIGH': return 'reservation-dot-high';
-            default: return 'reservation-dot-low';
+            default: return 'bg-zinc-300';
         }
     };
 
@@ -290,11 +274,13 @@ export default function ReservationStats({ onBack, onMyCalendarClick, onReservat
     });
 
     return (
-        <ReservationLayout title="크루 달력" onBack={onBack} action={onMyCalendarClick && <button type="button" onClick={onMyCalendarClick}>내 예약 →</button>}>
+        <ReservationLayout title={readOnly ? "시즌방 캘린더" : "크루 달력"} onBack={onBack} action={!readOnly && onMyCalendarClick && <button type="button" onClick={onMyCalendarClick}>내 예약 →</button>}>
 
             <main className="reservation-content">
 
                 <ReservationSummary title="시즌방 현황" description="날짜를 선택해 예약 현황을 확인하세요." />
+                {readOnly && <p className="mb-4 text-xs leading-6 text-zinc-500">신규 예약은 현재 보류 중이에요. 달력에서 날짜별 이용 현황을 확인해 주세요. 회색은 이용 현황이 제공되지 않은 날짜예요.</p>}
+                {loadError && <p role="alert" className="mb-4 rounded-xl bg-red-50 p-3 text-sm text-red-700">{loadError}</p>}
                 <div className="reservation-workspace">
                     <Calendar
                         className="mb-3"
@@ -363,7 +349,7 @@ export default function ReservationStats({ onBack, onMyCalendarClick, onReservat
 
                     <aside className="reservation-detail-column">
                         {/* Bottom Section: Legend or Expanded View */}
-                        {isExpanded ? (
+                        {readOnly && isExpanded && !currentDetail ? <p role="status" className="p-4 text-sm text-zinc-500">{loadError ? '이용 현황을 확인할 수 없습니다.' : '날짜별 현황을 확인하는 중...'}</p> : isExpanded ? (
                             <div className="w-full animate-in fade-in slide-in-from-bottom-4 duration-300">
                                 {/* Expanded User List Card */}
                                 <div className="reservation-panel w-full mb-3">
@@ -410,7 +396,7 @@ export default function ReservationStats({ onBack, onMyCalendarClick, onReservat
                                                             )}
                                                         </div>
                                                     </div>
-                                                    {currentDetail?.canManageReservations && (
+                                                    {!readOnly && currentDetail?.canManageReservations && (
                                                         <div className="reservation-member-controls">
                                                             <select
                                                                 value={member.paymentStatus ?? ''}
@@ -459,6 +445,7 @@ export default function ReservationStats({ onBack, onMyCalendarClick, onReservat
                                     </div>
                                 </div>
 
+                                {!readOnly && <>
                                 {/* Change Link */}
                                 <div className="w-full flex justify-end mb-6 pr-2">
                                     <button
@@ -486,6 +473,7 @@ export default function ReservationStats({ onBack, onMyCalendarClick, onReservat
                                         예약하기
                                     </Button>
                                 )}
+                                </>}
                             </div>
                         ) : (
                             /* Default Legend Section - Simplified for LOW/MEDIUM/HIGH */
@@ -557,13 +545,13 @@ export default function ReservationStats({ onBack, onMyCalendarClick, onReservat
 
                         <div className="w-full flex flex-col gap-2">
                             {/* Force Delete Icon - Bottom Right */}
-                            {selectedMember.canDelete && selectedMember.reservationId && (
+                            {!readOnly && selectedMember.canDelete && selectedMember.reservationId && (
                                 <div className="w-full flex justify-end mb-1">
                                     <button
                                         className="w-9 h-9 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center text-red-500 hover:bg-red-200 dark:hover:bg-red-900/50 transition-colors"
                                         onClick={async (e) => {
                                             e.stopPropagation();
-                                            if (!crewId || !selectedMember.reservationId) return;
+                                            if (readOnly || !crewId || !selectedMember.reservationId) return;
                                             if (confirm(`${selectedMember.name}님의 예약을 삭제하시겠습니까?`)) {
                                                 try {
                                                     await deleteReservation(crewId, selectedMember.reservationId);

@@ -46,8 +46,15 @@ try {
             if (width < 1024) { const button = await calendar.boundingBox(); const nav = await page.getByRole('navigation', { name: '하단 메뉴', exact: true }).boundingBox(); assert(button && nav && button.y + button.height <= nav.y, 'Bottom menu overlaps home action'); }
             await page.screenshot({ path: `${root}/output/playwright/member-home-${width}.png` });
             await calendar.click(); await page.getByRole('heading', { name: '시즌방 캘린더', exact: true }).waitFor();
-            await page.getByLabel('2026-11-15 혼잡', { exact: true }).waitFor(); await fits();
-            await page.getByRole('button', { name: '다음 달', exact: true }).click(); await page.getByLabel('2026-12-15 혼잡', { exact: true }).waitFor();
+            const day = page.getByRole('button', { name: '2026년 11월 15일', exact: true }); await day.waitFor();
+            await day.locator('.reservation-dot-high').waitFor();
+            await page.getByRole('switch', { name: '내 일정 표시', exact: true }).click();
+            await day.locator('.reservation-dot-high').waitFor();
+            await day.click(); await day.click(); await page.getByText('회원 #99102', { exact: true }).waitFor();
+            assert(await page.getByRole('button', { name: /예약하기|예약 취소하기|관리 정보 저장/ }).count() === 0, 'Read-only calendar exposed mutations');
+            assert(await page.getByRole('combobox', { name: /입금 상태/ }).count() === 0, 'Read-only calendar exposed payment edits');
+            await page.screenshot({ path: `${root}/output/playwright/season-calendar-${name}-${width}.png` }); await fits();
+            await page.getByRole('button', { name: '다음 달', exact: true }).click(); await page.getByRole('button', { name: '2026년 12월 15일', exact: true }).locator('.reservation-dot-high').waitFor();
             assert(!state.writes.some(item => item.path.includes('reservation')), 'Calendar wrote a reservation');
             assert(!state.errors.length && !state.unknown.length, `Fixture errors ${JSON.stringify(state.errors)} ${JSON.stringify(state.unknown)}`);
             completed.push(`${name}-${width}-participant-save-approve-event-edit-home-calendar`); await context.close();
