@@ -189,7 +189,7 @@ export default function DesktopShell({
       </aside>
 
       <main className="min-w-0 flex-1 overflow-hidden">
-        <div data-desktop-page className={`mx-auto h-full w-full overflow-hidden bg-[#FAF8F3] shadow-[0_0_40px_rgba(24,24,27,0.06)] ${
+        <div data-desktop-page className={`mx-auto flex h-full min-h-0 w-full flex-col overflow-hidden bg-[#FAF8F3] shadow-[0_0_40px_rgba(24,24,27,0.06)] ${
           ['crew_admin', 'school_admin', 'user_admin', 'signup_audit'].includes(activeDestination) ? 'max-w-none' : 'max-w-6xl'
         }`}>
           {children}

@@ -1,5 +1,4 @@
-const origin = 'http://127.0.0.1:5188';
-export const installOnboardingBoundary = async page => {
+export const installOnboardingBoundary = async (page, { origin = 'http://127.0.0.1:5188' } = {}) => {
     await page.clock.install({ time: new Date('2026-11-13T00:00:00.000Z') });
     const state = { token: 'a'.repeat(43), newUser: true, signupPrefill: null, applied: false, approved: false, unavailable: false, role: 'CREW_MEMBER',
         requests: [], invitations: [], groups: [], profileBody: null, errors: [], unknown: [], traffic: [], credentialInUrl: false, publicAuth: false };

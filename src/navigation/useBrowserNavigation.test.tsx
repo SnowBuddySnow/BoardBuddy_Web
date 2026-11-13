@@ -19,7 +19,9 @@ describe('URL navigation with existing authentication gates', () => {
         const [route, setRoute] = useState<NavigationState>(readNavigation);
         useBrowserNavigation(route, setRoute);
         return <><output>{route.view}:{route.eventId ?? route.groupId ?? ''}</output>
-            <button onClick={() => setRoute({ ...route, view: 'event_detail', eventId: 42 })}>Open event</button></>;
+            <button onClick={() => setRoute({ ...route, view: 'event_detail', eventId: 42 })}>Open event</button>
+            <button onClick={() => { localStorage.setItem('accessToken', 'synthetic-active'); setRoute({ ...route, view: 'home' }); }}>Finish login</button>
+            <button onClick={() => { localStorage.clear(); setRoute({ ...route, view: 'login' }); }}>Logout</button></>;
     }
 
     it('pushes a shareable event URL and restores state on browser navigation', async () => {
@@ -33,6 +35,35 @@ describe('URL navigation with existing authentication gates', () => {
         });
         expect(container.querySelector('output')!.textContent).toBe('dashboard_group_detail:7');
         expect(window.location.search).toBe('?view=dashboard_group_detail&groupId=7');
+    });
+
+    it('replaces the login entry after authentication instead of leaving it behind', async () => {
+        localStorage.clear(); window.history.replaceState(null, '', '/?view=login');
+        await act(async () => root.render(<Screen />));
+        const before = window.history.length;
+        await act(async () => container.querySelectorAll('button')[1].click());
+        expect(window.history.length).toBe(before);
+        expect(window.location.search).toBe('?view=home');
+    });
+
+    it('normalizes old login/signup entries on back and cached-page restoration', async () => {
+        await act(async () => root.render(<Screen />));
+        for (const view of ['login', 'user_info']) {
+            await act(async () => { window.history.replaceState(null, '', `/?view=${view}`); window.dispatchEvent(new PopStateEvent('popstate')); });
+            expect(container.querySelector('output')!.textContent).toBe('home:');
+            expect(window.location.search).toBe('?view=home');
+        }
+        await act(async () => {
+            localStorage.clear(); window.history.replaceState(null, '', '/?view=event_detail&eventId=42');
+            const event = new Event('pageshow'); Object.defineProperty(event, 'persisted', { value: true }); window.dispatchEvent(event);
+        });
+        expect(container.querySelector('output')!.textContent).toBe('login:42');
+        expect(window.location.search).toBe('?view=login');
+    });
+
+    it('preserves explicit invitation and verification destinations after login', () => {
+        window.history.replaceState(null, '', '/?view=crew_invite'); expect(readNavigation().view).toBe('crew_invite');
+        window.history.replaceState(null, '', '/?view=student_verification'); expect(readNavigation().view).toBe('student_verification');
     });
 
     it('validates IDs and preserves activation proof only on its verification screen', () => {

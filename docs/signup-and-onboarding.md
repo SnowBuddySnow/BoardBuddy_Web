@@ -102,3 +102,24 @@ https://stg.boardbuddy.kr still served `1.0.0+4717f8f`, despite develop `f896c64
 The Web GitHub workflow performs verification/build/browser checks only, and the merge commit has
 no Vercel commit status. A successful GitHub build alone is not proof of a frontend staging release.
 Vercel project access/configuration must be restored and the actual deployed version verified.
+
+## Mobile history, safe areas and local UI sandbox
+
+The same develop-based PR adds authentication-boundary history replacement. Successful login/signup
+completion replaces its entry, authenticated back/forward to legacy login/signup URLs normalizes to
+home, and persisted pageshow rechecks current session state. This does not block browser back or
+trap users in the site. Explicit crew invitations and school-verification links remain available;
+clearing authentication still prevents private screens from being restored.
+
+Chromium and WebKit mobile browser journeys cover login, back/forward, legacy-entry reload and
+logout. These are browser-engine tests, not an assertion of an actual iPhone hardware test. Safe-area
+insets, dynamic viewport height, desktop flex sizing and larger profile inputs improve mobile/PC fit.
+
+Run `pnpm dev:preview` and open http://127.0.0.1:5175 for an interactive sandbox using the actual React
+screens and synthetic HTTP fixtures. It binds loopback only, removes the real Kakao SDK and isolates
+its Vite cache. No staging/production data or actual SMS is used. Click the Kakao button for synthetic
+signup; use a synthetic 010 phone, six digits such as 123456 for SMS and a four-digit PIN such as 1234.
+The banner's “가상 승인” advances only local mock requests/membership. “처음부터” clears this sandbox's
+local state and starts over. It is intended for one local reviewer; fixture server state is shared
+across tabs. No real personal details should be entered. None of these fixture controls ships in the
+hosted app or changes backend authorization.
