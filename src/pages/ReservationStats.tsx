@@ -1,5 +1,5 @@
 import { getReservationSeason } from '../lib/reservationSeason';
-import { ReservationLayout, ReservationSummary } from '../components/reservation/ReservationLayout';
+import { ReservationLayout } from '../components/reservation/ReservationLayout';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { ChevronRightIcon, Smile, ChevronDown, Save, Trash2 } from 'lucide-react';
 import { Button } from '../components/Button';
@@ -314,15 +314,16 @@ export default function ReservationStats({ onBack, onMyCalendarClick, onReservat
             </div>}
             <main className="reservation-content" aria-busy={submitting}>
 
-                <ReservationSummary title="시즌방 현황" description="날짜를 선택해 예약 현황을 확인하세요." />
-                <div className="flex justify-end mb-2"><button type="button" className="text-xs text-blue-700 min-h-10" onClick={async () => {
+                <div className="mb-3 flex items-center justify-between gap-3">
+                    <p className="text-xs leading-5 text-slate-500">날짜를 선택해 예약 현황을 확인하세요.</p>
+                    <button type="button" className="min-h-10 shrink-0 text-xs text-blue-700" onClick={async () => {
                     if (!crewId) return;
                     try {
                         const data = await getCrewCalendar(crewId, formatDate(1), includeMine);
                         setCalendarData(data);
                         if (selectedDay) await fetchDetailForDay(selectedDay, true);
                     } catch { setLoadError('현황을 새로고침하지 못했습니다. 다시 시도해 주세요.'); }
-                }}>현황 새로고침</button></div>
+                }}>새로고침</button></div>
                 {readOnly && <p className="mb-4 text-xs leading-6 text-zinc-500"><span className="block">현재는 이용 현황만 조회할 수 있어요.</span><span className="block">회색은 현황이 제공되지 않은 날짜예요.</span></p>}
                 {loadError && <p role="alert" className="mb-4 rounded-xl bg-red-50 p-3 text-sm text-red-700">{loadError}</p>}
                 <div className="reservation-workspace">
