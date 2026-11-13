@@ -48,7 +48,9 @@ try {
             await calendar.click(); await page.getByRole('heading', { name: '시즌방 캘린더', exact: true }).waitFor();
             const day = page.getByRole('button', { name: '2026년 11월 15일', exact: true }); await day.waitFor();
             await day.locator('.reservation-dot-high').waitFor();
+            const monthReads = state.traffic.filter(item => item.path === '/crews/17/calendar').length;
             await page.getByRole('switch', { name: '내 일정 표시', exact: true }).click();
+            assert(state.traffic.filter(item => item.path === '/crews/17/calendar').length === monthReads, 'Overlay toggle refetched the same member calendar');
             await day.locator('.reservation-dot-high').waitFor();
             await day.click(); await page.getByText('회원 #99102', { exact: true }).waitFor();
             assert(await page.getByRole('button', { name: /예약하기|예약 취소하기|관리 정보 저장/ }).count() === 0, 'Closed calendar exposed enabled mutations');

@@ -46,6 +46,7 @@ export default function ReservationStats({ onBack, onMyCalendarClick, onReservat
     const detailRequests = useRef(new Map<string, Promise<void>>());
     const detailFetchedAt = useRef(new Map<string, number>());
     const [showMySchedule, setShowMySchedule] = useState(false);
+    const includeMine = showMySchedule || !readOnly;
     const [crewCapacity, setCrewCapacity] = useState<number | null>(null);
     const [crewId, setCrewId] = useState<number | null>(null);
 
@@ -95,11 +96,11 @@ export default function ReservationStats({ onBack, onMyCalendarClick, onReservat
         if (!crewId) return;
         let cancelled = false;
         setLoadError(''); setCalendarData(null);
-        getCrewCalendar(crewId, `${currentYear}-${String(currentMonthIndex + 1).padStart(2, '0')}-15`, (showMySchedule || !readOnly))
+        getCrewCalendar(crewId, `${currentYear}-${String(currentMonthIndex + 1).padStart(2, '0')}-15`, includeMine)
             .then(data => { if (!cancelled) setCalendarData(data); })
             .catch(() => { if (!cancelled) setLoadError('달력 현황을 불러오지 못했습니다. 새로고침 후 다시 확인해 주세요.'); });
         return () => { cancelled = true; };
-    }, [crewId, currentYear, currentMonthIndex, showMySchedule, readOnly]);
+    }, [crewId, currentYear, currentMonthIndex, includeMine]);
 
     const fetchDetailForDay = useCallback(async (day: number, refresh = false) => {
         if (!crewId) return; // Wait for crewId
@@ -160,7 +161,7 @@ export default function ReservationStats({ onBack, onMyCalendarClick, onReservat
             alert(booking.status === 'WAITING' ? `대기 ${booking.waitlistPosition ?? '-'}번으로 신청되었습니다.` : '예약이 확정되었습니다.');
             // Refresh data
             const calDateStr = `${currentYear}-${String(currentMonthIndex + 1).padStart(2, '0')}-15`;
-            const data = await getCrewCalendar(crewId, calDateStr, (showMySchedule || !readOnly));
+            const data = await getCrewCalendar(crewId, calDateStr, includeMine);
             setCalendarData(data);
             await fetchDetailForDay(selectedDay, true);
         } catch (error) {
@@ -189,7 +190,7 @@ export default function ReservationStats({ onBack, onMyCalendarClick, onReservat
 
             // Refresh data
             const calDateStr = `${currentYear}-${String(currentMonthIndex + 1).padStart(2, '0')}-15`;
-            const data = await getCrewCalendar(crewId, calDateStr, (showMySchedule || !readOnly));
+            const data = await getCrewCalendar(crewId, calDateStr, includeMine);
             setCalendarData(data);
             await fetchDetailForDay(selectedDay, true);
         } catch (error) {
@@ -304,7 +305,7 @@ export default function ReservationStats({ onBack, onMyCalendarClick, onReservat
                 <div className="flex justify-end mb-2"><button type="button" className="text-xs text-blue-700 min-h-10" onClick={async () => {
                     if (!crewId) return;
                     try {
-                        const data = await getCrewCalendar(crewId, formatDate(1), showMySchedule || !readOnly);
+                        const data = await getCrewCalendar(crewId, formatDate(1), includeMine);
                         setCalendarData(data);
                         if (selectedDay) await fetchDetailForDay(selectedDay, true);
                     } catch { setLoadError('현황을 새로고침하지 못했습니다. 다시 시도해 주세요.'); }
@@ -329,7 +330,7 @@ export default function ReservationStats({ onBack, onMyCalendarClick, onReservat
                             <div className="flex items-center gap-2">
                                 <span className="text-xs font-bold text-zinc-500 dark:text-zinc-400">내 일정</span>
                                 <div
-                                    onClick={() => setShowMySchedule(!(showMySchedule || !readOnly))}
+                                    onClick={() => setShowMySchedule(!includeMine)}
                                     role="switch" aria-checked={showMySchedule} aria-label="내 일정 표시" tabIndex={0}
                                     onKeyDown={event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); setShowMySchedule(current => !current); } }}
                                     className={`reservation-toggle w-10 h-6 rounded-full p-1 relative cursor-pointer ${showMySchedule ? 'is-on' : ''}`}
@@ -594,7 +595,7 @@ export default function ReservationStats({ onBack, onMyCalendarClick, onReservat
                                                     setSelectedMember(null);
                                                     // Refresh data
                                                     const calDateStr = `${currentYear}-${String(currentMonthIndex + 1).padStart(2, '0')}-15`;
-                                                    const data = await getCrewCalendar(crewId, calDateStr, (showMySchedule || !readOnly));
+                                                    const data = await getCrewCalendar(crewId, calDateStr, includeMine);
                                                     setCalendarData(data);
                                                     await fetchDetailForDay(selectedDay, true);
                                                 } catch (error) {
