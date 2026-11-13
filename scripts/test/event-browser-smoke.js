@@ -38,7 +38,7 @@ async (page) => {
     completed.push('cancelled-private-details-hidden');
 
     await open(9102); await begin(); await answer(); await submit();
-    await page.getByText('승인 대기 중입니다.', { exact: false }).waitFor();
+    try { await page.getByText('승인 대기 중입니다.', { exact: false }).waitFor(); } catch (error) { await page.screenshot({ path: 'output/playwright/event-pending-failure.png', fullPage: true }); console.log((await page.locator('body').innerText()).slice(-2500)); throw error; }
     check(await page.getByRole('link', { name: '외부 채팅방 열기' }).count() === 0, 'Pending approval must not expose chat');
     completed.push('approval-pending');
 

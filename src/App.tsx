@@ -5,7 +5,7 @@ import { LowerMenuBar } from './components/LowerMenuBar';
 import Home from './pages/Home';
 import LoginLanding from './pages/LoginLanding';
 import DesktopShell, { type DesktopDestination } from './components/DesktopShell';
-import DesktopRequired from './components/DesktopRequired';
+import SeasonCalendar from './pages/SeasonCalendar';
 
 import PageBoundary from './components/PageBoundary';
 import DevPanel from './components/DevPanel';
@@ -286,7 +286,7 @@ function App() {
   useEffect(() => {
     if (!isDesktop) {
       usedDesktopLanding.current = false;
-      // Keep the requested destination so DesktopRequired can explain the restriction.
+      // Mobile keeps the requested management destination and its permission checks.
       return;
     }
 
@@ -312,6 +312,7 @@ function App() {
   const showBottomNav = !viewsWithoutBottomNav.includes(currentView) && !isDashboardView && !isPublicGuestFlow;
 
   const getDesktopDestination = (): DesktopDestination => {
+    if (currentView === 'season_calendar') return 'season_calendar';
     if (currentView === 'crew_admin') return 'crew_admin';
     if (currentView === 'school_admin') return 'school_admin';
     if (currentView === 'user_admin') return 'user_admin';
@@ -436,10 +437,6 @@ function App() {
       );
     }
 
-    if (isManagementView && !isDesktop) {
-      return <DesktopRequired onBack={() => setCurrentView('home')} />;
-    }
-
     if (isManagementView && !managementAccessResolved) {
       return (
         <div className="flex h-full items-center justify-center bg-[#FAF8F3]">
@@ -484,6 +481,8 @@ function App() {
           seasonAvailable={operatingFeatures.season}
           offSeasonAvailable={operatingFeatures.offSeason}
         />;
+      case 'season_calendar':
+        return <SeasonCalendar onBack={() => setCurrentView('home')} />;
       case 'stats':
         return (
           <ReservationStats
@@ -498,7 +497,7 @@ function App() {
         return (
           <CrewDetail
             onBack={() => setCurrentView('home')}
-            onCalendarClick={() => setCurrentView('stats')}
+            onCalendarClick={() => setCurrentView('season_calendar')}
             onMemberClick={() => setCurrentView('crew_member')}
             onSettingsClick={() => setCurrentView('crew_settings')}
             seasonAvailable={seasonHouseAvailable}
@@ -614,7 +613,7 @@ function App() {
             onBack={() => setCurrentView('home')}
             onEventClick={(id) => openEventDetail(id)}
             onCreateClick={() => setCurrentView('dashboard_event_new')}
-            canCreate={operationPermissions.includes('PARTIES_CREATE') && isDesktop}
+            canCreate={operationPermissions.includes('PARTIES_CREATE')}
           />
         );
       case 'event_detail':
@@ -637,6 +636,7 @@ function App() {
       case 'dashboard_parties':
         return (
           <DashboardParties
+            canCreate={operationPermissions.includes('PARTIES_CREATE')}
             onCreateEventClick={() => setCurrentView('dashboard_event_new')}
             onEditEventClick={(id) => openEventDetail(id, 'dashboard_event_edit')}
             onViewDetailClick={(id) => openEventDetail(id, 'dashboard_event_detail')}
@@ -695,6 +695,7 @@ function App() {
             onMakeReservationClick={() => setCurrentView('reservation')}
             onGuestReservationClick={() => setCurrentView('guest_access')}
             onCalendarClick={() => setCurrentView('my_reservations')}
+            onSeasonCalendarClick={() => setCurrentView('season_calendar')}
             onTeamClick={() => setCurrentView('crew_detail')}
             onSearchClick={() => setCurrentView('search_crew')}
             onCreateCrewClick={() => setCurrentView('crew_create')}
@@ -726,6 +727,7 @@ function App() {
         ? "w-full h-full bg-white dark:bg-zinc-950 relative overflow-hidden flex flex-col" 
         : "w-full h-full max-w-md bg-[#FAF8F3] relative shadow-2xl overflow-hidden flex flex-col"
       }>
+        <div className="min-h-0 flex-1 flex flex-col">
         {usesDesktopShell ? (
           <DesktopShell
             activeDestination={getDesktopDestination()}
@@ -745,6 +747,7 @@ function App() {
             <PageBoundary key={currentView} onBack={() => setCurrentView('home')}>{currentContent}</PageBoundary>
           </DesktopShell>
         ) : <PageBoundary key={currentView} onBack={() => setCurrentView('home')}>{currentContent}</PageBoundary>}
+        </div>
 
         {showBottomNav && !isDesktop && (
           <LowerMenuBar

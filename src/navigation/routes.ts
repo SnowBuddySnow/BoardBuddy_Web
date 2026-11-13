@@ -2,8 +2,9 @@ import { getAccessToken, getSignupToken, hasDevOverride, isAutoLoginEnabled } fr
 import { isSchoolEmailActivationEntry } from '../lib/schoolEmailActivation';
 import { captureCrewInvitation } from '../lib/onboardingIntent';
 
-export type Tab = 'home' | 'events' | 'calendar' | 'edit' | 'heart' | 'user';
+export type Tab = 'home' | 'events' | 'calendar' | 'edit' | 'heart' | 'user' | 'season';
 export type View =
+  | 'season_calendar'
   | 'crew_invite'
   | 'onboarding'
   | 'login'
@@ -43,6 +44,7 @@ export type View =
   | 'organizer_invite';
 
 const knownViews = new Set<View>([
+  'season_calendar',
   'crew_invite', 'onboarding',
   'login',
   'home',
@@ -91,6 +93,7 @@ const parseView = (value: string | null): View | null => {
 };
 
 export const viewTabs: Partial<Record<View, Tab>> = {
+  season_calendar: 'season',
   home: 'home',
   parties: 'events',
   event_detail: 'events',
@@ -107,6 +110,7 @@ export const viewTabs: Partial<Record<View, Tab>> = {
 };
 
 export const tabViews: Record<Tab, View> = {
+  season: 'season_calendar',
   home: 'home',
   events: 'parties',
   calendar: 'my_reservations',

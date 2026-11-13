@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import {
   ArrowRight, Check, CheckCircle2, ChevronLeft, ChevronRight, ClipboardCheck,
-  FileCheck2, ListChecks, MessageCircle, Play, ShieldCheck, Sparkles, UsersRound, X,
+  FileCheck2, ListChecks, MessageCircle, Play, Sparkles, UsersRound, X,
 } from 'lucide-react';
 import { PLANNING_MODE_COPY } from './event/planningModeCopy';
 
@@ -116,7 +116,7 @@ export function EventManagerOnboardingReturnButton({ onReturn, onDismiss }: { on
 
 const clampStep = (index: number) => Number.isFinite(index) ? Math.min(Math.max(Math.floor(index), 0), steps.length - 1) : 0;
 
-export default function EventManagerOnboarding({ open, isDesktop, canCreateEvents, initialStep = 0, onClose, onComplete, onNavigate }: EventManagerOnboardingProps) {
+export default function EventManagerOnboarding({ open, canCreateEvents, initialStep = 0, onClose, onComplete, onNavigate }: EventManagerOnboardingProps) {
   const [stepIndex, setStepIndex] = useState(() => clampStep(initialStep));
   const dialogRef = useRef<HTMLElement>(null);
   const contentRef = useRef<HTMLElement>(null);
@@ -202,8 +202,7 @@ export default function EventManagerOnboarding({ open, isDesktop, canCreateEvent
                 {step.points.map(point => <li key={point} className="flex items-start gap-2 text-sm leading-5 text-zinc-600"><CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-indigo-600" /><span>{point}</span></li>)}
               </ul>
               {action && <div className="mt-3 rounded-2xl border border-zinc-200 bg-white p-3">
-                {isDesktop ? <button type="button" onClick={() => onNavigate(action.destination, stepIndex)} className="flex min-h-11 items-center gap-2 text-sm font-black text-[#162660]">{action.label}<ArrowRight className="h-4 w-4" /></button>
-                  : <p className="flex items-start gap-2 text-xs leading-6 text-zinc-500"><ShieldCheck className="mt-1 h-4 w-4 shrink-0" />이벤트 설정과 참가자 관리는 PC에서 진행해 주세요.</p>}
+                 <button type="button" onClick={() => onNavigate(action.destination, stepIndex)} className="flex min-h-11 items-center gap-2 text-sm font-black text-[#162660]">{action.label}<ArrowRight className="h-4 w-4" /></button>
               </div>}
             </div>
           </main>

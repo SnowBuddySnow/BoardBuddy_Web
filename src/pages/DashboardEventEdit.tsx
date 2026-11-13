@@ -193,7 +193,7 @@ export default function DashboardEventEdit({ eventId, onBack, onSuccess }: Dashb
     return (
         <div className="flex-1 flex flex-col h-full bg-[#FAF8F3] overflow-hidden">
             {/* Header */}
-            <header className="bg-white border-b border-zinc-100 px-6 py-4 flex items-center justify-between">
+            <header className="bg-white border-b border-zinc-100 px-4 py-4 flex flex-wrap items-center justify-between gap-3 sm:px-6">
                 <div className="flex items-center gap-3">
                     <Button variant="ghost" aria-label="뒤로 가기" onClick={onBack} disabled={submitLoading} className="-ml-2 min-h-11 min-w-11 gap-1 text-zinc-600 hover:bg-transparent">
                         <ChevronLeft className="w-5 h-5" />
@@ -221,7 +221,7 @@ export default function DashboardEventEdit({ eventId, onBack, onSuccess }: Dashb
                             <select
                                 value={organizerGroupId}
                                 onChange={e => setOrganizerGroupId(Number(e.target.value))}
-                                className="w-full px-4 py-2.5 bg-white border border-zinc-200 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-[#162660]/20 text-zinc-800"
+                                className="w-full min-w-0 px-4 py-2.5 bg-white border border-zinc-200 rounded-2xl text-base focus:outline-none focus:ring-2 focus:ring-[#162660]/20 text-zinc-800"
                             >
                                 {groups.map(group => (
                                     <option key={group.id} value={group.id}>
@@ -239,13 +239,13 @@ export default function DashboardEventEdit({ eventId, onBack, onSuccess }: Dashb
                                 placeholder="예: Summer Beach Skate & Surf"
                                 value={title}
                                 onChange={e => setTitle(e.target.value)}
-                                className="w-full px-4 py-2.5 bg-white border border-zinc-200 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-[#162660]/20 text-zinc-800"
+                                className="w-full min-w-0 px-4 py-2.5 bg-white border border-zinc-200 rounded-2xl text-base focus:outline-none focus:ring-2 focus:ring-[#162660]/20 text-zinc-800"
                                 required
                             />
                         </div>
 
                         {/* Activity Type & Capacity & Status */}
-                        <div className="grid grid-cols-3 gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                             <ActivityTypeSelector value={activityType} onChange={setActivityType} />
 
                             <div className="space-y-1.5">
@@ -256,7 +256,7 @@ export default function DashboardEventEdit({ eventId, onBack, onSuccess }: Dashb
                                     disabled={!capacityLimited}
                                     value={capacity}
                                     onChange={e => setCapacity(Number(e.target.value))}
-                                    className="w-full px-4 py-2.5 bg-white border border-zinc-200 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-[#162660]/20 text-zinc-800"
+                                    className="w-full min-w-0 px-4 py-2.5 bg-white border border-zinc-200 rounded-2xl text-base focus:outline-none focus:ring-2 focus:ring-[#162660]/20 text-zinc-800"
                                     required
                                 />
                                 <label className="mt-2 flex items-center gap-2 text-xs text-zinc-600">
@@ -270,7 +270,7 @@ export default function DashboardEventEdit({ eventId, onBack, onSuccess }: Dashb
                                 <select
                                     value={status}
                                     onChange={e => setStatus(e.target.value as EventStatus)}
-                                    className="w-full px-4 py-2.5 bg-white border border-zinc-200 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-[#162660]/20 text-zinc-800"
+                                    className="w-full min-w-0 px-4 py-2.5 bg-white border border-zinc-200 rounded-2xl text-base focus:outline-none focus:ring-2 focus:ring-[#162660]/20 text-zinc-800"
                                 >
                                     {(['DRAFT', 'OPEN', 'CLOSED', 'CANCELLED'] as const).map(value => (
                                         <option key={value} value={value}>{eventStatusLabel[value]}</option>
@@ -302,7 +302,7 @@ export default function DashboardEventEdit({ eventId, onBack, onSuccess }: Dashb
                                             max={capacity}
                                             value={crewMemberLimit}
                                             onChange={e => setCrewMemberLimit(Number(e.target.value))}
-                                            className="w-full px-4 py-2.5 bg-white border border-zinc-200 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-[#162660]/20 text-zinc-800"
+                                            className="w-full min-w-0 px-4 py-2.5 bg-white border border-zinc-200 rounded-2xl text-base focus:outline-none focus:ring-2 focus:ring-[#162660]/20 text-zinc-800"
                                             required
                                         />
                                     </div>
@@ -318,12 +318,12 @@ export default function DashboardEventEdit({ eventId, onBack, onSuccess }: Dashb
                                 placeholder="모임의 상세 내용"
                                 value={description}
                                 onChange={e => setDescription(e.target.value)}
-                                className="w-full px-4 py-2.5 bg-white border border-zinc-200 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-[#162660]/20 text-zinc-800"
+                                className="w-full min-w-0 px-4 py-2.5 bg-white border border-zinc-200 rounded-2xl text-base focus:outline-none focus:ring-2 focus:ring-[#162660]/20 text-zinc-800"
                             />
                         </div>
 
                         {/* Dates */}
-                        <div className="grid grid-cols-3 gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                             <div className="space-y-1.5">
                                 <label className="text-xs font-bold text-zinc-400 uppercase tracking-wider">신청 시작 일시 (한국 시간)</label>
                                 <input
@@ -332,7 +332,7 @@ export default function DashboardEventEdit({ eventId, onBack, onSuccess }: Dashb
                                     aria-label="신청 시작 일시 (한국 시간)"
                                     max={startsAt || undefined}
                                     onChange={e => setApplicationStartsAt(e.target.value)}
-                                    className="w-full px-4 py-2.5 bg-white border border-zinc-200 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-[#162660]/20 text-zinc-800"
+                                    className="w-full min-w-0 px-4 py-2.5 bg-white border border-zinc-200 rounded-2xl text-base focus:outline-none focus:ring-2 focus:ring-[#162660]/20 text-zinc-800"
                                 />
                             </div>
                             <div className="space-y-1.5">
@@ -342,7 +342,7 @@ export default function DashboardEventEdit({ eventId, onBack, onSuccess }: Dashb
                                     value={startsAt}
                                     aria-label="시작 일시 (한국 시간)"
                                     onChange={e => setStartsAt(e.target.value)}
-                                    className="w-full px-4 py-2.5 bg-white border border-zinc-200 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-[#162660]/20 text-zinc-800"
+                                    className="w-full min-w-0 px-4 py-2.5 bg-white border border-zinc-200 rounded-2xl text-base focus:outline-none focus:ring-2 focus:ring-[#162660]/20 text-zinc-800"
                                     required
                                 />
                             </div>
@@ -354,13 +354,13 @@ export default function DashboardEventEdit({ eventId, onBack, onSuccess }: Dashb
                                     value={endsAt}
                                     aria-label="종료 일시 (한국 시간)"
                                     onChange={e => setEndsAt(e.target.value)}
-                                    className="w-full px-4 py-2.5 bg-white border border-zinc-200 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-[#162660]/20 text-zinc-800"
+                                    className="w-full min-w-0 px-4 py-2.5 bg-white border border-zinc-200 rounded-2xl text-base focus:outline-none focus:ring-2 focus:ring-[#162660]/20 text-zinc-800"
                                 />
                             </div>
                         </div>
 
                         {/* Location */}
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div className="space-y-1.5">
                                 <label className="text-xs font-bold text-zinc-400 uppercase tracking-wider">장소명 (선택)</label>
                                 <input
@@ -368,7 +368,7 @@ export default function DashboardEventEdit({ eventId, onBack, onSuccess }: Dashb
                                     placeholder={planningMode === 'MEMBER_PLANNED' ? '참가자와 추후 협의 가능' : '장소명'}
                                     value={locationName}
                                     onChange={e => setLocationName(e.target.value)}
-                                    className="w-full px-4 py-2.5 bg-white border border-zinc-200 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-[#162660]/20 text-zinc-800"
+                                    className="w-full min-w-0 px-4 py-2.5 bg-white border border-zinc-200 rounded-2xl text-base focus:outline-none focus:ring-2 focus:ring-[#162660]/20 text-zinc-800"
                                 />
                             </div>
 
@@ -379,19 +379,19 @@ export default function DashboardEventEdit({ eventId, onBack, onSuccess }: Dashb
                                     placeholder="상세 주소"
                                     value={locationAddress}
                                     onChange={e => setLocationAddress(e.target.value)}
-                                    className="w-full px-4 py-2.5 bg-white border border-zinc-200 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-[#162660]/20 text-zinc-800"
+                                    className="w-full min-w-0 px-4 py-2.5 bg-white border border-zinc-200 rounded-2xl text-base focus:outline-none focus:ring-2 focus:ring-[#162660]/20 text-zinc-800"
                                 />
                             </div>
                         </div>
 
                         {/* Visibility and Policy */}
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div className="space-y-1.5">
                                 <label className="text-xs font-bold text-zinc-400 uppercase tracking-wider">대상 유형</label>
                                 <select
                                     value={kusbfAssociated ? 'KUSBF' : 'GENERAL'}
                                     onChange={e => setKusbfAssociated(e.target.value === 'KUSBF')}
-                                    className="w-full px-4 py-2.5 bg-white border border-zinc-200 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-[#162660]/20 text-zinc-800"
+                                    className="w-full min-w-0 px-4 py-2.5 bg-white border border-zinc-200 rounded-2xl text-base focus:outline-none focus:ring-2 focus:ring-[#162660]/20 text-zinc-800"
                                 >
                                     <option value="KUSBF">KUSBF 연계 이벤트</option>
                                     <option value="GENERAL">일반 이벤트</option>
@@ -403,7 +403,7 @@ export default function DashboardEventEdit({ eventId, onBack, onSuccess }: Dashb
                                 <select
                                     value={visibilityType}
                                     onChange={e => setVisibilityType(e.target.value as VisibilityType)}
-                                    className="w-full px-4 py-2.5 bg-white border border-zinc-200 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-[#162660]/20 text-zinc-800"
+                                    className="w-full min-w-0 px-4 py-2.5 bg-white border border-zinc-200 rounded-2xl text-base focus:outline-none focus:ring-2 focus:ring-[#162660]/20 text-zinc-800"
                                 >
                                     {(['PUBLIC', 'CREW_LIMITED', 'INVITE_ONLY', 'LINK_ONLY'] as const).map(value => (
                                         <option key={value} value={value}>{visibilityTypeLabel[value]}</option>
@@ -411,12 +411,12 @@ export default function DashboardEventEdit({ eventId, onBack, onSuccess }: Dashb
                                 </select>
                             </div>
 
-                            <div className="space-y-1.5 col-span-2">
+                            <div className="space-y-1.5 sm:col-span-2">
                                 <label className="text-xs font-bold text-zinc-400 uppercase tracking-wider">참가 신청 정책</label>
                                 <select
                                     value={joinPolicy}
                                     onChange={e => setJoinPolicy(e.target.value as JoinPolicy)}
-                                    className="w-full px-4 py-2.5 bg-white border border-zinc-200 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-[#162660]/20 text-zinc-800"
+                                    className="w-full min-w-0 px-4 py-2.5 bg-white border border-zinc-200 rounded-2xl text-base focus:outline-none focus:ring-2 focus:ring-[#162660]/20 text-zinc-800"
                                 >
                                     {(['INSTANT', 'APPROVAL_REQUIRED', 'INVITE_ONLY'] as const).map(value => (
                                         <option key={value} value={value}>{joinPolicyLabel[value]}</option>

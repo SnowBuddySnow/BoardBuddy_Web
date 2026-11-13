@@ -20,8 +20,8 @@ describe('event manager guide access and viewport presentation', () => {
 
   it('keeps the mobile guide readable without sending users into a desktop-only screen', () => {
     const mobile = renderGuide({ isDesktop: false });
-    expect(mobile).toContain('PC에서 진행해 주세요.');
-    expect(mobile).not.toContain('호스트 그룹 확인하기');
+    expect(mobile).not.toContain('PC에서 진행해 주세요.');
+    expect(mobile).toContain('호스트 그룹 확인하기');
     expect(mobile).toContain('aria-modal="true"');
   });
 

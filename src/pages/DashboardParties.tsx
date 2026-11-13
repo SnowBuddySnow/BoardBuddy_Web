@@ -15,6 +15,7 @@ interface DashboardPartiesProps {
     onViewDetailClick: (eventId: number) => void;
     onBackToHomeClick: () => void;
     onGroupsClick: () => void;
+    canCreate?: boolean;
 }
 
 export default function DashboardParties({
@@ -22,7 +23,8 @@ export default function DashboardParties({
     onEditEventClick,
     onViewDetailClick,
     onBackToHomeClick,
-    onGroupsClick
+    onGroupsClick,
+    canCreate = true
 }: DashboardPartiesProps) {
     const [parties, setParties] = useState<Event[]>([]);
     const [loading, setLoading] = useState(true);
@@ -113,8 +115,8 @@ export default function DashboardParties({
     return (
         <div className="flex-1 flex flex-col h-full bg-[#FAF8F3] overflow-hidden">
             {/* Top Desktop Navigation */}
-            <header className="bg-white border-b border-zinc-100 px-6 py-4 flex items-center justify-between">
-                <div className="flex items-center gap-6">
+            <header className="bg-white border-b border-zinc-100 px-4 py-4 flex flex-wrap items-center justify-between gap-3 sm:px-6">
+                <div className="flex min-w-0 flex-wrap items-center gap-3 sm:gap-6">
                     <div className="flex h-8 items-center gap-2"><img src={boardBuddyLogo} alt="BoardBuddy" className="h-8 w-32 object-cover object-center" /><span className="text-sm font-black text-[#162660]">운영</span></div>
                     <span className="h-4 w-px bg-zinc-200"></span>
                     <div className="flex gap-1 bg-zinc-100 p-1 rounded-full text-xs font-bold shrink-0">
@@ -131,17 +133,18 @@ export default function DashboardParties({
                         </button>
                     </div>
                 </div>
-                <div className="flex items-center gap-3">
+                <div className="flex flex-wrap items-center gap-3">
                     <Button
                         variant="outline"
                         onClick={onBackToHomeClick}
                         className="rounded-full border-zinc-200 text-zinc-600 hover:bg-zinc-50 font-medium h-10 py-0"
                     >
-                        모바일 홈으로
+                        홈으로
                     </Button>
                     <Button
                         variant="primary"
                         onClick={onCreateEventClick}
+                        disabled={!canCreate}
                         className="bg-[#162660] hover:bg-[#1e3a8a] text-white border-none rounded-full h-10 py-0 font-bold flex items-center gap-1.5 shadow-sm"
                     >
                         <Plus className="w-4 h-4" />
@@ -158,7 +161,7 @@ export default function DashboardParties({
                         <p className="text-sm">이벤트 관리 데이터를 가져오는 중...</p>
                     </div>
                 ) : parties.length === 0 ? (
-                    <div className="bg-white border border-zinc-100 rounded-3xl p-16 text-center text-zinc-400 shadow-sm flex flex-col items-center justify-center max-w-2xl mx-auto mt-12">
+                    <div className="bg-white border border-zinc-100 rounded-3xl p-6 sm:p-16 text-center text-zinc-400 shadow-sm flex flex-col items-center justify-center max-w-2xl mx-auto mt-12">
                         <ShieldAlert className="w-16 h-16 stroke-[1.2] mb-3 text-zinc-300" />
                         <h2 className="text-xl font-bold text-zinc-900 mb-1">관리 중인 이벤트가 없습니다</h2>
                         <p className="text-sm max-w-md mt-1 mb-6">
@@ -167,6 +170,7 @@ export default function DashboardParties({
                         <Button
                             variant="primary"
                             onClick={onCreateEventClick}
+                        disabled={!canCreate}
                             className="bg-[#162660] rounded-full font-bold px-6"
                         >
                             첫 번째 이벤트 개설하기
@@ -176,7 +180,7 @@ export default function DashboardParties({
                     <div className="bg-white border border-zinc-100 rounded-3xl shadow-sm overflow-hidden">
                         {/* Table layout for Desktop */}
                         <div className="overflow-x-auto">
-                            <table className="w-full text-left border-collapse">
+                            <table className="participant-table w-full text-left border-collapse">
                                 <thead>
                                     <tr className="bg-zinc-50 border-b border-zinc-100 text-xs text-zinc-400 font-bold uppercase tracking-wider">
                                         <th className="px-6 py-4">이벤트 / 그룹</th>
@@ -195,7 +199,7 @@ export default function DashboardParties({
 
                                         return (
                                             <tr key={event.id} className="hover:bg-zinc-50/50 transition-colors">
-                                                <td className="px-6 py-4.5">
+                                                <td data-label="이벤트 / 그룹" className="px-6 py-4.5">
                                                     <div className="font-bold text-zinc-900 hover:text-[#162660] cursor-pointer" onClick={() => onViewDetailClick(event.id)}>
                                                         {event.title}
                                                     </div>
@@ -204,26 +208,26 @@ export default function DashboardParties({
                                                     </div>
                                                     <div className="mt-2"><PlanningModeBadge mode={event.planningMode} /></div>
                                                 </td>
-                                                <td className="px-6 py-4.5">
+                                                <td data-label="상태" className="px-6 py-4.5">
                                                     <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs border ${getStatusStyle(event.status)}`}>
                                                         {eventStatusLabel[event.status]}
                                                     </span>
                                                 </td>
-                                                <td className="px-6 py-4.5 font-medium text-zinc-500">
+                                                <td data-label="일정" className="px-6 py-4.5 font-medium text-zinc-500">
                                                     {formatDate(event.startsAt)}
                                                 </td>
-                                                <td className="px-6 py-4.5">
+                                                <td data-label="공개 / 신청" className="px-6 py-4.5">
                                                     <div className="font-semibold text-zinc-800">{visibilityTypeLabel[event.visibilityType]}</div>
                                                     <div className="text-xs text-zinc-400 font-medium mt-0.5">{joinPolicyLabel[event.joinPolicy]}</div>
                                                 </td>
-                                                <td className="px-6 py-4.5">
+                                                <td data-label="참가 인원" className="px-6 py-4.5">
                                                     <div className="flex items-center gap-2 font-bold text-zinc-800">
                                                         <Users className="w-4 h-4 text-zinc-400" />
                                                         <span>{event.joinedCount || 0} / {event.capacityLimited === false ? '제한 없음' : event.capacity} 명</span>
                                                     </div>
                                                 </td>
-                                                <td className="px-6 py-4.5 text-right">
-                                                    <div className="flex items-center justify-end gap-2">
+                                                <td data-label="관리" className="px-6 py-4.5 text-right">
+                                                    <div className="flex flex-wrap items-center justify-end gap-2">
                                                         {/* Quick status transitions */}
                                                         {isDraft && (
                                                             <Button

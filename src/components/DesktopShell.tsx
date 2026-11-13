@@ -16,6 +16,7 @@ import {
 import NotificationBell from './NotificationBell';
 
 export type DesktopDestination =
+  | 'season_calendar'
   | 'home'
   | 'my_reservations'
   | 'reservation'
@@ -45,6 +46,7 @@ interface DesktopShellProps {
 
 const primaryItems = [
   { id: 'home', label: '홈', icon: Home },
+  { id: 'season_calendar', label: '시즌방 캘린더', icon: CalendarDays },
   { id: 'my_reservations', label: '내 예약', icon: CalendarDays },
   { id: 'reservation', label: '예약하기', icon: ClipboardPenLine },
   { id: 'crew_detail', label: '내 크루', icon: UsersRound },
@@ -80,7 +82,7 @@ export default function DesktopShell({
 
         <nav className="flex flex-1 flex-col gap-1" aria-label="주요 메뉴">
           {primaryItems.filter(({ id }) => {
-            if (!hasCrew && ['my_reservations', 'reservation', 'crew_detail'].includes(id)) return false;
+            if (!hasCrew && ['season_calendar', 'my_reservations', 'reservation', 'crew_detail'].includes(id)) return false;
             if (!seasonAvailable && ['my_reservations', 'reservation'].includes(id)) return false;
             if (!offSeasonAvailable && ['parties', 'my_parties'].includes(id)) return false;
             return true;

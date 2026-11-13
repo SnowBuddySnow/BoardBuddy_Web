@@ -38,6 +38,7 @@ describe('real App management navigation with synthetic HTTP', () => {
             let data: unknown;
             if (path === '/users/me') data = { userId: 7, userType: 'REGULAR', name: 'Synthetic host', role: 'CREW_MEMBER', crew: hasCrew ? { crewId: 1 } : null };
             else if (path === '/crews/1') data = { crewId: 1, crewName: 'Synthetic crew', seasonHouseActive: true };
+            else if (path.startsWith('/crews/1/calendar')) data = { calendar: [], my_reservations: [] };
             else if (path === '/operations/context') data = { permissions };
             else if (path === '/admin/crews') data = { developerAccess: false, crews: [], schools: [] };
             else if (path === '/events') data = events;
@@ -58,7 +59,7 @@ describe('real App management navigation with synthetic HTTP', () => {
     const render = async () => { await act(async () => { root.render(<App />); }); await settle(); };
     const settle = async () => { await act(async () => { await vi.dynamicImportSettled(); }); };
     const click = async (label: string) => {
-        const button = Array.from(container.querySelectorAll('button')).find(node => node.textContent?.trim() === label);
+        const button = Array.from(container.querySelectorAll('button')).find(node => node.textContent?.trim() === label || node.querySelector('h2')?.textContent === label);
         expect(button, label).toBeTruthy(); await act(async () => button!.click()); await settle();
     };
     const resize = async (nextWidth: number) => {
@@ -98,36 +99,41 @@ describe('real App management navigation with synthetic HTTP', () => {
         expect(Array.from(container.querySelectorAll('button')).some(button => /예약|나의 달력/.test(button.textContent || ''))).toBe(false);
     });
 
-    it('keeps the desktop-required explanation visible after a mobile host clicks Operations Center', async () => {
+    it('allows an authorized mobile host into Operations Center and event management', async () => {
         await render(); await click('운영 센터');
-        expect(container.textContent).toContain('데스크톱에서 관리해 주세요');
-        expect(container.textContent).toContain('1024px');
-        await settle();
-        expect(container.textContent).toContain('데스크톱에서 관리해 주세요');
-        expect(http.get).not.toHaveBeenCalledWith('/dashboard/events');
-        await click('홈으로 돌아가기');
-        expect(container.textContent).toContain('시작하기');
-    });
-
-    it('preserves the desktop-only gate for a direct dashboard entry at 1023px', async () => {
-        width = 1023; window.history.replaceState(null, '', '/?view=dashboard_parties');
-        await render();
-        expect(container.textContent).toContain('데스크톱에서 관리해 주세요');
-        expect(http.get).not.toHaveBeenCalledWith('/dashboard/events');
-    });
-
-    it('allows existing authorized desktop management and survives both breakpoint crossings', async () => {
-        width = 1024; await render();
         expect(container.querySelector('h1')?.textContent).toBe('운영 센터');
-        await resize(390);
-        expect(container.textContent).toContain('데스크톱에서 관리해 주세요');
-        await resize(1024);
-        expect(container.querySelector('h1')?.textContent).toBe('운영 센터');
+        await click('이벤트 관리');
+        expect(http.get).toHaveBeenCalledWith('/dashboard/events');
         expect(container.textContent).not.toContain('데스크톱에서 관리해 주세요');
     });
 
-    it('does not grant a non-host dashboard access', async () => {
-        width = 1024; permissions = []; window.history.replaceState(null, '', '/?view=operations_center');
+    it('allows direct dashboard entry on narrow screens', async () => {
+        width = 320; window.history.replaceState(null, '', '/?view=dashboard_parties');
+        await render();
+        expect(http.get).toHaveBeenCalledWith('/dashboard/events');
+        expect(container.textContent).toContain('관리 중인 이벤트가 없습니다');
+    });
+
+    it('keeps authorized management available across both breakpoint crossings', async () => {
+        width = 1024; await render();
+        expect(container.querySelector('h1')?.textContent).toBe('운영 센터');
+        await resize(390);
+        expect(container.querySelector('h1')?.textContent).toBe('운영 센터');
+        await resize(1024);
+        expect(container.querySelector('h1')?.textContent).toBe('운영 센터');
+    });
+
+    it('offers a read-only crew calendar while reservation creation stays held', async () => {
+        hasCrew = true; permissions = [];
+        await render(); await click('시즌방');
+        expect(container.querySelector('h1')?.textContent).toContain('시즌방 캘린더');
+        expect(container.textContent).toContain('신규 예약은 보류 중');
+        expect(http.get.mock.calls.some(([path]) => path.startsWith('/crews/1/calendar'))).toBe(true);
+        expect(http.get.mock.calls.some(([path]) => /reservations|usage-statistics/.test(path))).toBe(false);
+    });
+
+    it.each([390, 1024])('does not grant a non-host dashboard access at %spx', async viewport => {
+        width = viewport; permissions = []; window.history.replaceState(null, '', '/?view=operations_center');
         await render();
         expect(container.textContent).toContain('관리 권한이 없습니다');
         expect(http.get).not.toHaveBeenCalledWith('/dashboard/events');

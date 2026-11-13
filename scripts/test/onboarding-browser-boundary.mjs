@@ -2,6 +2,9 @@ export const installOnboardingBoundary = async (page, { origin = 'http://127.0.0
     await page.clock.install({ time: new Date('2026-11-13T00:00:00.000Z') });
     const state = { token: 'a'.repeat(43), newUser: true, signupPrefill: null, applied: false, approved: false, unavailable: false, role: 'CREW_MEMBER',
         requests: [], invitations: [], groups: [], profileBody: null, errors: [], unknown: [], traffic: [], credentialInUrl: false, publicAuth: false };
+    state.managedEvent = { id: 9101, title: '함께하는 주말 이벤트', description: '가상 운영 이벤트', activityType: 'EVENT', planningMode: 'MANAGER_PLANNED', organizerGroupId: 1, organizerGroupName: '로컬 호스트', startsAt: '2027-01-01T09:00:00', endsAt: '2027-01-01T18:00:00', capacity: 20, joinedCount: 0, status: 'DRAFT', visibilityType: 'PUBLIC', joinPolicy: 'APPROVAL_REQUIRED', kusbfAssociated: false };
+    state.participants = [{ id: 71, userId: 99102, userName: '가상 부원', status: 'PENDING', createdAt: '2026-11-13T00:00:00', paymentStatus: null, managerMemo: '' }];
+    state.writes = [];
     page.on('pageerror', error => state.errors.push(error.message));
     await page.context().addInitScript(() => {
         window.Kakao = { isInitialized: () => true, init() {}, Auth: { login: ({ success }) => { queueMicrotask(() => success({ access_token: 'synthetic-provider-only' })); } } };
@@ -46,6 +49,16 @@ export const installOnboardingBoundary = async (page, { origin = 'http://127.0.0
         }
         if (path === '/crews/17/invitations') return respond(state.invitations);
         if (path.startsWith('/crews/17/invitations/') && method === 'DELETE') { state.invitations.find(item => path.endsWith(item.id)).revokedAt = '2026-11-13T01:00:00'; return respond(null); }
+        if (path === '/dashboard/events') return respond([state.managedEvent]);
+        if (path === '/dashboard/events/9101' && method === 'PATCH') { const body = request.postDataJSON(); state.writes.push({ path, body }); Object.assign(state.managedEvent, body); return respond(state.managedEvent); }
+        if (path === '/dashboard/events/9101') return respond(state.managedEvent);
+        if (path === '/dashboard/events/9101/participants') return respond(state.participants);
+        if (path.startsWith('/dashboard/events/9101/participants/') && method === 'PATCH') { const body = request.postDataJSON(); state.writes.push({ path, body }); Object.assign(state.participants[0], body); state.managedEvent.joinedCount = state.participants.filter(item => item.status === 'JOINED').length; return respond(state.participants[0]); }
+        if (path === '/events/9101/chat-access') return respond({ chatUrl: null, chatPasscode: null, chatInstructions: null });
+        if (path === '/dashboard/events/9101/consents') return respond({ items: [], consentWindowMinutes: null, configurationLocked: true });
+        if (path === '/dashboard/events/9101/refund-policy') return respond({ refundPolicy: '' });
+        if (path === '/dashboard/events/9101/consent-responses') return respond({ eventId: 9101, eventTitle: state.managedEvent.title, items: [], participants: [], canRevealSensitive: false, canExport: false, privateValuesRevealed: false });
+        if (path === '/crews/17/calendar') { const month = url.searchParams.get('date').slice(0, 7); return respond({ calendar: [{ date: `${month}-13`, occupancy_status: 'LOW' }, { date: `${month}-14`, occupancy_status: 'MEDIUM' }, { date: `${month}-15`, occupancy_status: 'HIGH' }], my_reservations: [] }); }
         if (path === '/events/9101') return respond({ id: 9101, title: '가상 초대 행사', description: 'Synthetic event', activityType: 'EVENT', planningMode: 'MANAGER_PLANNED', startsAt: '2027-01-01T09:00:00', capacity: 20, joinedCount: 0, status: 'OPEN', visibilityType: 'PUBLIC', joinPolicy: 'APPROVAL_REQUIRED', organizerGroupId: 1, organizerGroupName: 'Synthetic hosts', kusbfAssociated: false, paymentRequired: false, currentUserStatus: null });
         if (path === '/events/9101/refund-policy') return respond({ refundPolicy: '' });
         if (path === '/crews/discover') return respond([{ crewId: 17, crewName: '가상 크루', crewCode: 'TEST', schoolName: '한국대학교', schoolId: 1, memberCount: 2, schoolVerificationRequired: false }]);
