@@ -1,7 +1,7 @@
 const origin = 'http://127.0.0.1:5188';
 export const installOnboardingBoundary = async page => {
     await page.clock.install({ time: new Date('2026-11-13T00:00:00.000Z') });
-    const state = { token: 'a'.repeat(43), newUser: true, applied: false, approved: false, unavailable: false, role: 'CREW_MEMBER',
+    const state = { token: 'a'.repeat(43), newUser: true, signupPrefill: null, applied: false, approved: false, unavailable: false, role: 'CREW_MEMBER',
         requests: [], invitations: [], groups: [], profileBody: null, errors: [], unknown: [], traffic: [], credentialInUrl: false, publicAuth: false };
     page.on('pageerror', error => state.errors.push(error.message));
     await page.context().addInitScript(() => {
@@ -20,7 +20,7 @@ export const installOnboardingBoundary = async page => {
             return state.unavailable ? respond(null, 404, 'Invitation is unavailable') : respond({ crewName: '가상 크루', schoolName: '한국대학교', expiresAt: '2027-01-01T00:00:00', approvalRequired: true });
         }
         if (path === '/crew-invitations/accept') { state.applied = true; return respond({ crewId: 17, status: state.approved ? 'JOINED' : 'PENDING' }); }
-        if (path === '/auth/social/kakao') return respond({ accountId: 99101, accessToken: state.newUser ? 'synthetic-pending' : 'synthetic-active', refreshToken: state.newUser ? null : 'synthetic-refresh', status: state.newUser ? 'PENDING_PROFILE' : 'ACTIVE', userType: 'REGULAR' });
+        if (path === '/auth/social/kakao') return respond({ accountId: 99101, accessToken: state.newUser ? 'synthetic-pending' : 'synthetic-active', refreshToken: state.newUser ? null : 'synthetic-refresh', status: state.newUser ? 'PENDING_PROFILE' : 'ACTIVE', userType: 'REGULAR', signupPrefill: state.signupPrefill });
         if (path === '/signup-policy') return respond({ studentEnabled: true, regularEnabled: true, version: 1 });
         if (path === '/schools') return respond([
             { id: 1, name: '한국대학교', schoolCode: 'MAIN', aliases: ['한국대'], emailDomains: [] },

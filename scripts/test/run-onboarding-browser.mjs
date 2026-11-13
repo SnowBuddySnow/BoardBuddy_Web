@@ -22,6 +22,30 @@ try {
     if (!ready) throw new Error('Onboarding scenario server did not become ready.');
     browser = await chromium.launch({ headless: true, ...(process.env.CI ? {} : { channel: 'chrome' }) });
     mkdirSync(`${root}/output/playwright`, { recursive: true });
+    {
+        const context = await browser.newContext({ viewport: { width: 390, height: 844 }, serviceWorkers: 'block' });
+        const page = await context.newPage(); const state = await installOnboardingBoundary(page);
+        state.signupPrefill = { name: '가상 실명', phoneNumber: '+82 10-0000-0000' };
+        await page.goto(`${origin}/?view=login`);
+        await page.getByRole('button', { name: 'Kakao Login', exact: true }).click();
+        const name = page.getByRole('textbox', { name: '실명 *', exact: true });
+        await name.waitFor();
+        assert(await name.inputValue() === '가상 실명', 'Provider account name was not carried through login');
+        assert(await name.evaluate(el => el.readOnly), 'Provider name confirmation was not shown');
+        await page.getByRole('button', { name: '내 이름이 아니에요 · 수정하기', exact: true }).click();
+        await name.fill('수정한 실명');
+        await page.getByRole('combobox', { name: '학교 *', exact: true }).fill('제2캠퍼스');
+        await page.getByRole('option').click();
+        await page.getByRole('textbox', { name: /^학번/ }).fill('20260001');
+        await page.getByRole('radio', { name: '여자', exact: true }).check();
+        await page.getByRole('button', { name: '다음', exact: true }).click();
+        assert(await page.getByRole('textbox', { name: '휴대전화번호 *', exact: true }).inputValue() === '010-0000-0000', 'Provider phone prefill was lost');
+        assert(await page.getByRole('button', { name: '인증번호 받기', exact: true }).isVisible(), 'Provider phone bypassed verification');
+        assert(!state.traffic.some(item => item.path.endsWith('/profile') || item.path === '/accounts/phone-verifications'), 'Provider hint triggered a write or SMS');
+        assert(state.unknown.length === 0 && state.errors.length === 0, 'Provider hint browser boundary failed');
+        completed.push('kakao-login-hints-confirm-correct-and-require-sms');
+        await context.close();
+    }
     for (const viewport of [{ width: 320, height: 640 }, { width: 390, height: 844 }, { width: 768, height: 1024 }, { width: 1440, height: 900 }]) {
         const context = await browser.newContext({ viewport, hasTouch: viewport.width < 1024, isMobile: viewport.width < 1024, serviceWorkers: 'block' });
         await context.addInitScript(() => { localStorage.setItem('tempAccessToken', 'synthetic-only'); localStorage.setItem('accountId', '99101'); });
