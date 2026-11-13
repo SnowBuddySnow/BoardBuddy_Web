@@ -127,7 +127,7 @@ describe('real App management navigation with synthetic HTTP', () => {
         hasCrew = true; permissions = [];
         await render(); await click('시즌방');
         expect(container.querySelector('h1')?.textContent).toContain('시즌방 캘린더');
-        expect(container.textContent).toContain('신규 예약은 보류 중');
+        expect(container.textContent).toContain('신규 예약은 현재 보류 중');
         expect(http.get.mock.calls.some(([path]) => path.startsWith('/crews/1/calendar'))).toBe(true);
         expect(http.get.mock.calls.some(([path]) => /reservations|usage-statistics/.test(path))).toBe(false);
     });
