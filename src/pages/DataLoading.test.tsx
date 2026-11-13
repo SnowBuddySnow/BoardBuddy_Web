@@ -125,4 +125,18 @@ describe('page fetch dependencies and reservation cache refresh (synthetic HTTP 
         await act(async () => finish(result({ results: [{ date: '2026-02-19', success: true, status: 'CONFIRMED' }] })));
     });
 
+    it('shows a processing notice for a delayed request and closes it after the response', async () => {
+        vi.useFakeTimers({ toFake: ['Date', 'setTimeout', 'clearTimeout'] });
+        vi.setSystemTime(new Date('2026-02-19T09:00:00Z'));
+        let finish!: (value: unknown) => void;
+        http.post.mockImplementation(() => new Promise(resolve => { finish = resolve; }));
+        await act(async () => root.render(<ReservationStats onBack={vi.fn()} />));
+        await click('예약하기');
+        await act(async () => vi.advanceTimersByTime(800));
+        expect(container.textContent).toContain('예약 요청을 처리하고 있어요');
+        expect(http.post).toHaveBeenCalledOnce();
+        await act(async () => finish(result({ results: [{ date: '2026-02-19', success: true, status: 'CONFIRMED' }] })));
+        expect(container.textContent).not.toContain('예약 요청을 처리하고 있어요');
+    });
+
 });

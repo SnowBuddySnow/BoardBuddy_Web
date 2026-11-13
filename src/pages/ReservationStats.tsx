@@ -42,6 +42,12 @@ export default function ReservationStats({ onBack, onMyCalendarClick, onReservat
     const [isExpanded, setIsExpanded] = useState(!readOnly && isCurrentMonthView);
     const [crewOpen, setCrewOpen] = useState(false);
     const [submitting, setSubmitting] = useState(false);
+    const [showProcessing, setShowProcessing] = useState(false);
+    useEffect(() => {
+        if (!submitting) return;
+        const timer = window.setTimeout(() => setShowProcessing(true), 700);
+        return () => window.clearTimeout(timer);
+    }, [submitting]);
     const mutationBusy = useRef(false);
     const detailRequests = useRef(new Map<string, Promise<void>>());
     const detailFetchedAt = useRef(new Map<string, number>());
@@ -154,7 +160,7 @@ export default function ReservationStats({ onBack, onMyCalendarClick, onReservat
         const dateStr = formatDate(selectedDay);
 
         try {
-            mutationBusy.current = true; setSubmitting(true);
+            mutationBusy.current = true; setShowProcessing(false); setSubmitting(true);
             const result = await createReservation(crewId, [dateStr]);
             const booking = result.results?.find(item => item.date === dateStr);
             if (!booking?.success) { alert(booking?.message || '예약을 신청하지 못했습니다. 접수 기간과 크루 설정을 확인해 주세요.'); return; }
@@ -183,7 +189,7 @@ export default function ReservationStats({ onBack, onMyCalendarClick, onReservat
         }
 
         try {
-            mutationBusy.current = true; setSubmitting(true);
+            mutationBusy.current = true; setShowProcessing(false); setSubmitting(true);
             const result = await cancelReservation(crewId, reservation.reservation_id);
             if (!result.success) { alert(result.message || '예약을 취소하지 못했습니다. 다시 확인해 주세요.'); return; }
             alert('예약이 취소되었습니다.');
@@ -299,7 +305,14 @@ export default function ReservationStats({ onBack, onMyCalendarClick, onReservat
     return (
         <ReservationLayout title={title ?? (readOnly ? "시즌방 캘린더" : "크루 달력")} onBack={onBack} action={!readOnly && onMyCalendarClick && <button type="button" onClick={onMyCalendarClick}>내 예약 →</button>}>
 
-            <main className="reservation-content">
+            {submitting && showProcessing && <div role="status" aria-live="polite" className="absolute inset-0 z-50 flex items-center justify-center bg-slate-900/30 p-5 backdrop-blur-sm">
+                <div className="w-full max-w-sm rounded-3xl bg-white p-6 text-center shadow-xl">
+                    <span aria-hidden="true" className="mx-auto mb-4 block h-8 w-8 animate-spin rounded-full border-4 border-blue-100 border-t-[#162660]" />
+                    <h2 className="text-lg font-bold text-[#162660]">예약 요청을 처리하고 있어요</h2>
+                    <p className="mt-2 text-sm leading-6 text-slate-600"><span className="block">서버의 응답을 기다리고 있어요.</span><span className="block">다시 누르지 않아도 결과를 알려드려요.</span></p>
+                </div>
+            </div>}
+            <main className="reservation-content" aria-busy={submitting}>
 
                 <ReservationSummary title="시즌방 현황" description="날짜를 선택해 예약 현황을 확인하세요." />
                 <div className="flex justify-end mb-2"><button type="button" className="text-xs text-blue-700 min-h-10" onClick={async () => {
@@ -315,6 +328,8 @@ export default function ReservationStats({ onBack, onMyCalendarClick, onReservat
                 <div className="reservation-workspace">
                     <Calendar
                         className="mb-3"
+                        dayDescription={day => ({ LOW: '여유', MEDIUM: '보통', HIGH: '혼잡', '': '—' }[getOccupancyStatus(day) ?? ''] ?? '현황 없음')}
+                        footer={<p className="mt-3 text-center text-xs text-slate-500">초록 여유 · 주황 보통 · 빨강 혼잡 · 회색 현황 없음</p>}
                         month={currentMonthName}
                         year={currentYear}
                         startDayOfWeek={firstDayOfMonth}
@@ -372,7 +387,10 @@ export default function ReservationStats({ onBack, onMyCalendarClick, onReservat
                             return (
                                 <div className={containerClasses}>
                                     {numberElement}
-                                    <div className={`w-2 h-2 rounded-full ${colorClass} mt-1`} />
+                                    <span className="flex items-center gap-0.5 text-[10px] leading-3 text-slate-500">
+                                        <span aria-hidden="true" className={`h-1.5 w-1.5 shrink-0 rounded-full ${colorClass}`} />
+                                        {{ LOW: '여유', MEDIUM: '보통', HIGH: '혼잡', '': '—' }[getOccupancyStatus(day) ?? ''] ?? '—'}
+                                    </span>
                                 </div>
                             );
                         }}
@@ -408,6 +426,7 @@ export default function ReservationStats({ onBack, onMyCalendarClick, onReservat
                                         </div>
                                     </div>
 
+                                    <p className="mb-3 text-xs text-slate-500">{!readOnly && currentDetail?.canManageReservations ? '입금 상태와 메모를 관리할 수 있어요.' : '날짜별 확정 인원과 대기 순서를 확인하세요.'}</p>
                                     {/* Users Grid */}
                                     <div className={`grid gap-y-3 gap-x-4 ${currentDetail?.canManageReservations ? 'grid-cols-1' : 'grid-cols-2'}`}>
                                         {currentMemberList.length > 0 ? (

@@ -17,6 +17,8 @@ interface CalendarProps {
     maxWeeks?: number;
     startWeekIndex?: number;
     isCollapsed?: boolean;
+    dayDescription?: (day: number) => string;
+    footer?: React.ReactNode;
     compact?: boolean; // For compact spacing (14px row spacing)
     onPrevMonth?: () => void;
     onNextMonth?: () => void;
@@ -40,6 +42,8 @@ export const Calendar = ({
     className,
     isCollapsed,
     compact = false,
+    dayDescription,
+    footer,
     onPrevMonth,
     onNextMonth,
 }: CalendarProps & { headerRight?: React.ReactNode, headerTop?: React.ReactNode, className?: string }) => {
@@ -222,6 +226,7 @@ export const Calendar = ({
                                                     disabled={!isAvailable && !expandable}
                                                     aria-label={`${year}년 ${month} ${day}일`}
                                                     aria-pressed={isSelected}
+                                                    aria-description={dayDescription?.(day)}
                                                     className={`calendar-default-day ${isSelected ? 'is-selected' : ''} ${viewMode === 'week' ? 'mt-4' : ''}`}
                                                 >
                                                     {day}
@@ -244,6 +249,7 @@ export const Calendar = ({
                     )}
                 </div>
             </div>
+            {footer}
         </div>
     );
 };

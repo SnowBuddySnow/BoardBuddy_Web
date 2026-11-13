@@ -42,6 +42,12 @@ try {
             state.role = 'CREW_MEMBER'; state.groups = [];
             await page.goto(`${origin}/?view=home`);
             await page.getByRole('heading', { name: '가상 크루와 함께하는 오늘' }).waitFor(); await fits();
+            if (width < 1024) {
+                const nav = page.getByRole('navigation', { name: '하단 메뉴', exact: true });
+                assert(await nav.getByRole('button').count() <= 4, 'Bottom navigation is crowded');
+                assert(await nav.getByRole('button', { name: /내 정보|알림|예약/ }).count() === 0, 'Secondary actions remain below');
+            }
+            await page.locator('header[aria-label="계정 메뉴"]').getByRole('button', { name: '내 정보', exact: true }).waitFor();
             const calendar = page.getByRole('button', { name: /날짜별 이용 현황 조회/ }); await calendar.scrollIntoViewIfNeeded();
             if (width < 1024) { const button = await calendar.boundingBox(); const nav = await page.getByRole('navigation', { name: '하단 메뉴', exact: true }).boundingBox(); assert(button && nav && button.y + button.height <= nav.y, 'Bottom menu overlaps home action'); }
             await page.screenshot({ path: `${root}/output/playwright/member-home-${width}.png` });
@@ -61,7 +67,10 @@ try {
             state.seasonOpen = true;
             await page.reload();
             await page.getByRole('button', { name: '2026년 11월 15일', exact: true }).click();
+            state.delayBookingMs = 1200;
             await page.locator('.reservation-content').getByRole('button', { name: '예약하기', exact: true }).click();
+            await page.getByText('예약 요청을 처리하고 있어요', { exact: true }).waitFor();
+            state.delayBookingMs = 0;
             try { await page.getByRole('button', { name: '예약 취소하기', exact: true }).waitFor(); } catch (error) { await page.screenshot({ path: `${root}/output/playwright/season-apply-failure.png` }); console.error(JSON.stringify({ bookings: state.bookings, traffic: state.traffic.slice(-12), unknown: state.unknown, text: await page.locator('body').innerText() })); throw error; }
             assert(state.bookings.length === 1, 'Application did not persist in fixture');
             await page.getByRole('button', { name: '예약 취소하기', exact: true }).click();

@@ -70,6 +70,18 @@ describe('real App management navigation with synthetic HTTP', () => {
         await settle();
     };
 
+    it('keeps only core destinations below and opens profile from the top right', async () => {
+        hasCrew = true; permissions = []; localStorage.setItem('dev_operating_mode', 'BOTH');
+        await render();
+        const nav = container.querySelector('nav[aria-label="하단 메뉴"]')!;
+        expect(Array.from(nav.querySelectorAll('button')).map(button => button.textContent?.trim())).toEqual(['홈', '시즌방', '이벤트', '내 크루']);
+        expect(nav.querySelector('[aria-label="내 정보"]')).toBeNull();
+        const toolbar = container.querySelector('header[aria-label="계정 메뉴"]')!;
+        expect(toolbar.querySelector('[aria-label="알림"]')).toBeTruthy();
+        await act(async () => (toolbar.querySelector('[aria-label="내 정보"]') as HTMLButtonElement).click());
+        await settle(); expect(container.textContent).toContain('My Page');
+    });
+
     it.each([320, 390, 768, 1023, 1024])('blocks member reservation views for a closed crew at %spx', async viewport => {
         width = viewport; hasCrew = true; crewOpen = false;
         localStorage.setItem('dev_operating_mode', 'BOTH');
@@ -125,7 +137,7 @@ describe('real App management navigation with synthetic HTTP', () => {
         expect(container.querySelector('h1')?.textContent).toBe('운영 센터');
     });
 
-    it('offers a read-only crew calendar while reservation creation stays held', async () => {
+    it('supports calendar-only access in explicit off-season mode', async () => {
         hasCrew = true; permissions = [];
         await render(); await click('시즌방');
         expect(container.querySelector('h1')?.textContent).toContain('시즌방 캘린더');

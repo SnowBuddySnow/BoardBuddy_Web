@@ -6,6 +6,7 @@ export const installOnboardingBoundary = async (page, { origin = 'http://127.0.0
     state.participants = [{ id: 71, userId: 99102, userName: '가상 부원', status: 'PENDING', createdAt: '2026-11-13T00:00:00', paymentStatus: null, managerMemo: '' }];
     state.writes = [];
     state.seedReservation = { reservationId: 77, participantAccountId: 99102, status: 'CONFIRMED', paymentStatus: 'UNPAID', managerMemo: null };
+    state.delayBookingMs = 0;
     state.seasonOpen = false; state.bookings = []; state.nextBookingId = 80;
     page.on('pageerror', error => state.errors.push(error.message));
     await page.context().addInitScript(() => {
@@ -61,6 +62,7 @@ export const installOnboardingBoundary = async (page, { origin = 'http://127.0.0
         if (path === '/dashboard/events/9101/refund-policy') return respond({ refundPolicy: '' });
         if (path === '/dashboard/events/9101/consent-responses') return respond({ eventId: 9101, eventTitle: state.managedEvent.title, items: [], participants: [], canRevealSensitive: false, canExport: false, privateValuesRevealed: false });
         if (path === '/crews/17/reservations' && method === 'POST') {
+            if (state.delayBookingMs) await new Promise(resolve => setTimeout(resolve, state.delayBookingMs));
             const body = request.postDataJSON(); state.writes.push({ path, body });
             const results = body.dates.map(date => { const item = { date, reservationId: state.nextBookingId++, participantAccountId: 99101, status: 'CONFIRMED' }; state.bookings.push(item); return { ...item, success: true, attempts: 1 }; });
             return respond({ crewId: 17, accountId: 99101, results });

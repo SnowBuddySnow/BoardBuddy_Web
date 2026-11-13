@@ -1,6 +1,7 @@
 import { claimEventManagerOnboarding, completeEventManagerOnboarding, dismissEventManagerOnboarding, hasEventManagementAccess } from './lib/eventManagerOnboarding';
 import EventManagerOnboarding, { EventManagerOnboardingReturnButton, type EventManagerOnboardingDestination } from './components/EventManagerOnboarding';
 import { lazy, useState, useEffect, useRef } from 'react';
+import AccountToolbar from './components/AccountToolbar';
 import { LowerMenuBar } from './components/LowerMenuBar';
 import Home from './pages/Home';
 import LoginLanding from './pages/LoginLanding';
@@ -482,7 +483,7 @@ function App() {
           offSeasonAvailable={operatingFeatures.offSeason}
         />;
       case 'season_calendar':
-        return <SeasonCalendar onBack={() => setCurrentView('home')} />;
+        return <SeasonCalendar onBack={() => setCurrentView('home')} onMyCalendarClick={() => setCurrentView('my_reservations')} onReservationClick={() => setCurrentView('reservation')} />;
       case 'stats':
         return (
           <ReservationStats
@@ -725,8 +726,11 @@ function App() {
     <div className="w-full h-dvh bg-zinc-100 dark:bg-zinc-900 flex items-center justify-center overflow-hidden">
       <div className={isDesktop || isDashboardView || usesDesktopShell || ['login', 'user_info', 'crew_invite', 'onboarding'].includes(currentView) || (['crew_admin', 'school_admin', 'user_admin', 'signup_audit'].includes(currentView) && canReviewCrews)
         ? "w-full h-full bg-white dark:bg-zinc-950 relative overflow-hidden flex flex-col" 
-        : "w-full h-full max-w-md bg-[#FAF8F3] relative shadow-2xl overflow-hidden flex flex-col"
+        : `w-full h-full ${['season_calendar', 'stats'].includes(currentView) ? 'max-w-3xl' : 'max-w-md'} bg-[#FAF8F3] relative shadow-2xl overflow-hidden flex flex-col`
       }>
+        {showBottomNav && !isDesktop && <AccountToolbar onHome={() => setCurrentView('home')} onProfile={() => setCurrentView('my_page')}
+            onManage={canManage ? () => setCurrentView('operations_center') : undefined}
+            notificationRefreshKey={notificationRefreshKey} onNotifications={() => { setNotificationReturnView(currentView); setCurrentView('notifications'); }} />}
         <div className="min-h-0 flex-1 flex flex-col">
         {usesDesktopShell ? (
           <DesktopShell
@@ -754,15 +758,9 @@ function App() {
             activeTab={activeTab}
             availableEventCount={availableEventCount}
             hasCrew={hasCrew && !hasPendingCrewApplication}
-            seasonAvailable={seasonHouseAvailable}
             offSeasonAvailable={operatingFeatures.offSeason}
             onTabChange={(tab) => {
               setCurrentView(tabViews[tab]);
-            }}
-            notificationRefreshKey={notificationRefreshKey}
-            onNotificationsClick={() => {
-              setNotificationReturnView(currentView);
-              setCurrentView('notifications');
             }}
           />
         )}
