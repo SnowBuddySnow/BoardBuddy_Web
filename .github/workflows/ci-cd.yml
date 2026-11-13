@@ -69,6 +69,8 @@ jobs:
         run: pnpm run test:browser
       - name: Exercise responsive signup and crew onboarding
         run: pnpm run test:onboarding
+      - name: Exercise mobile event management and read-only calendar
+        run: pnpm run test:management
       - name: Save synthetic scenario evidence
         if: always()
         uses: actions/upload-artifact@v4

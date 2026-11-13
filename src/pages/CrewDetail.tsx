@@ -144,21 +144,21 @@ export default function CrewDetail({ onBack, onCalendarClick, onMemberClick, onS
                         </button>
                     )}
 
-                    {/* Season-only actions */}
-                    {seasonAvailable && (
+                    {/* Calendar remains readable while new reservations are held. */}
+                    {(
                         <>
                             <button
                                 onClick={onCalendarClick}
                                 className="mt-4 w-full bg-white border border-zinc-200 dark:border-zinc-800 dark:bg-zinc-900 rounded-2xl p-5 flex items-center justify-between hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors mb-4"
                             >
-                                <span className="font-bold text-zinc-600 dark:text-zinc-300">크루 달력</span>
+                                <span className="font-bold text-zinc-600 dark:text-zinc-300">시즌방 캘린더</span>
                                 <div className="flex items-center gap-1 text-zinc-500 dark:text-zinc-400">
                                     <span className="text-sm font-medium">확인하기</span>
                                     <ChevronRightIcon className="w-5 h-5" />
                                 </div>
                             </button>
 
-                            <button
+                            {seasonAvailable && <button
                                 onClick={() => setShowStats(true)}
                                 className="w-full bg-white border border-zinc-200 dark:border-zinc-800 dark:bg-zinc-900 rounded-2xl p-5 flex items-center justify-between hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors"
                             >
@@ -167,7 +167,7 @@ export default function CrewDetail({ onBack, onCalendarClick, onMemberClick, onS
                                     <span className="text-sm font-medium">확인하기</span>
                                     <ChevronRightIcon className="w-5 h-5" />
                                 </div>
-                            </button>
+                            </button>}
                         </>
                     )}
 

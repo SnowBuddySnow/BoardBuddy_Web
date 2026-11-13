@@ -21,9 +21,9 @@ export function PlanningModeBadge({ mode }: PlanningModeBadgeProps) {
                 event.stopPropagation();
                 setIsOpen(current => !current);
             }}
-            className={`relative inline-flex min-h-11 items-center gap-1 whitespace-nowrap px-2 py-1 text-[11px] font-bold border rounded focus:outline-none focus:ring-2 focus:ring-current/30 ${memberPlanned
-            ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
-            : 'border-blue-200 bg-blue-50 text-blue-700'}`}
+            className={`relative inline-flex min-h-11 items-center gap-2 whitespace-normal px-3 py-2 text-xs font-bold border rounded-full focus:outline-none focus:ring-2 focus:ring-current/30 ${memberPlanned
+            ? 'border-amber-200 bg-amber-50 text-amber-900'
+            : 'border-[#162660]/10 bg-[#162660]/5 text-[#162660]'}`}
         >
             {copy.label}
             <Info className="h-3 w-3" aria-hidden="true" />

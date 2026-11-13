@@ -104,12 +104,12 @@ const UserIcon = ({ className, ...props }: IconProps) => (
 
 interface LowerMenuBarProps {
   className?: string;
-  activeTab?: 'home' | 'events' | 'calendar' | 'edit' | 'heart' | 'user';
+  activeTab?: 'home' | 'events' | 'calendar' | 'edit' | 'heart' | 'user' | 'season';
   availableEventCount?: number;
   hasCrew?: boolean;
   seasonAvailable?: boolean;
   offSeasonAvailable?: boolean;
-  onTabChange?: (tab: 'home' | 'events' | 'calendar' | 'edit' | 'heart' | 'user') => void;
+  onTabChange?: (tab: 'home' | 'events' | 'calendar' | 'edit' | 'heart' | 'user' | 'season') => void;
   notificationRefreshKey?: number;
   onNotificationsClick: () => void;
 }
@@ -128,6 +128,7 @@ export const LowerMenuBar = ({
   const menuItems = [
     { id: 'home', icon: HomeIcon, label: '홈', requiresCrew: false },
     { id: 'events', icon: Sparkles, label: '이벤트', requiresCrew: false },
+    { id: 'season', icon: CalendarIcon, label: '시즌방', requiresCrew: true },
     { id: 'calendar', icon: CalendarIcon, label: '내 예약', requiresCrew: true },
     { id: 'edit', icon: EditIcon, label: '예약', requiresCrew: true },
     { id: 'heart', icon: HeartIcon, label: '내 크루', requiresCrew: true },
@@ -138,7 +139,7 @@ export const LowerMenuBar = ({
     if (!offSeasonAvailable && item.id === 'events') return false;
     return true;
   }) as Array<{
-    id: 'home' | 'events' | 'calendar' | 'edit' | 'heart' | 'user';
+    id: 'home' | 'events' | 'calendar' | 'edit' | 'heart' | 'user' | 'season';
     icon: typeof HomeIcon;
     label: string;
     requiresCrew: boolean;
@@ -148,7 +149,7 @@ export const LowerMenuBar = ({
     <nav
       aria-label="하단 메뉴"
       className={cn(
-        'absolute inset-x-3 bottom-[max(0.75rem,env(safe-area-inset-bottom))] z-50 flex h-16 items-stretch justify-around rounded-[22px] border border-zinc-200/80 bg-white/95 px-1.5 py-1.5 shadow-[0_8px_28px_rgba(24,24,27,0.14)] backdrop-blur-md dark:border-zinc-800 dark:bg-zinc-900/95',
+        'relative z-50 mx-3 mt-2 mb-[max(0.75rem,env(safe-area-inset-bottom))] flex h-16 shrink-0 items-stretch justify-around rounded-[22px] border border-zinc-200/80 bg-white/95 px-1.5 py-1.5 shadow-[0_8px_28px_rgba(24,24,27,0.14)] backdrop-blur-md dark:border-zinc-800 dark:bg-zinc-900/95',
         className
       )}
     >

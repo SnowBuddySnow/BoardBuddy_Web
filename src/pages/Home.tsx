@@ -16,6 +16,7 @@ interface HomeProps {
     onMakeReservationClick: () => void;
     onGuestReservationClick: () => void;
     onCalendarClick: () => void;
+    onSeasonCalendarClick?: () => void;
     onTeamClick: () => void;
     onSearchClick: () => void;
     onCreateCrewClick: () => void;
@@ -35,6 +36,7 @@ export default function Home({
     onMakeReservationClick,
     onGuestReservationClick,
     onCalendarClick,
+    onSeasonCalendarClick,
     onTeamClick,
     onSearchClick,
     onCreateCrewClick,
@@ -92,8 +94,7 @@ export default function Home({
                 // Fetch public small gatherings
                 const partiesList = await listParties();
                 // Show only OPEN parties in recommended lists
-                const openParties = partiesList.filter(p => p.status === 'OPEN');
-                setParties(openParties);
+                setParties(partiesList);
 
                 // Fetch organizer groups to verify create permissions
                 const groups = await listOrganizerGroups();
@@ -185,7 +186,7 @@ export default function Home({
             </header>
 
             {/* Content Area */}
-            <main className="flex-1 overflow-y-auto pb-[calc(110px+env(safe-area-inset-bottom))] space-y-5">
+            <main className="flex-1 overflow-y-auto pb-6 space-y-5">
 
                 {/* Team Info / Host Metadata (De-emphasized compact row) */}
                 {!hasCrew && onOnboardingClick && <button type="button" onClick={onOnboardingClick} className="mb-5 flex min-h-14 w-full items-center justify-between gap-3 rounded-2xl bg-[#162660] p-4 text-left text-sm font-bold text-white"><span>내 가입·크루 생성 진행 상태 이어보기</span><ChevronRight className="h-4 w-4 shrink-0" /></button>}
@@ -292,6 +293,21 @@ export default function Home({
 
                 {hasCrew && (
                     <>
+                        <section className="px-4">
+                            <div className="rounded-3xl bg-[#162660] p-5 text-white sm:p-7">
+                                <p className="text-xs font-bold text-blue-200">MY CREW</p>
+                                <h2 className="mt-2 text-2xl font-black">{userInfo?.crew?.crewName || crewDetail?.crewName || '내 크루'}와 함께하는 오늘</h2>
+                                <p className="mt-3 text-sm leading-6 text-blue-100">새로운 모임을 찾아보고, 내 일정과 시즌방 현황을 한곳에서 확인해요.</p>
+                                <div className="mt-5 grid grid-cols-2 gap-3">
+                                    <button type="button" onClick={onMyPlansClick} className="min-h-16 rounded-2xl bg-white/10 p-3 text-left"><span className="block text-2xl font-black">{myPlansCount}</span><span className="text-xs text-blue-100">내 참여·대기 일정</span></button>
+                                    <button type="button" onClick={onSeeAllPartiesClick} className="min-h-16 rounded-2xl bg-white/10 p-3 text-left"><span className="block text-2xl font-black">{upcomingParties.length}</span><span className="text-xs text-blue-100">지금 참가 가능한 이벤트</span></button>
+                                </div>
+                            </div>
+                        </section>
+                        <section className="grid gap-3 px-4 sm:grid-cols-2">
+                            <button type="button" onClick={onSeasonCalendarClick || onCalendarClick} className="min-h-24 rounded-2xl border border-zinc-200 bg-white p-5 text-left"><CalendarIcon className="h-5 w-5 text-[#162660]" /><span className="mt-2 block font-black text-[#162660]">시즌방 캘린더</span><span className="mt-1 block text-xs leading-6 text-zinc-500">날짜별 이용 현황 조회 · {seasonHouseAvailable ? '예약 운영 중' : '신규 예약은 현재 보류 중'}</span></button>
+                            <button type="button" onClick={onMyPlansClick} className="min-h-24 rounded-2xl border border-zinc-200 bg-white p-5 text-left"><CalendarHeart className="h-5 w-5 text-[#162660]" /><span className="mt-2 block font-black text-[#162660]">내 참여 일정</span><span className="mt-1 block text-xs leading-6 text-zinc-500">참여·대기 중인 이벤트를 확인해요.</span></button>
+                        </section>
                         {seasonHouseAvailable && (
                             <section className="px-4">
                                 <button

@@ -14,6 +14,7 @@
     "preview": "vite preview",
     "check:contracts": "node scripts/check-api-contract.mjs",
     "test:browser": "node scripts/test/run-event-browser-smoke.mjs",
+    "test:management": "node scripts/test/run-mobile-management.mjs",
     "test:onboarding": "node scripts/test/run-onboarding-browser.mjs"
   },
   "dependencies": {
