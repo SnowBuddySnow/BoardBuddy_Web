@@ -1,18 +1,16 @@
 // @vitest-environment jsdom
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 import { getOperatingFeatures, getOperatingMode } from './operatingSeason';
-
-describe('current release season-house hold', () => {
-    afterEach(() => { localStorage.clear(); vi.unstubAllEnvs(); });
-    it.each(['SEASON', 'BOTH', 'OFF_SEASON'])('cannot be reopened by the %s developer override or winter calendar', mode => {
-        localStorage.setItem('dev_operating_mode', mode);
-        expect(getOperatingMode(new Date('2026-12-15T12:00:00+09:00'))).toBe('OFF_SEASON');
-        expect(getOperatingFeatures(mode as 'SEASON' | 'BOTH' | 'OFF_SEASON')).toEqual({ season: false, offSeason: true });
+describe('season reservations reopened', () => {
+    afterEach(() => localStorage.clear());
+    it('offers reservations and events during October through May', () => {
+        for (const month of [0, 4, 9, 11]) expect(getOperatingMode(new Date(2026, month, 15))).toBe('BOTH');
+        expect(getOperatingMode(new Date(2026, 6, 15))).toBe('OFF_SEASON');
     });
-    it.each(['VITE_OPERATING_MODE_OVERRIDE', 'VITE_OPERATING_SEASON_OVERRIDE'])('cannot be reopened by %s', async key => {
-        vi.stubEnv(key, 'BOTH'); vi.resetModules();
-        const configuration = await import('./operatingSeason');
-        expect(configuration.getOperatingMode()).toBe('OFF_SEASON');
-        expect(configuration.getOperatingFeatures('BOTH')).toEqual({ season: false, offSeason: true });
+    it.each(['SEASON', 'BOTH', 'OFF_SEASON'] as const)('honors explicit %s mode', mode => {
+        localStorage.setItem('dev_operating_mode', mode);
+        expect(getOperatingMode()).toBe(mode);
+        expect(getOperatingFeatures(mode).season).toBe(mode !== 'OFF_SEASON');
+        expect(getOperatingFeatures(mode).offSeason).toBe(mode !== 'SEASON');
     });
 });

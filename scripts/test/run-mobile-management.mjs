@@ -38,7 +38,7 @@ try {
             await page.getByText('모바일에서 수정한 이벤트', { exact: true }).waitFor();
             await page.reload(); await page.getByText('모바일에서 수정한 이벤트', { exact: true }).waitFor();
             assert(state.managedEvent.title === '모바일에서 수정한 이벤트', 'Event configuration not saved');
-            // Read-only calendar is accessible while writes remain held.
+            // A closed crew remains read-only; one selection opens the status panel.
             state.role = 'CREW_MEMBER'; state.groups = [];
             await page.goto(`${origin}/?view=home`);
             await page.getByRole('heading', { name: '가상 크루와 함께하는 오늘' }).waitFor(); await fits();
@@ -50,12 +50,30 @@ try {
             await day.locator('.reservation-dot-high').waitFor();
             await page.getByRole('switch', { name: '내 일정 표시', exact: true }).click();
             await day.locator('.reservation-dot-high').waitFor();
-            await day.click(); await day.click(); await page.getByText('회원 #99102', { exact: true }).waitFor();
-            assert(await page.getByRole('button', { name: /예약하기|예약 취소하기|관리 정보 저장/ }).count() === 0, 'Read-only calendar exposed mutations');
+            await day.click(); await page.getByText('회원 #99102', { exact: true }).waitFor();
+            assert(await page.getByRole('button', { name: /예약하기|예약 취소하기|관리 정보 저장/ }).count() === 0, 'Closed calendar exposed enabled mutations');
             assert(await page.getByRole('combobox', { name: /입금 상태/ }).count() === 0, 'Read-only calendar exposed payment edits');
+            await page.getByRole('combobox', { name: '예약자 정렬' }).selectOption('earliest');
             await page.screenshot({ path: `${root}/output/playwright/season-calendar-${name}-${width}.png` }); await fits();
+            // Reopen the same crew: application and cancellation refresh the day and own calendar.
+            state.seasonOpen = true;
+            await page.reload();
+            await page.getByRole('button', { name: '2026년 11월 15일', exact: true }).click();
+            await page.locator('.reservation-content').getByRole('button', { name: '예약하기', exact: true }).click();
+            try { await page.getByRole('button', { name: '예약 취소하기', exact: true }).waitFor(); } catch (error) { await page.screenshot({ path: `${root}/output/playwright/season-apply-failure.png` }); console.error(JSON.stringify({ bookings: state.bookings, traffic: state.traffic.slice(-12), unknown: state.unknown, text: await page.locator('body').innerText() })); throw error; }
+            assert(state.bookings.length === 1, 'Application did not persist in fixture');
+            await page.getByRole('button', { name: '예약 취소하기', exact: true }).click();
+            await page.locator('.reservation-content').getByRole('button', { name: '예약하기', exact: true }).waitFor();
+            assert(state.bookings.length === 0, 'Cancellation did not refresh');
+            state.role = 'CREW_CAPTAIN';
+            await page.reload();
+            await page.getByRole('button', { name: '2026년 11월 15일', exact: true }).click();
+            await page.getByRole('combobox', { name: '예약 77 입금 상태', exact: true }).selectOption('PAID');
+            await page.getByRole('textbox', { name: '예약 77 관리자 메모', exact: true }).fill('시즌방 입금 확인');
+            await page.getByRole('button', { name: '예약 77 관리 정보 저장', exact: true }).click();
+            assert(state.seedReservation.paymentStatus === 'PAID' && state.seedReservation.managerMemo === '시즌방 입금 확인', 'Season management lost edits');
             await page.getByRole('button', { name: '다음 달', exact: true }).click(); await page.getByRole('button', { name: '2026년 12월 15일', exact: true }).locator('.reservation-dot-high').waitFor();
-            assert(!state.writes.some(item => item.path.includes('reservation')), 'Calendar wrote a reservation');
+            assert(state.writes.filter(item => item.path.includes('reservation')).length === 3, 'Unexpected reservation mutations');
             assert(!state.errors.length && !state.unknown.length, `Fixture errors ${JSON.stringify(state.errors)} ${JSON.stringify(state.unknown)}`);
             completed.push(`${name}-${width}-participant-save-approve-event-edit-home-calendar`); await context.close();
         } } finally { await browser.close(); }
