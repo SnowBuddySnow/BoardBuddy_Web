@@ -83,3 +83,22 @@ References checked November 13, 2026:
 - https://ohou.se/normal_users/new : social entry alongside explicit nickname input and individually listed agreements.
 - https://ohou.se/contact_us : social login still has service-side identity/email verification concerns.
 These references inform the design; their authenticated private flows were not inspected.
+
+## Entry layout and school-domain follow-up
+
+The first Kakao entry screen now shares the invitation/signup navy, cream, yellow and rounded-card
+layout. It uses the app's available flex height and an internal scrolling surface, replacing a
+viewport-height minimum nested inside an overflow-hidden app viewport. Login joins the full-width
+onboarding shell. Browser checks cover 320/390/768/1440px and a short 960×420 viewport, including
+reachable footer and horizontal overflow checks.
+
+School selection chooses a registered email domain automatically. Multiple configured domains use
+a dropdown; the local part remains editable. Empty optional email stays empty rather than submitting
+`@domain`. Email/domain assistance does not mark school verification complete. The student-number
+hint is now “동명이인 구분을 위해 필수입니다.”.
+
+Release investigation on November 13, 2026 found the API live at `1d1fabed` (health UP), while
+https://stg.boardbuddy.kr still served `1.0.0+4717f8f`, despite develop `f896c64` having merged.
+The Web GitHub workflow performs verification/build/browser checks only, and the merge commit has
+no Vercel commit status. A successful GitHub build alone is not proof of a frontend staging release.
+Vercel project access/configuration must be restored and the actual deployed version verified.

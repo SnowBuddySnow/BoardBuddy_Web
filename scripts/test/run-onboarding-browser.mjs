@@ -22,6 +22,21 @@ try {
     if (!ready) throw new Error('Onboarding scenario server did not become ready.');
     browser = await chromium.launch({ headless: true, ...(process.env.CI ? {} : { channel: 'chrome' }) });
     mkdirSync(`${root}/output/playwright`, { recursive: true });
+    for (const viewport of [{ width: 320, height: 568 }, { width: 390, height: 844 }, { width: 768, height: 600 }, { width: 1440, height: 720 }, { width: 960, height: 420 }]) {
+        const context = await browser.newContext({ viewport, serviceWorkers: 'block' });
+        const page = await context.newPage();
+        const state = await installOnboardingBoundary(page);
+        await page.goto(`${origin}/?view=login`);
+        await page.getByRole('heading', { name: '반가워요, 함께 시작할까요?' }).waitFor();
+        assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), 'Entry screen overflows horizontally');
+        const footer = page.locator('footer'); await footer.scrollIntoViewIfNeeded();
+        const box = await footer.boundingBox();
+        assert(box && box.y >= 0 && box.y + box.height <= viewport.height + 1, 'Entry footer is clipped instead of scrollable');
+        await page.getByRole('button', { name: 'Kakao Login', exact: true }).scrollIntoViewIfNeeded();
+        if ([390, 1440].includes(viewport.width)) await page.screenshot({ path: `${root}/output/playwright/entry-${viewport.width}.png` });
+        assert(!state.errors.length && !state.unknown.length, 'Entry screen fixture failed');
+        completed.push(`entry-scroll-and-layout-${viewport.width}x${viewport.height}`); await context.close();
+    }
     {
         const context = await browser.newContext({ viewport: { width: 390, height: 844 }, serviceWorkers: 'block' });
         const page = await context.newPage(); const state = await installOnboardingBoundary(page);
@@ -36,6 +51,10 @@ try {
         await name.fill('수정한 실명');
         await page.getByRole('combobox', { name: '학교 *', exact: true }).fill('제2캠퍼스');
         await page.getByRole('option').click();
+        const domain = page.getByRole('combobox', { name: '학교 이메일 도메인', exact: true });
+        assert(await domain.inputValue() === 'campus.ac.kr', 'School domain was not automatically selected');
+        await page.getByRole('textbox', { name: '학교 이메일 아이디', exact: true }).fill('member');
+        await domain.selectOption('students.mail.campus.ac.kr');
         await page.getByRole('textbox', { name: /^학번/ }).fill('20260001');
         await page.getByRole('radio', { name: '여자', exact: true }).check();
         await page.getByRole('button', { name: '다음', exact: true }).click();
@@ -68,6 +87,7 @@ try {
             await school.fill('제2캠퍼스'); await page.getByRole('option').tap();
             assert(await school.inputValue() === '한국대학교', 'Touch school selection failed');
         }
+        assert(await page.getByRole('combobox', { name: '학교 이메일 도메인', exact: true }).inputValue() === 'campus.ac.kr', 'School domain was not selected');
         await page.getByRole('textbox', { name: /^학번/ }).fill('20260001');
         await page.getByRole('radio', { name: '여자', exact: true }).check();
         assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), `Signup overflows at ${viewport.width}`);
@@ -75,6 +95,8 @@ try {
         await page.getByRole('button', { name: '다음', exact: true }).click();
         await page.getByRole('textbox', { name: '휴대전화번호 *', exact: true }).fill('01000000000');
         await page.getByRole('button', { name: '인증번호 받기', exact: true }).click();
+        try { await page.getByRole('textbox', { name: '인증번호 *', exact: true }).waitFor({ timeout: 5000 }); }
+        catch (error) { await page.screenshot({ path: `${root}/output/playwright/signup-phone-failure.png` }); console.error({ viewport, body: await page.locator('body').innerText(), traffic: boundary.traffic, errors }); throw error; }
         await page.getByRole('textbox', { name: '인증번호 *', exact: true }).fill('123456');
         await page.getByRole('button', { name: '인증번호 확인', exact: true }).click();
         await page.getByText('본인 확인 완료', { exact: true }).waitFor();

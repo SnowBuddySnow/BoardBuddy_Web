@@ -76,6 +76,26 @@ describe('signup school, phone and consent flow', () => {
         await render();
         expect(container.querySelector<HTMLInputElement>('input[autocomplete="name"]')!.value).toBe('');
     });
+    it('selects the school domain, supports alternatives and never submits a bare domain', async () => {
+        mocks.getSchools.mockResolvedValue(schools.map(item => ({ ...item, emailDomains: item.id === 2 ? ['campus.ac.kr', 'mail.campus.ac.kr'] : ['main.ac.kr'] })));
+        await render(); await personal();
+        const domain = container.querySelector<HTMLSelectElement>('select')!;
+        expect(domain.value).toBe('campus.ac.kr');
+        await fill('input[placeholder="이메일 아이디"]', 'member');
+        await act(async () => { domain.value = 'mail.campus.ac.kr'; domain.dispatchEvent(new Event('change', { bubbles: true })); });
+        await click(button('다음'));
+        await fill('input[type="tel"]', '01000000000'); await click(button('인증번호 받기'));
+        await fill('input[placeholder="6자리 인증번호"]', '123456'); await click(button('인증번호 확인')); await click(button('다음'));
+        await click(container.querySelector<HTMLInputElement>('input[type="checkbox"]')!); await click(button('필수 약관 전체 동의 후 가입 완료'));
+        expect(mocks.put.mock.calls[0][1]).toMatchObject({ email: 'member@mail.campus.ac.kr', schoolId: 2 });
+    });
+    it('allows an optional school email to remain empty despite a preselected domain', async () => {
+        mocks.getSchools.mockResolvedValue(schools.map(item => ({ ...item, emailDomains: ['campus.ac.kr'] })));
+        await render(); await toTerms();
+        await click(container.querySelector<HTMLInputElement>('input[type="checkbox"]')!); await click(button('필수 약관 전체 동의 후 가입 완료'));
+        expect(mocks.put.mock.calls[0][1].email).toBeUndefined();
+        expect(success).toHaveBeenCalledOnce();
+    });
     it('submits the selected school ID even when names are identical, with explicit required consent only', async () => {
         await render(); await toTerms();
         expect(button('필수 약관 전체 동의 후 가입 완료').disabled).toBe(true);

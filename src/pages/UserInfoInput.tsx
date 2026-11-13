@@ -1,3 +1,4 @@
+import { SchoolEmailInput } from '../components/SchoolEmailInput';
 import { getSignupPrefill } from '../lib/signupPrefill';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { ArrowLeft, Check, GraduationCap, ShieldCheck, UserRound } from 'lucide-react';
@@ -109,7 +110,7 @@ export default function UserInfoInput({ onBack, onSuccess }: UserInfoInputProps)
         if (!gender) return '성별을 선택해 주세요.';
         const visibleEmail = profileType === 'GENERAL' || SCHOOL_EMAIL_AUTH_AVAILABLE;
         if (visibleEmail && email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) return '이메일 형식을 확인해 주세요.';
-        if (SCHOOL_EMAIL_AUTH_AVAILABLE && profileType === 'STUDENT' && school?.emailDomains.length) {
+        if (SCHOOL_EMAIL_AUTH_AVAILABLE && profileType === 'STUDENT' && email.trim() && school?.emailDomains.length) {
             const domain = email.trim().toLowerCase().split('@')[1] || '';
             if (!school.emailDomains.some(item => domain === item.toLowerCase() || domain.endsWith(`.${item.toLowerCase()}`))) return '선택한 학교의 이메일을 입력해 주세요.';
         }
@@ -226,13 +227,13 @@ export default function UserInfoInput({ onBack, onSuccess }: UserInfoInputProps)
                             </label>
                             {!editProviderName && <button type="button" onClick={() => setEditProviderName(true)} className="min-h-11 text-sm font-bold text-[#162660] underline">내 이름이 아니에요 · 수정하기</button>}
                             {profileType === 'STUDENT' && <div className="grid min-w-0 gap-5 sm:grid-cols-2">
-                                <SchoolPicker value={school} options={schools} loading={schoolsLoading} error={schoolsError} onRetry={() => setSchoolsAttempt(value => value + 1)} onChange={setSchool} />
-                                <label className="block min-w-0 text-sm font-bold text-[#162660]">학번 *<input value={studentNumber} maxLength={30} onChange={event => setStudentNumber(event.target.value)} className={inputClass} placeholder="학교에서 사용하는 학번" /><span className="mt-2 block text-xs font-normal leading-5 text-zinc-600">운영진이 동명이인을 구분할 때 사용해요.</span></label>
+                                <SchoolPicker value={school} options={schools} loading={schoolsLoading} error={schoolsError} onRetry={() => setSchoolsAttempt(value => value + 1)} onChange={selected => { setSchool(selected); setEmail(current => { const local = current.split('@')[0]; return selected?.emailDomains.length && local ? `${local}@${selected.emailDomains[0]}` : local; }); }} />
+                                <label className="block min-w-0 text-sm font-bold text-[#162660]">학번 *<input value={studentNumber} maxLength={30} onChange={event => setStudentNumber(event.target.value)} className={inputClass} placeholder="학교에서 사용하는 학번" /><span className="mt-2 block text-xs font-normal leading-5 text-zinc-600">동명이인 구분을 위해 필수입니다.</span></label>
                             </div>}
                             <fieldset><legend className="text-sm font-bold text-[#162660]">성별 *</legend><div className="mt-2 flex flex-wrap gap-3">
                                 {(['FEMALE', 'MALE'] as const).map(value => <label key={value} className="flex min-h-12 flex-1 items-center gap-3 rounded-2xl border border-zinc-200 px-4 text-sm"><input type="radio" name="gender" checked={gender === value} onChange={() => setGender(value)} className="h-5 w-5 accent-[#162660]" />{value === 'FEMALE' ? '여자' : '남자'}</label>)}
                             </div></fieldset>
-                            {(profileType === 'GENERAL' || SCHOOL_EMAIL_AUTH_AVAILABLE) && <label className="block text-sm font-bold text-[#162660]">이메일 {profileType === 'STUDENT' && school?.emailDomains.length ? '(학교 인증용 · 선택)' : '(선택)'}<input type="email" autoComplete="email" value={email} onChange={event => setEmail(event.target.value)} className={inputClass} placeholder="name@example.com" /></label>}
+                            {profileType === 'STUDENT' && SCHOOL_EMAIL_AUTH_AVAILABLE ? <SchoolEmailInput key={school?.id ?? 'none'} domains={school?.emailDomains ?? []} value={email} onChange={setEmail} /> : profileType === 'GENERAL' && <label className="block text-sm font-bold text-[#162660]">이메일 (선택)<input type="email" autoComplete="email" value={email} onChange={event => setEmail(event.target.value)} className={inputClass} placeholder="name@example.com" /></label>}
                         </>}
                         {step === 1 && <>
                             <p className="text-sm leading-6 text-zinc-600">카카오 전화번호가 제공되면 미리 채워드려요. 번호를 확인한 뒤 문자 인증을 완료해 주세요.</p>
