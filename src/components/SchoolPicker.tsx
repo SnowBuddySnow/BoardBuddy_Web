@@ -38,7 +38,7 @@ export function SchoolPicker({ options, value, onChange, loading, error, onRetry
     };
     return (
         <div ref={root} className="min-w-0 space-y-2">
-            <label htmlFor={id} className="block text-sm font-bold text-[#162660]">학교</label>
+            <label htmlFor={id} className="block text-sm font-bold text-[#162660]">학교 *</label>
             <input id={id} role="combobox" aria-autocomplete="list" aria-expanded={expanded}
                 aria-controls={`${id}-results`} aria-activedescendant={expanded && active >= 0 && matches[active] ? `${id}-${matches[active].id}` : undefined}
                 aria-describedby={`${id}-hint`} aria-invalid={invalid || undefined}

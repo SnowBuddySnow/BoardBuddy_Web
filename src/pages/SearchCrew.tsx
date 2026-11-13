@@ -92,6 +92,12 @@ export default function SearchCrew({ onBack, onJoined, onApplied }: SearchCrewPr
 
             <main className="flex-1 overflow-y-auto px-5 py-6 lg:px-8">
                 <div className="mx-auto max-w-5xl">
+                    <section className="mb-6 rounded-3xl bg-white p-5 shadow-sm sm:p-7">
+                        <p className="text-xs font-bold text-zinc-500">크루 연결 · 1 / 3</p>
+                        <h2 className="mt-2 text-2xl font-black text-[#162660]">내 동아리를 찾아볼까요?</h2>
+                        <ol aria-label="크루 가입 단계" className="mt-4 flex flex-wrap gap-3 text-sm text-[#162660]"><li className="font-bold">1. 크루 찾기</li><li>2. PIN 확인·신청</li><li>3. 가입 상태 확인</li></ol>
+                        <p className="mt-4 text-sm leading-6 text-zinc-600">초대 링크 없이도 가입할 수 있어요. 크루를 선택하고 운영진에게 받은 4자리 PIN을 입력해 주세요. 크루 정책에 따라 운영진 승인이나 학교 인증이 필요할 수 있어요.</p>
+                    </section>
                     <div className="relative">
                         <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
                         <input
@@ -168,7 +174,7 @@ export default function SearchCrew({ onBack, onJoined, onApplied }: SearchCrewPr
                     >
                         <div className="flex items-start justify-between gap-4">
                             <div>
-                                <p className="text-xs font-bold text-zinc-400">크루 가입 신청</p>
+                                <p className="text-xs font-bold text-zinc-400">크루 연결 · 2 / 3</p>
                                 <h2 className="mt-1 text-xl font-black text-zinc-900">{selectedCrew.crewName}</h2>
                             </div>
                             <button
@@ -192,7 +198,7 @@ export default function SearchCrew({ onBack, onJoined, onApplied }: SearchCrewPr
                             </div>
                         )}
                         <label className="mt-6 block text-sm font-bold text-zinc-700">
-                            4자리 가입 PIN
+                            4자리 가입 PIN *
                             <span className="mt-2 flex gap-2">
                                 <input
                                     autoFocus

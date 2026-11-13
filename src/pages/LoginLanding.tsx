@@ -1,3 +1,4 @@
+import { setSignupPrefill } from '../lib/signupPrefill';
 
 import { useEffect, useState } from 'react';
 import { CheckIcon } from 'lucide-react';
@@ -86,6 +87,7 @@ export default function LoginLanding({ onLogin, onSignupNeeded, onProfileTypeNee
                             saveTempAccessToken(accessToken);
                             // Save auto-login preference
                             setAutoLoginPreference(autoLogin);
+                            setSignupPrefill(accountId, data.data.signupPrefill);
                             onSignupNeeded();
                         } else {
                             // Existing User: Login success

@@ -22,6 +22,30 @@ try {
     if (!ready) throw new Error('Onboarding scenario server did not become ready.');
     browser = await chromium.launch({ headless: true, ...(process.env.CI ? {} : { channel: 'chrome' }) });
     mkdirSync(`${root}/output/playwright`, { recursive: true });
+    {
+        const context = await browser.newContext({ viewport: { width: 390, height: 844 }, serviceWorkers: 'block' });
+        const page = await context.newPage(); const state = await installOnboardingBoundary(page);
+        state.signupPrefill = { name: '가상 실명', phoneNumber: '+82 10-0000-0000' };
+        await page.goto(`${origin}/?view=login`);
+        await page.getByRole('button', { name: 'Kakao Login', exact: true }).click();
+        const name = page.getByRole('textbox', { name: '실명 *', exact: true });
+        await name.waitFor();
+        assert(await name.inputValue() === '가상 실명', 'Provider account name was not carried through login');
+        assert(await name.evaluate(el => el.readOnly), 'Provider name confirmation was not shown');
+        await page.getByRole('button', { name: '내 이름이 아니에요 · 수정하기', exact: true }).click();
+        await name.fill('수정한 실명');
+        await page.getByRole('combobox', { name: '학교 *', exact: true }).fill('제2캠퍼스');
+        await page.getByRole('option').click();
+        await page.getByRole('textbox', { name: /^학번/ }).fill('20260001');
+        await page.getByRole('radio', { name: '여자', exact: true }).check();
+        await page.getByRole('button', { name: '다음', exact: true }).click();
+        assert(await page.getByRole('textbox', { name: '휴대전화번호 *', exact: true }).inputValue() === '010-0000-0000', 'Provider phone prefill was lost');
+        assert(await page.getByRole('button', { name: '인증번호 받기', exact: true }).isVisible(), 'Provider phone bypassed verification');
+        assert(!state.traffic.some(item => item.path.endsWith('/profile') || item.path === '/accounts/phone-verifications'), 'Provider hint triggered a write or SMS');
+        assert(state.unknown.length === 0 && state.errors.length === 0, 'Provider hint browser boundary failed');
+        completed.push('kakao-login-hints-confirm-correct-and-require-sms');
+        await context.close();
+    }
     for (const viewport of [{ width: 320, height: 640 }, { width: 390, height: 844 }, { width: 768, height: 1024 }, { width: 1440, height: 900 }]) {
         const context = await browser.newContext({ viewport, hasTouch: viewport.width < 1024, isMobile: viewport.width < 1024, serviceWorkers: 'block' });
         await context.addInitScript(() => { localStorage.setItem('tempAccessToken', 'synthetic-only'); localStorage.setItem('accountId', '99101'); });
@@ -36,8 +60,8 @@ try {
             await page.screenshot({ path: `${root}/output/playwright/member-invitation-preview.png` });
             await page.getByRole('button', { name: '회원가입 이어서 하기', exact: true }).click();
         } else await page.goto(`${origin}/?view=user_info`);
-        await page.getByRole('textbox', { name: '실명', exact: true }).fill('가상 회원');
-        const school = page.getByRole('combobox', { name: '학교', exact: true });
+        await page.getByRole('textbox', { name: '실명 *', exact: true }).fill('가상 회원');
+        const school = page.getByRole('combobox', { name: '학교 *', exact: true });
         await school.fill('제2캠퍼스'); await school.press('ArrowDown'); await school.press('Enter');
         assert(await school.inputValue() === '한국대학교', 'Keyboard school selection failed');
         if (viewport.width === 390) {
@@ -49,13 +73,13 @@ try {
         assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), `Signup overflows at ${viewport.width}`);
         if ([390, 1440].includes(viewport.width)) await page.screenshot({ path: `${root}/output/playwright/signup-${viewport.width}.png` });
         await page.getByRole('button', { name: '다음', exact: true }).click();
-        await page.getByRole('textbox', { name: '휴대전화번호', exact: true }).fill('01000000000');
+        await page.getByRole('textbox', { name: '휴대전화번호 *', exact: true }).fill('01000000000');
         await page.getByRole('button', { name: '인증번호 받기', exact: true }).click();
-        await page.getByRole('textbox', { name: '인증번호', exact: true }).fill('123456');
+        await page.getByRole('textbox', { name: '인증번호 *', exact: true }).fill('123456');
         await page.getByRole('button', { name: '인증번호 확인', exact: true }).click();
         await page.getByText('본인 확인 완료', { exact: true }).waitFor();
         await page.getByRole('button', { name: '다음', exact: true }).click();
-        const finish = page.getByRole('button', { name: '동의하고 가입 완료', exact: true });
+        const finish = page.getByRole('button', { name: '필수 약관 전체 동의 후 가입 완료', exact: true });
         assert(!await finish.isEnabled(), 'Consent was preselected');
         const read = page.getByRole('button', { name: '보드버디 서비스 이용약관 자세히 보기', exact: true });
         if (viewport.width === 390) await page.setViewportSize({ width: 390, height: 480 });
@@ -97,6 +121,23 @@ try {
             assert(new URL(page.url()).searchParams.get('eventId') === '9101', 'Original event destination was lost');
             assert(!boundary.credentialInUrl && !boundary.publicAuth, 'Invitation leaked into an HTTP URL or public credentials');
             completed.push('new-member-invitation-signup-pending-approval-return');
+        }
+        if (viewport.width === 320) {
+            await page.getByRole('button', { name: '내 크루 찾기', exact: true }).click();
+            await page.getByRole('heading', { name: '내 동아리를 찾아볼까요?' }).waitFor();
+            await page.getByPlaceholder('크루명, 학교명 또는 크루 코드 검색').fill('가상');
+            await page.getByRole('button', { name: '가입', exact: true }).click();
+            await page.getByRole('textbox', { name: '4자리 가입 PIN', exact: true }).fill('1234');
+            await page.getByRole('button', { name: '가입 신청', exact: true }).click();
+            await page.getByText('운영진 승인 대기', { exact: true }).waitFor();
+            await page.screenshot({ path: `${root}/output/playwright/member-no-invitation-pending.png` });
+            await page.reload();
+            await page.getByText('운영진 승인 대기', { exact: true }).waitFor();
+            boundary.approved = true;
+            await page.getByRole('button', { name: '가입 상태 새로고침', exact: true }).click();
+            await page.getByRole('heading', { name: '크루 연결 완료', exact: true }).waitFor();
+            assert(!boundary.traffic.some(item => item.path === '/crew-invitations/accept'), 'Normal signup required an invitation');
+            completed.push('no-invitation-signup-search-pin-pending-reload-approved');
         }
         assert(errors.length === 0, `Browser errors: ${JSON.stringify(errors)}`);
         assert(unknown.length === 0, `Unexpected synthetic API calls: ${JSON.stringify(unknown)}`);
