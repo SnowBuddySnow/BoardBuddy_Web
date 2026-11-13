@@ -279,7 +279,7 @@ export default function ReservationStats({ onBack, onMyCalendarClick, onReservat
             <main className="reservation-content">
 
                 <ReservationSummary title="시즌방 현황" description="날짜를 선택해 예약 현황을 확인하세요." />
-                {readOnly && <p className="mb-4 text-xs leading-6 text-zinc-500">기존 크루 달력 양식으로 현황을 조회해요. 신규 예약은 보류 중이며 예약·취소·관리 정보 변경은 제공하지 않아요. 회색 표시는 현황 없음이며 빈방을 의미하지 않아요.</p>}
+                {readOnly && <p className="mb-4 text-xs leading-6 text-zinc-500">신규 예약은 현재 보류 중이에요. 달력에서 날짜별 이용 현황을 확인해 주세요. 회색은 이용 현황이 제공되지 않은 날짜예요.</p>}
                 {loadError && <p role="alert" className="mb-4 rounded-xl bg-red-50 p-3 text-sm text-red-700">{loadError}</p>}
                 <div className="reservation-workspace">
                     <Calendar
