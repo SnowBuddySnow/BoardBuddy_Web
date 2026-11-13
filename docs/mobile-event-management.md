@@ -23,7 +23,7 @@ is enabled by this change. The new season_calendar route is a read-only monthly 
 the existing crew calendar GET API, which authorizes approved membership/platform administrators.
 It is available from home, the mobile “시즌방” tab, PC sidebar and crew details. Missing date rows mean
 “현황 없음”, never a claim of vacancy or booking availability. Changing month discards stale responses;
-errors do not show old data as current. No roster or phone details are fetched for this view.
+errors do not show old data as current. It reuses the existing ReservationStats/Calendar layout, month navigation, congestion dots, own-schedule toggle and date details. Selecting a date reads the existing authorized reservation-day detail API; all booking and management writes stay hidden and guarded in read-only mode.
 
 Verification includes existing unit/route denial/release-hold tests and synthetic browser journeys
 at 320/390/768/1440px plus mobile WebKit: participant memo/payment save, approval, event edit, reload,
@@ -34,3 +34,5 @@ fixtures, not actual member approvals or legal consent. This is not staging or r
 synthetic manager fixture for editing/participant management; “가상 승인” applies only to the local mock;
 “처음부터” resets local fixture state. These controls are in a separate localhost-only dev server,
 never the hosted product, and grant no real permissions. The same shared fixture state serves local tabs.
+
+Owner correction: retain the established crew-calendar screen and format rather than a separate tile calendar. SeasonCalendar now delegates to the shared screen in read-only mode. Unknown occupancy remains gray, and failed or superseded reads are not shown as current availability.
