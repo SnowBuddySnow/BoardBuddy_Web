@@ -148,7 +148,7 @@ export const LowerMenuBar = ({
     <nav
       aria-label="하단 메뉴"
       className={cn(
-        'absolute inset-x-3 bottom-3 z-50 flex h-16 items-stretch justify-around rounded-[22px] border border-zinc-200/80 bg-white/95 px-1.5 py-1.5 shadow-[0_8px_28px_rgba(24,24,27,0.14)] backdrop-blur-md dark:border-zinc-800 dark:bg-zinc-900/95',
+        'absolute inset-x-3 bottom-[max(0.75rem,env(safe-area-inset-bottom))] z-50 flex h-16 items-stretch justify-around rounded-[22px] border border-zinc-200/80 bg-white/95 px-1.5 py-1.5 shadow-[0_8px_28px_rgba(24,24,27,0.14)] backdrop-blur-md dark:border-zinc-800 dark:bg-zinc-900/95',
         className
       )}
     >

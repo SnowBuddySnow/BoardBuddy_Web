@@ -6,6 +6,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:preview": "node scripts/dev/onboarding-preview.mjs",
     "build": "tsc -b && vite build && node scripts/check-bundle-size.mjs",
     "test": "vitest run",
     "typecheck": "tsc -b",

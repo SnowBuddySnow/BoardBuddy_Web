@@ -1,4 +1,4 @@
-import { chromium } from 'playwright';
+import { chromium, webkit } from 'playwright';
 import { spawn } from 'node:child_process';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
@@ -22,6 +22,30 @@ try {
     if (!ready) throw new Error('Onboarding scenario server did not become ready.');
     browser = await chromium.launch({ headless: true, ...(process.env.CI ? {} : { channel: 'chrome' }) });
     mkdirSync(`${root}/output/playwright`, { recursive: true });
+    const safari = await webkit.launch({ headless: true });
+    try {
+        for (const [name, engine] of [['chromium', browser], ['webkit', safari]]) {
+            const context = await engine.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, serviceWorkers: 'block' });
+            const page = await context.newPage(); const state = await installOnboardingBoundary(page); state.newUser = false;
+            await page.goto(`${origin}/?view=login`);
+            const before = await page.evaluate(() => history.length);
+            await page.getByRole('button', { name: 'Kakao Login', exact: true }).click();
+            await page.waitForURL('**/?view=home');
+            assert(await page.evaluate(() => history.length) === before, `${name}: successful login retained the auth entry`);
+            await page.getByRole('button', { name: '내 가입·크루 생성 진행 상태 이어보기', exact: true }).click();
+            await page.waitForURL('**/?view=onboarding');
+            await page.goBack(); await page.waitForURL('**/?view=home');
+            assert(await page.getByRole('button', { name: 'Kakao Login', exact: true }).count() === 0, `${name}: back restored login`);
+            await page.goForward(); await page.waitForURL('**/?view=onboarding');
+            // Simulate a login URL left in a pre-fix history entry, then reload it.
+            await page.evaluate(() => history.replaceState(null, '', '/?view=login'));
+            await page.reload(); await page.waitForURL('**/?view=home');
+            await page.evaluate(() => localStorage.clear());
+            await page.reload(); await page.waitForURL('**/?view=login');
+            assert(state.errors.length === 0 && state.unknown.length === 0, `${name}: browser navigation boundary failed ${JSON.stringify(state.unknown)}`);
+            completed.push(`${name}-mobile-login-back-forward-reload-logout`); await context.close();
+        }
+    } finally { await safari.close(); }
     for (const viewport of [{ width: 320, height: 568 }, { width: 390, height: 844 }, { width: 768, height: 600 }, { width: 1440, height: 720 }, { width: 960, height: 420 }]) {
         const context = await browser.newContext({ viewport, serviceWorkers: 'block' });
         const page = await context.newPage();

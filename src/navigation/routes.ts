@@ -144,6 +144,7 @@ export const getInitialView = (): View => {
   const hasOrganizerInvite = params.has('organizerInvite');
   if (hasOrganizerInvite) return 'organizer_invite';
   if (isSchoolEmailActivationEntry(requestedView, params.get('token'))) return 'student_verification';
+  if (getAccessToken() && (requestedView === 'login' || requestedView === 'user_info')) return 'home';
   if (requestedView && publicEntryViews.has(requestedView)) return requestedView;
   if (requestedView && getAccessToken()) return requestedView;
   if (requestedView && signupViews.has(requestedView) && getSignupToken()) return requestedView;

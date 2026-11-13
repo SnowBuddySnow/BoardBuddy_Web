@@ -1,3 +1,4 @@
+import { getAccessToken } from '../lib/session';
 import { useEffect, useRef } from 'react';
 import { getInitialView, type View } from './routes';
 
@@ -16,7 +17,8 @@ const positiveId = (value: string | null): number | null => {
 
 export const readNavigation = (): NavigationState => {
     const params = new URLSearchParams(window.location.search);
-    return { view: getInitialView(), eventId: positiveId(params.get('eventId')),
+    const requested = getInitialView();
+    return { view: requested === 'login' && getAccessToken() ? 'home' : requested, eventId: positiveId(params.get('eventId')),
         groupId: positiveId(params.get('groupId')), organizerInviteToken: params.get('organizerInvite') || '' };
 };
 
@@ -37,6 +39,7 @@ export const navigationUrl = (route: NavigationState): string => {
 /** Keep existing query links while making navigation, reload and back/forward agree. */
 export function useBrowserNavigation(route: NavigationState, onRestore: (route: NavigationState) => void) {
     const initial = useRef(true);
+    const previousView = useRef(route.view);
     const restoringUrl = useRef<string | null>(null);
     const restore = useRef(onRestore);
     useEffect(() => { restore.current = onRestore; }, [onRestore]);
@@ -44,16 +47,25 @@ export function useBrowserNavigation(route: NavigationState, onRestore: (route: 
         const handlePopState = () => {
             const next = readNavigation();
             restoringUrl.current = navigationUrl(next);
+            const current = window.location.pathname + window.location.search + window.location.hash;
+            // A cached entry may normalize to the already-rendered view, so no React effect fires.
+            if (current !== restoringUrl.current) window.history.replaceState(window.history.state, '', restoringUrl.current);
             restore.current(next);
         };
+        const handlePageShow = (event: PageTransitionEvent) => { if (event.persisted) handlePopState(); };
         window.addEventListener('popstate', handlePopState);
-        return () => window.removeEventListener('popstate', handlePopState);
+        window.addEventListener('pageshow', handlePageShow);
+        return () => { window.removeEventListener('popstate', handlePopState); window.removeEventListener('pageshow', handlePageShow); };
     }, []);
     const { view, eventId, groupId, organizerInviteToken } = route;
     useEffect(() => {
         const next = navigationUrl({ view, eventId, groupId, organizerInviteToken });
         const current = window.location.pathname + window.location.search + window.location.hash;
-        const replace = initial.current || restoringUrl.current === next;
+        const authFlow = ['login', 'user_info', 'profile_type_confirmation'];
+        const leavingAuthentication = authFlow.includes(previousView.current) && previousView.current !== view;
+        const replace = initial.current || restoringUrl.current === next || view === 'login'
+            || (leavingAuthentication && (getAccessToken() || authFlow.includes(view)));
+        previousView.current = view;
         initial.current = false;
         restoringUrl.current = null;
         if (current === next) return;
