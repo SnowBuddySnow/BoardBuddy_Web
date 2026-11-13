@@ -24,7 +24,7 @@ export const installOnboardingBoundary = async page => {
         if (path === '/signup-policy') return respond({ studentEnabled: true, regularEnabled: true, version: 1 });
         if (path === '/schools') return respond([
             { id: 1, name: '한국대학교', schoolCode: 'MAIN', aliases: ['한국대'], emailDomains: [] },
-            { id: 2, name: '한국대학교', schoolCode: 'CAMPUS', aliases: ['제2캠퍼스'], emailDomains: [] },
+            { id: 2, name: '한국대학교', schoolCode: 'CAMPUS', aliases: ['제2캠퍼스'], emailDomains: ['campus.ac.kr', 'students.mail.campus.ac.kr'] },
         ]);
         if (path === '/accounts/phone-verifications') return respond({ challengeId: 'synthetic-challenge', retryAfterSeconds: 0 }, 202);
         if (path === '/accounts/phone-verifications/synthetic-challenge/confirm') return respond({ accountId: 99101, accessToken: 'synthetic-verified', resolution: 'VERIFIED', status: 'PENDING_PROFILE' });
