@@ -1,5 +1,5 @@
 export interface ReservationAvailability { bookable?: boolean; opensAt?: string | null; unavailableReason?: string | null }
-export function availabilityCopy(value?: ReservationAvailability) {
+function availabilityCopy(value?: ReservationAvailability) {
     if (!value) return '예약 가능 여부를 확인하고 있어요.';
     if (value.bookable) return '';
     if (value.opensAt) { const [date,time]=value.opensAt.split('T'); return `${date.replace(/-/g,'.')} ${time.slice(0,5)} 오픈 예정입니다. (한국 시간)`; }
