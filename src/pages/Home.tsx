@@ -2,13 +2,11 @@ import { useState, useEffect } from 'react';
 import { getUserInfo } from '../services/user';
 import { getMyApplications, withdrawCrewApplication } from '../services/crew';
 import { listParties } from '../services/event';
-import { listOrganizerGroups } from '../services/organizerGroup';
 import { UserDetail, CrewDetail, MyApplication, Event } from '../types/api';
 import { UserPlus, Sparkles, Users, Calendar as CalendarIcon, ChevronRight, Clock3, ShieldCheck, X, TentTree, CalendarHeart, CloudSun, LockKeyhole } from 'lucide-react';
 import { getWeather, WeatherData } from '../services/weather';
 import { getEventActivityLabel } from '../constants/eventActivity';
 import { getOperatingFeatures, OperatingMode } from '../constants/operatingSeason';
-import boardBuddyLogo from '../assets/boardbuddy-logo.png';
 import { PendingCrewVerificationNotice } from '../components/PendingCrewVerificationNotice';
 import { formatEventDateTime, isEventRegistrationAvailable, parseEventDateTime } from '../lib/eventDateTime';
 
@@ -45,7 +43,6 @@ export default function Home({
     onEventClick,
     onSeeAllPartiesClick,
     onMyPlansClick,
-    onDashboardClick,
     onStudentVerificationClick,
     operatingMode,
     crewDetail,
@@ -61,7 +58,6 @@ export default function Home({
 
     // Small gathering related states
     const [parties, setParties] = useState<Event[]>([]);
-    const [hasOrganizerPermission, setHasOrganizerPermission] = useState(false);
     const operatingFeatures = getOperatingFeatures(operatingMode);
 
     useEffect(() => {
@@ -96,9 +92,6 @@ export default function Home({
                 // Show only OPEN parties in recommended lists
                 setParties(partiesList);
 
-                // Fetch organizer groups to verify create permissions
-                const groups = await listOrganizerGroups();
-                setHasOrganizerPermission(groups.length > 0);
             } catch (err) {
                 console.error("Failed to fetch small gathering data for home screen", err);
             }
@@ -169,22 +162,6 @@ export default function Home({
 
     return (
         <div className="flex-1 flex flex-col h-full overflow-hidden bg-[#FAF8F3] relative">
-            {/* Header */}
-            <header className="px-4 pt-4 pb-3 flex items-center justify-between z-10 bg-[#FAF8F3] lg:hidden">
-                <div className="flex h-8 w-32 items-center">
-                    <img src={boardBuddyLogo} alt="BoardBuddy" className="h-full w-full object-cover object-center" />
-                </div>
-
-                {hasOrganizerPermission && (
-                    <button
-                        onClick={onDashboardClick}
-                        className="text-xs font-black bg-[#162660] text-white px-3 py-1.5 rounded-full hover:bg-blue-900 transition-colors shadow-sm flex items-center gap-1"
-                    >
-                        <Sparkles className="w-3 h-3" /> 운영 센터
-                    </button>
-                )}
-            </header>
-
             {/* Content Area */}
             <main className="flex-1 overflow-y-auto pb-6 space-y-5">
 
@@ -305,7 +282,7 @@ export default function Home({
                             </div>
                         </section>
                         <section className="grid gap-3 px-4 sm:grid-cols-2">
-                            <button type="button" onClick={onSeasonCalendarClick || onCalendarClick} className="min-h-24 rounded-2xl border border-zinc-200 bg-white p-5 text-left"><CalendarIcon className="h-5 w-5 text-[#162660]" /><span className="mt-2 block font-black text-[#162660]">시즌방 캘린더</span><span className="mt-1 block text-xs leading-6 text-zinc-500">날짜별 이용 현황 조회 · {seasonHouseAvailable ? '예약 운영 중' : '신규 예약은 현재 보류 중'}</span></button>
+                            <button type="button" onClick={onSeasonCalendarClick || onCalendarClick} className="min-h-24 rounded-2xl border border-zinc-200 bg-white p-5 text-left"><CalendarIcon className="h-5 w-5 text-[#162660]" /><span className="mt-2 block font-black text-[#162660]">시즌방 캘린더</span><span className="mt-1 block text-xs leading-6 text-zinc-500">날짜별 이용 현황 조회 · {seasonHouseAvailable ? '예약 운영 중' : '크루 예약 접수 전'}</span></button>
                             <button type="button" onClick={onMyPlansClick} className="min-h-24 rounded-2xl border border-zinc-200 bg-white p-5 text-left"><CalendarHeart className="h-5 w-5 text-[#162660]" /><span className="mt-2 block font-black text-[#162660]">내 참여 일정</span><span className="mt-1 block text-xs leading-6 text-zinc-500">참여·대기 중인 이벤트를 확인해요.</span></button>
                         </section>
                         {seasonHouseAvailable && (

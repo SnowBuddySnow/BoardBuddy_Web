@@ -119,7 +119,7 @@ export interface ReservationBookingResponse {
 }
 
 export interface ReservationDayResponse {
-    reservationDayId: number;
+    reservationDayId: number | null;
     crewId: number;
     reservationDate: string;
     capacityLimited: boolean;

@@ -18,6 +18,7 @@ describe('real App management navigation with synthetic HTTP', () => {
     let permissions: string[];
     let events: unknown[];
     let hasCrew: boolean;
+    let crewOpen: boolean;
     const listeners = new Set<(event: { matches: boolean }) => void>();
     beforeEach(() => {
         vi.resetAllMocks();
@@ -28,7 +29,7 @@ describe('real App management navigation with synthetic HTTP', () => {
         localStorage.setItem('autoLogin', 'true');
         localStorage.setItem('dev_operating_mode', 'OFF_SEASON');
         window.history.replaceState(null, '', '/?view=home');
-        width = 390; permissions = ['PARTIES_MANAGE', 'EVENT_GROUPS_VIEW']; events = []; hasCrew = false; listeners.clear();
+        width = 390; permissions = ['PARTIES_MANAGE', 'EVENT_GROUPS_VIEW']; events = []; hasCrew = false; crewOpen = true; listeners.clear();
         vi.stubGlobal('matchMedia', () => ({
             matches: width >= 1024,
             addEventListener: (_type: string, listener: (event: { matches: boolean }) => void) => listeners.add(listener),
@@ -37,10 +38,11 @@ describe('real App management navigation with synthetic HTTP', () => {
         http.get.mockImplementation(async (path: string) => {
             let data: unknown;
             if (path === '/users/me') data = { userId: 7, userType: 'REGULAR', name: 'Synthetic host', role: 'CREW_MEMBER', crew: hasCrew ? { crewId: 1 } : null };
-            else if (path === '/crews/1') data = { crewId: 1, crewName: 'Synthetic crew', seasonHouseActive: true };
+            else if (path === '/crews/1') data = { crewId: 1, crewName: 'Synthetic crew', seasonHouseActive: crewOpen };
             else if (path.startsWith('/crews/1/calendar')) data = { calendar: [], my_reservations: [] };
             else if (path === '/operations/context') data = { permissions };
             else if (path === '/admin/crews') data = { developerAccess: false, crews: [], schools: [] };
+            else if (path === '/users/me/reservations') data = [];
             else if (path === '/events') data = events;
             else if (path === '/crews/my-applications' || path === '/dashboard/events') data = [];
             else if (path === '/notifications') data = { items: [], unreadCount: 0 };
@@ -68,10 +70,22 @@ describe('real App management navigation with synthetic HTTP', () => {
         await settle();
     };
 
-    it.each([320, 390, 768, 1023, 1024])('blocks every direct reservation view at %spx, including a season override', async viewport => {
-        width = viewport; hasCrew = true;
+    it('keeps only core destinations below and opens profile from the top right', async () => {
+        hasCrew = true; permissions = []; localStorage.setItem('dev_operating_mode', 'BOTH');
+        await render();
+        const nav = container.querySelector('nav[aria-label="하단 메뉴"]')!;
+        expect(Array.from(nav.querySelectorAll('button')).map(button => button.textContent?.trim())).toEqual(['홈', '시즌방', '이벤트', '내 크루']);
+        expect(nav.querySelector('[aria-label="내 정보"]')).toBeNull();
+        const toolbar = container.querySelector('header[aria-label="계정 메뉴"]')!;
+        expect(toolbar.querySelector('[aria-label="알림"]')).toBeTruthy();
+        await act(async () => (toolbar.querySelector('[aria-label="내 정보"]') as HTMLButtonElement).click());
+        await settle(); expect(container.textContent).toContain('My Page');
+    });
+
+    it.each([320, 390, 768, 1023, 1024])('blocks member reservation views for a closed crew at %spx', async viewport => {
+        width = viewport; hasCrew = true; crewOpen = false;
         localStorage.setItem('dev_operating_mode', 'BOTH');
-        for (const view of ['reservation', 'guest_reservation', 'stats', 'my_reservations']) {
+        for (const view of ['reservation', 'stats', 'my_reservations']) {
             window.history.replaceState(null, '', `/?view=${view}`);
             await render();
             expect(container.textContent).toContain('시즌방 예약을 이용할 수 없습니다');
@@ -81,22 +95,22 @@ describe('real App management navigation with synthetic HTTP', () => {
         expect(http.get.mock.calls.some(([path]) => /reservations|calendar|usage-statistics/.test(path))).toBe(false);
     });
 
-    it('does not expose or fetch the personal reservation calendar', async () => {
+    it('restores the personal reservation calendar', async () => {
         window.history.replaceState(null, '', '/?view=my_page');
         await render();
         expect(container.textContent).toContain('My Page');
-        expect(container.textContent).not.toContain('나의 달력');
-        expect(container.textContent).not.toContain('시즌방 이용 횟수');
-        expect(http.get).not.toHaveBeenCalledWith('/users/me/reservations');
+        expect(container.textContent).toContain('나의 달력');
+        expect(container.textContent).toContain('시즌방 이용 횟수');
+        expect(http.get).toHaveBeenCalledWith('/users/me/reservations');
     });
 
-    it('hides reservation management even from a desktop host granted the legacy permission', async () => {
-        width = 1024; hasCrew = true; permissions.push('RESERVATIONS_MANAGE');
+    it('shows reservation management to a permitted desktop host during the season', async () => {
+        width = 1024; hasCrew = true; permissions.push('RESERVATIONS_MANAGE'); localStorage.setItem('dev_operating_mode', 'BOTH');
         window.history.replaceState(null, '', '/?view=operations_center');
         await render();
         expect(container.textContent).toContain('이벤트 관리');
-        expect(container.textContent).not.toContain('예약 관리');
-        expect(Array.from(container.querySelectorAll('button')).some(button => /예약|나의 달력/.test(button.textContent || ''))).toBe(false);
+        expect(container.textContent).toContain('예약 관리');
+
     });
 
     it('allows an authorized mobile host into Operations Center and event management', async () => {
@@ -123,11 +137,11 @@ describe('real App management navigation with synthetic HTTP', () => {
         expect(container.querySelector('h1')?.textContent).toBe('운영 센터');
     });
 
-    it('offers a read-only crew calendar while reservation creation stays held', async () => {
+    it('supports calendar-only access in explicit off-season mode', async () => {
         hasCrew = true; permissions = [];
         await render(); await click('시즌방');
         expect(container.querySelector('h1')?.textContent).toContain('시즌방 캘린더');
-        expect(container.textContent).toContain('신규 예약은 현재 보류 중');
+        expect(container.textContent).toContain('현재는 이용 현황만 조회');
         expect(http.get.mock.calls.some(([path]) => path.startsWith('/crews/1/calendar'))).toBe(true);
         expect(http.get.mock.calls.some(([path]) => /reservations|usage-statistics/.test(path))).toBe(false);
     });

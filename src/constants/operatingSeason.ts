@@ -1,7 +1,7 @@
 export type OperatingMode = 'SEASON' | 'OFF_SEASON' | 'BOTH';
 
-// Release hold: reopening requires an explicit reviewed change, not a date or browser override.
-export const SEASON_HOUSE_RESERVATIONS_ENABLED: boolean = false;
+// Reopened for the reservation season; crew-level opening and server permissions still apply.
+export const SEASON_HOUSE_RESERVATIONS_ENABLED: boolean = true;
 
 const DEV_OPERATING_MODE_KEY = 'dev_operating_mode';
 
@@ -30,7 +30,7 @@ export const getOperatingMode = (date = new Date()): OperatingMode => {
   if (configuredMode) return configuredMode;
 
   const month = date.getMonth() + 1;
-  return month === 12 || month <= 3 ? 'SEASON' : 'OFF_SEASON';
+  return month >= 10 || month <= 5 ? 'BOTH' : 'OFF_SEASON';
 };
 
 export const getOperatingFeatures = (mode: OperatingMode) => ({

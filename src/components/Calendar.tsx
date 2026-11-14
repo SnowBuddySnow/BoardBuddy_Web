@@ -17,6 +17,9 @@ interface CalendarProps {
     maxWeeks?: number;
     startWeekIndex?: number;
     isCollapsed?: boolean;
+    dayDescription?: (day: number) => string;
+    footer?: React.ReactNode;
+    variant?: 'default' | 'crew-classic';
     compact?: boolean; // For compact spacing (14px row spacing)
     onPrevMonth?: () => void;
     onNextMonth?: () => void;
@@ -40,6 +43,9 @@ export const Calendar = ({
     className,
     isCollapsed,
     compact = false,
+    variant = 'default',
+    dayDescription,
+    footer,
     onPrevMonth,
     onNextMonth,
 }: CalendarProps & { headerRight?: React.ReactNode, headerTop?: React.ReactNode, className?: string }) => {
@@ -114,7 +120,7 @@ export const Calendar = ({
     };
 
     return (
-        <div className={`reservation-calendar ${compact ? 'is-compact' : ''} ${className || ''}`}>
+        <div className={`reservation-calendar ${compact ? 'is-compact' : ''} ${variant === 'crew-classic' ? 'is-classic' : ''} ${className || ''}`}>
             {/* Optional Header Top Content */}
             {headerTop && (
                 <div className="mb-4 w-full">
@@ -123,7 +129,7 @@ export const Calendar = ({
             )}
 
             {/* Top Control Row */}
-            {!hideHeader && headerRight && <div className="calendar-toolbar">{headerRight}</div>}
+            {!hideHeader && (headerRight || variant === 'crew-classic') && <div className="calendar-toolbar">{variant === 'crew-classic' && <span className="calendar-year">{year}</span>}{headerRight}</div>}
 
             {/* Month Header Bar */}
             {!hideHeader && (
@@ -139,7 +145,7 @@ export const Calendar = ({
                         <ChevronLeftIcon className="w-5 h-5" />
                     </Button>
                     <h2 className="flex-1 text-center">
-                        {year}년 {month}
+                        {variant === 'crew-classic' ? month : `${year}년 ${month}`}
                     </h2>
                     <Button
                         variant="ghost"
@@ -222,6 +228,7 @@ export const Calendar = ({
                                                     disabled={!isAvailable && !expandable}
                                                     aria-label={`${year}년 ${month} ${day}일`}
                                                     aria-pressed={isSelected}
+                                                    aria-description={dayDescription?.(day)}
                                                     className={`calendar-default-day ${isSelected ? 'is-selected' : ''} ${viewMode === 'week' ? 'mt-4' : ''}`}
                                                 >
                                                     {day}
@@ -244,6 +251,7 @@ export const Calendar = ({
                     )}
                 </div>
             </div>
+            {footer}
         </div>
     );
 };

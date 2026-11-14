@@ -38,24 +38,60 @@ try {
             await page.getByText('모바일에서 수정한 이벤트', { exact: true }).waitFor();
             await page.reload(); await page.getByText('모바일에서 수정한 이벤트', { exact: true }).waitFor();
             assert(state.managedEvent.title === '모바일에서 수정한 이벤트', 'Event configuration not saved');
-            // Read-only calendar is accessible while writes remain held.
+            // A closed crew remains read-only; one selection opens the status panel.
             state.role = 'CREW_MEMBER'; state.groups = [];
             await page.goto(`${origin}/?view=home`);
             await page.getByRole('heading', { name: '가상 크루와 함께하는 오늘' }).waitFor(); await fits();
+            if (width < 1024) {
+                const nav = page.getByRole('navigation', { name: '하단 메뉴', exact: true });
+                assert(await nav.getByRole('button').count() <= 4, 'Bottom navigation is crowded');
+                assert(await nav.getByRole('button', { name: /내 정보|알림|예약/ }).count() === 0, 'Secondary actions remain below');
+            }
+            await page.locator('header[aria-label="계정 메뉴"]').getByRole('button', { name: '내 정보', exact: true }).waitFor();
             const calendar = page.getByRole('button', { name: /날짜별 이용 현황 조회/ }); await calendar.scrollIntoViewIfNeeded();
             if (width < 1024) { const button = await calendar.boundingBox(); const nav = await page.getByRole('navigation', { name: '하단 메뉴', exact: true }).boundingBox(); assert(button && nav && button.y + button.height <= nav.y, 'Bottom menu overlaps home action'); }
             await page.screenshot({ path: `${root}/output/playwright/member-home-${width}.png` });
             await calendar.click(); await page.getByRole('heading', { name: '시즌방 캘린더', exact: true }).waitFor();
             const day = page.getByRole('button', { name: '2026년 11월 15일', exact: true }); await day.waitFor();
             await day.locator('.reservation-dot-high').waitFor();
+            assert(await day.locator('.reservation-dot-high').evaluate(element => getComputedStyle(element).backgroundColor) === 'rgb(189, 130, 126)', 'Classic muted occupancy color was overridden');
+            const monthReads = state.traffic.filter(item => item.path === '/crews/17/calendar').length;
             await page.getByRole('switch', { name: '내 일정 표시', exact: true }).click();
+            assert(await page.getByRole('switch', { name: '내 일정 표시', exact: true }).getAttribute('aria-checked') === 'true', 'Personal overlay did not turn on');
+            assert(state.traffic.filter(item => item.path === '/crews/17/calendar').length === monthReads, 'Overlay toggle refetched the same member calendar');
             await day.locator('.reservation-dot-high').waitFor();
-            await day.click(); await day.click(); await page.getByText('회원 #99102', { exact: true }).waitFor();
-            assert(await page.getByRole('button', { name: /예약하기|예약 취소하기|관리 정보 저장/ }).count() === 0, 'Read-only calendar exposed mutations');
+            await day.click(); await page.getByText('회원 #99102', { exact: true }).waitFor();
+            assert(await page.getByRole('button', { name: /예약하기|예약 취소하기|관리 정보 저장/ }).count() === 0, 'Closed calendar exposed enabled mutations');
             assert(await page.getByRole('combobox', { name: /입금 상태/ }).count() === 0, 'Read-only calendar exposed payment edits');
+            await page.getByRole('combobox', { name: '예약자 정렬' }).selectOption('earliest');
             await page.screenshot({ path: `${root}/output/playwright/season-calendar-${name}-${width}.png` }); await fits();
+            // Reopen the same crew: application and cancellation refresh the day and own calendar.
+            state.seasonOpen = true;
+            await page.reload();
+            await page.getByRole('button', { name: '2026년 11월 15일', exact: true }).click();
+            state.delayBookingMs = 1200;
+            await page.locator('.reservation-content').getByRole('button', { name: '예약하기', exact: true }).click();
+            await page.getByText('예약 요청을 처리하고 있어요', { exact: true }).waitFor();
+            state.delayBookingMs = 0;
+            try { await page.getByRole('button', { name: '예약 취소하기', exact: true }).waitFor(); } catch (error) { await page.screenshot({ path: `${root}/output/playwright/season-apply-failure.png` }); console.error(JSON.stringify({ bookings: state.bookings, traffic: state.traffic.slice(-12), unknown: state.unknown, text: await page.locator('body').innerText() })); throw error; }
+            assert(state.bookings.length === 1, 'Application did not persist in fixture');
+            await page.getByRole('switch', { name: '내 일정 표시', exact: true }).click();
+            const ownDay = page.getByRole('button', { name: '2026년 11월 15일', exact: true });
+            await ownDay.locator('.reservation-confirmed').waitFor();
+            const ownBox = await ownDay.boundingBox(); const markerBox = await ownDay.locator('.reservation-confirmed').boundingBox();
+            assert(ownBox && markerBox && markerBox.y >= ownBox.y && markerBox.y + markerBox.height <= ownBox.y + ownBox.height, 'Personal reservation marker overflowed its date cell');
+            await page.getByRole('button', { name: '예약 취소하기', exact: true }).click();
+            await page.locator('.reservation-content').getByRole('button', { name: '예약하기', exact: true }).waitFor();
+            assert(state.bookings.length === 0, 'Cancellation did not refresh');
+            state.role = 'CREW_CAPTAIN';
+            await page.reload();
+            await page.getByRole('button', { name: '2026년 11월 15일', exact: true }).click();
+            await page.getByRole('combobox', { name: '예약 77 입금 상태', exact: true }).selectOption('PAID');
+            await page.getByRole('textbox', { name: '예약 77 관리자 메모', exact: true }).fill('시즌방 입금 확인');
+            await page.getByRole('button', { name: '예약 77 관리 정보 저장', exact: true }).click();
+            assert(state.seedReservation.paymentStatus === 'PAID' && state.seedReservation.managerMemo === '시즌방 입금 확인', 'Season management lost edits');
             await page.getByRole('button', { name: '다음 달', exact: true }).click(); await page.getByRole('button', { name: '2026년 12월 15일', exact: true }).locator('.reservation-dot-high').waitFor();
-            assert(!state.writes.some(item => item.path.includes('reservation')), 'Calendar wrote a reservation');
+            assert(state.writes.filter(item => item.path.includes('reservation')).length === 3, 'Unexpected reservation mutations');
             assert(!state.errors.length && !state.unknown.length, `Fixture errors ${JSON.stringify(state.errors)} ${JSON.stringify(state.unknown)}`);
             completed.push(`${name}-${width}-participant-save-approve-event-edit-home-calendar`); await context.close();
         } } finally { await browser.close(); }

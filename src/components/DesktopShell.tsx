@@ -2,7 +2,6 @@ import type { ReactNode } from 'react';
 import boardBuddyLogo from '../assets/boardbuddy-logo.png';
 import {
   CalendarDays,
-  CircleUserRound,
   ClipboardPenLine,
   FlaskConical,
   Home,
@@ -13,7 +12,7 @@ import {
   UserCog,
   UsersRound,
 } from 'lucide-react';
-import NotificationBell from './NotificationBell';
+import AccountToolbar from './AccountToolbar';
 
 export type DesktopDestination =
   | 'season_calendar'
@@ -52,7 +51,6 @@ const primaryItems = [
   { id: 'crew_detail', label: '내 크루', icon: UsersRound },
   { id: 'parties', label: '크루 이벤트', icon: Sparkles },
   { id: 'my_parties', label: '내 이벤트', icon: CalendarDays },
-  { id: 'my_page', label: '내 정보', icon: CircleUserRound },
 ] as const;
 
 export default function DesktopShell({
@@ -111,10 +109,6 @@ export default function DesktopShell({
               </button>
             );
           })}
-          <NotificationBell
-            refreshKey={notificationRefreshKey}
-            onClick={onNotificationsClick}
-          />
         </nav>
 
         {canManage && (
@@ -190,8 +184,9 @@ export default function DesktopShell({
         )}
       </aside>
 
-      <main className="min-w-0 flex-1 overflow-hidden">
-        <div data-desktop-page className={`mx-auto flex h-full min-h-0 w-full flex-col overflow-hidden bg-[#FAF8F3] shadow-[0_0_40px_rgba(24,24,27,0.06)] ${
+      <main className="flex min-w-0 flex-1 flex-col overflow-hidden">
+        <AccountToolbar onHome={() => onNavigate('home')} onProfile={() => onNavigate('my_page')} onNotifications={onNotificationsClick} notificationRefreshKey={notificationRefreshKey} />
+        <div data-desktop-page className={`mx-auto flex flex-1 min-h-0 w-full flex-col overflow-hidden bg-[#FAF8F3] shadow-[0_0_40px_rgba(24,24,27,0.06)] ${
           ['crew_admin', 'school_admin', 'user_admin', 'signup_audit'].includes(activeDestination) ? 'max-w-none' : 'max-w-6xl'
         }`}>
           {children}

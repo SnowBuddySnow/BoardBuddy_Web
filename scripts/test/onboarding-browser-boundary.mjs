@@ -5,6 +5,9 @@ export const installOnboardingBoundary = async (page, { origin = 'http://127.0.0
     state.managedEvent = { id: 9101, title: '함께하는 주말 이벤트', description: '가상 운영 이벤트', activityType: 'EVENT', planningMode: 'MANAGER_PLANNED', organizerGroupId: 1, organizerGroupName: '로컬 호스트', startsAt: '2027-01-01T09:00:00', endsAt: '2027-01-01T18:00:00', capacity: 20, joinedCount: 0, status: 'DRAFT', visibilityType: 'PUBLIC', joinPolicy: 'APPROVAL_REQUIRED', kusbfAssociated: false };
     state.participants = [{ id: 71, userId: 99102, userName: '가상 부원', status: 'PENDING', createdAt: '2026-11-13T00:00:00', paymentStatus: null, managerMemo: '' }];
     state.writes = [];
+    state.seedReservation = { reservationId: 77, participantAccountId: 99102, status: 'CONFIRMED', paymentStatus: 'UNPAID', managerMemo: null };
+    state.delayBookingMs = 0;
+    state.seasonOpen = false; state.bookings = []; state.nextBookingId = 80;
     page.on('pageerror', error => state.errors.push(error.message));
     await page.context().addInitScript(() => {
         window.Kakao = { isInitialized: () => true, init() {}, Auth: { login: ({ success }) => { queueMicrotask(() => success({ access_token: 'synthetic-provider-only' })); } } };
@@ -33,7 +36,7 @@ export const installOnboardingBoundary = async (page, { origin = 'http://127.0.0
         if (path === '/accounts/99101/profile') { state.profileBody = request.postDataJSON(); return respond({ accessToken: 'synthetic-active', refreshToken: 'synthetic-refresh' }); }
         if (path === '/accounts/onboarding') return respond({ verifiedPhoneNumber: null });
         if (path === '/users/me') return respond({ userId: 99101, name: '가상 회원', role: state.role, userType: 'REGULAR', isRegistered: true, crew: state.approved ? { crewId: 17, crewName: '가상 크루' } : null });
-        if (path === '/crews/17') return respond({ crewId: 17, crew_id: 17, crewName: '가상 크루', name: '가상 크루', univ: '한국대학교', status: 'ACTIVE', role: state.role, member_count: 2, seasonHouseActive: false });
+        if (path === '/crews/17') return respond({ crewId: 17, crew_id: 17, crewName: '가상 크루', name: '가상 크루', univ: '한국대학교', status: 'ACTIVE', role: state.role, member_count: 2, seasonHouseActive: state.seasonOpen, dailyCapacity: 20 });
         if (path === '/crews/17/managers') return respond([]);
         if (path === '/operations/context') return respond({ permissions: state.role === 'CREW_CAPTAIN' ? ['PARTIES_CREATE', 'PARTIES_MANAGE', 'EVENT_GROUPS_CREATE', 'EVENT_GROUPS_VIEW', 'EVENT_GROUPS_MANAGE'] : [] });
         if (path === '/admin/crews' && method === 'POST') { const item = { id: 17, name: request.postDataJSON().name, approvalStatus: 'PENDING', status: 'INACTIVE', createdAt: '2026-11-13T00:00:00' }; state.requests.push(item); return respond(item, 201); }
@@ -58,8 +61,22 @@ export const installOnboardingBoundary = async (page, { origin = 'http://127.0.0
         if (path === '/dashboard/events/9101/consents') return respond({ items: [], consentWindowMinutes: null, configurationLocked: true });
         if (path === '/dashboard/events/9101/refund-policy') return respond({ refundPolicy: '' });
         if (path === '/dashboard/events/9101/consent-responses') return respond({ eventId: 9101, eventTitle: state.managedEvent.title, items: [], participants: [], canRevealSensitive: false, canExport: false, privateValuesRevealed: false });
-        if (path.startsWith('/crews/17/reservations/days/')) return respond({ reservationDayId: 1, crewId: 17, reservationDate: path.split('/').pop(), capacityLimited: true, capacity: 20, confirmedCount: 1, waitingCount: 0, canManageReservations: true, reservations: [{ reservationId: 77, participantAccountId: 99102, status: 'CONFIRMED', paymentStatus: 'UNPAID', managerMemo: null }] });
-        if (path === '/crews/17/calendar') { const month = url.searchParams.get('date').slice(0, 7); return respond({ calendar: [{ date: `${month}-13`, occupancy_status: 'LOW' }, { date: `${month}-14`, occupancy_status: 'MEDIUM' }, { date: `${month}-15`, occupancy_status: 'HIGH' }], my_reservations: [] }); }
+        if (path === '/crews/17/reservations' && method === 'POST') {
+            if (state.delayBookingMs) await new Promise(resolve => setTimeout(resolve, state.delayBookingMs));
+            const body = request.postDataJSON(); state.writes.push({ path, body });
+            const results = body.dates.map(date => { const item = { date, reservationId: state.nextBookingId++, participantAccountId: 99101, status: 'CONFIRMED' }; state.bookings.push(item); return { ...item, success: true, attempts: 1 }; });
+            return respond({ crewId: 17, accountId: 99101, results });
+        }
+        if (/^\/crews\/17\/reservations\/\d+$/.test(path) && method === 'DELETE') {
+            state.writes.push({ path }); state.bookings = state.bookings.filter(item => item.reservationId !== Number(path.split('/').pop()));
+            return respond({ success: true, status: 'CANCELED', attempts: 1 });
+        }
+        if (path === '/crews/17/reservations/77/management' && method === 'PATCH') {
+            const body = request.postDataJSON(); state.writes.push({ path, body }); Object.assign(state.seedReservation, body); return respond(state.seedReservation);
+        }
+        if (path === '/users/me/reservations') return respond([]);
+        if (path.startsWith('/crews/17/reservations/days/')) return respond({ reservationDayId: 1, crewId: 17, reservationDate: path.split('/').pop(), capacityLimited: true, capacity: 20, confirmedCount: 1 + state.bookings.filter(item => item.date === path.split('/').pop()).length, waitingCount: 0, canManageReservations: state.role === 'CREW_CAPTAIN', reservations: [...state.bookings.filter(item => item.date === path.split('/').pop()), state.seedReservation] });
+        if (path === '/crews/17/calendar') { const month = url.searchParams.get('date').slice(0, 7); return respond({ calendar: [{ date: `${month}-13`, occupancy_status: 'LOW' }, { date: `${month}-14`, occupancy_status: 'MEDIUM' }, { date: `${month}-15`, occupancy_status: 'HIGH' }], my_reservations: state.bookings.map(item => ({ date: item.date, status: item.status.toLowerCase(), reservation_id: item.reservationId })) }); }
         if (path === '/events/9101') return respond({ id: 9101, title: '가상 초대 행사', description: 'Synthetic event', activityType: 'EVENT', planningMode: 'MANAGER_PLANNED', startsAt: '2027-01-01T09:00:00', capacity: 20, joinedCount: 0, status: 'OPEN', visibilityType: 'PUBLIC', joinPolicy: 'APPROVAL_REQUIRED', organizerGroupId: 1, organizerGroupName: 'Synthetic hosts', kusbfAssociated: false, paymentRequired: false, currentUserStatus: null });
         if (path === '/events/9101/refund-policy') return respond({ refundPolicy: '' });
         if (path === '/crews/discover') return respond([{ crewId: 17, crewName: '가상 크루', crewCode: 'TEST', schoolName: '한국대학교', schoolId: 1, memberCount: 2, schoolVerificationRequired: false }]);
