@@ -38,6 +38,8 @@ it('loads only the two required months for a 14-day home preview crossing month 
  await act(async()=>root.render(<PersonalCalendarPreview crewId={17} onOpen={vi.fn()}/>));
  expect(http.get.mock.calls.map(([path])=>path)).toEqual(['/crews/17/calendar/my?date=2026-11-01','/crews/17/calendar/my?date=2026-12-01']);
  expect(container.querySelectorAll('button[aria-label]')).toHaveLength(14);
+ expect(container.textContent).not.toContain('—');
+ expect([...container.querySelectorAll('span')].filter(node=>node.textContent==='일')).toHaveLength(1);
 });
 
 it('does not present a failed account/calendar load as an empty reservation',async()=>{
