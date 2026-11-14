@@ -2,13 +2,14 @@ import type { ReactNode } from 'react';
 import { ChevronLeft } from 'lucide-react';
 import './reservation.css';
 
-export function ReservationLayout({ title, onBack, action, children }: {
+export function ReservationLayout({ title, onBack, action, children, className = '' }: {
     title: string;
+    className?: string;
     onBack: () => void;
     action?: ReactNode;
     children: ReactNode;
 }) {
-    return <div className="reservation-shell">
+    return <div className={`reservation-shell ${className}`}>
         <header className="reservation-header">
             <button type="button" onClick={onBack} aria-label="뒤로 가기" className="reservation-back"><ChevronLeft className="h-5 w-5" /></button>
             <h1>{title}</h1>

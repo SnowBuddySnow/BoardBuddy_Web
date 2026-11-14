@@ -1,3 +1,4 @@
+import '../components/reservation/crew-calendar.css';
 import { getReservationSeason } from '../lib/reservationSeason';
 import { ReservationLayout } from '../components/reservation/ReservationLayout';
 import { useState, useEffect, useCallback, useRef } from 'react';
@@ -284,7 +285,7 @@ export default function ReservationStats({ onBack, onMyCalendarClick, onReservat
             case 'LOW': return 'reservation-dot-low';
             case 'MEDIUM': return 'reservation-dot-medium';
             case 'HIGH': return 'reservation-dot-high';
-            default: return 'bg-zinc-300';
+            default: return 'reservation-dot-none';
         }
     };
 
@@ -303,7 +304,7 @@ export default function ReservationStats({ onBack, onMyCalendarClick, onReservat
     });
 
     return (
-        <ReservationLayout title={title ?? (readOnly ? "시즌방 캘린더" : "크루 달력")} onBack={onBack} action={!readOnly && onMyCalendarClick && <button type="button" onClick={onMyCalendarClick}>내 예약 →</button>}>
+        <ReservationLayout className="crew-calendar-screen" title={title ?? (readOnly ? "시즌방 캘린더" : "크루 달력")} onBack={onBack} action={!readOnly && onMyCalendarClick && <button type="button" onClick={onMyCalendarClick}>내 예약 →</button>}>
 
             {submitting && showProcessing && <div role="status" aria-live="polite" className="absolute inset-0 z-50 flex items-center justify-center bg-slate-900/30 p-5 backdrop-blur-sm">
                 <div className="w-full max-w-sm rounded-3xl bg-white p-6 text-center shadow-xl">
@@ -328,9 +329,15 @@ export default function ReservationStats({ onBack, onMyCalendarClick, onReservat
                 {loadError && <p role="alert" className="mb-4 rounded-xl bg-red-50 p-3 text-sm text-red-700">{loadError}</p>}
                 <div className="reservation-workspace">
                     <Calendar
+                        variant="crew-classic"
                         className="mb-3"
-                        dayDescription={day => ({ LOW: '여유', MEDIUM: '보통', HIGH: '혼잡', '': '—' }[getOccupancyStatus(day) ?? ''] ?? '현황 없음')}
-                        footer={<p className="mt-3 text-center text-xs text-slate-500">초록 여유 · 주황 보통 · 빨강 혼잡 · 회색 현황 없음</p>}
+                        dayDescription={day => ({ LOW: '여유', MEDIUM: '보통', HIGH: '혼잡', '': '현황 없음' }[getOccupancyStatus(day) ?? ''] ?? '현황 없음')}
+                        footer={<div className="crew-calendar-legend" aria-label="혼잡도 안내">
+                            {(['LOW', 'MEDIUM', 'HIGH', 'NONE'] as const).map(status => <span key={status}>
+                                <i aria-hidden="true" className={`crew-occupancy-dot ${{ LOW: 'reservation-dot-low', MEDIUM: 'reservation-dot-medium', HIGH: 'reservation-dot-high', NONE: 'reservation-dot-none' }[status]}`} />
+                                {{ LOW: '여유', MEDIUM: '보통', HIGH: '혼잡', NONE: '현황 없음' }[status]}
+                            </span>)}
+                        </div>}
                         month={currentMonthName}
                         year={currentYear}
                         startDayOfWeek={firstDayOfMonth}
@@ -346,7 +353,7 @@ export default function ReservationStats({ onBack, onMyCalendarClick, onReservat
                             <div className="flex items-center gap-2">
                                 <span className="text-xs font-bold text-zinc-500 dark:text-zinc-400">내 일정</span>
                                 <div
-                                    onClick={() => setShowMySchedule(!includeMine)}
+                                    onClick={() => setShowMySchedule(current => !current)}
                                     role="switch" aria-checked={showMySchedule} aria-label="내 일정 표시" tabIndex={0}
                                     onKeyDown={event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); setShowMySchedule(current => !current); } }}
                                     className={`reservation-toggle w-10 h-6 rounded-full p-1 relative cursor-pointer ${showMySchedule ? 'is-on' : ''}`}
@@ -364,7 +371,7 @@ export default function ReservationStats({ onBack, onMyCalendarClick, onReservat
                             const isPending = showMySchedule && pendingDays.includes(day);
 
                             // Base classes
-                            let containerClasses = "reservation-date-cell";
+                            let containerClasses = `reservation-date-cell${isConfirmed || isPending ? ' has-personal-reservation' : ''}`;
 
                             if (isSelected) {
                                 containerClasses += " is-selected";
@@ -388,10 +395,7 @@ export default function ReservationStats({ onBack, onMyCalendarClick, onReservat
                             return (
                                 <div className={containerClasses}>
                                     {numberElement}
-                                    <span className="flex items-center gap-0.5 text-[10px] leading-3 text-slate-500">
-                                        <span aria-hidden="true" className={`h-1.5 w-1.5 shrink-0 rounded-full ${colorClass}`} />
-                                        {{ LOW: '여유', MEDIUM: '보통', HIGH: '혼잡', '': '—' }[getOccupancyStatus(day) ?? ''] ?? '—'}
-                                    </span>
+                                    <span aria-hidden="true" className={`crew-occupancy-dot ${colorClass}`} />
                                 </div>
                             );
                         }}

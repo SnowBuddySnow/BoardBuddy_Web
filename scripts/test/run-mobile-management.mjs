@@ -54,8 +54,10 @@ try {
             await calendar.click(); await page.getByRole('heading', { name: '시즌방 캘린더', exact: true }).waitFor();
             const day = page.getByRole('button', { name: '2026년 11월 15일', exact: true }); await day.waitFor();
             await day.locator('.reservation-dot-high').waitFor();
+            assert(await day.locator('.reservation-dot-high').evaluate(element => getComputedStyle(element).backgroundColor) === 'rgb(189, 130, 126)', 'Classic muted occupancy color was overridden');
             const monthReads = state.traffic.filter(item => item.path === '/crews/17/calendar').length;
             await page.getByRole('switch', { name: '내 일정 표시', exact: true }).click();
+            assert(await page.getByRole('switch', { name: '내 일정 표시', exact: true }).getAttribute('aria-checked') === 'true', 'Personal overlay did not turn on');
             assert(state.traffic.filter(item => item.path === '/crews/17/calendar').length === monthReads, 'Overlay toggle refetched the same member calendar');
             await day.locator('.reservation-dot-high').waitFor();
             await day.click(); await page.getByText('회원 #99102', { exact: true }).waitFor();
@@ -73,6 +75,11 @@ try {
             state.delayBookingMs = 0;
             try { await page.getByRole('button', { name: '예약 취소하기', exact: true }).waitFor(); } catch (error) { await page.screenshot({ path: `${root}/output/playwright/season-apply-failure.png` }); console.error(JSON.stringify({ bookings: state.bookings, traffic: state.traffic.slice(-12), unknown: state.unknown, text: await page.locator('body').innerText() })); throw error; }
             assert(state.bookings.length === 1, 'Application did not persist in fixture');
+            await page.getByRole('switch', { name: '내 일정 표시', exact: true }).click();
+            const ownDay = page.getByRole('button', { name: '2026년 11월 15일', exact: true });
+            await ownDay.locator('.reservation-confirmed').waitFor();
+            const ownBox = await ownDay.boundingBox(); const markerBox = await ownDay.locator('.reservation-confirmed').boundingBox();
+            assert(ownBox && markerBox && markerBox.y >= ownBox.y && markerBox.y + markerBox.height <= ownBox.y + ownBox.height, 'Personal reservation marker overflowed its date cell');
             await page.getByRole('button', { name: '예약 취소하기', exact: true }).click();
             await page.locator('.reservation-content').getByRole('button', { name: '예약하기', exact: true }).waitFor();
             assert(state.bookings.length === 0, 'Cancellation did not refresh');

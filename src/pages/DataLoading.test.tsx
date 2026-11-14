@@ -1,13 +1,13 @@
 // @vitest-environment jsdom
-import { act } from 'react';
+import { act, type ReactNode } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const http = vi.hoisted(() => ({ get: vi.fn(), post: vi.fn() }));
 vi.mock('../lib/axios', () => ({ default: http }));
 // Exercise page effects without conflating them with the unchanged calendar widget.
-vi.mock('../components/Calendar', () => ({ Calendar: ({ onDayClick }: { onDayClick: (day: number) => void }) => (
-    <button onClick={() => onDayClick(19)}>Synthetic day 19</button>
+vi.mock('../components/Calendar', () => ({ Calendar: ({ onDayClick, headerRight }: { onDayClick: (day: number) => void; headerRight?: ReactNode }) => (
+    <div>{headerRight}<button onClick={() => onDayClick(19)}>Synthetic day 19</button></div>
 ) }));
 import MemberStats from './MemberStats';
 import Promote from './Promote';
@@ -137,6 +137,19 @@ describe('page fetch dependencies and reservation cache refresh (synthetic HTTP 
         expect(http.post).toHaveBeenCalledOnce();
         await act(async () => finish(result({ results: [{ date: '2026-02-19', success: true, status: 'CONFIRMED' }] })));
         expect(container.textContent).not.toContain('예약 요청을 처리하고 있어요');
+    });
+
+    it('toggles the personal overlay by pointer and keyboard without refetching the active member month', async () => {
+        await act(async () => root.render(<ReservationStats onBack={vi.fn()} />));
+        const toggle = container.querySelector('[role="switch"]') as HTMLElement;
+        expect(toggle.getAttribute('aria-checked')).toBe('false');
+        await act(async () => toggle.click());
+        expect(toggle.getAttribute('aria-checked')).toBe('true');
+        await act(async () => toggle.click());
+        expect(toggle.getAttribute('aria-checked')).toBe('false');
+        await act(async () => toggle.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true })));
+        expect(toggle.getAttribute('aria-checked')).toBe('true');
+        expect(countGets('/calendar?')).toBe(1);
     });
 
 });
