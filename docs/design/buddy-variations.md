@@ -29,3 +29,11 @@
 - `output/design/buddy-variations/prompts.json`: 실제 생성 프롬프트 공통부와 시안별 지시
 
 이미지와 프롬프트 원본은 로컬 검토 산출물로 보관하며, 대용량 PNG를 코드 저장소나 제품 번들에 포함하지 않는다. 최종안 선택 후 작은 크기 가독성, 투명 배경, 대비, 일관된 표정 세트를 별도로 다듬는다.
+
+## 선택안 B의 서비스 적용
+
+B SOFT를 선택한 뒤 단일 투명 배경 자산으로 정리하고 320px로 최적화했다. 제품 자산은 `src/assets/buddy-soft.png`이며 현재 처리 대기 안내와 나의 달력의 빈 예약 안내에만 작은 크기로 사용한다. 기본 프로필 사진이나 예약 상태 배지를 대신하지 않는다. 확정·대기·대기 순번은 계속 텍스트와 날짜 표시가 전달한다.
+
+내장 image_gen 편집 프롬프트: “Edit the supplied B / SOFT mascot concept sheet into ONE production web asset: ONLY the main full-body white arctic fox, navy scarf and gold house-key charm, same character proportions, same matte soft 3D toy material and gentle friendly wave. Remove every heading, small head study, all background and ground shadow. Center the single fox with modest padding. True transparent background. No text, no frame, no added characters. Preserve the chosen mascot's exact identity and colors.”
+
+가입 환영·예약 완료에 추가할 때도 작은 보조 역할을 권장한다. 관리 목록·입금 표·필수 입력에는 장식으로 반복하지 않는다.

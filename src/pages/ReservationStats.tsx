@@ -1,3 +1,5 @@
+import ReservationWindowNotice from '../components/ReservationWindowNotice';
+import BuddyNote from '../components/BuddyNote';
 import '../components/reservation/crew-calendar.css';
 import { getReservationSeason } from '../lib/reservationSeason';
 import { ReservationLayout } from '../components/reservation/ReservationLayout';
@@ -152,7 +154,7 @@ export default function ReservationStats({ onBack, onMyCalendarClick, onReservat
         .map(r => parseInt(r.date.split('-')[2], 10)) || [];
 
     const handleCreateReservation = async () => {
-        if (readOnly || !crewOpen || mutationBusy.current) return;
+        if (readOnly || !crewOpen || mutationBusy.current || !detailsCache[formatDate(selectedDay)]?.bookable) return;
         if (!crewId) {
             alert("크루 정보를 불러오는 중입니다. 잠시 후 다시 시도해주세요.");
             return;
@@ -309,7 +311,7 @@ export default function ReservationStats({ onBack, onMyCalendarClick, onReservat
             {submitting && showProcessing && <div role="status" aria-live="polite" className="absolute inset-0 z-50 flex items-center justify-center bg-slate-900/30 p-5 backdrop-blur-sm">
                 <div className="w-full max-w-sm rounded-3xl bg-white p-6 text-center shadow-xl">
                     <span aria-hidden="true" className="mx-auto mb-4 block h-8 w-8 animate-spin rounded-full border-4 border-blue-100 border-t-[#162660]" />
-                    <h2 className="text-lg font-bold text-[#162660]">예약 요청을 처리하고 있어요</h2>
+                    <BuddyNote><h2 className="text-lg font-bold text-[#162660]">예약 요청을 처리하고 있어요</h2></BuddyNote>
                     <p className="mt-2 text-sm leading-6 text-slate-600"><span className="block">서버의 응답을 기다리고 있어요.</span><span className="block">다시 누르지 않아도 결과를 알려드려요.</span></p>
                 </div>
             </div>}
@@ -325,19 +327,19 @@ export default function ReservationStats({ onBack, onMyCalendarClick, onReservat
                         if (selectedDay) await fetchDetailForDay(selectedDay, true);
                     } catch { setLoadError('현황을 새로고침하지 못했습니다. 다시 시도해 주세요.'); }
                 }}>새로고침</button></div>
-                {readOnly && <p className="mb-4 text-xs leading-6 text-zinc-500"><span className="block">현재는 이용 현황만 조회할 수 있어요.</span><span className="block">회색은 현황이 제공되지 않은 날짜예요.</span></p>}
+                {readOnly && <p className="mb-4 text-xs leading-6 text-zinc-500"><span className="block">현재는 이용 현황만 조회할 수 있어요.</span></p>}
                 {loadError && <p role="alert" className="mb-4 rounded-xl bg-red-50 p-3 text-sm text-red-700">{loadError}</p>}
                 <div className="reservation-workspace">
                     <Calendar
                         variant="crew-classic"
                         className="mb-3"
                         dayDescription={day => ({ LOW: '여유', MEDIUM: '보통', HIGH: '혼잡', '': '현황 없음' }[getOccupancyStatus(day) ?? ''] ?? '현황 없음')}
-                        footer={<div className="crew-calendar-legend" aria-label="혼잡도 안내">
-                            {(['LOW', 'MEDIUM', 'HIGH', 'NONE'] as const).map(status => <span key={status}>
+                        footer={<><div className="crew-calendar-legend" aria-label="혼잡도 안내">
+                            {(['LOW', 'MEDIUM', 'HIGH'] as const).map(status => <span key={status}>
                                 <i aria-hidden="true" className={`crew-occupancy-dot ${{ LOW: 'reservation-dot-low', MEDIUM: 'reservation-dot-medium', HIGH: 'reservation-dot-high', NONE: 'reservation-dot-none' }[status]}`} />
                                 {{ LOW: '여유', MEDIUM: '보통', HIGH: '혼잡', NONE: '현황 없음' }[status]}
                             </span>)}
-                        </div>}
+                        </div></>}
                         month={currentMonthName}
                         year={currentYear}
                         startDayOfWeek={firstDayOfMonth}
@@ -395,7 +397,7 @@ export default function ReservationStats({ onBack, onMyCalendarClick, onReservat
                             return (
                                 <div className={containerClasses}>
                                     {numberElement}
-                                    <span aria-hidden="true" className={`crew-occupancy-dot ${colorClass}`} />
+                                    {getOccupancyStatus(day) && <span aria-hidden="true" className={`crew-occupancy-dot ${colorClass}`} />}
                                 </div>
                             );
                         }}
@@ -437,15 +439,17 @@ export default function ReservationStats({ onBack, onMyCalendarClick, onReservat
                                         {currentMemberList.length > 0 ? (
                                             currentMemberList.map((member) => (
                                                 <div key={member.reservationId} className="reservation-member-row">
-                                                    <div className="w-10 h-10 bg-zinc-300 dark:bg-zinc-600 rounded-full shrink-0 overflow-hidden relative">
+                                                    <div className="w-6 h-6 bg-zinc-200 dark:bg-zinc-600 rounded-full shrink-0 overflow-hidden relative">
                                                         {/* No profile image available in new DTO yet */}
                                                     </div>
                                                     <div className="flex flex-col items-start gap-0.5 min-w-0">
-                                                        <div className="flex items-center gap-1.5">
+                                                        <div className="flex flex-wrap items-center gap-1.5">
                                                             <span className="text-sm font-bold text-zinc-700 dark:text-zinc-300">
                                                                 {member.guestId ? `게스트 #${member.guestId}` : `회원 #${member.participantAccountId}`}
                                                             </span>
                                                             <span className="text-xs text-zinc-500">{member.status === 'WAITING' ? `대기 ${member.waitlistPosition ?? '-'}번` : '확정'}</span>
+                                                            {['CREW_CAPTAIN', 'CREW_MANAGER'].includes(member.memberRole ?? '') && <span className="rounded bg-slate-200 px-1.5 py-0.5 text-[10px] font-bold text-slate-600">임원진</span>}
+                                                            {member.teachingRequested && <span className="rounded bg-blue-50 px-1.5 py-0.5 text-[10px] text-blue-700">강습</span>}
                                                             {member.guestId && (
                                                                 <div className="px-1.5 py-0.5 bg-blue-50 rounded-[4px] flex items-center justify-center">
                                                                     <span className="text-[10px] font-bold text-blue-700">게스트</span>
@@ -514,6 +518,7 @@ export default function ReservationStats({ onBack, onMyCalendarClick, onReservat
                                     </button>
                                 </div>}
 
+                                <ReservationWindowNotice value={currentDetail ?? undefined} />
                                 {/* Action Button */}
                                 {confirmedDays.includes(selectedDay) || pendingDays.includes(selectedDay) ? (
                                     <Button
@@ -526,11 +531,11 @@ export default function ReservationStats({ onBack, onMyCalendarClick, onReservat
                                     </Button>
                                 ) : (
                                     <Button
-                                        disabled={submitting || !crewOpen}
+                                        disabled={submitting || !crewOpen || currentDetail?.bookable !== true}
                                         onClick={handleCreateReservation}
                                         className="reservation-primary w-full h-14 text-base"
                                     >
-                                        {submitting ? '신청 중…' : !crewOpen ? '크루 예약 접수 전' : '예약하기'}
+                                        {submitting ? '신청 중…' : !crewOpen ? '크루 예약 접수 전' : currentDetail?.bookable !== true ? '예약 오픈 전' : '예약하기'}
                                     </Button>
                                 )}
                                 </>}
