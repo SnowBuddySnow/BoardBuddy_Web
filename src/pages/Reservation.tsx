@@ -272,7 +272,12 @@ export default function Reservation({ onBack, isGuest = false, guestCrewId }: Re
         const guestId = isGuest && guestDetail ? guestDetail.id : undefined;
 
         try {
-            await createReservation(crewId, formattedDates, guestId);
+            const result = await createReservation(crewId, formattedDates, guestId);
+            const failed = result.results?.filter(item => !item.success) ?? [];
+            if (!result.results?.length || failed.length) {
+                alert(`예약하지 못한 날짜가 있습니다. 아직 오픈되지 않은 날짜는 크루 달력에서 오픈 시각을 확인해 주세요. ${failed.map(item => item.date).join(', ')}`);
+                return;
+            }
             alert("예약 신청이 완료되었습니다."); // Simple feedback
             setSelectedDays([]); // Clear selection
             // Refresh list so the new reservation appears as "reserved" immediately

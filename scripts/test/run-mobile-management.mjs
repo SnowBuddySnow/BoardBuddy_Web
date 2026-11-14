@@ -93,6 +93,28 @@ try {
             await page.getByRole('button', { name: '다음 달', exact: true }).click(); await page.getByRole('button', { name: '2026년 12월 15일', exact: true }).locator('.reservation-dot-high').waitFor();
             assert(state.writes.filter(item => item.path.includes('reservation')).length === 3, 'Unexpected reservation mutations');
             assert(!state.errors.length && !state.unknown.length, `Fixture errors ${JSON.stringify(state.errors)} ${JSON.stringify(state.unknown)}`);
+            state.role = 'CREW_MEMBER'; state.groups = [];
+            state.bookings = [{date:'2026-11-15',reservationId:81,participantAccountId:99101,status:'CONFIRMED',teaching:false},{date:'2026-11-16',reservationId:82,participantAccountId:99101,status:'WAITING',waitlistPosition:3}];
+            await page.goto(`${origin}/?view=my_reservations`);
+            await page.getByRole('heading',{name:'나의 달력',exact:true}).waitFor();
+            const personalDay = number => page.getByRole('button',{name:`2026년 11월 ${number}일`,exact:true});
+            await personalDay(15).locator('.reservation-confirmed').waitFor();
+            await personalDay(16).locator('.reservation-pending').waitFor();
+            await personalDay(16).click(); await page.getByText('예약 대기 3번입니다.',{exact:true}).waitFor();
+            assert(await page.getByRole('switch',{name:'강습 신청',exact:true}).count()===0,'Waiting member exposed teaching');
+            await personalDay(15).click(); await page.getByRole('switch',{name:'강습 신청',exact:true}).click();
+            await page.waitForFunction(()=>document.querySelector('[aria-label="강습 신청"]')?.checked);
+            assert(state.bookings[0].teaching===true,'Teaching did not persist'); await fits();
+            await page.goto(`${origin}/?view=home`);
+            await page.getByRole('region',{name:'나의 2주 달력'}).getByRole('button',{name:'2026-11-15 예약 확정',exact:true}).waitFor();
+            await page.getByRole('region',{name:'나의 2주 달력'}).getByRole('button',{name:'2026-11-16 예약 대기',exact:true}).waitFor(); await fits();
+            state.closedDate = '2026-11-18';
+            await page.goto(`${origin}/?view=season_calendar`);
+            await page.getByRole('button',{name:'2026년 11월 18일',exact:true}).click();
+            await page.getByText('2026.11.18 18:00 오픈 예정입니다. (한국 시간)',{exact:true}).waitFor();
+            assert(await page.getByRole('button',{name:'예약 오픈 전',exact:true}).isDisabled(),'Unopened date enabled booking');
+            assert(await page.getByRole('button',{name:'2026년 11월 29일',exact:true}).isVisible(),'Selecting a date hid the rest of the month');
+            assert(!(await page.locator('body').innerText()).includes('현황 없음'),'Unknown-status legend remains visible');
             completed.push(`${name}-${width}-participant-save-approve-event-edit-home-calendar`); await context.close();
         } } finally { await browser.close(); }
     }

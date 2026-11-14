@@ -24,7 +24,7 @@ describe('page fetch dependencies and reservation cache refresh (synthetic HTTP 
         vi.resetAllMocks(); vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true); vi.stubGlobal('alert', vi.fn());
         vi.useFakeTimers({ toFake: ['Date'] }); vi.setSystemTime(new Date('2026-02-19T09:00:00Z'));
         localStorage.clear();
-        dayData = { date: '2026-02-19', confirmedCount: 0, reservations: [] };
+        dayData = { bookable: true, date: '2026-02-19', confirmedCount: 0, reservations: [] };
         http.get.mockImplementation(async (path: string) => {
             if (path === '/users/me') return result({ userId: 7, crew: { crewId: 1 } });
             if (path === '/users/me/reservations') return result([]);
@@ -100,7 +100,7 @@ describe('page fetch dependencies and reservation cache refresh (synthetic HTTP 
         await click('Synthetic day 19');
         expect(container.textContent).toContain('2월 19일');
         expect(countGets('/reservations/days/')).toBe(1);
-        dayData = { date: '2026-02-19', confirmedCount: 1, reservations: [] };
+        dayData = { bookable: true, date: '2026-02-19', confirmedCount: 1, reservations: [] };
         await click('예약하기');
         expect(http.post).toHaveBeenCalledOnce();
         expect(countGets('/reservations/days/')).toBe(2);
@@ -150,6 +150,15 @@ describe('page fetch dependencies and reservation cache refresh (synthetic HTTP 
         await act(async () => toggle.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true })));
         expect(toggle.getAttribute('aria-checked')).toBe('true');
         expect(countGets('/calendar?')).toBe(1);
+    });
+
+    it('disables unopened dates and displays the server opening time', async () => {
+        dayData = { bookable: false, opensAt: '2026-02-20T18:00:00', unavailableReason: 'NOT_OPEN_YET', confirmedCount: 0, reservations: [] };
+        await act(async () => root.render(<ReservationStats onBack={vi.fn()} />));
+        expect(container.textContent).toContain('2026.02.20 18:00 오픈 예정');
+        const button = Array.from(container.querySelectorAll('button')).find(node => node.textContent?.trim() === '예약 오픈 전') as HTMLButtonElement;
+        expect(button.disabled).toBe(true);
+        await act(async()=>button.click()); expect(http.post).not.toHaveBeenCalled();
     });
 
 });

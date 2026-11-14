@@ -38,6 +38,7 @@ export default function CrewSettings({ onBack, onCaptainGuideClick }: CrewSettin
     const [requestCopied, setRequestCopied] = useState(false);
     const [formData, setFormData] = useState<CrewInfoUpdateRequest>({
         crewName: '',
+        teachingEnabled: false,
         reservationOpenDay: 'FRIDAY',
         reservationOpenTime: '18:00',
         reservationOpenOffsetDays: 3,
@@ -59,12 +60,7 @@ export default function CrewSettings({ onBack, onCaptainGuideClick }: CrewSettin
     // const [targetTime, setTargetTime] = useState('18:00');
 
     const calculateOpenDay = () => {
-        const days = ['SUNDAY', 'MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY'];
-        const targetIndex = days.indexOf(formData.reservationOpenDay);
-        if (targetIndex === -1) return 'UNKNOWN';
-        let openIndex = (targetIndex - formData.reservationOpenOffsetDays) % 7;
-        if (openIndex < 0) openIndex += 7;
-        return days[openIndex];
+        return formData.reservationOpenDay;
     };
 
     useEffect(() => {
@@ -92,13 +88,16 @@ export default function CrewSettings({ onBack, onCaptainGuideClick }: CrewSettin
                         crewName: info.name,
                         reservationOpenDay: info.reservationOpenDay || 'FRIDAY',
                         reservationOpenTime: info.reservationOpenTime || '18:00',
-                        reservationOpenOffsetDays: info.reservationOpenOffsetDays || 3, // Default fallback
+                        reservationOpenOffsetDays: info.reservationOpenOffsetDays ?? 3, // Default fallback
                         dailyCapacity: info.dailyCapacity,
                         isCapacityLimited: info.isCapacityLimited,
-                        reservationPeriodLimitDays: info.reservationPeriodLimitDays || 7,
+                        teachingEnabled: info.teachingEnabled === true,
+                        reservationPeriodLimitDays: info.reservationPeriodLimitDays ?? 7,
+                        reservationWindowDays: info.reservationWindowDays ?? ((info.reservationPeriodLimitDays ?? 7) > 0 ? (info.reservationPeriodLimitDays ?? 7) + 1 : 0),
                         schoolVerificationRequired: info.configuredSchoolVerificationRequired ?? info.schoolVerificationRequired,
                         verifiedSchoolAutoJoinEnabled: info.verifiedSchoolAutoJoinEnabled ?? false,
                     });
+                    setIsAlwaysOpen(!info.reservationOpenDay || !info.reservationOpenTime);
                     setCrewPin(info.crewPin || '');
                 }
             } catch (error) {
@@ -122,7 +121,10 @@ export default function CrewSettings({ onBack, onCaptainGuideClick }: CrewSettin
         const payload: Partial<CrewInfoUpdateRequest> & { id: number; name?: string } = {
             ...formData,
             id: crewId,
+            reservationAlwaysOpen: isAlwaysOpen,
+            reservationWindowDays: isAlwaysOpen ? 0 : (formData.reservationWindowDays ?? 8),
         };
+        if (isAlwaysOpen) { delete payload.reservationOpenDay; delete payload.reservationOpenTime; }
         if (!SEASON_HOUSE_RESERVATIONS_ENABLED) {
             delete payload.reservationOpenDay;
             delete payload.reservationOpenTime;
@@ -408,7 +410,7 @@ export default function CrewSettings({ onBack, onCaptainGuideClick }: CrewSettin
                                     />
                                 </div>
                                 <div className="space-y-2">
-                                    <label className="text-xs font-bold text-zinc-500">예약 대상 요일</label>
+                                    <label className="text-xs font-bold text-zinc-500">매주 오픈 요일</label>
                                     <select
                                         value={formData.reservationOpenDay}
                                         onChange={(e) => handleChange('reservationOpenDay', e.target.value)}
@@ -424,8 +426,8 @@ export default function CrewSettings({ onBack, onCaptainGuideClick }: CrewSettin
 
                             <div className="space-y-2">
                                 <div className="flex justify-between">
-                                    <label className="text-xs font-bold text-zinc-500">오픈일 설정 (D-{formData.reservationOpenOffsetDays})</label>
-                                    <span className="text-xs text-zinc-400">{formData.reservationOpenOffsetDays}일 전 오픈</span>
+                                    <label className="text-xs font-bold text-zinc-500">오픈일부터 숙박 시작일까지</label>
+                                    <span className="text-xs text-zinc-400">오픈 후 {formData.reservationOpenOffsetDays}일부터 예약</span>
                                 </div>
                                 <input
                                     type="number"
@@ -438,12 +440,9 @@ export default function CrewSettings({ onBack, onCaptainGuideClick }: CrewSettin
                                 />
                             </div>
 
-                            {/* Simulated Calendar */}
-                            <SimulatedCalendar
-                                targetDay={formData.reservationOpenDay}
-                                daysBefore={formData.reservationOpenOffsetDays}
-                                targetTime={formData.reservationOpenTime}
-                            />
+                            <label className="block text-xs font-bold text-zinc-500">한 번에 오픈할 숙박 일수 (0은 제한 없음)
+                                <input aria-label="한 번에 오픈할 숙박 일수" type="number" min="0" max="366" value={formData.reservationWindowDays ?? 8} onChange={event => handleChange('reservationWindowDays', Math.max(0,Math.min(366,Number(event.target.value))))} className="mt-2 w-full rounded-xl border border-blue-100 bg-blue-50/50 px-3 py-2 text-sm" />
+                            </label>
                         </div>
 
                         <div className="pt-2 border-t border-zinc-200 mt-2">
@@ -502,207 +501,7 @@ export default function CrewSettings({ onBack, onCaptainGuideClick }: CrewSettin
 
                     <div className="h-10" />
                 </div>
-            </main>
+            <label className="mx-4 mb-4 flex items-center justify-between rounded-xl border border-slate-200 p-4 text-sm font-bold"><span>시즌방 강습 신청 사용<small className="mt-1 block text-xs font-normal text-slate-500">켜면 확정 예약한 부원이 강습을 신청할 수 있어요.</small></span><input type="checkbox" checked={formData.teachingEnabled === true} onChange={event => handleChange('teachingEnabled', event.target.checked)} /></label></main>
         </ReservationLayout>
     );
 }
-
-
-
-
-// Helper Simulations
-const SimulatedCalendar = ({ targetDay, daysBefore, targetTime }: { targetDay: string, daysBefore: number, targetTime?: string }) => {
-    // 1. Calculate Target Dates
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    const dayMap: { [key: string]: number } = {
-        'SUNDAY': 0, 'MONDAY': 1, 'TUESDAY': 2, 'WEDNESDAY': 3, 'THURSDAY': 4, 'FRIDAY': 5, 'SATURDAY': 6
-    };
-
-    const targetDayIndex = dayMap[targetDay];
-
-    // Find next target day
-    // Logic: The calendar is simulating: "If I set these settings, what happens?"
-    // The "Open Day" is defined by (Target Day - daysBefore).
-    // Let's assume we are showing the *Next* valid cycle.
-    // If Today + daysBefore leads to a date, we find the next TargetDay after that date.
-
-    const minTargetDate = new Date(today);
-    minTargetDate.setDate(today.getDate() + daysBefore);
-
-    const diff = (targetDayIndex - minTargetDate.getDay() + 7) % 7;
-    const targetStart = new Date(minTargetDate);
-    targetStart.setDate(minTargetDate.getDate() + diff);
-
-    // Derived Real Open Date
-    const realOpenDate = new Date(targetStart);
-    realOpenDate.setDate(targetStart.getDate() - daysBefore);
-
-    // Target End (1 week duration)
-    const targetEnd = new Date(targetStart);
-    targetEnd.setDate(targetStart.getDate() + 6);
-
-    // 2. Generate Trimming Range (Relevant Weeks Only)
-    // Start from the Sunday of the Open Date's week
-    const viewStart = new Date(realOpenDate);
-    viewStart.setDate(realOpenDate.getDate() - realOpenDate.getDay());
-
-    // End at the Saturday of the Target End's week
-    const viewEnd = new Date(targetEnd);
-    viewEnd.setDate(targetEnd.getDate() + (6 - targetEnd.getDay()));
-
-    // Generate dates
-    const calendarDays: Date[] = [];
-    const current = new Date(viewStart);
-    while (current <= viewEnd) {
-        calendarDays.push(new Date(current));
-        current.setDate(current.getDate() + 1);
-    }
-
-    // 3. Download Logic
-    const handleDownload = () => {
-        // Create an SVG string representing the calendar
-        const width = 400;
-        const cellWidth = width / 7;
-        const headerHeight = 40;
-        const rowHeight = 60;
-        const rows = Math.ceil(calendarDays.length / 7);
-        const height = headerHeight + 30 + (rows * rowHeight);
-
-        // Colors
-        const bgTarget = "#D0E6FD"; // Light Blue for Target
-        const textOpen = "#2b63df";
-        const textTarget = "#162660";
-
-        let svgContent = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" style="font-family: sans-serif; background: white;">
-            <rect width="100%" height="100%" fill="white"/>
-            <text x="${width / 2}" y="25" text-anchor="middle" font-size="14" font-weight="bold" fill="#18181B">
-                ${realOpenDate.getMonth() + 1}월 ${realOpenDate.getDate()}일 예약 오픈 예시
-            </text>
-            
-            <!-- Week Headers -->
-            <g transform="translate(0, 45)">
-                ${['일', '월', '화', '수', '목', '금', '토'].map((d, i) =>
-            `<text x="${i * cellWidth + cellWidth / 2}" y="15" text-anchor="middle" font-size="10" fill="#A1A1AA">${d}</text>`
-        ).join('')}
-            </g>
-            
-            <!-- Days -->
-            <g transform="translate(0, 70)">
-        `;
-
-        calendarDays.forEach((date, i) => {
-            const x = (i % 7) * cellWidth;
-            const y = Math.floor(i / 7) * rowHeight;
-
-            const isOpenDate = date.toDateString() === realOpenDate.toDateString();
-            const curr = new Date(date); curr.setHours(0, 0, 0, 0);
-            const tStart = new Date(targetStart); tStart.setHours(0, 0, 0, 0);
-            const tEnd = new Date(targetEnd); tEnd.setHours(0, 0, 0, 0);
-            const isTargetRange = curr >= tStart && curr <= tEnd;
-
-            // Background
-            if (isTargetRange) {
-                // Round corners if start/end
-                svgContent += `<rect x="${x}" y="${y}" width="${cellWidth}" height="${rowHeight}" fill="${bgTarget}" />`;
-            }
-
-            // Date Number
-            let fill = "#52525B";
-            if (date.getMonth() !== realOpenDate.getMonth() && !isTargetRange) fill = "#D4D4D8";
-            if (isTargetRange) fill = textTarget;
-            if (isOpenDate) fill = textOpen;
-
-            svgContent += `<text x="${x + cellWidth / 2}" y="${y + 20}" text-anchor="middle" font-size="12" font-weight="${isOpenDate || isTargetRange ? 'bold' : 'normal'}" fill="${fill}">${date.getDate()}</text>`;
-
-            // Open Label / Time
-            if (isOpenDate) {
-                svgContent += `<rect x="${x + 5}" y="${y + 30}" width="${cellWidth - 10}" height="14" rx="4" fill="${textOpen}" />`;
-                svgContent += `<text x="${x + cellWidth / 2}" y="${y + 40}" text-anchor="middle" font-size="8" fill="white" font-weight="bold">오픈 ${targetTime || ''}</text>`;
-            }
-        });
-
-        svgContent += `</g></svg>`;
-
-        // Conversion
-        const blob = new Blob([svgContent], { type: 'image/svg+xml;charset=utf-8' });
-        const url = URL.createObjectURL(blob);
-        const img = new Image();
-        img.onload = () => {
-            const canvas = document.createElement('canvas');
-            canvas.width = width;
-            canvas.height = height;
-            const ctx = canvas.getContext('2d');
-            if (ctx) {
-                ctx.drawImage(img, 0, 0);
-                const pngUrl = canvas.toDataURL('image/png');
-                const a = document.createElement('a');
-                a.href = pngUrl;
-                a.download = `reservation_calendar_preview.png`;
-                a.click();
-            }
-            URL.revokeObjectURL(url);
-        };
-        img.src = url;
-    };
-
-    return (
-        <div className="bg-white rounded-lg border border-zinc-200 p-3 mt-2">
-            <div className="flex justify-between items-center mb-2">
-                <div className="text-xs font-bold text-zinc-900">
-                    {realOpenDate.getMonth() + 1}월 {realOpenDate.getDate()}일 예약 오픈 예시
-                </div>
-                <Button variant="ghost" size="small" onClick={handleDownload} className="reservation-secondary text-[10px] px-2">
-                    이미지 다운로드
-                </Button>
-            </div>
-
-            {/* Week Headers */}
-            <div className="grid grid-cols-7 mb-1">
-                {['일', '월', '화', '수', '목', '금', '토'].map(d => (
-                    <div key={d} className="text-[10px] text-center text-zinc-400">{d}</div>
-                ))}
-            </div>
-
-            {/* Days */}
-            <div className="grid grid-cols-7 gap-y-1">
-                {calendarDays.map((date, idx) => {
-                    const isOpenDate = date.toDateString() === realOpenDate.toDateString();
-
-                    const tStart = new Date(targetStart); tStart.setHours(0, 0, 0, 0);
-                    const tEnd = new Date(targetEnd); tEnd.setHours(0, 0, 0, 0);
-                    const curr = new Date(date); curr.setHours(0, 0, 0, 0);
-                    const isTargetRange = curr >= tStart && curr <= tEnd;
-
-                    let bgClass = "bg-transparent";
-                    let textClass = "text-zinc-600";
-
-                    // Dim days from other months unless they are relevant
-                    if (curr.getMonth() !== realOpenDate.getMonth() && !isTargetRange) {
-                        textClass = "text-zinc-300";
-                    }
-
-                    if (isTargetRange) {
-                        bgClass = "bg-[#D0E6FD]";
-                        textClass = "text-[#162660] font-bold";
-                        if (curr.getTime() === tStart.getTime()) bgClass += " rounded-l-md";
-                        if (curr.getTime() === tEnd.getTime()) bgClass += " rounded-r-md";
-                    }
-
-                    return (
-                        <div key={idx} className={`relative flex flex-col items-center justify-start py-1 min-h-[50px] ${bgClass} ${textClass}`}>
-                            <span className={`text-xs ${isOpenDate ? 'text-blue-700 font-bold' : ''}`}>{date.getDate()}</span>
-                            {isOpenDate && (
-                                <div className="mt-1 flex flex-col items-center">
-                                    <span className="text-[10px] bg-blue-700 text-white font-bold px-1.5 py-0.5 rounded-full leading-none mb-0.5">오픈</span>
-                                    <span className="text-[9px] text-blue-700 font-bold leading-none">{targetTime}</span>
-                                </div>
-                            )}
-                        </div>
-                    );
-                })}
-            </div>
-        </div>
-    );
-};

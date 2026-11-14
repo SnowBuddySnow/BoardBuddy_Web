@@ -1,3 +1,4 @@
+import PersonalCalendarPreview from '../components/PersonalCalendarPreview';
 import { useState, useEffect } from 'react';
 import { getUserInfo } from '../services/user';
 import { getMyApplications, withdrawCrewApplication } from '../services/crew';
@@ -163,7 +164,8 @@ export default function Home({
     return (
         <div className="flex-1 flex flex-col h-full overflow-hidden bg-[#FAF8F3] relative">
             {/* Content Area */}
-            <main className="flex-1 overflow-y-auto pb-6 space-y-5">
+            <main className="flex-1 overflow-y-auto pt-4 pb-6 space-y-5">
+                {seasonHouseAvailable && userInfo?.crew && <PersonalCalendarPreview crewId={userInfo.crew.crewId} onOpen={onCalendarClick} />}
 
                 {/* Team Info / Host Metadata (De-emphasized compact row) */}
                 {!hasCrew && onOnboardingClick && <button type="button" onClick={onOnboardingClick} className="mb-5 flex min-h-14 w-full items-center justify-between gap-3 rounded-2xl bg-[#162660] p-4 text-left text-sm font-bold text-white"><span>내 가입·크루 생성 진행 상태 이어보기</span><ChevronRight className="h-4 w-4 shrink-0" /></button>}
