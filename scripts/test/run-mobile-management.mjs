@@ -69,6 +69,7 @@ try {
             state.seasonOpen = true;
             await page.reload();
             await page.getByRole('button', { name: '2026년 11월 15일', exact: true }).click();
+            await page.getByRole('checkbox', {name:'숙박일 기준을 확인하고 동의합니다. *',exact:true}).check();
             state.delayBookingMs = 1200;
             await page.locator('.reservation-content').getByRole('button', { name: '예약하기', exact: true }).click();
             await page.getByText('예약 요청을 처리하고 있어요', { exact: true }).waitFor();

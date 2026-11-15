@@ -1,3 +1,5 @@
+import StayPolicyConsent from '../components/reservation/StayPolicyConsent';
+import SeasonPassCard from '../components/reservation/SeasonPassCard';
 import { useEffect, useRef, useState } from 'react';
 import ReservationWindowNotice, {type ReservationAvailability} from '../components/ReservationWindowNotice';
 import BuddyNote from '../components/BuddyNote';
@@ -16,7 +18,7 @@ export default function MyReservations({ onBack, onCrewClick }: { onBack: () => 
     const [crewId, setCrewId] = useState<number>();
     const [teachingEnabled, setTeachingEnabled] = useState(false);
     const [items, setItems] = useState<MyReservation[]>([]);
-    const [usage, setUsage] = useState(0);
+    const [policyDate, setPolicyDate] = useState('');
     const [loading, setLoading] = useState(true);
     const [busy, setBusy] = useState(false);
     const lock = useRef(false);
@@ -42,7 +44,7 @@ export default function MyReservations({ onBack, onCrewClick }: { onBack: () => 
         const key = localDateKey(month).slice(0,7);
         if (loadedMonth.current !== key) { setItems([]); loadedMonth.current = key; }
         void getMyCrewCalendar(crewId, localDateKey(month)).then(data => {
-            if (request === revision.current) { setItems(data.my_reservations); setUsage(data.usage_count); }
+            if (request === revision.current) { setItems(data.my_reservations); }
         }).catch(() => { if (request === revision.current) setError('예약 현황을 불러오지 못했습니다. 다시 시도해 주세요.'); })
             .finally(() => { if (request === revision.current) setLoading(false); });
         return () => { if (revision.current === request) revision.current = request + 1; };
@@ -54,8 +56,8 @@ export default function MyReservations({ onBack, onCrewClick }: { onBack: () => 
         lock.current = true; setBusy(true); setError('');
         try {
             if (action === 'reserve') {
-                if (availability?.bookable !== true) return;
-                const result = await createReservation(crewId, [selected]);
+                if (availability?.bookable !== true || policyDate !== selected) return;
+                const result = await createReservation(crewId, [selected], undefined, 1);
                 const booking = result.results?.find(item => item.date === selected);
                 if (!booking?.success) throw Error(booking?.message || '신청하지 못했습니다.');
             } else if (reservation && action === 'cancel') {
@@ -64,7 +66,7 @@ export default function MyReservations({ onBack, onCrewClick }: { onBack: () => 
             } else if (reservation && (reservation.teaching || (teachingEnabled && state === 'confirmed'))) {
                 await (reservation.teaching ? withdrawFromTeaching : applyForTeaching)(crewId, reservation.reservation_id);
             }
-            setRefresh(value => value + 1);
+            setPolicyDate(''); setRefresh(value => value + 1);
         } catch (cause) { setError(cause instanceof Error ? cause.message : '처리하지 못했습니다. 다시 확인해 주세요.'); }
         finally { lock.current = false; setBusy(false); }
     };
@@ -72,7 +74,8 @@ export default function MyReservations({ onBack, onCrewClick }: { onBack: () => 
     const move = (offset: number) => { const next = new Date(month.getFullYear(), month.getMonth()+offset, 1); setMonth(next); setSelected(localDateKey(next)); };
     return <ReservationLayout className="crew-calendar-screen" title="나의 달력" onBack={onBack} action={onCrewClick && <button onClick={onCrewClick}>크루 달력 →</button>}>
         <main className="reservation-content" aria-busy={loading || busy}>
-            <div className="mb-3 flex items-center justify-between text-xs text-slate-500"><span>확정·대기 일정을 한눈에 확인하세요.</span><span>시즌방 이용 {usage}박 <button className="ml-2 min-h-10 text-blue-700" onClick={() => setRefresh(value=>value+1)}>새로고침</button></span></div>
+            <div className="mb-3 flex items-center justify-between text-xs text-slate-500"><span>확정·대기 일정을 한눈에 확인하세요.</span><span><button className="ml-2 min-h-10 text-blue-700" onClick={() => setRefresh(value=>value+1)}>새로고침</button></span></div>
+            {crewId && <SeasonPassCard crewId={crewId} refreshKey={refresh} />}
             {error && <p role="alert" className="mb-3 text-sm text-red-700">{error} <button onClick={() => setRefresh(value => value+1)}>다시 불러오기</button></p>}
             <div className="reservation-workspace"><Calendar variant="crew-classic" month={`${month.getMonth()+1}월`} year={month.getFullYear()}
                 startDayOfWeek={new Date(month.getFullYear(),month.getMonth(),1).getDay()} totalDays={new Date(month.getFullYear(),month.getMonth()+1,0).getDate()}
@@ -91,7 +94,8 @@ export default function MyReservations({ onBack, onCrewClick }: { onBack: () => 
                     <p role="status" className="my-3 text-sm text-slate-600">{error ? '예약 현황을 확인할 수 없습니다.' : loading ? '현황을 확인하고 있어요.' : state==='confirmed' ? '예약이 확정되었습니다.' : state==='waiting' ? `예약 대기 ${reservation?.waiting_order ?? '-'}번입니다.` : '예약 내역이 없습니다.'}</p>
                     {(reservation?.teaching || (state==='confirmed' && teachingEnabled)) && <label className="mb-3 flex items-center justify-between text-sm">강습 신청<input type="checkbox" role="switch" aria-label="강습 신청" checked={reservation?.teaching === true} disabled={busy || loading} onChange={() => void mutate('teaching')} /></label>}
                     <ReservationWindowNotice value={reservation ? {bookable:true} : availability} />
-                    <button disabled={busy || loading || !!error || (!reservation && availability?.bookable !== true)} onClick={() => void mutate(reservation ? 'cancel' : 'reserve')} className="reservation-primary w-full px-4 py-3">{busy ? '처리 중…' : reservation ? state==='waiting' ? '대기 취소' : '예약 취소' : '예약하기'}</button>
+                    {!reservation && <StayPolicyConsent dates={[selected]} checked={policyDate === selected} onChange={checked => setPolicyDate(checked ? selected : '')} disabled={busy} />}
+                    <button disabled={busy || loading || !!error || (!reservation && (availability?.bookable !== true || policyDate !== selected))} onClick={() => void mutate(reservation ? 'cancel' : 'reserve')} className="reservation-primary w-full px-4 py-3">{busy ? '처리 중…' : reservation ? state==='waiting' ? '대기 취소' : '예약 취소' : '예약하기'}</button>
                 </section></aside>
             </div>
         </main>

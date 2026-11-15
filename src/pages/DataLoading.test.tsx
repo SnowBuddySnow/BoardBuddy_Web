@@ -26,6 +26,7 @@ describe('page fetch dependencies and reservation cache refresh (synthetic HTTP 
         localStorage.clear();
         dayData = { bookable: true, date: '2026-02-19', confirmedCount: 0, reservations: [] };
         http.get.mockImplementation(async (path: string) => {
+            if (path.endsWith('/season-stays/pass')) return result({ registered: false });
             if (path === '/users/me') return result({ userId: 7, crew: { crewId: 1 } });
             if (path === '/users/me/reservations') return result([]);
             if (/^\/crews\/[12]$/.test(path)) return result({ dailyCapacity: 2 });
@@ -43,6 +44,7 @@ describe('page fetch dependencies and reservation cache refresh (synthetic HTTP 
         vi.useRealTimers(); vi.unstubAllGlobals();
     });
     const countGets = (fragment: string) => http.get.mock.calls.filter(([path]) => String(path).includes(fragment)).length;
+    const agree = async () => { await act(async () => (container.querySelector('[aria-label="숙박일 안내"] input') as HTMLInputElement).click()); };
     const click = async (text: string) => {
         const button = Array.from(container.querySelectorAll('button')).find(node => node.textContent?.trim() === text);
         expect(button, text).toBeTruthy(); await act(async () => button!.click());
@@ -101,7 +103,7 @@ describe('page fetch dependencies and reservation cache refresh (synthetic HTTP 
         expect(container.textContent).toContain('2월 19일');
         expect(countGets('/reservations/days/')).toBe(1);
         dayData = { bookable: true, date: '2026-02-19', confirmedCount: 1, reservations: [] };
-        await click('예약하기');
+        await agree(); await click('예약하기');
         expect(http.post).toHaveBeenCalledOnce();
         expect(countGets('/reservations/days/')).toBe(2);
         expect(container.textContent).toContain('확정 1/2');
@@ -109,7 +111,7 @@ describe('page fetch dependencies and reservation cache refresh (synthetic HTTP 
     it('does not report a rejected booking as success or issue a refresh', async () => {
         http.post.mockResolvedValue(result({ results: [{ date: '2026-02-19', success: false, message: '접수 전입니다.' }] }));
         await act(async () => root.render(<ReservationStats onBack={vi.fn()} />));
-        await click('예약하기');
+        await agree(); await click('예약하기');
         expect(alert).toHaveBeenCalledWith('접수 전입니다.');
         expect(countGets('/reservations/days/')).toBe(1);
     });
@@ -118,6 +120,7 @@ describe('page fetch dependencies and reservation cache refresh (synthetic HTTP 
         let finish!: (value: unknown) => void;
         http.post.mockImplementation(() => new Promise(resolve => { finish = resolve; }));
         await act(async () => root.render(<ReservationStats onBack={vi.fn()} />));
+        await agree();
         const button = Array.from(container.querySelectorAll('button')).find(node => node.textContent?.trim() === '예약하기')!;
         await act(async () => { button.click(); button.click(); });
         expect(http.post).toHaveBeenCalledOnce();
@@ -131,7 +134,7 @@ describe('page fetch dependencies and reservation cache refresh (synthetic HTTP 
         let finish!: (value: unknown) => void;
         http.post.mockImplementation(() => new Promise(resolve => { finish = resolve; }));
         await act(async () => root.render(<ReservationStats onBack={vi.fn()} />));
-        await click('예약하기');
+        await agree(); await click('예약하기');
         await act(async () => vi.advanceTimersByTime(800));
         expect(container.textContent).toContain('예약 요청을 처리하고 있어요');
         expect(http.post).toHaveBeenCalledOnce();

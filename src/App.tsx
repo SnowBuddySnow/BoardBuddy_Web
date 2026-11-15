@@ -607,7 +607,7 @@ function App() {
           />
         );
       case 'notifications':
-        return <Notifications onBack={() => setCurrentView(notificationReturnView)} onChanged={() => setNotificationRefreshKey(key => key + 1)} onOnboarding={() => setCurrentView('onboarding')} />;
+        return <Notifications onBack={() => setCurrentView(notificationReturnView)} onChanged={() => setNotificationRefreshKey(key => key + 1)} onOnboarding={() => setCurrentView('onboarding')} onMyReservations={() => setCurrentView('my_reservations')} />;
       case 'parties':
         return (
           <Parties
