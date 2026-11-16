@@ -1,3 +1,7 @@
+import StayPolicyConsent from '../components/reservation/StayPolicyConsent';
+import StayAnnouncementPanel from '../components/reservation/StayAnnouncementPanel';
+import SeasonPassManager from '../components/reservation/SeasonPassManager';
+import { completeStay } from '../services/seasonStays';
 import ReservationWindowNotice from '../components/ReservationWindowNotice';
 import BuddyNote from '../components/BuddyNote';
 import '../components/reservation/crew-calendar.css';
@@ -51,6 +55,8 @@ export default function ReservationStats({ onBack, onMyCalendarClick, onReservat
         const timer = window.setTimeout(() => setShowProcessing(true), 700);
         return () => window.clearTimeout(timer);
     }, [submitting]);
+    const [policyDate, setPolicyDate] = useState('');
+    const [completingId, setCompletingId] = useState<number>();
     const mutationBusy = useRef(false);
     const detailRequests = useRef(new Map<string, Promise<void>>());
     const detailFetchedAt = useRef(new Map<string, number>());
@@ -154,6 +160,7 @@ export default function ReservationStats({ onBack, onMyCalendarClick, onReservat
         .map(r => parseInt(r.date.split('-')[2], 10)) || [];
 
     const handleCreateReservation = async () => {
+        if (policyDate !== formatDate(selectedDay)) return;
         if (readOnly || !crewOpen || mutationBusy.current || !detailsCache[formatDate(selectedDay)]?.bookable) return;
         if (!crewId) {
             alert("크루 정보를 불러오는 중입니다. 잠시 후 다시 시도해주세요.");
@@ -164,9 +171,10 @@ export default function ReservationStats({ onBack, onMyCalendarClick, onReservat
 
         try {
             mutationBusy.current = true; setShowProcessing(false); setSubmitting(true);
-            const result = await createReservation(crewId, [dateStr]);
+            const result = await createReservation(crewId, [dateStr], undefined, 1);
             const booking = result.results?.find(item => item.date === dateStr);
             if (!booking?.success) { alert(booking?.message || '예약을 신청하지 못했습니다. 접수 기간과 크루 설정을 확인해 주세요.'); return; }
+            setPolicyDate('');
             alert(booking.status === 'WAITING' ? `대기 ${booking.waitlistPosition ?? '-'}번으로 신청되었습니다.` : '예약이 확정되었습니다.');
             // Refresh data
             const calDateStr = `${currentYear}-${String(currentMonthIndex + 1).padStart(2, '0')}-15`;
@@ -445,7 +453,7 @@ export default function ReservationStats({ onBack, onMyCalendarClick, onReservat
                                                     <div className="flex flex-col items-start gap-0.5 min-w-0">
                                                         <div className="flex flex-wrap items-center gap-1.5">
                                                             <span className="text-sm font-bold text-zinc-700 dark:text-zinc-300">
-                                                                {member.guestId ? `게스트 #${member.guestId}` : `회원 #${member.participantAccountId}`}
+                                                                {member.participantName || (member.guestId ? `게스트 #${member.guestId}` : `회원 #${member.participantAccountId}`)}
                                                             </span>
                                                             <span className="text-xs text-zinc-500">{member.status === 'WAITING' ? `대기 ${member.waitlistPosition ?? '-'}번` : '확정'}</span>
                                                             {['CREW_CAPTAIN', 'CREW_MANAGER'].includes(member.memberRole ?? '') && <span className="rounded bg-slate-200 px-1.5 py-0.5 text-[10px] font-bold text-slate-600">임원진</span>}
@@ -457,6 +465,7 @@ export default function ReservationStats({ onBack, onMyCalendarClick, onReservat
                                                             )}
                                                         </div>
                                                     </div>
+                                                    {!readOnly && currentDetail?.canManageReservations && member.status === 'CONFIRMED' && formatDate(selectedDay) < `${todayDate.getFullYear()}-${String(todayDate.getMonth()+1).padStart(2,'0')}-${String(todayDate.getDate()).padStart(2,'0')}` && <button className="min-h-10 rounded-lg border border-slate-200 px-2 text-xs text-blue-700" disabled={completingId != null} onClick={async () => { if (!crewId || completingId != null) return; setCompletingId(member.reservationId); try { await completeStay(crewId, member.reservationId, !member.stayCompleted); await fetchDetailForDay(selectedDay, true); } catch { alert('이용 완료 상태를 저장하지 못했습니다.'); } finally { setCompletingId(undefined); } }}>{completingId === member.reservationId ? '저장 중…' : member.stayCompleted ? '이용 완료 취소' : '이용 완료 확인'}</button>}
                                                     {!readOnly && currentDetail?.canManageReservations && (
                                                         <div className="reservation-member-controls">
                                                             <select
@@ -518,7 +527,9 @@ export default function ReservationStats({ onBack, onMyCalendarClick, onReservat
                                     </button>
                                 </div>}
 
+                                {crewId && currentDetail?.canManageReservations && <><SeasonPassManager crewId={crewId} /><StayAnnouncementPanel key={`${crewId}-${formatDate(selectedDay)}`} crewId={crewId} date={formatDate(selectedDay)} confirmedCount={Number(currentDetail.confirmedCount)} /></>}
                                 <ReservationWindowNotice value={currentDetail ?? undefined} />
+                                {!confirmedDays.includes(selectedDay) && !pendingDays.includes(selectedDay) && <StayPolicyConsent dates={[formatDate(selectedDay)]} checked={policyDate === formatDate(selectedDay)} onChange={checked => setPolicyDate(checked ? formatDate(selectedDay) : '')} disabled={submitting} />}
                                 {/* Action Button */}
                                 {confirmedDays.includes(selectedDay) || pendingDays.includes(selectedDay) ? (
                                     <Button
@@ -531,7 +542,7 @@ export default function ReservationStats({ onBack, onMyCalendarClick, onReservat
                                     </Button>
                                 ) : (
                                     <Button
-                                        disabled={submitting || !crewOpen || currentDetail?.bookable !== true}
+                                        disabled={submitting || !crewOpen || currentDetail?.bookable !== true || policyDate !== formatDate(selectedDay)}
                                         onClick={handleCreateReservation}
                                         className="reservation-primary w-full h-14 text-base"
                                     >

@@ -11,6 +11,7 @@ beforeEach(()=>{
  vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT',true); vi.useFakeTimers({toFake:['Date']}); vi.setSystemTime(new Date('2026-11-13T03:00:00Z')); vi.clearAllMocks(); teaching=false;
  const result=(data:unknown)=>({data:{data}});
  http.get.mockImplementation(async(path:string)=>{
+  if(path.endsWith('/season-stays/pass'))return result({registered:false});
   if(path==='/users/me')return result({crew:{crewId:17}});
   if(path==='/crews/17')return result({teachingEnabled:true});
   if(path.includes('/reservations/days/'))return result({bookable:true});

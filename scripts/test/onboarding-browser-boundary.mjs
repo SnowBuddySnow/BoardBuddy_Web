@@ -6,7 +6,8 @@ export const installOnboardingBoundary = async (page, { origin = 'http://127.0.0
     state.participants = [{ id: 71, userId: 99102, userName: '가상 부원', status: 'PENDING', createdAt: '2026-11-13T00:00:00', paymentStatus: null, managerMemo: '' }];
     state.writes = [];
     state.crewOverrides = {};
-    state.seedReservation = { reservationId: 77, participantAccountId: 99102, status: 'CONFIRMED', paymentStatus: 'UNPAID', managerMemo: null };
+    state.seedReservation = { participantName: '가상 부원', reservationId: 77, participantAccountId: 99102, status: 'CONFIRMED', paymentStatus: 'UNPAID', managerMemo: null };
+    state.seasonPasses = {}; state.stayAnnouncements = []; state.notifications = [];
     state.delayBookingMs = 0;
     state.seasonOpen = false; state.bookings = []; state.nextBookingId = 80;
     page.on('pageerror', error => state.errors.push(error.message));
@@ -42,12 +43,39 @@ export const installOnboardingBoundary = async (page, { origin = 'http://127.0.0
             Object.assign(state.crewOverrides, request.postDataJSON()); return respond(null);
         }
         if (path === '/crews/17') return respond({ crewId: 17, crew_id: 17, crewName: '가상 크루', name: '가상 크루', univ: '한국대학교', status: 'ACTIVE', role: state.role, member_count: 2, seasonHouseActive: state.seasonOpen, dailyCapacity: 20, teachingEnabled: true, ...state.crewOverrides });
+        if (path === '/crews/17/members') return respond([{user_id:99101,name:'가상 회원',role:state.role},{user_id:99102,name:'가상 부원',role:'CREW_MEMBER'}]);
         if (path === '/crews/17/managers') return respond([]);
         if (path === '/operations/context') return respond({ permissions: state.role === 'CREW_CAPTAIN' ? ['PARTIES_CREATE', 'PARTIES_MANAGE', 'EVENT_GROUPS_CREATE', 'EVENT_GROUPS_VIEW', 'EVENT_GROUPS_MANAGE'] : [] });
         if (path === '/admin/crews' && method === 'POST') { const item = { id: 17, name: request.postDataJSON().name, approvalStatus: 'PENDING', status: 'INACTIVE', createdAt: '2026-11-13T00:00:00' }; state.requests.push(item); return respond(item, 201); }
         if (path === '/admin/crews') return respond({ crews: state.requests, schools: [], developerAccess: false });
         if (path === '/notifications/unread-count') return respond({ count: 0 });
-        if (path === '/notifications') return respond({ items: [], unreadCount: 0 });
+        if (path === '/notifications') return respond({ items: state.notifications, unreadCount: state.notifications.filter(item=>!item.read).length });
+        if (/^\/notifications\/\d+\/read$/.test(path) && method === 'PATCH') { state.notifications.find(item=>item.id===Number(path.split('/')[2])).read=true; state.stayAnnouncements.filter(item=>item.id===Number(path.split('/')[2])).forEach(item=>item.recipients.filter(recipient=>recipient.accountId===99101).forEach(recipient=>recipient.read=true)); return respond(null); }
+        if (path.includes('/season-stays/pass')) {
+            const id = path.endsWith('/pass') ? 99101 : Number(path.split('/').pop());
+            if (method === 'PUT') { if(state.role!=='CREW_CAPTAIN')return respond(null,403); state.seasonPasses[id] = { ...request.postDataJSON(),registered:true }; }
+            const pass = state.seasonPasses[id];
+            if (!pass) return respond({registered:false});
+            const usedNights=state.bookings.filter(item=>item.participantAccountId===id&&item.status==='CONFIRMED'&&item.stayCompleted).length;
+            const reservedNights=state.bookings.filter(item=>item.participantAccountId===id&&item.status==='CONFIRMED'&&!item.stayCompleted).length;
+            return respond({...pass, usedNights, reservedNights, remainingNights:pass.totalNights==null?null:Math.max(0,pass.totalNights-usedNights-reservedNights)});
+        }
+        if (path === '/crews/17/season-stays/announcements') {
+            if (state.role !== 'CREW_CAPTAIN') return respond(null,403);
+            if (method === 'POST') {
+                const body=request.postDataJSON(); const prior=state.stayAnnouncements.find(item=>item.requestKey===body.requestKey); if(prior)return respond(prior);
+                const confirmed=[...state.bookings.filter(item=>item.date===body.date&&item.status==='CONFIRMED'),state.seedReservation];
+                const ids=[...new Set(confirmed.map(item=>item.participantAccountId??item.requestedByAccountId))];
+                const item={...body,id:state.stayAnnouncements.length+1,stayDate:body.date,sentAt:'2026-11-15T12:00:00',recipients:ids.map(accountId=>({accountId,name:accountId===99101?'가상 회원':'가상 부원',read:false}))};
+                state.stayAnnouncements.unshift(item); state.writes.push({path,body});
+                if(ids.includes(99101))state.notifications.unshift({id:item.id,type:'STAY_ANNOUNCEMENT',audienceType:'ACCOUNT',senderType:'MANAGER',title:item.title,body:item.body,actionUrl:'?view=my_reservations',channels:['IN_APP'],publishedAt:item.sentAt,read:false});
+                return respond(item);
+            }
+            return respond(state.stayAnnouncements.filter(item=>item.stayDate===url.searchParams.get('date')));
+        }
+        if (/^\/crews\/17\/season-stays\/reservations\/\d+\/completion$/.test(path)) {
+            if(state.role!=='CREW_CAPTAIN')return respond(null,403); const id=Number(path.split('/').at(-2)); const item=state.bookings.find(item=>item.reservationId===id)??state.seedReservation; item.stayCompleted=request.postDataJSON().completed; return respond(null);
+        }
         if (path === '/crews/my-applications') return respond(state.applied ? [{ application_id: 71, crew_id: 17, crew_name: '가상 크루', status: state.approved ? 'APPROVED' : 'PENDING' }] : []);
         if (path === '/dashboard/organizer-groups') return respond(state.groups);
         if (path === '/dashboard/organizer-group-invitations') return respond([]);
@@ -68,7 +96,7 @@ export const installOnboardingBoundary = async (page, { origin = 'http://127.0.0
         if (path === '/dashboard/events/9101/consent-responses') return respond({ eventId: 9101, eventTitle: state.managedEvent.title, items: [], participants: [], canRevealSensitive: false, canExport: false, privateValuesRevealed: false });
         if (path === '/crews/17/reservations' && method === 'POST') {
             if (state.delayBookingMs) await new Promise(resolve => setTimeout(resolve, state.delayBookingMs));
-            const body = request.postDataJSON(); state.writes.push({ path, body });
+            const body = request.postDataJSON(); if(body.stayPolicyVersion!==1)return respond(null,400,'숙박일 안내 동의가 필요합니다.'); state.writes.push({ path, body });
             const results = body.dates.map(date => { const item = { date, reservationId: state.nextBookingId++, participantAccountId: 99101, status: 'CONFIRMED' }; state.bookings.push(item); return { ...item, success: true, attempts: 1 }; });
             return respond({ crewId: 17, accountId: 99101, results });
         }
@@ -86,7 +114,7 @@ export const installOnboardingBoundary = async (page, { origin = 'http://127.0.0
             booking.teaching = method === 'POST'; return respond(booking);
         }
         if (path === '/users/me/reservations') return respond([]);
-        if (path.startsWith('/crews/17/reservations/days/')) return respond({ bookable: !path.endsWith(state.closedDate ?? 'unmatched'), opensAt: path.endsWith(state.closedDate ?? 'unmatched') ? '2026-11-18T18:00:00' : null, reservationDayId: 1, crewId: 17, reservationDate: path.split('/').pop(), capacityLimited: true, capacity: 20, confirmedCount: 1 + state.bookings.filter(item => item.date === path.split('/').pop()).length, waitingCount: 0, canManageReservations: state.role === 'CREW_CAPTAIN', reservations: [...state.bookings.filter(item => item.date === path.split('/').pop()), state.seedReservation] });
+        if (path.startsWith('/crews/17/reservations/days/')) return respond({ bookable: !path.endsWith(state.closedDate ?? 'unmatched'), opensAt: path.endsWith(state.closedDate ?? 'unmatched') ? '2026-11-18T18:00:00' : null, reservationDayId: 1, crewId: 17, reservationDate: path.split('/').pop(), capacityLimited: true, capacity: 20, confirmedCount: 1 + state.bookings.filter(item => item.date === path.split('/').pop() && item.status === 'CONFIRMED').length, waitingCount: state.bookings.filter(item => item.date === path.split('/').pop() && item.status === 'WAITING').length, canManageReservations: state.role === 'CREW_CAPTAIN', reservations: [...state.bookings.filter(item => item.date === path.split('/').pop()), state.seedReservation] });
         if (path === '/crews/17/calendar') { const month = url.searchParams.get('date').slice(0, 7); return respond({ calendar: [{ date: `${month}-13`, occupancy_status: 'LOW' }, { date: `${month}-14`, occupancy_status: 'MEDIUM' }, { date: `${month}-15`, occupancy_status: 'HIGH' }], my_reservations: state.bookings.map(item => ({ date: item.date, status: item.status.toLowerCase(), reservation_id: item.reservationId })) }); }
         if (path === '/events/9101') return respond({ id: 9101, title: '가상 초대 행사', description: 'Synthetic event', activityType: 'EVENT', planningMode: 'MANAGER_PLANNED', startsAt: '2027-01-01T09:00:00', capacity: 20, joinedCount: 0, status: 'OPEN', visibilityType: 'PUBLIC', joinPolicy: 'APPROVAL_REQUIRED', organizerGroupId: 1, organizerGroupName: 'Synthetic hosts', kusbfAssociated: false, paymentRequired: false, currentUserStatus: null });
         if (path === '/events/9101/refund-policy') return respond({ refundPolicy: '' });

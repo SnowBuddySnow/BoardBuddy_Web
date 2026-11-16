@@ -90,6 +90,7 @@ export interface CrewApplicant {
 // --- New Reservation DTOs ---
 
 export interface ReservationCreateRequest {
+    stayPolicyVersion?: number;
     dates: string[];
     guestId?: number;
 }
@@ -113,6 +114,8 @@ export interface ReservationCreateResponse {
 export interface ReservationBookingResponse {
     memberRole?: string | null;
     teachingRequested?: boolean;
+    participantName?: string | null;
+    stayCompleted?: boolean;
     reservationId: number;
     participantAccountId?: number;
     guestId?: number;

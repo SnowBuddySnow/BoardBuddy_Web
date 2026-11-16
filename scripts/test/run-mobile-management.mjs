@@ -60,7 +60,9 @@ try {
             assert(await page.getByRole('switch', { name: '내 일정 표시', exact: true }).getAttribute('aria-checked') === 'true', 'Personal overlay did not turn on');
             assert(state.traffic.filter(item => item.path === '/crews/17/calendar').length === monthReads, 'Overlay toggle refetched the same member calendar');
             await day.locator('.reservation-dot-high').waitFor();
-            await day.click(); await page.getByText('회원 #99102', { exact: true }).waitFor();
+            await day.click();
+            await page.locator('.reservation-member-row').getByText(state.seedReservation.participantName, { exact: true }).waitFor();
+            assert(await page.getByText('회원 #99102', { exact: true }).count() === 0, 'Named member fell back to an internal account ID');
             assert(await page.getByRole('button', { name: /예약하기|예약 취소하기|관리 정보 저장/ }).count() === 0, 'Closed calendar exposed enabled mutations');
             assert(await page.getByRole('combobox', { name: /입금 상태/ }).count() === 0, 'Read-only calendar exposed payment edits');
             await page.getByRole('combobox', { name: '예약자 정렬' }).selectOption('earliest');
@@ -69,6 +71,7 @@ try {
             state.seasonOpen = true;
             await page.reload();
             await page.getByRole('button', { name: '2026년 11월 15일', exact: true }).click();
+            await page.getByRole('checkbox', {name:'숙박일 기준을 확인하고 동의합니다. *',exact:true}).check();
             state.delayBookingMs = 1200;
             await page.locator('.reservation-content').getByRole('button', { name: '예약하기', exact: true }).click();
             await page.getByText('예약 요청을 처리하고 있어요', { exact: true }).waitFor();

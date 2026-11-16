@@ -1,6 +1,7 @@
+import StayPolicyConsent from '../components/reservation/StayPolicyConsent';
 import { getReservationSeason } from '../lib/reservationSeason';
 import { ReservationLayout, ReservationSummary } from '../components/reservation/ReservationLayout';
-import { useState, useEffect, useCallback } from 'react';
+import { useRef, useState, useEffect, useCallback } from 'react';
 import { Button } from '../components/Button';
 import { Calendar } from '../components/Calendar';
 import { createReservation, cancelReservation, getCrewInfo } from '../services/crew';
@@ -43,6 +44,10 @@ export default function Reservation({ onBack, isGuest = false, guestCrewId }: Re
 
     // Selected days for NEW reservation
     const [selectedDays, setSelectedDays] = useState<number[]>([]);
+    const [policyDates, setPolicyDates] = useState('');
+    const selectionKey = `${currentYear}-${currentMonthIndex}-${[...selectedDays].sort((a,b)=>a-b).join(',')}`;
+    const [submittingStay, setSubmittingStay] = useState(false);
+    const stayLock = useRef(false);
 
     // Guest State
     const [guestName, setGuestName] = useState('');
@@ -239,7 +244,7 @@ export default function Reservation({ onBack, isGuest = false, guestCrewId }: Re
 
     // Submit Reservation
     const handleSubmit = async () => {
-        if (selectedDays.length === 0) return;
+        if (selectedDays.length === 0 || policyDates !== selectionKey || stayLock.current) return;
 
         if (!crewId) {
             alert("크루 정보를 불러오는 중입니다. 잠시 후 다시 시도해주세요.");
@@ -259,6 +264,7 @@ export default function Reservation({ onBack, isGuest = false, guestCrewId }: Re
     };
 
     const executeSubmitReservation = async () => {
+        if (stayLock.current || policyDates !== selectionKey) return;
         if (crewId == null) {
             alert("크루 정보를 불러오는 중입니다. 잠시 후 다시 시도해주세요.");
             return;
@@ -272,21 +278,22 @@ export default function Reservation({ onBack, isGuest = false, guestCrewId }: Re
         const guestId = isGuest && guestDetail ? guestDetail.id : undefined;
 
         try {
-            const result = await createReservation(crewId, formattedDates, guestId);
+            stayLock.current = true; setSubmittingStay(true);
+            const result = await createReservation(crewId, formattedDates, guestId, 1);
             const failed = result.results?.filter(item => !item.success) ?? [];
             if (!result.results?.length || failed.length) {
                 alert(`예약하지 못한 날짜가 있습니다. 아직 오픈되지 않은 날짜는 크루 달력에서 오픈 시각을 확인해 주세요. ${failed.map(item => item.date).join(', ')}`);
                 return;
             }
             alert("예약 신청이 완료되었습니다."); // Simple feedback
-            setSelectedDays([]); // Clear selection
+            setPolicyDates(''); setSelectedDays([]); // Clear selection
             // Refresh list so the new reservation appears as "reserved" immediately
             await fetchReservations();
             // Optional: onBack(); 
         } catch (error) {
             console.error("Reservation creation failed:", error);
             alert("예약 신청에 실패했습니다.");
-        }
+        } finally { stayLock.current = false; setSubmittingStay(false); }
     };
 
     const handleConfirmConsent = async (always: boolean) => {
@@ -362,9 +369,10 @@ export default function Reservation({ onBack, isGuest = false, guestCrewId }: Re
                         <div className="reservation-selection" role="status">
                             {selectedDays.length ? <><strong>선택한 날짜</strong><br />{[...selectedDays].sort((a, b) => a - b).map(day => `${currentMonthIndex + 1}월 ${day}일`).join(', ')}</> : '예약할 날짜를 선택하면 여기에 표시됩니다.'}
                         </div>
+                        <StayPolicyConsent dates={selectedDays.map(day => `${currentYear}-${String(currentMonthIndex+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`)} checked={policyDates === selectionKey} onChange={checked => setPolicyDates(checked ? selectionKey : '')} disabled={submittingStay} />
                         <div className="w-full flex justify-center">
                             <Button
-                                disabled={selectedDays.length === 0 || (isGuest && (!guestName || !guestPhone))}
+                                disabled={submittingStay || policyDates !== selectionKey || selectedDays.length === 0 || (isGuest && (!guestName || !guestPhone))}
                                 onClick={handleSubmit}
                                 className="reservation-primary w-full h-14 text-base"
                             >

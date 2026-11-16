@@ -71,6 +71,8 @@ jobs:
         run: pnpm run test:onboarding
       - name: Exercise mobile management and season reservation lifecycle
         run: pnpm run test:management
+      - name: Exercise season pass, stay consent and announcements
+        run: pnpm run test:season-stays
       - name: Save synthetic scenario evidence
         if: always()
         uses: actions/upload-artifact@v4
