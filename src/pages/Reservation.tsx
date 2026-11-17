@@ -1,4 +1,5 @@
 import StayPolicyConsent from '../components/reservation/StayPolicyConsent';
+import SeasonPassCard from '../components/reservation/SeasonPassCard';
 import { getReservationSeason } from '../lib/reservationSeason';
 import { ReservationLayout, ReservationSummary } from '../components/reservation/ReservationLayout';
 import { useRef, useState, useEffect, useCallback } from 'react';
@@ -60,6 +61,7 @@ export default function Reservation({ onBack, isGuest = false, guestCrewId }: Re
 
     // User's Crew ID
     const [crewId, setCrewId] = useState<number | null>(null);
+    const [passRevision, setPassRevision] = useState(0);
 
     // Phone Sharing Consent State
     const [showPhoneConsentModal, setShowPhoneConsentModal] = useState(false);
@@ -207,6 +209,7 @@ export default function Reservation({ onBack, isGuest = false, guestCrewId }: Re
                     return;
                 }
                 await cancelReservation(crewId, reservation.reservation_id);
+                setPassRevision(value => value + 1);
                 alert("예약이 취소되었습니다.");
 
                 // Refresh list
@@ -286,6 +289,7 @@ export default function Reservation({ onBack, isGuest = false, guestCrewId }: Re
                 return;
             }
             alert("예약 신청이 완료되었습니다."); // Simple feedback
+            setPassRevision(value => value + 1);
             setPolicyDates(''); setSelectedDays([]); // Clear selection
             // Refresh list so the new reservation appears as "reserved" immediately
             await fetchReservations();
@@ -311,6 +315,7 @@ export default function Reservation({ onBack, isGuest = false, guestCrewId }: Re
             <main className="reservation-content">
 
                 <ReservationSummary title={crew?.name || '시즌방 예약'} description={isGuest ? '게스트로 이용할 날짜를 선택해주세요.' : '이용할 날짜를 선택해주세요.'} value={selectedDays.length > 0 ? `${selectedDays.length}일` : undefined} />
+                {!isGuest && crewId && <SeasonPassCard crewId={crewId} refreshKey={passRevision} compact />}
                 <div className="reservation-workspace">
                     <Calendar
                         className="mb-5"

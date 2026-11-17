@@ -4,7 +4,9 @@ Branch: `feat/season-stay-benefits`, based on develop dee7ec0. Deployment is han
 
 - My calendar displays the pass's used, confirmed-reserved and additional available nights. It distinguishes loading, failure and an unregistered pass.
 - All three reservation entry points require the overnight-date agreement and send policy version 1. A booking's consent is not silently inferred by the HTTP service.
-- Crew calendar managers can register 5/10/custom/unlimited passes, mark past confirmed stays completed, and send selected-day announcements to confirmed stayers. Guest notices go to the requester.
+- Crew managers manage passes in **크루 관리 → 이용권 관리**, also reachable from My Crew. A paginated searchable roster displays every member's pass, lifetime completed stays and period-based remaining nights. Select members on the current page to assign 5/10/unlimited passes atomically, with an explicit period/target confirmation. Open an individual member for dated stay history and custom pass editing. Ordinary members and event-only hosts cannot use these management APIs.
+- The crew calendar keeps past-stay completion. Manager-only announcements sit at the bottom, closed behind `공지하기`; history is fetched only after opening. Guest notices go to the requester. Pass administration is removed from reservation/calendar screens; batch booking shows only the caller's compact pass balance.
+- Reservation names open a focused detail dialog. Only guest details show payment controls to managers; member details retain manager notes without a payment input. The roster stays compact. Failed saves preserve drafts, and successful saves update the cached selected-day record through the existing authorized API.
 - Announcement history displays snapshotted recipients and read receipts. A stable request key is retained after an ambiguous network failure so retrying does not duplicate the announcement.
 - Promotion, stay reminder and manager announcements use the existing in-app bell/feed. Opening a stay notification navigates to my calendar. These are not Kakao or background device push alerts.
 
@@ -13,7 +15,7 @@ Branch: `feat/season-stay-benefits`, based on develop dee7ec0. Deployment is han
 Run `node scripts/dev/onboarding-preview.mjs`, then visit http://127.0.0.1:5175.
 
 - **시즌방 보기**: synthetic member with 5-night pass, completed stays, confirmed and waiting dates. Open my calendar to view the pass balance.
-- **시즌방 운영**: synthetic crew manager; select a date, open member pass management, and send an announcement.
+- **시즌방 운영**: synthetic crew captain; select a date to manage stays/announcements. For pass administration open **내 크루 → 이용권 관리**, or **운영 센터 → 크루 관리 → 이용권 관리**.
 - All actions are synthetic and never call staging/production. The preview banner is development-only.
 
 ## Validation

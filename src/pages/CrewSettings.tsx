@@ -5,7 +5,7 @@ import { getCrewInfo, resetCrewPin, updateCrew } from '../services/crew';
 import { getUserInfo } from '../services/user';
 import { getSchools, type SchoolOption } from '../services/schools';
 import { CrewInfoUpdateRequest } from '../types/api';
-import { isCrewCaptainRole } from '../constants/crewRole';
+import { isCrewCaptainRole, isCrewManagerRole } from '../constants/crewRole';
 import Promote from './Promote';
 import { SEASON_HOUSE_RESERVATIONS_ENABLED } from '../constants/operatingSeason';
 import { CrewInvitationPanel } from '../components/onboarding/CrewInvitationPanel';
@@ -30,6 +30,8 @@ export default function CrewSettings({ onBack, onCaptainGuideClick }: CrewSettin
     const [crewId, setCrewId] = useState<number | null>(null);
     const [showPromote, setShowPromote] = useState(false);
     const [isCaptain, setIsCaptain] = useState(false);
+    const [canConfigure, setCanConfigure] = useState(false);
+    const [loadFailed, setLoadFailed] = useState(false);
     const [verificationEnforced, setVerificationEnforced] = useState(false);
     const [schools, setSchools] = useState<SchoolOption[]>([]);
     const [selectedSchoolId, setSelectedSchoolId] = useState('');
@@ -66,6 +68,8 @@ export default function CrewSettings({ onBack, onCaptainGuideClick }: CrewSettin
         const fetchData = async () => {
             try {
                 const user = await getUserInfo();
+                if (!user.crew || !isCrewManagerRole(user.role)) return;
+                setCanConfigure(true);
                 if (user.crew) {
                     const cId = user.crew.crewId;
                     setCrewId(cId);
@@ -100,6 +104,7 @@ export default function CrewSettings({ onBack, onCaptainGuideClick }: CrewSettin
                     setCrewPin(info.crewPin || '');
                 }
             } catch (error) {
+                setLoadFailed(true);
                 console.error("Failed to fetch crew settings", error);
             } finally {
                 setLoading(false);
@@ -113,7 +118,7 @@ export default function CrewSettings({ onBack, onCaptainGuideClick }: CrewSettin
     };
 
     const handleSave = async () => {
-        if (!crewId) return;
+        if (!crewId || !canConfigure || loadFailed) return;
 
         // Construct payload with possible aliases to handle API strictness
         // Only the crew captain can change the crew name.
@@ -202,6 +207,8 @@ export default function CrewSettings({ onBack, onCaptainGuideClick }: CrewSettin
 
     if (loading) return <div className="flex-1 flex items-center justify-center">로딩 중...</div>;
 
+    if (!canConfigure || loadFailed) return <ReservationLayout title="크루 설정" onBack={onBack}><main className="reservation-content"><p role="alert" className="rounded-2xl border border-slate-200 bg-white p-4 text-sm leading-6 text-slate-600">{loadFailed ? '크루 설정을 불러오지 못했습니다. 잠시 후 다시 들어와 주세요.' : '크루장과 임원진만 설정을 관리할 수 있어요.'}</p></main></ReservationLayout>;
+
     if (showPromote && crewId) {
         return <Promote crewId={crewId} onBack={() => setShowPromote(false)} />;
     }
@@ -214,8 +221,9 @@ export default function CrewSettings({ onBack, onCaptainGuideClick }: CrewSettin
                     {isCaptain && crewId !== null && <CrewInvitationPanel crewId={crewId} />}
                     {/* Crew Name */}
                     <div className="space-y-2">
-                        <label className="text-sm font-bold text-zinc-900">크루 이름</label>
+                        <label htmlFor="crew-settings-name" className="text-sm font-bold text-zinc-900">크루 이름</label>
                         <input
+                            id="crew-settings-name"
                             type="text"
                             value={formData.crewName}
                             onChange={(e) => handleChange('crewName', e.target.value)}

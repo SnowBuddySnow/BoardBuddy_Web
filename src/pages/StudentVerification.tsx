@@ -28,6 +28,7 @@ export default function StudentVerification({ onDone }: StudentVerificationProps
     const [sending, setSending] = useState(false);
     const [verifying, setVerifying] = useState(false);
     const [verified, setVerified] = useState(false);
+    const [signupPending, setSignupPending] = useState(false);
     const [verifiedIdentity, setVerifiedIdentity] = useState<Pick<SchoolEmailVerificationResult, 'schoolName' | 'maskedEmail'> | null>(null);
     const [requiresStudentProfile, setRequiresStudentProfile] = useState(false);
     const [error, setError] = useState('');
@@ -57,6 +58,7 @@ export default function StudentVerification({ onDone }: StudentVerificationProps
                     const result = await activation.current;
                     if (!cancelled) {
                         setVerifiedIdentity(result);
+                        setSignupPending(result.signupPending === true);
                         setVerified(true);
                         const url = new URL(window.location.href);
                         url.searchParams.delete('token');
@@ -147,6 +149,7 @@ export default function StudentVerification({ onDone }: StudentVerificationProps
                         <BadgeCheckIcon className="h-9 w-9" />
                     </span>
                     <h1 className="mt-5 text-2xl font-black text-zinc-950">학교 이메일 인증이 완료되었습니다</h1>
+                    {signupPending && <p className="mt-3 text-sm text-zinc-600">진행 중인 가입 화면으로 돌아가 가입을 완료해 주세요.</p>}
                     {(verifiedIdentity?.schoolName || verifiedIdentity?.maskedEmail) && (
                         <p className="mt-3 text-sm font-semibold text-zinc-700">
                             {[verifiedIdentity?.schoolName, verifiedIdentity?.maskedEmail].filter(Boolean).join(' · ')}

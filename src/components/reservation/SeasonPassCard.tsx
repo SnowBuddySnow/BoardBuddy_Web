@@ -7,9 +7,11 @@ import {
 export default function SeasonPassCard({
   crewId,
   refreshKey = 0,
+  compact = false,
 }: {
   crewId: number;
   refreshKey?: number;
+  compact?: boolean;
 }) {
   const [pass, setPass] = useState<SeasonPassSummary>();
   const [failed, setFailed] = useState(false);
@@ -54,34 +56,44 @@ export default function SeasonPassCard({
         </p>
       ) : pass.registered ? (
         <>
-          <dl className="mt-3 grid grid-cols-3 divide-x divide-slate-100 text-center">
-            <div>
-              <dt className="text-[11px] text-slate-500">총 이용 가능</dt>
-              <dd className="mt-1 text-base font-bold text-[#162660]">
-                {pass.totalNights == null ? "무제한" : `${pass.totalNights}박`}
-              </dd>
-            </div>
-            <div>
-              <dt className="text-[11px] text-slate-500">이용 완료</dt>
-              <dd className="mt-1 text-base font-bold text-[#162660]">
-                {pass.usedNights}박
-              </dd>
-            </div>
-            <div>
-              <dt className="text-[11px] text-slate-500">확정 예약</dt>
-              <dd className="mt-1 text-base font-bold text-[#162660]">
-                {pass.reservedNights}박
-              </dd>
-            </div>
-          </dl>
-          <p className="mt-3 text-[11px] leading-5 text-slate-500">
-            {pass.startsOn?.replace(/-/g, ".")} ~{" "}
-            {pass.endsOn?.replace(/-/g, ".")}
-            <br />
-            대기는 차감하지 않아요. 이용 완료는 운영진이 확인해요.
-            <br />
-            잔여 박수가 없거나 이용 기간 밖이면 승격이 보류돼요.
-          </p>
+          {compact ? (
+            <p className="mt-2 text-xs text-slate-500">
+              이용 완료 {pass.usedNights}박 · 확정 예약 {pass.reservedNights}박
+            </p>
+          ) : (
+            <>
+              <dl className="mt-3 grid grid-cols-3 divide-x divide-slate-100 text-center">
+                <div>
+                  <dt className="text-[11px] text-slate-500">총 이용 가능</dt>
+                  <dd className="mt-1 text-base font-bold text-[#162660]">
+                    {pass.totalNights == null
+                      ? "무제한"
+                      : `${pass.totalNights}박`}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-[11px] text-slate-500">이용 완료</dt>
+                  <dd className="mt-1 text-base font-bold text-[#162660]">
+                    {pass.usedNights}박
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-[11px] text-slate-500">확정 예약</dt>
+                  <dd className="mt-1 text-base font-bold text-[#162660]">
+                    {pass.reservedNights}박
+                  </dd>
+                </div>
+              </dl>
+              <p className="mt-3 text-[11px] leading-5 text-slate-500">
+                {pass.startsOn?.replace(/-/g, ".")} ~{" "}
+                {pass.endsOn?.replace(/-/g, ".")}
+                <br />
+                대기는 차감하지 않아요. 이용 완료는 운영진이 확인해요.
+                <br />
+                잔여 박수가 없거나 이용 기간 밖이면 승격이 보류돼요.
+              </p>
+            </>
+          )}
         </>
       ) : (
         <p className="mt-2 text-xs leading-5 text-slate-500">

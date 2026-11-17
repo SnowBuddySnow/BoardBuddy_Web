@@ -5,6 +5,7 @@ declare global {
 
     interface KakaoAuth {
         login(options: {
+            scope?: string;
             success: (authObj: KakaoAuthResponse) => void;
             fail: (error: unknown) => void;
         }): void;

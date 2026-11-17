@@ -116,6 +116,14 @@ function App() {
   const [crewDetail, setCrewDetail] = useState<CrewDetailData | null>(null);
   const [isCaptain, setIsCaptain] = useState(false);
   const [crewAccessRevision, setCrewAccessRevision] = useState(0);
+  const [crewSettingsReturnView, setCrewSettingsReturnView] = useState<View>('crew_detail');
+  const [crewManagementSection, setCrewManagementSection] = useState<'permissions'|'passes'>('permissions');
+  const [crewManagementReturnView, setCrewManagementReturnView] = useState<View>('operations_center');
+  const openCrewManagement = (section: 'permissions'|'passes', from: View) => { setCrewManagementSection(section); setCrewManagementReturnView(from); setCurrentView('crew_permissions'); };
+  const openCrewSettings = (from: View) => {
+    setCrewSettingsReturnView(from);
+    setCurrentView('crew_settings');
+  };
   const [onboardingUserId, setOnboardingUserId] = useState<number | null>(null);
   const [captainOnboardingOpen, setCaptainOnboardingOpen] = useState(false);
   const [captainOnboardingDismissed, setCaptainOnboardingDismissed] = useState(false);
@@ -500,21 +508,22 @@ function App() {
             onBack={() => setCurrentView('home')}
             onCalendarClick={() => setCurrentView('season_calendar')}
             onMemberClick={() => setCurrentView('crew_member')}
-            onSettingsClick={() => setCurrentView('crew_settings')}
+            onSettingsClick={() => openCrewSettings('crew_detail')}
+            onPassesClick={() => openCrewManagement('passes','crew_detail')}
             seasonAvailable={seasonHouseAvailable}
           />
         );
       case 'crew_settings':
         return (
           <CrewSettings
-            onBack={() => setCurrentView('crew_detail')}
+            onBack={() => setCurrentView(crewSettingsReturnView)}
             onCaptainGuideClick={isCaptain ? openCaptainOnboarding : undefined}
           />
         );
       case 'crew_member':
         return <CrewMember onBack={() => setCurrentView('crew_detail')} />;
       case 'search_crew':
-        return <SearchCrew onBack={() => setCurrentView('onboarding')} onApplied={() => setCurrentView('onboarding')} onJoined={() => {
+        return <SearchCrew onBack={() => setCurrentView('onboarding')} onSkip={() => setCurrentView('home')} onApplied={() => setCurrentView('onboarding')} onJoined={() => {
           setHasCrew(true);
           setHasPendingCrewApplication(false);
           setCrewAccessRevision(revision => revision + 1);
@@ -566,6 +575,8 @@ function App() {
         return (
           <MyPage
             onBack={() => setCurrentView('home')}
+            onCalendarClick={() => setCurrentView('my_reservations')}
+            seasonAvailable={seasonHouseAvailable}
             onAccountInfoClick={() => setCurrentView('account_info')}
             onRoleGuideClick={() => setCurrentView('role_guide')}
             onCaptainOnboardingClick={isCaptain ? openCaptainOnboarding : undefined}
@@ -602,7 +613,9 @@ function App() {
       case 'crew_permissions':
         return (
           <CrewPermissions
-            onBack={() => setCurrentView('operations_center')}
+            onBack={() => setCurrentView(crewManagementReturnView)}
+            initialSection={crewManagementSection}
+            canAssignRoles={operationPermissions.includes('CREW_EVENT_MANAGERS_ASSIGN')}
             onPermissionsChanged={() => setManagementRefreshKey(key => key + 1)}
           />
         );
@@ -630,7 +643,8 @@ function App() {
             onReservationsClick={() => setCurrentView('stats')}
             onPartiesClick={() => setCurrentView('dashboard_parties')}
             onGroupsClick={() => setCurrentView('dashboard_groups')}
-            onCrewClick={() => setCurrentView('crew_permissions')}
+            onCrewClick={() => openCrewManagement('permissions','operations_center')}
+            onCrewSettingsClick={() => openCrewSettings('operations_center')}
             onEventManagerOnboardingClick={canUseEventManagerGuide ? openEventManagerOnboarding : undefined}
           />
         );
@@ -698,6 +712,7 @@ function App() {
             onCalendarClick={() => setCurrentView('my_reservations')}
             onSeasonCalendarClick={() => setCurrentView('season_calendar')}
             onTeamClick={() => setCurrentView('crew_detail')}
+            onCrewSettingsClick={() => openCrewSettings('home')}
             onSearchClick={() => setCurrentView('search_crew')}
             onCreateCrewClick={() => setCurrentView('crew_create')}
             onOnboardingClick={() => setCurrentView('onboarding')}

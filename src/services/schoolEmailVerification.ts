@@ -26,6 +26,7 @@ export interface SchoolEmailVerificationResult {
     maskedEmail: string;
     status: UniversityVerificationStatus;
     verifiedAt: string;
+    signupPending?: boolean;
 }
 
 export const requestSchoolEmailVerification = async (email?: string): Promise<SchoolEmailChallenge> => {
@@ -61,3 +62,14 @@ export const activateSchoolEmailLink = async (token: string): Promise<SchoolEmai
     );
     return response.data.data;
 };
+
+export interface SignupEmailProof { challengeId: string; verified: boolean; maskedEmail: string; }
+export async function requestSignupSchoolEmail(schoolId: number, email: string): Promise<SchoolEmailChallenge> {
+    return (await apiClient.post<ApiResponse<SchoolEmailChallenge>>('/accounts/onboarding/school-email-verifications', { schoolId, email })).data.data;
+}
+export async function confirmSignupSchoolEmail(challengeId: string, code: string): Promise<SignupEmailProof> {
+    return (await apiClient.post<ApiResponse<SignupEmailProof>>(`/accounts/onboarding/school-email-verifications/${challengeId}/confirm`, { code })).data.data;
+}
+export async function getSignupSchoolEmail(challengeId: string): Promise<SignupEmailProof> {
+    return (await apiClient.get<ApiResponse<SignupEmailProof>>(`/accounts/onboarding/school-email-verifications/${challengeId}`)).data.data;
+}

@@ -19,6 +19,7 @@ describe('real App management navigation with synthetic HTTP', () => {
     let events: unknown[];
     let hasCrew: boolean;
     let crewOpen: boolean;
+    let crewRole: string;
     const listeners = new Set<(event: { matches: boolean }) => void>();
     beforeEach(() => {
         vi.resetAllMocks();
@@ -29,7 +30,7 @@ describe('real App management navigation with synthetic HTTP', () => {
         localStorage.setItem('autoLogin', 'true');
         localStorage.setItem('dev_operating_mode', 'OFF_SEASON');
         window.history.replaceState(null, '', '/?view=home');
-        width = 390; permissions = ['PARTIES_MANAGE', 'EVENT_GROUPS_VIEW']; events = []; hasCrew = false; crewOpen = true; listeners.clear();
+        width = 390; permissions = ['PARTIES_MANAGE', 'EVENT_GROUPS_VIEW']; events = []; hasCrew = false; crewOpen = true; crewRole = 'CREW_MEMBER'; listeners.clear();
         vi.stubGlobal('matchMedia', () => ({
             matches: width >= 1024,
             addEventListener: (_type: string, listener: (event: { matches: boolean }) => void) => listeners.add(listener),
@@ -37,8 +38,10 @@ describe('real App management navigation with synthetic HTTP', () => {
         }));
         http.get.mockImplementation(async (path: string) => {
             let data: unknown;
-            if (path === '/users/me') data = { userId: 7, userType: 'REGULAR', name: 'Synthetic host', role: 'CREW_MEMBER', crew: hasCrew ? { crewId: 1 } : null };
-            else if (path === '/crews/1') data = { crewId: 1, crewName: 'Synthetic crew', seasonHouseActive: crewOpen };
+            if (path === '/users/me') data = { userId: 7, userType: 'REGULAR', name: 'Synthetic host', role: crewRole, crew: hasCrew ? { crewId: 1, crewName:'Synthetic crew' } : null };
+            else if (path === '/crews/1/season-stays/pass') data = {registered:true,name:'5박권',startsOn:'2026-10-01',endsOn:'2027-05-31',totalNights:5,usedNights:1,reservedNights:1,remainingNights:3};
+            else if (path === '/crews/1') data = { crewId: 1, crew_id: 1, crewName: 'Synthetic crew', name: 'Synthetic crew', member_count: 2, seasonHouseActive: crewOpen };
+            else if (path === '/schools' || path === '/crews/1/invitations' || path === '/crews/discover') data = [];
             else if (path.startsWith('/crews/1/calendar')) data = { calendar: [], my_reservations: [] };
             else if (path === '/operations/context') data = { permissions };
             else if (path === '/admin/crews') data = { developerAccess: false, crews: [], schools: [] };
@@ -79,7 +82,55 @@ describe('real App management navigation with synthetic HTTP', () => {
         const toolbar = container.querySelector('header[aria-label="계정 메뉴"]')!;
         expect(toolbar.querySelector('[aria-label="알림"]')).toBeTruthy();
         await act(async () => (toolbar.querySelector('[aria-label="내 정보"]') as HTMLButtonElement).click());
-        await settle(); expect(container.textContent).toContain('My Page');
+        await settle(); expect(container.textContent).toContain('내 정보');
+    });
+
+    it('lets a new member skip crew search and resume it from Home without applying', async () => {
+        permissions=[];window.history.replaceState(null,'','/?view=search_crew');
+        await render();await click('다음에 하기');
+        expect(new URL(window.location.href).searchParams.get('view')).toBe('home');
+        await click('크루 가입하기크루를 찾아 PIN으로 가입 신청하세요.');
+        expect(container.querySelector('h1')?.textContent).toBe('크루 검색');
+        expect(hasCrew).toBe(false);
+    });
+
+    it.each(['CREW_CAPTAIN', 'CREW_MANAGER'])('lets %s open settings directly from Home and My Crew without a manager-list request', async role => {
+        hasCrew = true; crewRole = role; permissions = ['CREW_MEMBERS_MANAGE'];
+        localStorage.setItem('boardbuddy_captain_onboarding_v1:7', 'completed');
+        await render();
+        expect(container.querySelector('h2')?.textContent).toBe('Synthetic crew와 함께하는 오늘');
+        expect(Array.from(container.querySelectorAll('span')).some(node => node.textContent?.trim() === 'Synthetic crew')).toBe(false);
+        await click('크루 설정');
+        expect(container.querySelector('h1')?.textContent).toBe('크루 설정');
+        await act(async () => (container.querySelector('[aria-label="뒤로 가기"]') as HTMLButtonElement).click()); await settle();
+        expect(container.querySelector('h2')?.textContent).toBe('Synthetic crew와 함께하는 오늘');
+        await click('내 크루');
+        expect(container.querySelector('h1')?.textContent).toBe('내 크루');
+        await click('크루 설정');
+        expect(container.querySelector('h1')?.textContent).toBe('크루 설정');
+        expect(http.get).not.toHaveBeenCalledWith('/crews/1/managers');
+    });
+
+    it.each(['CREW_CAPTAIN', 'CREW_MANAGER'])('offers desktop crew settings in Operations Center for %s', async role => {
+        width = 1440; hasCrew = true; crewRole = role; permissions = ['CREW_MEMBERS_MANAGE'];
+        localStorage.setItem('boardbuddy_captain_onboarding_v1:7', 'completed');
+        window.history.replaceState(null, '', '/?view=operations_center');
+        await render(); await click('크루 설정');
+        expect(container.querySelector('h1')?.textContent).toBe('크루 설정');
+        await act(async () => (container.querySelector('[aria-label="뒤로 가기"]') as HTMLButtonElement).click()); await settle();
+        expect(container.querySelector('h1')?.textContent).toBe('운영 센터');
+    });
+
+    it('hides member settings and rejects direct settings entry before loading the form', async () => {
+        hasCrew = true; permissions = [];
+        await render();
+        expect(Array.from(container.querySelectorAll('button')).some(node=>node.textContent?.trim()==='크루 설정')).toBe(false);
+        await act(async () => root.unmount()); root = createRoot(container);
+        window.history.replaceState(null, '', '/?view=crew_settings');
+        await render();
+        expect(container.querySelector('[role="alert"]')?.textContent).toContain('크루장과 임원진만');
+        expect(http.get).not.toHaveBeenCalledWith('/schools');
+        expect(container.querySelector('input')).toBeNull();
     });
 
     it.each([320, 390, 768, 1023, 1024])('blocks member reservation views for a closed crew at %spx', async viewport => {
@@ -95,13 +146,17 @@ describe('real App management navigation with synthetic HTTP', () => {
         expect(http.get.mock.calls.some(([path]) => /reservations|calendar|usage-statistics/.test(path))).toBe(false);
     });
 
-    it('restores the personal reservation calendar', async () => {
+    it('uses authoritative pass balances and lazily opens the shared personal calendar', async () => {
+        hasCrew = true; permissions = []; localStorage.setItem('dev_operating_mode','BOTH');
         window.history.replaceState(null, '', '/?view=my_page');
         await render();
-        expect(container.textContent).toContain('My Page');
+        expect(container.textContent).toContain('내 정보');
         expect(container.textContent).toContain('나의 달력');
-        expect(container.textContent).toContain('시즌방 이용 횟수');
-        expect(http.get).toHaveBeenCalledWith('/users/me/reservations');
+        expect(container.textContent).toContain('추가 예약 3박 가능');
+        expect(http.get).not.toHaveBeenCalledWith('/users/me/reservations');
+        expect(http.get.mock.calls.some(([path])=>path.includes('/calendar/my?'))).toBe(false);
+        await click('나의 달력');
+        expect(http.get.mock.calls.some(([path])=>path.includes('/calendar/my?'))).toBe(true);
     });
 
     it('shows reservation management to a permitted desktop host during the season', async () => {

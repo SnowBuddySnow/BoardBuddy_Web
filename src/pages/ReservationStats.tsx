@@ -1,6 +1,6 @@
 import StayPolicyConsent from '../components/reservation/StayPolicyConsent';
 import StayAnnouncementPanel from '../components/reservation/StayAnnouncementPanel';
-import SeasonPassManager from '../components/reservation/SeasonPassManager';
+import ReservationMemberDetail from '../components/reservation/ReservationMemberDetail';
 import { completeStay } from '../services/seasonStays';
 import ReservationWindowNotice from '../components/ReservationWindowNotice';
 import BuddyNote from '../components/BuddyNote';
@@ -8,12 +8,12 @@ import '../components/reservation/crew-calendar.css';
 import { getReservationSeason } from '../lib/reservationSeason';
 import { ReservationLayout } from '../components/reservation/ReservationLayout';
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { ChevronRightIcon, Smile, ChevronDown, Save, Trash2 } from 'lucide-react';
+import { ChevronRightIcon, Smile, ChevronDown } from 'lucide-react';
 import { Button } from '../components/Button';
 import { Calendar } from '../components/Calendar';
-import { getCrewInfo, getReservationDetail, getCrewCalendar, createReservation, cancelReservation, deleteReservation, updateReservationManagement } from '../services/crew';
+import { getCrewInfo, getReservationDetail, getCrewCalendar, createReservation, cancelReservation, deleteReservation } from '../services/crew';
 import { getUserInfo } from '../services/user';
-import { ReservationDayResponse, CrewCalendarResponse, PaymentStatus } from '../types/api';
+import { ReservationDayResponse, CrewCalendarResponse, PaymentStatus, ReservationBookingResponse } from '../types/api';
 
 
 interface ReservationStatsProps {
@@ -71,21 +71,11 @@ export default function ReservationStats({ onBack, onMyCalendarClick, onReservat
     // Store monthly calendar data (occupancy statuses)
     const [calendarData, setCalendarData] = useState<CrewCalendarResponse | null>(null);
 
-    // Guest Detail Modal State
-    const [selectedMember, setSelectedMember] = useState<{
-        role: string;
-        name: string;
-        phoneNumber?: string;
-        inviter?: string;
-        reservationTime?: string;
-        reservationId?: number;
-        canDelete?: boolean;
-    } | null>(null);
+    const [selectedMember, setSelectedMember] = useState<ReservationBookingResponse | null>(null);
 
     // Default groups confirmed/waiting; earliest follows reservation IDs.
     const [sortOrder, setSortOrder] = useState<'default' | 'earliest'>('default');
     const [loadError, setLoadError] = useState('');
-    const [managementSavingId, setManagementSavingId] = useState<number | null>(null);
 
     const formatDate = useCallback((day: number) => {
         return `${currentYear}-${String(currentMonthIndex + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
@@ -232,23 +222,6 @@ export default function ReservationStats({ onBack, onMyCalendarClick, onReservat
                 },
             };
         });
-    };
-
-    const handleReservationManagementSave = async (reservationId: number, paymentStatus: PaymentStatus | null, managerMemo: string | null) => {
-        if (readOnly || !crewId || mutationBusy.current) return;
-        mutationBusy.current = true;
-        try {
-            setManagementSavingId(reservationId);
-            const updated = await updateReservationManagement(crewId, reservationId, paymentStatus, managerMemo?.trim() || null);
-            updateReservationDraft(reservationId, updated);
-            alert('예약 관리 정보가 저장되었습니다.');
-        } catch (error) {
-            console.error('Failed to update reservation management details:', error);
-            alert('예약 관리 정보 저장에 실패했습니다.');
-        } finally {
-            mutationBusy.current = false;
-            setManagementSavingId(null);
-        }
     };
 
     const handleDayClick = (day: number) => {
@@ -441,7 +414,7 @@ export default function ReservationStats({ onBack, onMyCalendarClick, onReservat
                                         </div>
                                     </div>
 
-                                    <p className="mb-3 text-xs text-slate-500">{!readOnly && currentDetail?.canManageReservations ? '입금 상태와 메모를 관리할 수 있어요.' : '날짜별 확정 인원과 대기 순서를 확인하세요.'}</p>
+                                    <p className="mb-3 text-xs text-slate-500">{!readOnly && currentDetail?.canManageReservations ? '이름을 누르면 상세 정보를 관리할 수 있어요.' : '날짜별 확정 인원과 대기 순서를 확인하세요.'}</p>
                                     {/* Users Grid */}
                                     <div className={`grid gap-y-3 gap-x-4 ${currentDetail?.canManageReservations ? 'grid-cols-1' : 'grid-cols-2'}`}>
                                         {currentMemberList.length > 0 ? (
@@ -452,9 +425,9 @@ export default function ReservationStats({ onBack, onMyCalendarClick, onReservat
                                                     </div>
                                                     <div className="flex flex-col items-start gap-0.5 min-w-0">
                                                         <div className="flex flex-wrap items-center gap-1.5">
-                                                            <span className="text-sm font-bold text-zinc-700 dark:text-zinc-300">
+                                                            <button type="button" onClick={() => setSelectedMember(member)} className="min-h-10 text-left text-sm font-bold text-zinc-700 underline decoration-slate-300 underline-offset-4 dark:text-zinc-300">
                                                                 {member.participantName || (member.guestId ? `게스트 #${member.guestId}` : `회원 #${member.participantAccountId}`)}
-                                                            </span>
+                                                            </button>
                                                             <span className="text-xs text-zinc-500">{member.status === 'WAITING' ? `대기 ${member.waitlistPosition ?? '-'}번` : '확정'}</span>
                                                             {['CREW_CAPTAIN', 'CREW_MANAGER'].includes(member.memberRole ?? '') && <span className="rounded bg-slate-200 px-1.5 py-0.5 text-[10px] font-bold text-slate-600">임원진</span>}
                                                             {member.teachingRequested && <span className="rounded bg-blue-50 px-1.5 py-0.5 text-[10px] text-blue-700">강습</span>}
@@ -466,45 +439,7 @@ export default function ReservationStats({ onBack, onMyCalendarClick, onReservat
                                                         </div>
                                                     </div>
                                                     {!readOnly && currentDetail?.canManageReservations && member.status === 'CONFIRMED' && formatDate(selectedDay) < `${todayDate.getFullYear()}-${String(todayDate.getMonth()+1).padStart(2,'0')}-${String(todayDate.getDate()).padStart(2,'0')}` && <button className="min-h-10 rounded-lg border border-slate-200 px-2 text-xs text-blue-700" disabled={completingId != null} onClick={async () => { if (!crewId || completingId != null) return; setCompletingId(member.reservationId); try { await completeStay(crewId, member.reservationId, !member.stayCompleted); await fetchDetailForDay(selectedDay, true); } catch { alert('이용 완료 상태를 저장하지 못했습니다.'); } finally { setCompletingId(undefined); } }}>{completingId === member.reservationId ? '저장 중…' : member.stayCompleted ? '이용 완료 취소' : '이용 완료 확인'}</button>}
-                                                    {!readOnly && currentDetail?.canManageReservations && (
-                                                        <div className="reservation-member-controls">
-                                                            <select
-                                                                value={member.paymentStatus ?? ''}
-                                                                onChange={event => updateReservationDraft(member.reservationId, {
-                                                                    paymentStatus: (event.target.value || null) as PaymentStatus | null,
-                                                                })}
-                                                                className="reservation-input w-24 text-xs"
-                                                                aria-label={`예약 ${member.reservationId} 입금 상태`}
-                                                            >
-                                                                <option value="">미설정</option>
-                                                                <option value="UNPAID">미입금</option>
-                                                                <option value="PAID">입금 완료</option>
-                                                            </select>
-                                                            <input
-                                                                type="text"
-                                                                value={member.managerMemo ?? ''}
-                                                                onChange={event => updateReservationDraft(member.reservationId, { managerMemo: event.target.value })}
-                                                                placeholder="관리자 메모"
-                                                                maxLength={1000}
-                                                                className="reservation-input text-xs"
-                                                                aria-label={`예약 ${member.reservationId} 관리자 메모`}
-                                                            />
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => handleReservationManagementSave(
-                                                                    member.reservationId,
-                                                                    member.paymentStatus ?? null,
-                                                                    member.managerMemo ?? null,
-                                                                )}
-                                                                disabled={managementSavingId === member.reservationId}
-                                                                className="w-8 h-8 shrink-0 border border-zinc-200 dark:border-zinc-700 rounded-lg flex items-center justify-center text-[#1E3A8A] dark:text-blue-300 hover:bg-white dark:hover:bg-zinc-900 disabled:opacity-50"
-                                                                title="입금 상태와 메모 저장"
-                                                                aria-label={`예약 ${member.reservationId} 관리 정보 저장`}
-                                                            >
-                                                                <Save className="w-4 h-4" />
-                                                            </button>
-                                                        </div>
-                                                    )}
+
                                                 </div>
                                             ))
                                         ) : (
@@ -527,7 +462,6 @@ export default function ReservationStats({ onBack, onMyCalendarClick, onReservat
                                     </button>
                                 </div>}
 
-                                {crewId && currentDetail?.canManageReservations && <><SeasonPassManager crewId={crewId} /><StayAnnouncementPanel key={`${crewId}-${formatDate(selectedDay)}`} crewId={crewId} date={formatDate(selectedDay)} confirmedCount={Number(currentDetail.confirmedCount)} /></>}
                                 <ReservationWindowNotice value={currentDetail ?? undefined} />
                                 {!confirmedDays.includes(selectedDay) && !pendingDays.includes(selectedDay) && <StayPolicyConsent dates={[formatDate(selectedDay)]} checked={policyDate === formatDate(selectedDay)} onChange={checked => setPolicyDate(checked ? formatDate(selectedDay) : '')} disabled={submitting} />}
                                 {/* Action Button */}
@@ -582,84 +516,19 @@ export default function ReservationStats({ onBack, onMyCalendarClick, onReservat
                         )}
                     </aside>
                 </div>
+            {!readOnly && crewId && selectedDay > 0 && currentDetail?.canManageReservations && <StayAnnouncementPanel key={`${crewId}-${formatDate(selectedDay)}`} crewId={crewId} date={formatDate(selectedDay)} confirmedCount={Number(currentDetail.confirmedCount)} />}
             </main>
 
-            {/* Member Detail Modal */}
-            {selectedMember && (
-                <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-[2px] p-6 animate-in fade-in duration-200" onClick={() => setSelectedMember(null)}>
-                    <div role="dialog" aria-modal="true" aria-label="예약 정보" className="reservation-modal w-full max-w-sm flex flex-col items-center relative" onClick={(e) => e.stopPropagation()}>
+            {selectedMember && crewId && <ReservationMemberDetail key={selectedMember.reservationId} crewId={crewId} date={formatDate(selectedDay)} member={selectedMember}
+                canManage={!readOnly && currentDetail?.canManageReservations === true}
+                onSaved={updated => updateReservationDraft(selectedMember.reservationId, updated)} onClose={() => setSelectedMember(null)}
+                onDelete={async () => {
+                    await deleteReservation(crewId, selectedMember.reservationId);
+                    setSelectedMember(null);
+                    const data = await getCrewCalendar(crewId, `${currentYear}-${String(currentMonthIndex + 1).padStart(2, '0')}-15`, includeMine);
+                    setCalendarData(data); await fetchDetailForDay(selectedDay, true);
+                }} />}
 
-
-                        <h3 className="text-lg font-bold text-zinc-900 dark:text-zinc-100 mb-1">{selectedMember.name}</h3>
-                        <p className="text-xs text-zinc-400 dark:text-zinc-500 mb-6 font-medium">
-                            {selectedMember.role === 'VISITOR' ? '게스트 정보' : '예약 정보'}
-                        </p>
-
-                        <div className="w-full space-y-4 mb-6">
-                            {selectedMember.role === 'VISITOR' ? (
-                                <>
-                                    <div className="flex gap-3 text-sm">
-                                        <span className="font-bold text-zinc-500 dark:text-zinc-400 w-14 shrink-0 text-right">휴대전화</span>
-                                        <span className="text-zinc-900 dark:text-zinc-100 font-medium">{selectedMember.phoneNumber || '-'}</span>
-                                    </div>
-                                    <div className="flex gap-3 text-sm">
-                                        <span className="font-bold text-zinc-500 dark:text-zinc-400 w-14 shrink-0 text-right">초대자</span>
-                                        <span className="text-zinc-900 dark:text-zinc-100 font-medium">{selectedMember.inviter || '-'}</span>
-                                    </div>
-                                    <div className="flex gap-3 text-sm">
-                                        <span className="font-bold text-zinc-500 dark:text-zinc-400 w-14 shrink-0 text-right">예약시간</span>
-                                        <span className="text-zinc-900 dark:text-zinc-100 font-medium">{selectedMember.reservationTime || '-'}</span>
-                                    </div>
-                                </>
-                            ) : (
-                                <div className="flex gap-3 text-sm">
-                                    <span className="font-bold text-zinc-500 dark:text-zinc-400 w-14 shrink-0 text-right">예약시간</span>
-                                    <span className="text-zinc-900 dark:text-zinc-100 font-medium">{selectedMember.reservationTime || '-'}</span>
-                                </div>
-                            )}
-                        </div>
-
-                        <div className="w-full flex flex-col gap-2">
-                            {/* Force Delete Icon - Bottom Right */}
-                            {!readOnly && selectedMember.canDelete && selectedMember.reservationId && (
-                                <div className="w-full flex justify-end mb-1">
-                                    <button
-                                        className="w-9 h-9 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center text-red-500 hover:bg-red-200 dark:hover:bg-red-900/50 transition-colors"
-                                        onClick={async (e) => {
-                                            e.stopPropagation();
-                                            if (readOnly || !crewId || !selectedMember.reservationId) return;
-                                            if (confirm(`${selectedMember.name}님의 예약을 삭제하시겠습니까?`)) {
-                                                try {
-                                                    await deleteReservation(crewId, selectedMember.reservationId);
-                                                    alert("예약이 삭제되었습니다.");
-                                                    setSelectedMember(null);
-                                                    // Refresh data
-                                                    const calDateStr = `${currentYear}-${String(currentMonthIndex + 1).padStart(2, '0')}-15`;
-                                                    const data = await getCrewCalendar(crewId, calDateStr, includeMine);
-                                                    setCalendarData(data);
-                                                    await fetchDetailForDay(selectedDay, true);
-                                                } catch (error) {
-                                                    console.error("Failed to delete reservation:", error);
-                                                    alert("예약 삭제에 실패했습니다.");
-                                                }
-                                            }
-                                        }}
-                                    >
-                                        <Trash2 className="w-4 h-4" />
-                                    </button>
-                                </div>
-                            )}
-
-                            <Button
-                                className="reservation-primary w-full text-sm"
-                                onClick={() => setSelectedMember(null)}
-                            >
-                                닫기
-                            </Button>
-                        </div>
-                    </div>
-                </div>
-            )}
         </ReservationLayout>
     );
 }

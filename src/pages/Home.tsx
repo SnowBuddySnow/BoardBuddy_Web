@@ -4,7 +4,8 @@ import { getUserInfo } from '../services/user';
 import { getMyApplications, withdrawCrewApplication } from '../services/crew';
 import { listParties } from '../services/event';
 import { UserDetail, CrewDetail, MyApplication, Event } from '../types/api';
-import { UserPlus, Sparkles, Users, Calendar as CalendarIcon, ChevronRight, Clock3, ShieldCheck, X, TentTree, CalendarHeart, CloudSun, LockKeyhole } from 'lucide-react';
+import { UserPlus, Sparkles, Users, Calendar as CalendarIcon, ChevronRight, Clock3, ShieldCheck, X, TentTree, CalendarHeart, CloudSun, LockKeyhole, Settings } from 'lucide-react';
+import { isCrewManagerRole } from '../constants/crewRole';
 import { getWeather, WeatherData } from '../services/weather';
 import { getEventActivityLabel } from '../constants/eventActivity';
 import { getOperatingFeatures, OperatingMode } from '../constants/operatingSeason';
@@ -17,6 +18,7 @@ interface HomeProps {
     onCalendarClick: () => void;
     onSeasonCalendarClick?: () => void;
     onTeamClick: () => void;
+    onCrewSettingsClick?: () => void;
     onSearchClick: () => void;
     onCreateCrewClick: () => void;
     onOnboardingClick?: () => void;
@@ -37,6 +39,7 @@ export default function Home({
     onCalendarClick,
     onSeasonCalendarClick,
     onTeamClick,
+    onCrewSettingsClick,
     onSearchClick,
     onCreateCrewClick,
     onOnboardingClick,
@@ -52,6 +55,7 @@ export default function Home({
     const [myApplications, setMyApplications] = useState<MyApplication[]>([]);
     const [hasCrew, setHasCrew] = useState(initialHasCrew);
     const [weather, setWeather] = useState<WeatherData | null>(null);
+    const [weatherFailed, setWeatherFailed] = useState(false);
     const [currentDate, setCurrentDate] = useState<string>('');
     const [applicationToWithdraw, setApplicationToWithdraw] = useState<MyApplication | null>(null);
     const [isWithdrawing, setIsWithdrawing] = useState(false);
@@ -103,19 +107,19 @@ export default function Home({
 
         // Fetch Weather
         if (operatingFeatures.season) {
+            setWeatherFailed(false);
             getWeather().then(data => {
                 setWeather(data);
-            }).catch(err => console.error("Weather fetch failed", err));
+            }).catch(err => { setWeatherFailed(true); console.error("Weather fetch failed", err); });
         }
 
         // Set Current Date
         const now = new Date();
-        const year = now.getFullYear();
         const month = String(now.getMonth() + 1).padStart(2, '0');
         const day = String(now.getDate()).padStart(2, '0');
-        const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+        const days = ['일', '월', '화', '수', '목', '금', '토'];
         const weekday = days[now.getDay()];
-        setCurrentDate(`${year}. ${month}. ${day} ${weekday}`);
+        setCurrentDate(`${month}.${day} (${weekday})`);
 
     }, [operatingFeatures.offSeason, operatingFeatures.season]);
 
@@ -129,7 +133,6 @@ export default function Home({
 
     const seasonHouseUnavailable = operatingFeatures.season && crewDetail?.seasonHouseActive === false;
     const seasonHouseAvailable = operatingFeatures.season && crewDetail !== null && crewDetail.seasonHouseActive !== false;
-    const showCrewUniversity = crewDetail?.kusbfAssociated === true && Boolean(crewDetail.univ);
 
     // Plans user has joined or has pending
     const myPlansCount = parties.filter(p => (
@@ -165,27 +168,26 @@ export default function Home({
         <div className="flex-1 flex flex-col h-full overflow-hidden bg-[#FAF8F3] relative">
             {/* Content Area */}
             <main className="flex-1 overflow-y-auto pt-4 pb-6 space-y-5">
-                {seasonHouseAvailable && userInfo?.crew && <PersonalCalendarPreview crewId={userInfo.crew.crewId} onOpen={onCalendarClick} />}
 
-                {/* Team Info / Host Metadata (De-emphasized compact row) */}
-                {!hasCrew && onOnboardingClick && <button type="button" onClick={onOnboardingClick} className="mb-5 flex min-h-14 w-full items-center justify-between gap-3 rounded-2xl bg-[#162660] p-4 text-left text-sm font-bold text-white"><span>내 가입·크루 생성 진행 상태 이어보기</span><ChevronRight className="h-4 w-4 shrink-0" /></button>}
-                {(hasCrew && userInfo?.crew || pendingApplication) && (
+                        {operatingFeatures.season && (
+                            <section aria-label="휘닉스파크 날씨" className="px-4">
+                                <div className="flex items-center justify-between rounded-2xl border border-zinc-200 bg-white px-4 py-3">
+                                    <span className="flex items-center gap-3">
+                                        <CloudSun className="h-5 w-5 text-sky-600" />
+                                        <span>
+                                            <span className="block text-xs font-black text-zinc-800">휘닉스파크</span>
+                                            <span className="block text-[11px] text-zinc-400">{currentDate} · {weather?.weatherLabel || (weatherFailed ? '날씨를 불러오지 못했어요' : '날씨 확인 중')}</span>
+                                        </span>
+                                    </span>
+                                    <span className="text-xl font-black text-zinc-800">{weather ? Math.round(weather.temperature) : '--'}°</span>
+                                </div>
+                            </section>
+                        )}
+
+                {/* Pending applications remain visible without repeating the member's crew name. */}
+                {!hasCrew && onOnboardingClick && <div className="px-4"><button type="button" onClick={onOnboardingClick} className="flex min-h-12 w-full items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-left text-sm font-semibold text-[#162660]"><span>가입·크루 진행 상태</span><span className="flex shrink-0 items-center gap-1 text-xs text-slate-500">이어보기<ChevronRight className="h-4 w-4" /></span></button></div>}
+                {!hasCrew && pendingApplication && (
                     <div className="px-4">
-                    {hasCrew && userInfo?.crew ? (
-                        <div className="bg-white/80 border border-zinc-100 rounded-2xl px-4 py-2.5 flex items-center justify-between text-xs shadow-sm">
-                            <div className="flex items-center gap-2">
-                                {showCrewUniversity && (
-                                    <>
-                                        <span className="font-bold text-zinc-400">{crewDetail.univ}</span>
-                                        <span className="h-3 w-px bg-zinc-200"></span>
-                                    </>
-                                )}
-                                <span onClick={onTeamClick} className="font-black text-zinc-700 hover:text-[#162660] cursor-pointer flex items-center gap-0.5">
-                                    {userInfo.crew.crewName} <ChevronRight className="w-3.5 h-3.5 text-zinc-400" />
-                                </span>
-                            </div>
-                        </div>
-                    ) : pendingApplication ? (
                         <div className="overflow-hidden rounded-3xl border border-blue-100 bg-white shadow-sm">
                             <div className="bg-gradient-to-br from-[#162660] to-[#273c83] px-5 py-5 text-white">
                                 <div className="mb-4 flex items-center justify-between">
@@ -213,7 +215,6 @@ export default function Home({
                                 </button>
                             </div>
                         </div>
-                    ) : null}
                     </div>
                 )}
 
@@ -274,7 +275,10 @@ export default function Home({
                     <>
                         <section className="px-4">
                             <div className="rounded-3xl bg-[#162660] p-5 text-white sm:p-7">
-                                <p className="text-xs font-bold text-blue-200">MY CREW</p>
+                                <div className="flex items-center justify-between gap-3">
+                                    <p className="text-xs font-bold text-blue-200">MY CREW</p>
+                                    {userInfo?.crew && isCrewManagerRole(userInfo.role) && onCrewSettingsClick && <button type="button" onClick={onCrewSettingsClick} className="inline-flex min-h-10 shrink-0 items-center gap-1.5 rounded-xl bg-white/10 px-3 text-xs font-semibold text-white hover:bg-white/20"><Settings className="h-4 w-4" />크루 설정</button>}
+                                </div>
                                 <h2 className="mt-2 text-2xl font-black">{userInfo?.crew?.crewName || crewDetail?.crewName || '내 크루'}와 함께하는 오늘</h2>
                                 <p className="mt-3 text-sm leading-6 text-blue-100">새로운 모임을 찾아보고, 내 일정과 시즌방 현황을 한곳에서 확인해요.</p>
                                 <div className="mt-5 grid grid-cols-2 gap-3">
@@ -283,6 +287,7 @@ export default function Home({
                                 </div>
                             </div>
                         </section>
+                {seasonHouseAvailable && userInfo?.crew && <PersonalCalendarPreview crewId={userInfo.crew.crewId} onOpen={onCalendarClick} />}
                         <section className="grid gap-3 px-4 sm:grid-cols-2">
                             <button type="button" onClick={onSeasonCalendarClick || onCalendarClick} className="min-h-24 rounded-2xl border border-zinc-200 bg-white p-5 text-left"><CalendarIcon className="h-5 w-5 text-[#162660]" /><span className="mt-2 block font-black text-[#162660]">시즌방 캘린더</span><span className="mt-1 block text-xs leading-6 text-zinc-500">날짜별 이용 현황 조회 · {seasonHouseAvailable ? '예약 운영 중' : '크루 예약 접수 전'}</span></button>
                             <button type="button" onClick={onMyPlansClick} className="min-h-24 rounded-2xl border border-zinc-200 bg-white p-5 text-left"><CalendarHeart className="h-5 w-5 text-[#162660]" /><span className="mt-2 block font-black text-[#162660]">내 참여 일정</span><span className="mt-1 block text-xs leading-6 text-zinc-500">참여·대기 중인 이벤트를 확인해요.</span></button>
@@ -422,20 +427,7 @@ export default function Home({
                             </div>
                         </section>
 
-                        {seasonHouseAvailable && (
-                            <section className="px-4">
-                                <div className="flex items-center justify-between rounded-2xl border border-zinc-200 bg-white px-4 py-3">
-                                    <span className="flex items-center gap-3">
-                                        <CloudSun className="h-5 w-5 text-sky-600" />
-                                        <span>
-                                            <span className="block text-xs font-black text-zinc-800">휘닉스파크</span>
-                                            <span className="block text-[11px] text-zinc-400">{currentDate} · {weather?.weatherLabel || '날씨 확인 중'}</span>
-                                        </span>
-                                    </span>
-                                    <span className="text-xl font-black text-zinc-800">{weather ? Math.round(weather.temperature) : '--'}°</span>
-                                </div>
-                            </section>
-                        )}
+
                     </>
                 )}
             </main>

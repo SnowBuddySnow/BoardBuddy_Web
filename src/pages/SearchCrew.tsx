@@ -9,9 +9,10 @@ interface SearchCrewProps {
     onBack: () => void;
     onJoined?: () => void;
     onApplied?: () => void;
+    onSkip?: () => void;
 }
 
-export default function SearchCrew({ onBack, onJoined, onApplied }: SearchCrewProps) {
+export default function SearchCrew({ onBack, onJoined, onApplied, onSkip }: SearchCrewProps) {
     const [crews, setCrews] = useState<DiscoverableCrew[]>([]);
     const [query, setQuery] = useState('');
     const [selectedCrew, setSelectedCrew] = useState<DiscoverableCrew | null>(null);
@@ -87,7 +88,7 @@ export default function SearchCrew({ onBack, onJoined, onApplied }: SearchCrewPr
                     <ChevronLeftIcon className="h-7 w-7" />
                 </Button>
                 <h1 className="absolute left-1/2 -translate-x-1/2 text-xl font-bold text-zinc-900">크루 검색</h1>
-                <div className="w-8" />
+                {onSkip ? <button type="button" onClick={onSkip} disabled={submitting} className="min-h-11 text-xs font-semibold text-slate-500">다음에 하기</button> : <div className="w-8" />}
             </header>
 
             <main className="flex-1 overflow-y-auto px-5 py-6 lg:px-8">
