@@ -17,6 +17,7 @@ export const installOnboardingBoundary = async (page, { origin = 'http://127.0.0
         const usedNights=committed.filter(item=>item.stayCompleted).length,reservedNights=committed.length-usedNights;
         return {...pass,usedNights,reservedNights,remainingNights:pass.totalNights==null?null:Math.max(0,pass.totalNights-usedNights-reservedNights)};
     };
+    const savePass = (id, body) => { const existing = state.seasonPasses[id]; return { ...body, registered: true, startsOn: body.startsOn ?? existing?.startsOn ?? '2026-10-01', endsOn: body.endsOn ?? existing?.endsOn ?? '2027-05-31' }; };
     page.on('pageerror', error => state.errors.push(error.message));
     await page.context().addInitScript(() => {
         window.Kakao = { isInitialized: () => true, init() {}, Auth: { login: ({ success }) => { queueMicrotask(() => success({ access_token: 'synthetic-provider-only' })); } } };
@@ -68,7 +69,7 @@ export const installOnboardingBoundary = async (page, { origin = 'http://127.0.0
                 const body=request.postDataJSON();
                 if(state.passAssignmentError)return respond(null,400,'이미 확정된 박수보다 적게 설정할 수 없습니다.');
                 if(!body.memberIds.length||body.memberIds.some(id=>![99101,99102].includes(id)))return respond(null,403);
-                body.memberIds.forEach(id=>{state.seasonPasses[id]={registered:true,name:body.name,totalNights:body.totalNights,startsOn:body.startsOn,endsOn:body.endsOn};});
+                body.memberIds.forEach(id=>{state.seasonPasses[id]=savePass(id,{name:body.name,totalNights:body.totalNights});});
                 state.writes.push({path,body});return respond({updated:body.memberIds.length});
             }
             const all=[{accountId:99101,name:'가상 회원',studentNumber:'20260001',role:state.role},{accountId:99102,name:'가상 부원',studentNumber:'20260002',role:'CREW_MEMBER'}];
@@ -84,7 +85,7 @@ export const installOnboardingBoundary = async (page, { origin = 'http://127.0.0
         }
         if (path.includes('/season-stays/pass')) {
             const id = path.endsWith('/pass') ? 99101 : Number(path.split('/').pop());
-            if (method === 'PUT') { if(!['CREW_CAPTAIN','CREW_MANAGER'].includes(state.role))return respond(null,403); state.seasonPasses[id] = { ...request.postDataJSON(),registered:true }; }
+            if (method === 'PUT') { if(!['CREW_CAPTAIN','CREW_MANAGER'].includes(state.role))return respond(null,403); state.seasonPasses[id] = savePass(id,request.postDataJSON()); }
             const pass = state.seasonPasses[id];
             if (!pass) return respond({registered:false});
             const usedNights=state.bookings.filter(item=>item.participantAccountId===id&&item.status==='CONFIRMED'&&item.stayCompleted).length;

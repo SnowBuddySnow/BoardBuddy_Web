@@ -85,12 +85,9 @@ export default function SeasonPassCard({
                 </div>
               </dl>
               <p className="mt-3 text-[11px] leading-5 text-slate-500">
-                {pass.startsOn?.replace(/-/g, ".")} ~{" "}
-                {pass.endsOn?.replace(/-/g, ".")}
+                이용권은 시즌별로 관리하며, 대기는 차감하지 않아요.
                 <br />
-                대기는 차감하지 않아요. 이용 완료는 운영진이 확인해요.
-                <br />
-                잔여 박수가 없거나 이용 기간 밖이면 승격이 보류돼요.
+                잔여 박수가 없으면 승격이 보류돼요.
               </p>
             </>
           )}

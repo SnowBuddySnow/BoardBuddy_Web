@@ -4,8 +4,6 @@ import {
   saveSeasonPass,
   type SeasonPassSummary,
 } from "../../services/seasonStays";
-import { getReservationSeason } from "../../lib/reservationSeason";
-import { localDateKey } from "../../lib/personalCalendar";
 
 export default function SeasonPassEditor({
   crewId,
@@ -17,14 +15,10 @@ export default function SeasonPassEditor({
   onSaved: () => void;
 }) {
   const [editing, setEditing] = useState(false);
-  const [newSeason, setNewSeason] = useState(false);
   const [pass, setPass] = useState<SeasonPassSummary>();
   const [name, setName] = useState("5박권");
   const [nights, setNights] = useState("5");
   const [kind, setKind] = useState("5");
-  const season = getReservationSeason();
-  const [startsOn, setStartsOn] = useState(localDateKey(season.start));
-  const [endsOn, setEndsOn] = useState(localDateKey(season.end));
   const [busy, setBusy] = useState(false);
   const lock = useRef(false);
   const [loading, setLoading] = useState(false);
@@ -47,12 +41,9 @@ export default function SeasonPassEditor({
           : String(value.totalNights)
         : "5",
     );
-    setStartsOn(value.startsOn ?? localDateKey(getReservationSeason().start));
-    setEndsOn(value.endsOn ?? localDateKey(getReservationSeason().end));
   }, []);
   useEffect(() => {
     setEditing(false);
-    setNewSeason(false);
     if (!memberId) return;
     let cancelled = false;
     setLoading(true);
@@ -82,8 +73,6 @@ export default function SeasonPassEditor({
     try {
       const value = await saveSeasonPass(crewId, Number(memberId), {
         name,
-        startsOn,
-        endsOn,
         totalNights: kind === "unlimited" ? null : Number(nights),
       });
       setPass(value);
@@ -92,7 +81,7 @@ export default function SeasonPassEditor({
       onSaved();
     } catch {
       setMessage(
-        "저장하지 못했습니다. 기간과 이미 확정된 박수를 확인해 주세요.",
+        "저장하지 못했습니다. 이미 확정된 박수와 권한을 확인해 주세요.",
       );
     } finally {
       lock.current = false;
@@ -107,24 +96,6 @@ export default function SeasonPassEditor({
       <h3 className="text-sm font-bold text-[#162660]">이용권 정보</h3>
       <div className="space-y-3 py-2 text-xs">
         {loading && <p role="status">이용권을 확인하고 있어요.</p>}
-        {pass?.registered &&
-          pass.endsOn &&
-          pass.endsOn < localDateKey(new Date()) && (
-            <button
-              className="min-h-10 text-blue-700"
-              onClick={() => {
-                setEditing(true);
-                setNewSeason(true);
-                setKind("5");
-                setName("5박권");
-                setNights("5");
-                setStartsOn(localDateKey(getReservationSeason().start));
-                setEndsOn(localDateKey(getReservationSeason().end));
-              }}
-            >
-              새 시즌 이용권 등록
-            </button>
-          )}
         {pass && (
           <section
             aria-label="선택한 부원 이용권"
@@ -135,10 +106,6 @@ export default function SeasonPassEditor({
             </h3>
             {pass.registered && (
               <>
-                <p className="mt-1 text-xs text-slate-500">
-                  {pass.startsOn?.replace(/-/g, ".")} ~{" "}
-                  {pass.endsOn?.replace(/-/g, ".")}
-                </p>
                 <dl className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
                   {[
                     [
@@ -171,7 +138,6 @@ export default function SeasonPassEditor({
             type="button"
             onClick={() => {
               restoreDraft(pass);
-              setNewSeason(false);
               setEditing(true);
             }}
             className="reservation-secondary min-h-11 w-full"
@@ -237,30 +203,6 @@ export default function SeasonPassEditor({
                 />
               </label>
             </div>
-            <div className="grid grid-cols-2 gap-2">
-              <label>
-                시작일 *
-                <input
-                  aria-label="이용권 시작일"
-                  type="date"
-                  value={startsOn}
-                  onChange={(event) => setStartsOn(event.target.value)}
-                  disabled={busy || (pass.registered && !newSeason)}
-                  className="reservation-input mt-1 w-full min-w-0"
-                />
-              </label>
-              <label>
-                종료일 *
-                <input
-                  aria-label="이용권 종료일"
-                  type="date"
-                  value={endsOn}
-                  onChange={(event) => setEndsOn(event.target.value)}
-                  disabled={busy || (pass.registered && !newSeason)}
-                  className="reservation-input mt-1 w-full min-w-0"
-                />
-              </label>
-            </div>
             <p className="leading-5 text-slate-500">
               이용 {pass.usedNights}박 · 확정 예약 {pass.reservedNights}박
               <br />
@@ -271,9 +213,6 @@ export default function SeasonPassEditor({
               disabled={
                 busy ||
                 !name.trim() ||
-                !startsOn ||
-                !endsOn ||
-                startsOn > endsOn ||
                 (kind !== "unlimited" &&
                   (!Number.isInteger(Number(nights)) ||
                     Number(nights) < 1 ||

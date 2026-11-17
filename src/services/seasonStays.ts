@@ -13,8 +13,6 @@ export interface SeasonPassSummary {
 }
 export interface SeasonPassInput {
   name: string;
-  startsOn: string;
-  endsOn: string;
   totalNights: number | null;
 }
 export interface SeasonPassMember {

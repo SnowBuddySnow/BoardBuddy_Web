@@ -167,10 +167,10 @@ export default function Home({
     return (
         <div className="flex-1 flex flex-col h-full overflow-hidden bg-[#FAF8F3] relative">
             {/* Content Area */}
-            <main className="flex-1 overflow-y-auto pt-4 pb-6 space-y-5">
+            <main className="mx-auto w-full max-w-6xl flex-1 overflow-y-auto px-4 pt-5 pb-6 space-y-5 sm:px-6 lg:px-8 lg:pt-6">
 
                         {operatingFeatures.season && (
-                            <section aria-label="휘닉스파크 날씨" className="px-4">
+                            <section aria-label="휘닉스파크 날씨">
                                 <div className="flex items-center justify-between rounded-2xl border border-zinc-200 bg-white px-4 py-3">
                                     <span className="flex items-center gap-3">
                                         <CloudSun className="h-5 w-5 text-sky-600" />
@@ -185,9 +185,9 @@ export default function Home({
                         )}
 
                 {/* Pending applications remain visible without repeating the member's crew name. */}
-                {!hasCrew && onOnboardingClick && <div className="px-4"><button type="button" onClick={onOnboardingClick} className="flex min-h-12 w-full items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-left text-sm font-semibold text-[#162660]"><span>가입·크루 진행 상태</span><span className="flex shrink-0 items-center gap-1 text-xs text-slate-500">이어보기<ChevronRight className="h-4 w-4" /></span></button></div>}
+                {!hasCrew && onOnboardingClick && <div><button type="button" onClick={onOnboardingClick} className="flex min-h-12 w-full items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-left text-sm font-semibold text-[#162660]"><span>가입·크루 진행 상태</span><span className="flex shrink-0 items-center gap-1 text-xs text-slate-500">이어보기<ChevronRight className="h-4 w-4" /></span></button></div>}
                 {!hasCrew && pendingApplication && (
-                    <div className="px-4">
+                    <div>
                         <div className="overflow-hidden rounded-3xl border border-blue-100 bg-white shadow-sm">
                             <div className="bg-gradient-to-br from-[#162660] to-[#273c83] px-5 py-5 text-white">
                                 <div className="mb-4 flex items-center justify-between">
@@ -219,13 +219,13 @@ export default function Home({
                 )}
 
                 {!hasCrew && !pendingApplication && (
-                    <section className="px-4">
+                    <section>
                         <div className="mb-3">
                             <h2 className="text-base font-black text-zinc-900">시작하기</h2>
                             <p className="mt-0.5 text-xs font-medium text-zinc-500">내게 맞는 방식으로 지금 바로 이용해 보세요.</p>
                         </div>
-                        <div className="grid grid-cols-2 gap-3">
-                            <button type="button" onClick={onSearchClick} className="col-span-2 flex min-h-[152px] items-center justify-between overflow-hidden rounded-3xl bg-[#162660] p-6 text-left text-white shadow-sm transition-transform hover:bg-[#0f1b48] active:scale-[0.99]">
+                        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4">
+                            <button type="button" onClick={onSearchClick} className="col-span-2 sm:col-span-1 flex min-h-[152px] sm:min-h-48 items-center justify-between overflow-hidden rounded-3xl bg-[#162660] p-6 text-left text-white shadow-sm transition-transform hover:bg-[#0f1b48] active:scale-[0.99]">
                                 <span>
                                     <span className="mb-3 flex h-11 w-11 -rotate-6 items-center justify-center rounded-2xl border border-white/20 bg-white/15 shadow-sm"><Sparkles className="h-5 w-5 text-amber-200" /></span>
                                     <span className="block text-base font-black">크루 가입하기</span>
@@ -233,15 +233,15 @@ export default function Home({
                                 </span>
                                 <span className="flex h-11 w-11 rotate-6 items-center justify-center rounded-full bg-white/10"><ChevronRight className="h-5 w-5 text-blue-100" /></span>
                             </button>
-                            <button type="button" onClick={onCreateCrewClick} className="min-h-[164px] rounded-3xl border border-sky-100 bg-sky-50 p-5 text-left transition-colors hover:bg-sky-100 active:scale-[0.99]">
+                            <button type="button" onClick={onCreateCrewClick} className="min-h-[164px] sm:min-h-48 rounded-3xl border border-sky-100 bg-sky-50 p-5 text-left transition-colors hover:bg-sky-100 active:scale-[0.99]">
                                 <span className="mb-4 flex h-11 w-11 rotate-3 items-center justify-center rounded-2xl border border-sky-100 bg-white text-sky-700 shadow-sm"><TentTree className="h-5 w-5" /></span>
                                 <span className="block text-base font-black text-zinc-900">크루 만들기</span>
                                 <span className="mt-1.5 block text-xs leading-4 font-medium text-zinc-500">새 크루를 등록하고 운영을 시작하세요.</span>
                             </button>
-                            <button type="button" onClick={onGuestReservationClick} className="min-h-[164px] rounded-3xl border border-rose-100 bg-rose-50 p-5 text-left transition-colors hover:bg-rose-100 active:scale-[0.99]">
+                            <button type="button" onClick={onGuestReservationClick} className="min-h-[164px] sm:min-h-48 rounded-3xl border border-rose-100 bg-rose-50 p-5 text-left transition-colors hover:bg-rose-100 active:scale-[0.99]">
                                 <span className="mb-4 flex h-11 w-11 -rotate-3 items-center justify-center rounded-2xl border border-rose-100 bg-white text-rose-500 shadow-sm"><CalendarHeart className="h-5 w-5" /></span>
                                 <span className="block text-base font-black text-zinc-900">{operatingFeatures.season ? '게스트 예약하기' : '게스트 이벤트 참여'}</span>
-                                <span className="mt-1.5 block text-xs leading-4 font-medium text-zinc-500">{operatingFeatures.season ? '크루 가입 전에도 게스트로 예약할 수 있어요.' : '초대 코드로 이벤트에 참여할 수 있어요.'}</span>
+                                <span className="mt-1.5 block text-xs leading-4 font-medium text-zinc-500">{operatingFeatures.season ? '게스트 신청 방법을 확인해 보세요.' : '초대 코드로 이벤트에 참여할 수 있어요.'}</span>
                             </button>
                         </div>
                     </section>
@@ -273,7 +273,7 @@ export default function Home({
 
                 {hasCrew && (
                     <>
-                        <section className="px-4">
+                        <section>
                             <div className="rounded-3xl bg-[#162660] p-5 text-white sm:p-7">
                                 <div className="flex items-center justify-between gap-3">
                                     <p className="text-xs font-bold text-blue-200">MY CREW</p>
@@ -288,12 +288,12 @@ export default function Home({
                             </div>
                         </section>
                 {seasonHouseAvailable && userInfo?.crew && <PersonalCalendarPreview crewId={userInfo.crew.crewId} onOpen={onCalendarClick} />}
-                        <section className="grid gap-3 px-4 sm:grid-cols-2">
+                        <section className="grid gap-3 sm:grid-cols-2">
                             <button type="button" onClick={onSeasonCalendarClick || onCalendarClick} className="min-h-24 rounded-2xl border border-zinc-200 bg-white p-5 text-left"><CalendarIcon className="h-5 w-5 text-[#162660]" /><span className="mt-2 block font-black text-[#162660]">시즌방 캘린더</span><span className="mt-1 block text-xs leading-6 text-zinc-500">날짜별 이용 현황 조회 · {seasonHouseAvailable ? '예약 운영 중' : '크루 예약 접수 전'}</span></button>
                             <button type="button" onClick={onMyPlansClick} className="min-h-24 rounded-2xl border border-zinc-200 bg-white p-5 text-left"><CalendarHeart className="h-5 w-5 text-[#162660]" /><span className="mt-2 block font-black text-[#162660]">내 참여 일정</span><span className="mt-1 block text-xs leading-6 text-zinc-500">참여·대기 중인 이벤트를 확인해요.</span></button>
                         </section>
                         {seasonHouseAvailable && (
-                            <section className="px-4">
+                            <section>
                                 <button
                                     type="button"
                                     onClick={onMakeReservationClick}
@@ -313,7 +313,7 @@ export default function Home({
                             </section>
                         )}
 
-                        {operatingFeatures.offSeason && <section className="space-y-2.5 px-4">
+                        {operatingFeatures.offSeason && <section className="space-y-2.5">
                             <div className="flex items-end justify-between gap-3">
                                 <div>
                                     <p className="text-[11px] font-black text-[#162660]">CREW EVENTS</p>
@@ -373,7 +373,7 @@ export default function Home({
                         </section>}
 
                         {operatingFeatures.offSeason && myPlansCount > 0 && (
-                            <section className="px-4">
+                            <section>
                                 <button
                                     type="button"
                                     onClick={onMyPlansClick}
@@ -392,7 +392,7 @@ export default function Home({
                         )}
 
                         {seasonHouseUnavailable && (
-                            <section className="px-4">
+                            <section>
                                 <div className="flex items-center gap-3 rounded-2xl border border-zinc-200 bg-white px-4 py-3.5">
                                     <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-zinc-100 text-zinc-500">
                                         <LockKeyhole className="h-4 w-4" />
@@ -405,7 +405,7 @@ export default function Home({
                             </section>
                         )}
 
-                        <section className="px-4">
+                        <section>
                             <h2 className="mb-2.5 text-xs font-black text-zinc-500">바로가기</h2>
                             <div className={`grid gap-2 ${seasonHouseAvailable ? 'grid-cols-3' : 'grid-cols-1'}`}>
                                 {seasonHouseAvailable && (

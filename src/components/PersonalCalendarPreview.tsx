@@ -53,7 +53,7 @@ export default function PersonalCalendarPreview({
   return (
     <section
       aria-label="나의 2주 달력"
-      className="mx-4 rounded-[20px] bg-[#f3f4f6] p-3"
+      className="rounded-[20px] bg-[#f3f4f6] p-3"
     >
       <div className="mb-3 flex items-center justify-between">
         <h2 className="text-sm font-bold text-[#162660]">
