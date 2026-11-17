@@ -1,4 +1,4 @@
-import { ArrowRight, CalendarDays, Sparkles, ShieldCheck, UsersRound } from 'lucide-react';
+import { ArrowRight, CalendarDays, Sparkles, ShieldCheck, UsersRound, Settings } from 'lucide-react';
 import type { OperationPermission } from '../services/operations';
 import { hasEventManagementAccess } from '../lib/eventManagerOnboarding';
 import { getOperatingFeatures, OperatingMode, operatingModeCopy } from '../constants/operatingSeason';
@@ -11,6 +11,7 @@ interface OperationsCenterProps {
   onPartiesClick: () => void;
   onGroupsClick: () => void;
   onCrewClick: () => void;
+  onCrewSettingsClick?: () => void;
   onEventManagerOnboardingClick?: () => void;
 }
 
@@ -25,6 +26,7 @@ export default function OperationsCenter({
   onPartiesClick,
   onGroupsClick,
   onCrewClick,
+  onCrewSettingsClick,
   onEventManagerOnboardingClick,
 }: OperationsCenterProps) {
   const features = getOperatingFeatures(operatingMode);
@@ -61,9 +63,17 @@ export default function OperationsCenter({
     canManageCrew && {
       id: 'crew',
       title: '크루 관리',
-      description: '크루 운영과 이벤트 호스트 지정을 확인합니다.',
+      description: '멤버 권한과 부원 이용권을 관리합니다.',
       icon: UsersRound,
       onClick: onCrewClick,
+      priority: false,
+    },
+    canManageCrew && onCrewSettingsClick && {
+      id: 'crew-settings',
+      title: '크루 설정',
+      description: '예약 오픈 시간·정원·가입 설정을 관리합니다.',
+      icon: Settings,
+      onClick: onCrewSettingsClick,
       priority: false,
     },
   ].filter(Boolean) as Array<{

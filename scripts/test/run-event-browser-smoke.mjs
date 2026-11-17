@@ -10,7 +10,7 @@ let browser;
 try {
     if (!process.argv.includes('--existing-server')) {
         server = spawn(process.execPath, ['node_modules/vite/bin/vite.js', '--host', '127.0.0.1', '--port', '5187', '--strictPort'], {
-            cwd: root, stdio: 'ignore', env: { ...process.env, VITE_API_BASE_URL: `${origin}/__scenario_api`,
+            cwd: root, stdio: 'ignore', env: { ...process.env, BOARDBUDDY_VITE_CACHE_DIR: 'node_modules/.vite-event-test', VITE_API_BASE_URL: `${origin}/__scenario_api`,
                 VITE_OPERATING_MODE_OVERRIDE: 'OFF_SEASON', VITE_KAKAO_JAVASCRIPT_KEY: '' },
         });
         let ready = false;

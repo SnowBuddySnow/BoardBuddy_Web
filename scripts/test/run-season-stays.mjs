@@ -26,6 +26,7 @@ try {
       stdio: "ignore",
       env: {
         ...process.env,
+        BOARDBUDDY_VITE_CACHE_DIR: 'node_modules/.vite-stays-test',
         VITE_API_BASE_URL: `${origin}/__scenario_api`,
         VITE_KAKAO_JAVASCRIPT_KEY: "",
       },
@@ -161,6 +162,7 @@ try {
           .waitFor();
         await fits();
         await day(13).click();
+        await page.getByRole("button",{name:"공지하기",exact:true}).click();
         const panel = page.getByRole("region", { name: "숙박자 공지" });
         await panel
           .getByRole("textbox", { name: "숙박 공지 내용" })
@@ -178,10 +180,15 @@ try {
           state.stayAnnouncements.length === 1,
           "Announcement double sent",
         );
-        await page.getByText("부원 이용권 관리", { exact: true }).click();
-        await page
-          .getByRole("combobox", { name: "이용권 부원" })
-          .selectOption("99101");
+        assert(await page.getByText('부원 이용권 관리',{exact:true}).count()===0,'Booking calendar contains pass administration');
+        await page.goto(`${origin}/?view=crew_detail`);
+        await page.getByRole('button',{name:'이용권 관리',exact:true}).click();
+        await page.getByRole('heading',{name:'크루 관리',exact:true}).waitFor();
+        await page.getByRole('list',{name:'부원 이용권 목록',exact:true}).getByText('가상 회원',{exact:true}).waitFor();
+        assert(await page.getByRole('combobox',{name:'이용권 부원'}).count()===0,'Pass directory still uses a member dropdown');
+        await page.getByRole('button',{name:'가상 회원 이력·수정',exact:true}).click();
+        await page.getByRole('region',{name:'숙박 이력',exact:true}).getByText('2026.11.12',{exact:true}).waitFor();
+        await page.getByRole('button',{name:'이용권 수정',exact:true}).click();
         await page
           .getByRole("combobox", { name: "이용권 종류" })
           .selectOption("10");
@@ -192,10 +199,28 @@ try {
           .getByText("이용권을 저장했습니다.", { exact: true })
           .waitFor();
         assert(state.seasonPasses[99101].totalNights === 10, "Pass not saved");
+        await page.getByRole('region',{name:'선택한 부원 이용권',exact:true}).getByRole('heading',{name:'10박권',exact:true}).waitFor();
+        assert(await page.getByRole('button',{name:'이용권 저장',exact:true}).count()===0,'Pass editor did not close after save');
         await fits();
         await page.screenshot({
           path: `${root}/output/playwright/season-stays-${name}-${width}.png`,
         });
+        await page.getByRole('dialog').getByRole('button',{name:'닫기',exact:true}).click();
+        await page.getByRole('textbox',{name:'부원 검색',exact:true}).fill('20260002');
+        await page.getByRole('list',{name:'부원 이용권 목록',exact:true}).getByText('가상 부원',{exact:true}).waitFor();
+        assert(await page.getByRole('list',{name:'부원 이용권 목록',exact:true}).getByText('가상 회원',{exact:true}).count()===0,'Member search did not filter');
+        await page.getByRole('textbox',{name:'부원 검색',exact:true}).fill('');
+        await page.getByRole('list',{name:'부원 이용권 목록',exact:true}).getByText('가상 회원',{exact:true}).waitFor();
+        await page.getByRole('checkbox',{name:'현재 목록 전체 선택',exact:true}).check();
+        await page.getByRole('button',{name:'풀상주 할당',exact:true}).click();
+        const bulk=page.getByRole('dialog');
+        await bulk.getByRole('button',{name:'선택 2명에게 할당',exact:true}).click();
+        await page.getByText('2명에게 이용권을 할당했습니다.',{exact:true}).waitFor();
+        assert(state.seasonPasses[99101].totalNights===null&&state.seasonPasses[99102].totalNights===null,'Bulk unlimited assignment failed');
+        await page.getByRole('checkbox',{name:'현재 목록 전체 선택',exact:true}).check();
+        await page.getByRole('button',{name:'10박권 할당',exact:true}).click();
+        await page.getByRole('dialog').getByRole('button',{name:'선택 2명에게 할당',exact:true}).click();
+        await page.getByText('2명에게 이용권을 할당했습니다.',{exact:true}).waitFor();
         await page.goto(`${origin}/?view=notifications`);
         await page
           .getByRole("heading", { name: "알림", exact: true })

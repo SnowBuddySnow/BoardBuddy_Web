@@ -1,5 +1,5 @@
 import { getAccountId, getAuthSessionRevision } from './session';
-export interface SignupPrefill { name?: string | null; phoneNumber?: string | null; }
+export interface SignupPrefill { name?: string | null; phoneNumber?: string | null; gender?: 'FEMALE' | 'MALE' | null; missingConsentScopes?: string[]; }
 let hint: { accountId: string; revision: number; value: SignupPrefill } | null = null;
 // Memory only; no provider PII in persisted drafts or URLs.
 export const setSignupPrefill = (accountId: string | number, value?: SignupPrefill) => {

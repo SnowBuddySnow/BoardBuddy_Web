@@ -17,6 +17,62 @@ export interface SeasonPassInput {
   endsOn: string;
   totalNights: number | null;
 }
+export interface SeasonPassMember {
+  accountId: number;
+  name: string;
+  studentNumber: string | null;
+  role: string;
+  pass: SeasonPassSummary;
+  completedNights: number;
+}
+export interface StayHistoryItem {
+  reservationId: number;
+  date: string;
+  status: string;
+  completed: boolean;
+}
+export interface PagedItems<T> {
+  items: T[];
+  total: number;
+  page: number;
+  size: number;
+}
+export async function listSeasonPassMembers(
+  crewId: number,
+  query = "",
+  page = 0,
+): Promise<PagedItems<SeasonPassMember>> {
+  return (
+    await apiClient.get<ApiResponse<PagedItems<SeasonPassMember>>>(
+      `/crews/${crewId}/season-stays/passes`,
+      { params: { query, page, size: 30 } },
+    )
+  ).data.data;
+}
+export async function getMemberStayHistory(
+  crewId: number,
+  memberId: number,
+  page = 0,
+): Promise<PagedItems<StayHistoryItem>> {
+  return (
+    await apiClient.get<ApiResponse<PagedItems<StayHistoryItem>>>(
+      `/crews/${crewId}/season-stays/passes/${memberId}/history`,
+      { params: { page, size: 10 } },
+    )
+  ).data.data;
+}
+export async function assignSeasonPasses(
+  crewId: number,
+  memberIds: number[],
+  input: SeasonPassInput,
+): Promise<{ updated: number }> {
+  return (
+    await apiClient.put<ApiResponse<{ updated: number }>>(
+      `/crews/${crewId}/season-stays/passes`,
+      { ...input, memberIds },
+    )
+  ).data.data;
+}
 export interface StayAnnouncement {
   id: number;
   stayDate: string;

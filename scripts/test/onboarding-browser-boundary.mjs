@@ -7,15 +7,23 @@ export const installOnboardingBoundary = async (page, { origin = 'http://127.0.0
     state.writes = [];
     state.crewOverrides = {};
     state.seedReservation = { participantName: '가상 부원', reservationId: 77, participantAccountId: 99102, status: 'CONFIRMED', paymentStatus: 'UNPAID', managerMemo: null };
+    state.signupEmailProofs = {};
     state.seasonPasses = {}; state.stayAnnouncements = []; state.notifications = [];
     state.delayBookingMs = 0;
     state.seasonOpen = false; state.bookings = []; state.nextBookingId = 80;
+    const passView = id => {
+        const pass=state.seasonPasses[id];if(!pass)return {registered:false,name:null,startsOn:null,endsOn:null,totalNights:null,usedNights:0,reservedNights:0,remainingNights:null};
+        const committed=state.bookings.filter(item=>item.participantAccountId===id&&item.status==='CONFIRMED');
+        const usedNights=committed.filter(item=>item.stayCompleted).length,reservedNights=committed.length-usedNights;
+        return {...pass,usedNights,reservedNights,remainingNights:pass.totalNights==null?null:Math.max(0,pass.totalNights-usedNights-reservedNights)};
+    };
     page.on('pageerror', error => state.errors.push(error.message));
     await page.context().addInitScript(() => {
         window.Kakao = { isInitialized: () => true, init() {}, Auth: { login: ({ success }) => { queueMicrotask(() => success({ access_token: 'synthetic-provider-only' })); } } };
     });
     await page.route('**/*', async route => {
         const request = route.request(); const url = new URL(request.url());
+        if (url.hostname === 'api.open-meteo.com' && url.pathname === '/v1/forecast') return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({current:{temperature_2m:-2,weather_code:71}})});
         if (url.origin !== origin) return route.abort('blockedbyclient');
         if (!url.pathname.startsWith('/__scenario_api')) return route.continue();
         if (request.url().includes(state.token)) state.credentialInUrl = true;
@@ -36,6 +44,8 @@ export const installOnboardingBoundary = async (page, { origin = 'http://127.0.0
         if (path === '/accounts/phone-verifications') return respond({ challengeId: 'synthetic-challenge', retryAfterSeconds: 0 }, 202);
         if (path === '/accounts/phone-verifications/synthetic-challenge/confirm') return respond({ accountId: 99101, accessToken: 'synthetic-verified', resolution: 'VERIFIED', status: 'PENDING_PROFILE' });
         if (path === '/accounts/99101/profile') { state.profileBody = request.postDataJSON(); return respond({ accessToken: 'synthetic-active', refreshToken: 'synthetic-refresh' }); }
+        if (path === '/accounts/onboarding/school-email-verifications' && method === 'POST') { const body=request.postDataJSON(); const challengeId=`school-proof-${Object.keys(state.signupEmailProofs).length+1}`; state.signupEmailProofs[challengeId]={...body,verified:false}; return respond({challengeId,maskedEmail:'me***@campus.ac.kr',expiresAt:'2027-01-01T00:00:00',retryAfterSeconds:0,expiresInSeconds:900}); }
+        if (path.startsWith('/accounts/onboarding/school-email-verifications/')) { const id=path.split('/')[4]; const proof=state.signupEmailProofs[id]; if(!proof)return respond(null,404); if(method==='POST'){ if(request.postDataJSON().code!=='123456')return respond(null,400);proof.verified=true; }return respond({challengeId:id,verified:proof.verified,maskedEmail:'me***@campus.ac.kr'}); }
         if (path === '/accounts/onboarding') return respond({ verifiedPhoneNumber: null });
         if (path === '/users/me') return respond({ userId: 99101, name: '가상 회원', role: state.role, userType: 'REGULAR', isRegistered: true, crew: state.approved ? { crewId: 17, crewName: '가상 크루' } : null });
         if (path === '/crews/17' && method === 'PATCH') {
@@ -45,15 +55,36 @@ export const installOnboardingBoundary = async (page, { origin = 'http://127.0.0
         if (path === '/crews/17') return respond({ crewId: 17, crew_id: 17, crewName: '가상 크루', name: '가상 크루', univ: '한국대학교', status: 'ACTIVE', role: state.role, member_count: 2, seasonHouseActive: state.seasonOpen, dailyCapacity: 20, teachingEnabled: true, ...state.crewOverrides });
         if (path === '/crews/17/members') return respond([{user_id:99101,name:'가상 회원',role:state.role},{user_id:99102,name:'가상 부원',role:'CREW_MEMBER'}]);
         if (path === '/crews/17/managers') return respond([]);
-        if (path === '/operations/context') return respond({ permissions: state.role === 'CREW_CAPTAIN' ? ['PARTIES_CREATE', 'PARTIES_MANAGE', 'EVENT_GROUPS_CREATE', 'EVENT_GROUPS_VIEW', 'EVENT_GROUPS_MANAGE'] : [] });
+        if (path === '/operations/crews/17/members') return respond([{accountId:99101,displayName:'가상 회원',crewRole:state.role,eventManager:state.role==='CREW_CAPTAIN'},{accountId:99102,displayName:'가상 부원',crewRole:'CREW_MEMBER',eventManager:false}]);
+        if (path === '/operations/context') return respond({ permissions: state.role === 'CREW_CAPTAIN' ? ['CREW_MEMBERS_MANAGE', 'CREW_EVENT_MANAGERS_ASSIGN', 'PARTIES_CREATE', 'PARTIES_MANAGE', 'EVENT_GROUPS_CREATE', 'EVENT_GROUPS_VIEW', 'EVENT_GROUPS_MANAGE'] : state.role === 'CREW_MANAGER' ? ['CREW_MEMBERS_MANAGE'] : [] });
         if (path === '/admin/crews' && method === 'POST') { const item = { id: 17, name: request.postDataJSON().name, approvalStatus: 'PENDING', status: 'INACTIVE', createdAt: '2026-11-13T00:00:00' }; state.requests.push(item); return respond(item, 201); }
         if (path === '/admin/crews') return respond({ crews: state.requests, schools: [], developerAccess: false });
         if (path === '/notifications/unread-count') return respond({ count: 0 });
         if (path === '/notifications') return respond({ items: state.notifications, unreadCount: state.notifications.filter(item=>!item.read).length });
         if (/^\/notifications\/\d+\/read$/.test(path) && method === 'PATCH') { state.notifications.find(item=>item.id===Number(path.split('/')[2])).read=true; state.stayAnnouncements.filter(item=>item.id===Number(path.split('/')[2])).forEach(item=>item.recipients.filter(recipient=>recipient.accountId===99101).forEach(recipient=>recipient.read=true)); return respond(null); }
+        if (path === '/crews/17/season-stays/passes') {
+            if (!['CREW_CAPTAIN','CREW_MANAGER'].includes(state.role)) return respond(null,403);
+            if(method==='PUT') {
+                const body=request.postDataJSON();
+                if(state.passAssignmentError)return respond(null,400,'이미 확정된 박수보다 적게 설정할 수 없습니다.');
+                if(!body.memberIds.length||body.memberIds.some(id=>![99101,99102].includes(id)))return respond(null,403);
+                body.memberIds.forEach(id=>{state.seasonPasses[id]={registered:true,name:body.name,totalNights:body.totalNights,startsOn:body.startsOn,endsOn:body.endsOn};});
+                state.writes.push({path,body});return respond({updated:body.memberIds.length});
+            }
+            const all=[{accountId:99101,name:'가상 회원',studentNumber:'20260001',role:state.role},{accountId:99102,name:'가상 부원',studentNumber:'20260002',role:'CREW_MEMBER'}];
+            const query=url.searchParams.get('query')??'';const page=Number(url.searchParams.get('page')??0),size=Number(url.searchParams.get('size')??30);
+            const filtered=all.filter(item=>item.name.includes(query)||item.studentNumber.includes(query));
+            return respond({items:filtered.slice(page*size,(page+1)*size).map(item=>({...item,pass:passView(item.accountId),completedNights:state.bookings.filter(booking=>booking.participantAccountId===item.accountId&&booking.status==='CONFIRMED'&&booking.stayCompleted).length})),total:filtered.length,page,size});
+        }
+        if (/^\/crews\/17\/season-stays\/passes\/\d+\/history$/.test(path)) {
+            if(!['CREW_CAPTAIN','CREW_MANAGER'].includes(state.role))return respond(null,403);
+            const id=Number(path.split('/').at(-2));const page=Number(url.searchParams.get('page')??0),size=Number(url.searchParams.get('size')??10);
+            const items=state.bookings.filter(item=>item.participantAccountId===id).sort((a,b)=>b.date.localeCompare(a.date)).map(item=>({reservationId:item.reservationId,date:item.date,status:item.status,completed:item.stayCompleted===true}));
+            return respond({items:items.slice(page*size,(page+1)*size),total:items.length,page,size});
+        }
         if (path.includes('/season-stays/pass')) {
             const id = path.endsWith('/pass') ? 99101 : Number(path.split('/').pop());
-            if (method === 'PUT') { if(state.role!=='CREW_CAPTAIN')return respond(null,403); state.seasonPasses[id] = { ...request.postDataJSON(),registered:true }; }
+            if (method === 'PUT') { if(!['CREW_CAPTAIN','CREW_MANAGER'].includes(state.role))return respond(null,403); state.seasonPasses[id] = { ...request.postDataJSON(),registered:true }; }
             const pass = state.seasonPasses[id];
             if (!pass) return respond({registered:false});
             const usedNights=state.bookings.filter(item=>item.participantAccountId===id&&item.status==='CONFIRMED'&&item.stayCompleted).length;
@@ -95,6 +126,7 @@ export const installOnboardingBoundary = async (page, { origin = 'http://127.0.0
         if (path === '/dashboard/events/9101/refund-policy') return respond({ refundPolicy: '' });
         if (path === '/dashboard/events/9101/consent-responses') return respond({ eventId: 9101, eventTitle: state.managedEvent.title, items: [], participants: [], canRevealSensitive: false, canExport: false, privateValuesRevealed: false });
         if (path === '/crews/17/reservations' && method === 'POST') {
+            if (state.bookingGate) await state.bookingGate;
             if (state.delayBookingMs) await new Promise(resolve => setTimeout(resolve, state.delayBookingMs));
             const body = request.postDataJSON(); if(body.stayPolicyVersion!==1)return respond(null,400,'숙박일 안내 동의가 필요합니다.'); state.writes.push({ path, body });
             const results = body.dates.map(date => { const item = { date, reservationId: state.nextBookingId++, participantAccountId: 99101, status: 'CONFIRMED' }; state.bookings.push(item); return { ...item, success: true, attempts: 1 }; });

@@ -2,11 +2,12 @@
 import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-const mocks = vi.hoisted(() => ({ getSchools: vi.fn(), put: vi.fn(), getSignupPolicy: vi.fn(), requestPhoneVerification: vi.fn(), confirmPhoneVerification: vi.fn(), getOnboardingStatus: vi.fn() }));
+const mocks = vi.hoisted(() => ({ getSchools: vi.fn(), put: vi.fn(), getSignupPolicy: vi.fn(), requestPhoneVerification: vi.fn(), confirmPhoneVerification: vi.fn(), getOnboardingStatus: vi.fn(), requestSignupSchoolEmail:vi.fn(), confirmSignupSchoolEmail:vi.fn(), getSignupSchoolEmail:vi.fn() }));
 vi.mock('../lib/axios', () => ({ default: { put: mocks.put } }));
 vi.mock('../services/schools', () => ({ getSchools: mocks.getSchools }));
 vi.mock('../services/signupPolicy', () => ({ getSignupPolicy: mocks.getSignupPolicy }));
 vi.mock('../services/onboarding', () => ({ getOnboardingStatus: mocks.getOnboardingStatus }));
+vi.mock('../services/schoolEmailVerification',()=>({requestSignupSchoolEmail:mocks.requestSignupSchoolEmail,confirmSignupSchoolEmail:mocks.confirmSignupSchoolEmail,getSignupSchoolEmail:mocks.getSignupSchoolEmail}));
 vi.mock('../services/phoneVerification', () => ({ requestPhoneVerification: mocks.requestPhoneVerification, confirmPhoneVerification: mocks.confirmPhoneVerification }));
 import UserInfoInput from './UserInfoInput';
 import { setSignupPrefill } from '../lib/signupPrefill';
@@ -23,6 +24,9 @@ describe('signup school, phone and consent flow', () => {
         localStorage.clear(); localStorage.setItem('tempAccessToken', 'synthetic-only'); localStorage.setItem('accountId', '99101');
         mocks.getSignupPolicy.mockResolvedValue({ regularEnabled: true, studentEnabled: true, version: 1 });
         mocks.getSchools.mockResolvedValue(schools);
+        mocks.requestSignupSchoolEmail.mockResolvedValue({challengeId:'school-proof',retryAfterSeconds:0,expiresInSeconds:900,expiresAt:new Date(Date.now()+900_000).toISOString()});
+        mocks.confirmSignupSchoolEmail.mockResolvedValue({challengeId:'school-proof',verified:true,maskedEmail:'me***@campus.ac.kr'});
+        mocks.getSignupSchoolEmail.mockResolvedValue({challengeId:'school-proof',verified:false});
         mocks.getOnboardingStatus.mockResolvedValue({ verifiedPhoneNumber: null });
         mocks.requestPhoneVerification.mockResolvedValue({ challengeId: 'synthetic-challenge', retryAfterSeconds: 0 });
         mocks.confirmPhoneVerification.mockResolvedValue({ accountId: 99101, accessToken: 'synthetic-verified', resolution: 'VERIFIED', status: 'PENDING_PROFILE' });
@@ -48,22 +52,23 @@ describe('signup school, phone and consent flow', () => {
         await click(container.querySelector<HTMLInputElement>('input[name="gender"]')!);
     };
     const toTerms = async () => {
-        await personal(); await click(button('다음'));
+        await personal();
         await fill('input[type="tel"]', '01000000000');
-        await click(button('인증번호 받기'));
+        await click(button('인증'));
         await fill('input[placeholder="6자리 인증번호"]', '123456');
-        await click(button('인증번호 확인')); await click(button('다음'));
+        await click(button('인증번호 확인')); await click(button('동의 단계로'));
     };
     it('prefills provider name and phone without treating either as local verification', async () => {
-        setSignupPrefill('99101', { name: '가상 실명', phoneNumber: '+82 10-0000-0000' });
+        setSignupPrefill('99101', { name: '가상 실명', phoneNumber: '+82 10-0000-0000', gender:'FEMALE' });
         await render();
         const name = container.querySelector<HTMLInputElement>('input[autocomplete="name"]')!;
         expect(name.value).toBe('가상 실명'); expect(name.readOnly).toBe(true);
+        expect(container.querySelector<HTMLInputElement>('input[name="gender"]')!.checked).toBe(true);
         await click(button('내 이름이 아니에요 · 수정하기')); expect(name.readOnly).toBe(false);
-        await personal(); await click(button('다음'));
+        await personal(); await click(button('동의 단계로'));
         expect(container.querySelector<HTMLInputElement>('input[type="tel"]')!.value).toBe('010-0000-0000');
         expect(container.textContent).not.toContain('본인 확인 완료');
-        await click(button('다음')); expect(mocks.put).not.toHaveBeenCalled();
+        await click(button('동의 단계로')); expect(mocks.put).not.toHaveBeenCalled();
         expect(container.querySelector('[role="alert"]')!.textContent).toContain('전화번호 인증');
     });
     it('does not reuse another account or an earlier login hint', async () => {
@@ -83,33 +88,65 @@ describe('signup school, phone and consent flow', () => {
         expect(domain.value).toBe('campus.ac.kr');
         await fill('input[placeholder="이메일 아이디"]', 'member');
         await act(async () => { domain.value = 'mail.campus.ac.kr'; domain.dispatchEvent(new Event('change', { bubbles: true })); });
-        await click(button('다음'));
-        await fill('input[type="tel"]', '01000000000'); await click(button('인증번호 받기'));
-        await fill('input[placeholder="6자리 인증번호"]', '123456'); await click(button('인증번호 확인')); await click(button('다음'));
-        await click(container.querySelector<HTMLInputElement>('input[type="checkbox"]')!); await click(button('필수 약관 전체 동의 후 가입 완료'));
-        expect(mocks.put.mock.calls[0][1]).toMatchObject({ email: 'member@mail.campus.ac.kr', schoolId: 2 });
+        await click(button('학교 이메일 인증'));
+        await fill('#signup-school-code', '123456'); await click(button('이메일 확인'));
+        await fill('input[type="tel"]', '01000000000'); await click(button('인증'));
+        await fill('input[placeholder="6자리 인증번호"]', '123456'); await click(button('인증번호 확인')); await click(button('동의 단계로'));
+        await click(container.querySelector<HTMLInputElement>('input[type="checkbox"]')!); await click(button('전체 동의 후 가입 완료'));
+        expect(mocks.put.mock.calls[0][1]).toMatchObject({ email: 'member@mail.campus.ac.kr', schoolId: 2, schoolEmailChallengeId: 'school-proof' });
+    });
+    it('shows canonical school names only and keeps abbreviations searchable', async () => {
+        await render(); await fill('[role="combobox"]','제2캠퍼스');
+        const option = container.querySelector('[role="option"]')!;
+        expect(option.textContent).toBe('한국대학교');
+        expect(container.textContent).not.toContain('CAMPUS');
+    });
+    it('keeps verification inline, rejects unverified email, and invalidates a proof after email edits', async () => {
+        mocks.getSchools.mockResolvedValue(schools.map(item=>({...item,emailDomains:['campus.ac.kr']})));
+        await render(); await personal(); await fill('input[placeholder="이메일 아이디"]','member');
+        await fill('input[type="tel"]','01000000000'); await click(button('인증'));
+        await fill('#signup-phone-code','123456'); await click(button('인증번호 확인'));
+        await click(button('동의 단계로')); expect(container.querySelector('[role="alert"]')!.textContent).toContain('학교 이메일');
+        await click(button('학교 이메일 인증')); await fill('#signup-school-code','123456'); await click(button('이메일 확인'));
+        await fill('input[placeholder="이메일 아이디"]','changed');
+        await click(button('동의 단계로')); expect(container.querySelector('[role="alert"]')!.textContent).toContain('학교 이메일');
+        expect(mocks.put).not.toHaveBeenCalled();
+    });
+    it('invalidates school email proof when the address changes', async () => {
+        mocks.getSchools.mockResolvedValue(schools.map(item => ({ ...item, emailDomains: ['campus.ac.kr'] })));
+        mocks.getOnboardingStatus.mockResolvedValue({verifiedPhoneNumber:'+821000000000'});
+        await render(); await personal(); await fill('input[placeholder="이메일 아이디"]','member');
+        await click(button('학교 이메일 인증')); await fill('#signup-school-code','123456'); await click(button('이메일 확인'));
+        expect(container.textContent).toContain('학교 이메일 인증 완료');
+        await click(button('동의 단계로')); await click(button('이전 단계'));
+        expect(container.textContent).toContain('학교 이메일 인증 완료');
+        await fill('input[placeholder="이메일 아이디"]','changed');
+        expect(container.textContent).not.toContain('학교 이메일 인증 완료');
+        await click(button('동의 단계로'));
+        expect(container.querySelector('[role="alert"]')!.textContent).toContain('학교 이메일');
+        expect(mocks.put).not.toHaveBeenCalled();
     });
     it('allows an optional school email to remain empty despite a preselected domain', async () => {
         mocks.getSchools.mockResolvedValue(schools.map(item => ({ ...item, emailDomains: ['campus.ac.kr'] })));
         await render(); await toTerms();
-        await click(container.querySelector<HTMLInputElement>('input[type="checkbox"]')!); await click(button('필수 약관 전체 동의 후 가입 완료'));
+        await click(container.querySelector<HTMLInputElement>('input[type="checkbox"]')!); await click(button('전체 동의 후 가입 완료'));
         expect(mocks.put.mock.calls[0][1].email).toBeUndefined();
         expect(success).toHaveBeenCalledOnce();
     });
     it('submits the selected school ID even when names are identical, with explicit required consent only', async () => {
         await render(); await toTerms();
-        expect(button('필수 약관 전체 동의 후 가입 완료').disabled).toBe(true);
+        expect(button('전체 동의 후 가입 완료').disabled).toBe(true);
         await click(container.querySelector<HTMLInputElement>('input[type="checkbox"]')!);
         expect(container.querySelector<HTMLInputElement>('input[name="phoneConsentPref"]:checked')!.parentElement!.textContent).toContain('제공할 때마다 확인');
-        await click(button('필수 약관 전체 동의 후 가입 완료'));
+        await click(button('전체 동의 후 가입 완료'));
         expect(mocks.put.mock.calls[0][1]).toMatchObject({ schoolId: 2, displayName: '가상 회원', phoneNumber: '010-0000-0000' });
         expect(success).toHaveBeenCalledOnce();
     });
     it('invalidates the chosen school on edits instead of treating a typed name as a selection', async () => {
         await render(); await personal(); await fill('[role="combobox"]', '한국대'); await fill('[role="combobox"]', '한국대학교');
-        await click(button('다음'));
+        await click(button('동의 단계로'));
         expect(container.querySelector('[role="alert"]')!.textContent).toContain('검색 결과에서 학교를 선택');
-        expect(container.textContent).toContain('1 / 3');
+        expect(container.textContent).toContain('1 / 2');
     });
     it('does not consent on read or close, and agrees only to the document explicitly accepted', async () => {
         await render(); await toTerms();
@@ -123,7 +160,7 @@ describe('signup school, phone and consent flow', () => {
         await click(open); await click(button('이 약관에 동의', document.querySelector('[role="dialog"]')!));
         expect(container.querySelectorAll('input[type="checkbox"]:checked')).toHaveLength(1);
         expect(container.querySelector<HTMLInputElement>('input[type="checkbox"]')!.indeterminate).toBe(true);
-        expect(button('필수 약관 전체 동의 후 가입 완료').disabled).toBe(true);
+        expect(button('전체 동의 후 가입 완료').disabled).toBe(true);
         await act(async () => { container.querySelector('form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })); });
         expect(mocks.put).not.toHaveBeenCalled();
     });
@@ -137,26 +174,25 @@ describe('signup school, phone and consent flow', () => {
     it('keeps personal data and verification while stepping back, and invalidates verification on phone edits', async () => {
         await render(); await toTerms(); await click(button('이전 단계'));
         expect(container.textContent).toContain('본인 확인 완료');
-        await fill('input[type="tel"]', '01000000001'); await click(button('다음'));
+        await fill('input[type="tel"]', '01000000001'); await click(button('동의 단계로'));
         expect(container.querySelector('[role="alert"]')!.textContent).toContain('전화번호 인증');
-        await click(button('이전 단계'));
         expect(container.querySelector<HTMLInputElement>('input[placeholder="김보드"]')!.value).toBe('가상 회원');
         expect(container.textContent).toContain('한국대학교 선택됨');
     });
     it('preserves consent and input after a failed submission', async () => {
         mocks.put.mockRejectedValueOnce(new Error('offline'));
         await render(); await toTerms(); await click(container.querySelector<HTMLInputElement>('input[type="checkbox"]')!);
-        await click(button('필수 약관 전체 동의 후 가입 완료'));
+        await click(button('전체 동의 후 가입 완료'));
         expect(container.querySelectorAll('input[type="checkbox"]:checked')).toHaveLength(3);
         expect(container.querySelector('[role="alert"]')).not.toBeNull();
-        await click(button('필수 약관 전체 동의 후 가입 완료')); expect(success).toHaveBeenCalledOnce();
+        await click(button('전체 동의 후 가입 완료')); expect(success).toHaveBeenCalledOnce();
     });
     it('returns to personal review when refreshed signup policy changes the profile type', async () => {
         await render(); await toTerms(); await click(container.querySelector<HTMLInputElement>('input[type="checkbox"]')!);
         mocks.put.mockRejectedValueOnce({ isAxiosError: true, response: { status: 403 } });
         mocks.getSignupPolicy.mockResolvedValue({ regularEnabled: true, studentEnabled: false, version: 2 });
-        await click(button('필수 약관 전체 동의 후 가입 완료'));
-        expect(container.textContent).toContain('1 / 3');
+        await click(button('전체 동의 후 가입 완료'));
+        expect(container.textContent).toContain('1 / 2');
         expect(container.querySelector<HTMLButtonElement>('button[aria-pressed="true"]')!.textContent).toContain('일반');
         expect(container.querySelector<HTMLInputElement>('input[placeholder="보드버디"]')!.value).toBe('가상 회원');
         expect(mocks.put).toHaveBeenCalledOnce();
@@ -164,16 +200,16 @@ describe('signup school, phone and consent flow', () => {
     });
     it('reuses server-verified identity without sending another SMS', async () => {
         mocks.getOnboardingStatus.mockResolvedValue({ verifiedPhoneNumber: '+821000000000' });
-        await render(); await personal(); await click(button('다음'));
+        await render(); await personal();
         expect(container.querySelector<HTMLInputElement>('input[type="tel"]')!.value).toBe('010-0000-0000');
         expect(container.textContent).toContain('본인 확인 완료');
-        await click(button('다음')); expect(container.textContent).toContain('3 / 3');
+        await click(button('동의 단계로')); expect(container.textContent).toContain('2 / 2');
         expect(mocks.requestPhoneVerification).not.toHaveBeenCalled();
     });
     it('does not overwrite a phone edited while identity recovery was in flight', async () => {
         let finish!: (value: { verifiedPhoneNumber: string }) => void;
         mocks.getOnboardingStatus.mockReturnValue(new Promise(resolve => { finish = resolve; }));
-        await render(); await personal(); await click(button('다음'));
+        await render(); await personal(); await click(button('동의 단계로'));
         await fill('input[type="tel"]', '01011112222');
         await act(async () => finish({ verifiedPhoneNumber: '+821000000000' }));
         expect(container.querySelector<HTMLInputElement>('input[type="tel"]')!.value).toBe('010-1111-2222');

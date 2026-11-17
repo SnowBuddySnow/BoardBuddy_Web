@@ -1,321 +1,250 @@
-import { useState, useEffect } from 'react';
-import { BadgeCheck, ChevronLeftIcon, ChevronRightIcon, UserIcon, Pencil, ExternalLink, Crown, Waypoints, Map, Sparkles } from 'lucide-react';
-import { Button } from '../components/Button';
-import { Calendar } from '../components/Calendar';
-import { getUserInfo, getMyReservations } from '../services/user';
-import { UserDetail, MyReservation } from '../types/api';
-import { signOut } from '../services/auth';
-import { isCrewCaptainRole, normalizeCrewRole } from '../constants/crewRole';
-import { SEASON_HOUSE_RESERVATIONS_ENABLED } from '../constants/operatingSeason';
+import { useEffect, useState, type ReactNode } from "react";
+import {
+  BadgeCheck,
+  ChevronRight,
+  Map,
+  Sparkles,
+  Waypoints,
+  UserRound,
+  CalendarDays,
+  LogOut,
+} from "lucide-react";
+import { ReservationLayout } from "../components/reservation/ReservationLayout";
+import PersonalCalendarPreview from "../components/PersonalCalendarPreview";
+import SeasonPassCard from "../components/reservation/SeasonPassCard";
+import BuddyMascot from "../components/BuddyMascot";
+import { getUserInfo } from "../services/user";
+import type { UserDetail } from "../types/api";
+import { signOut } from "../services/auth";
+import { isCrewCaptainRole, normalizeCrewRole } from "../constants/crewRole";
+import {
+  SEASON_HOUSE_RESERVATIONS_ENABLED,
+  getOperatingFeatures,
+  getOperatingMode,
+} from "../constants/operatingSeason";
 
 interface MyPageProps {
-    onBack: () => void;
-    onAccountInfoClick?: () => void;
-    onRoleGuideClick?: () => void;
-    onCaptainOnboardingClick?: () => void;
-    onEventManagerOnboardingClick?: () => void;
+  onBack: () => void;
+  onAccountInfoClick?: () => void;
+  onRoleGuideClick?: () => void;
+  onCaptainOnboardingClick?: () => void;
+  onEventManagerOnboardingClick?: () => void;
+  onCalendarClick?: () => void;
+  seasonAvailable?: boolean;
 }
-
-export default function MyPage({ onBack, onAccountInfoClick, onRoleGuideClick, onCaptainOnboardingClick, onEventManagerOnboardingClick }: MyPageProps) {
-    const [userInfo, setUserInfo] = useState<UserDetail | null>(null);
-    const [isLoading, setIsLoading] = useState(true);
-    const [reservations, setReservations] = useState<MyReservation[]>([]);
-    const [usageCount, setUsageCount] = useState(0);
-    const [showFullCalendar, setShowFullCalendar] = useState(false);
-
-    useEffect(() => {
-        const fetchData = async () => {
-            try {
-                const data = await getUserInfo();
-                setUserInfo(data);
-
-                // Fetch reservations
-                if (SEASON_HOUSE_RESERVATIONS_ENABLED) try {
-                    const reservationsData = await getMyReservations();
-                    setReservations(reservationsData);
-
-                    // Calculate usage count (confirmed reservations)
-                    const confirmedCount = reservationsData.filter(r => r.status === 'confirmed').length;
-                    setUsageCount(confirmedCount);
-                } catch (error) {
-                    console.error('Failed to fetch reservations:', error);
-                }
-            } catch (error) {
-                console.error('Failed to fetch user info:', error);
-                alert('사용자 정보를 불러오는데 실패했습니다.');
-            } finally {
-                setIsLoading(false);
-            }
-        };
-
-        fetchData();
-    }, []);
-
-    if (isLoading) {
-        return (
-            <div className="flex-1 flex items-center justify-center bg-white dark:bg-zinc-950">
-                <div className="text-zinc-500">로딩 중...</div>
-            </div>
-        );
-    }
-
-    if (!userInfo) {
-        return (
-            <div className="flex-1 flex items-center justify-center bg-white dark:bg-zinc-950">
-                <div className="text-zinc-500">사용자 정보를 불러올 수 없습니다.</div>
-            </div>
-        );
-    }
-
-    // Get current month calendar data for Calendar component
-    const today = new Date();
-    const currentYear = today.getFullYear();
-    const currentMonth = today.getMonth();
-    const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
-    const firstDayOfWeek = new Date(currentYear, currentMonth, 1).getDay();
-
-    const monthNames = [
-        "January", "February", "March", "April", "May", "June",
-        "July", "August", "September", "October", "November", "December"
-    ];
-    const currentMonthName = monthNames[currentMonth];
-
-
-    return (
-        <div className="flex-1 flex flex-col h-full overflow-hidden bg-white dark:bg-zinc-950">
-            {/* Header */}
-            <header className="px-4 pt-2 pb-2 flex items-center justify-between relative">
-                <Button variant="ghost" onClick={onBack} className="-ml-2 text-zinc-900 dark:text-zinc-100">
-                    <ChevronLeftIcon className="w-6 h-6" />
-                </Button>
-                <h1 className="text-xl font-bold absolute left-1/2 -translate-x-1/2" style={{ fontFamily: '"Joti One", serif' }}>My Page</h1>
-                <div className="w-10" /> {/* Spacer for centering */}
-            </header>
-
-            {/* Content */}
-            <div className="flex-1 overflow-y-auto flex flex-col">
-                {/* Profile Section */}
-                <div className="p-6 pb-4">
-                    <div className="flex flex-col items-center mb-6">
-                        {/* Avatar with edit icon */}
-                        <div className="relative mb-4">
-                            <div className="w-20 h-20 rounded-2xl bg-zinc-200 dark:bg-zinc-800 flex items-center justify-center overflow-hidden">
-                                {userInfo.profileImageUrl ? (
-                                    <img
-                                        src={userInfo.profileImageUrl}
-                                        alt={userInfo.name}
-                                        className="w-full h-full object-cover"
-                                    />
-                                ) : (
-                                    <UserIcon className="w-10 h-10 text-zinc-400" />
-                                )}
-                            </div>
-                            <button className="absolute bottom-0 right-0 w-6 h-6 bg-zinc-700 rounded-full flex items-center justify-center">
-                                <Pencil className="w-3.5 h-3.5 text-white" />
-                            </button>
-                        </div>
-
-                        {/* Name with role icon */}
-                        <div className="flex items-center gap-2 mb-2">
-                            {isCrewCaptainRole(userInfo.role) && (
-                                <Crown className="w-5 h-5" strokeWidth={2.5} color="#162660" fill="#162660" />
-                            )}
-                            {normalizeCrewRole(userInfo.role) === 'CREW_MANAGER' && (
-                                <Crown className="w-5 h-5" strokeWidth={2.5} color="#60A5FA" fill="#D0E6FD" />
-                            )}
-                            <h2 className="text-2xl font-bold">{userInfo.name}</h2>
-                        </div>
-
-                        {/* School / Crew Info */}
-                        {(userInfo.school || userInfo.crew) && (
-                            <div className="flex items-center gap-2">
-                                <span className="text-zinc-600 dark:text-zinc-400 text-sm">
-                                    {[userInfo.school, userInfo.crew?.crewName].filter(Boolean).join(' / ')}
-                                </span>
-                                {userInfo.school && userInfo.universityVerificationStatus === 'VERIFIED' && (
-                                    <span
-                                        title={`${userInfo.school} 학교 인증`}
-                                        aria-label={`${userInfo.school} 학교 인증`}
-                                        className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-2 py-1 text-[11px] font-black text-[#162660] dark:bg-blue-950/50 dark:text-blue-200"
-                                    >
-                                        <BadgeCheck className="h-3.5 w-3.5" />
-                                        학교 인증
-                                    </span>
-                                )}
-                                <button className="w-4 h-4 flex items-center justify-center">
-                                    <ExternalLink className="w-3.5 h-3.5 text-zinc-400" />
-                                </button>
-                            </div>
-                        )}
-                    </div>
+function MenuRow({
+  title,
+  icon,
+  onClick,
+}: {
+  title: string;
+  icon: ReactNode;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="flex min-h-14 w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-sm font-semibold text-[#162660] hover:bg-slate-50"
+    >
+      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-slate-50">
+        {icon}
+      </span>
+      <span className="min-w-0 flex-1 break-keep">{title}</span>
+      <ChevronRight className="h-4 w-4 shrink-0 text-slate-400" />
+    </button>
+  );
+}
+export default function MyPage({
+  onBack,
+  onAccountInfoClick,
+  onRoleGuideClick,
+  onCaptainOnboardingClick,
+  onEventManagerOnboardingClick,
+  onCalendarClick,
+  seasonAvailable,
+}: MyPageProps) {
+  const [userInfo, setUserInfo] = useState<UserDetail | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+  const [attempt, setAttempt] = useState(0);
+  const [showCalendar, setShowCalendar] = useState(false);
+  const [signingOut, setSigningOut] = useState(false);
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    setError(false);
+    void getUserInfo()
+      .then((data) => {
+        if (!cancelled) setUserInfo(data);
+      })
+      .catch(() => {
+        if (!cancelled) setError(true);
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [attempt]);
+  const season =
+    seasonAvailable ??
+    (SEASON_HOUSE_RESERVATIONS_ENABLED &&
+      getOperatingFeatures(getOperatingMode()).season);
+  const role = !userInfo?.crew
+    ? "크루 미가입"
+    : { CREW_CAPTAIN: "크루장", CREW_MANAGER: "임원진", CREW_MEMBER: "부원" }[
+        normalizeCrewRole(userInfo.role)
+      ];
+  return (
+    <ReservationLayout
+      title="내 정보"
+      onBack={onBack}
+      className="!bg-[#FAF8F3]"
+    >
+      <main className="reservation-content space-y-4 !bg-[#FAF8F3]">
+        {loading ? (
+          <p role="status" className="py-10 text-center text-sm text-slate-500">
+            내 정보를 불러오고 있어요.
+          </p>
+        ) : error || !userInfo ? (
+          <section className="rounded-2xl border border-slate-200 bg-white p-4">
+            <p role="alert" className="text-sm text-slate-600">
+              정보를 불러오지 못했습니다.
+            </p>
+            <button
+              onClick={() => setAttempt((value) => value + 1)}
+              className="mt-2 min-h-11 text-sm font-semibold text-blue-700"
+            >
+              다시 시도
+            </button>
+          </section>
+        ) : (
+          <>
+            <section
+              aria-label="내 프로필"
+              className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5"
+            >
+              <div className="flex items-center gap-3">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full bg-slate-50">
+                  {userInfo.profileImageUrl ? (
+                    <img
+                      src={userInfo.profileImageUrl}
+                      alt=""
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    <BuddyMascot size={44} />
+                  )}
                 </div>
-
-                {/* Usage Count Section */}
-                {SEASON_HOUSE_RESERVATIONS_ENABLED && <>
-                <div className="px-6 mb-4">
-                    <div className="bg-[#EDF2FF] dark:bg-[#1E3A8A]/20 rounded-2xl p-4">
-                        <div className="text-sm font-semibold text-zinc-700 dark:text-zinc-300">
-                            시즌방 이용 횟수: <span className="text-[#1E3A8A] dark:text-[#60A5FA]">{usageCount}박</span>
-                        </div>
-                    </div>
-                </div>
-
-                {/* My Calendar Dropdown Button */}
-                <div className="px-6 mb-4">
-                    <button
-                        onClick={() => setShowFullCalendar(!showFullCalendar)}
-                        className="w-full bg-zinc-100 rounded-[20px] p-5 flex items-center justify-between hover:bg-zinc-200 transition-colors"
-                    >
-                        <span className="font-bold text-zinc-600">나의 달력</span>
-                        <div className="flex items-center gap-1 text-zinc-500">
-                            <span className="text-sm font-medium">확인하기</span>
-                            <ChevronRightIcon className={`w-5 h-5 transition-transform ${showFullCalendar ? 'rotate-90' : ''}`} />
-                        </div>
-                    </button>
-
-                    {/* Calendar Dropdown - This Week and Next Week Only */}
-                    {showFullCalendar && (
-                        <div className="w-full mt-0 bg-zinc-100 rounded-[20px] p-4 shadow-sm">
-                            <Calendar
-                                month={currentMonthName}
-                                year={currentYear}
-                                startDayOfWeek={firstDayOfWeek}
-                                totalDays={daysInMonth}
-                                expandable={false}
-                                hideHeader={true}
-                                maxWeeks={2}
-                                compact={true}
-                                className="rounded-[20px]"
-                                startWeekIndex={(() => {
-                                    // Calculate which week contains today
-                                    const todayDay = today.getDate();
-                                    return Math.floor((todayDay + firstDayOfWeek - 1) / 7);
-                                })()}
-                                renderDay={(day) => {
-                                    const dateStr = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-                                    const reservation = reservations.find(r => r.date === dateStr);
-                                    const isConfirmed = reservation?.status === 'confirmed';
-                                    const isPending = reservation && reservation.status !== 'confirmed';
-
-                                    // Base Container Classes
-                                    const containerClasses = "w-full h-full flex flex-col items-center justify-start pt-1.5 transition-all duration-200 text-sm font-bold rounded-[10px]";
-
-                                    // Content (Number or Circle)
-                                    let numberElement = <span className="text-sm font-medium text-zinc-500">{day}</span>;
-
-                                    if (isConfirmed || isPending) {
-                                        const bg = isConfirmed ? 'bg-[#1E3A8A]' : 'bg-[#93C5FD]'; // 확정: 남색, 대기: 연한 남색
-                                        const textColor = 'text-white';
-                                        numberElement = (
-                                            <div className={`w-8 h-8 -mt-1 rounded-full ${bg} ${textColor} flex items-center justify-center text-sm font-medium shadow-sm`}>
-                                                {day}
-                                            </div>
-                                        );
-                                    }
-
-                                    return (
-                                        <div className={containerClasses}>
-                                            {numberElement}
-                                        </div>
-                                    );
-                                }}
-                            />
-                        </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h2 className="break-words text-lg font-bold text-[#162660]">
+                      {userInfo.name}
+                    </h2>
+                    <span className="rounded-md bg-blue-50 px-2 py-1 text-[11px] font-semibold text-[#162660]">
+                      {role}
+                    </span>
+                    {onEventManagerOnboardingClick && (
+                      <span className="rounded-md bg-slate-100 px-2 py-1 text-[11px] font-semibold text-slate-600">
+                        이벤트 운영
+                      </span>
                     )}
+                  </div>
+                  <p className="mt-1 break-words text-sm text-slate-500">
+                    {userInfo.crew?.crewName || "아직 소속 크루가 없어요."}
+                  </p>
                 </div>
-
-                </>}
-                {/* Captain Onboarding Menu */}
-                {isCrewCaptainRole(userInfo.role) && onCaptainOnboardingClick && (
-                    <div className="px-6 mb-4">
-                        <button
-                            onClick={onCaptainOnboardingClick}
-                            className="w-full rounded-[20px] border border-amber-200 bg-amber-50 p-5 flex items-center justify-between hover:bg-amber-100 transition-colors"
-                        >
-                            <div className="flex items-center gap-3">
-                                <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-200 text-amber-900">
-                                    <Map className="h-5 w-5" />
-                                </span>
-                                <div className="text-left">
-                                    <span className="block font-black text-amber-950">크루장 시작 가이드</span>
-                                    <span className="mt-0.5 block text-xs font-medium text-amber-800">크루 운영의 전체 흐름 다시 보기</span>
-                                </div>
-                            </div>
-                            <ChevronRightIcon className="w-5 h-5 text-amber-800" />
-                        </button>
-                    </div>
-                )}
-
-                {onEventManagerOnboardingClick && (
-                    <div className="px-6 mb-4">
-                        <button
-                            type="button"
-                            onClick={onEventManagerOnboardingClick}
-                            className="w-full rounded-[20px] border border-indigo-200 bg-indigo-50 p-5 flex items-center justify-between gap-3 hover:bg-indigo-100 transition-colors"
-                        >
-                            <div className="flex items-center gap-3 text-left">
-                                <Sparkles className="h-5 w-5 shrink-0 text-indigo-800" />
-                                <div>
-                                    <span className="block font-black text-indigo-950">이벤트 그룹 매니저 시작 가이드</span>
-                                    <span className="mt-0.5 block text-xs text-indigo-800">호스트 그룹부터 모집·참가자 관리까지</span>
-                                </div>
-                            </div>
-                            <ChevronRightIcon className="h-5 w-5 shrink-0 text-indigo-800" />
-                        </button>
-                    </div>
-                )}
-
-                {/* Role Guide Menu */}
-                {onRoleGuideClick && (
-                    <div className="px-6 mb-4">
-                        <button
-                            onClick={onRoleGuideClick}
-                            className="w-full bg-[#EDF2FF] rounded-[20px] p-5 flex items-center justify-between hover:bg-blue-100 transition-colors"
-                        >
-                            <div className="flex items-center gap-3">
-                                <Waypoints className="h-5 w-5 text-[#162660]" />
-                                <span className="font-bold text-[#162660]">역할 안내</span>
-                            </div>
-                            <div className="flex items-center gap-1 text-[#162660]/70">
-                                <span className="text-sm font-medium">한눈에 보기</span>
-                                <ChevronRightIcon className="w-5 h-5" />
-                            </div>
-                        </button>
-                    </div>
-                )}
-
-                {/* Account Info Menu */}
-                {onAccountInfoClick && (
-                    <div className="px-6 mb-4">
-                        <button
-                            onClick={onAccountInfoClick}
-                            className="w-full bg-zinc-100 rounded-[20px] p-5 flex items-center justify-between hover:bg-zinc-200 transition-colors"
-                        >
-                            <span className="font-bold text-zinc-600">계정 관리</span>
-                            <div className="flex items-center gap-1 text-zinc-500">
-                                <span className="text-sm font-medium">확인하기</span>
-                                <ChevronRightIcon className="w-5 h-5" />
-                            </div>
-                        </button>
-                    </div>
-                )}
-
-                {/* Logout Button - Bottom */}
-                <div className="mt-auto px-6 mb-24 flex justify-center">
-                    <Button
-                        variant="outline"
-                        onClick={async () => {
-                            if (confirm('로그아웃 하시겠습니까?')) {
-                                await signOut();
-                                window.location.href = '/';
-                            }
-                        }}
-                        className="w-32 h-10 text-sm"
-                    >
-                        로그아웃
-                    </Button>
+              </div>
+              {userInfo.school && (
+                <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-slate-100 pt-3 text-xs text-slate-500">
+                  <span>{userInfo.school}</span>
+                  {userInfo.universityVerificationStatus === "VERIFIED" && (
+                    <span className="inline-flex items-center gap-1 rounded-md bg-emerald-50 px-2 py-1 font-semibold text-emerald-700">
+                      <BadgeCheck className="h-3.5 w-3.5" />
+                      학교 인증
+                    </span>
+                  )}
                 </div>
-            </div>
-        </div>
-    );
+              )}
+            </section>
+            {season && userInfo.crew && (
+              <section aria-label="내 시즌방">
+                <SeasonPassCard crewId={userInfo.crew.crewId} />
+                <div className="rounded-2xl border border-slate-200 bg-white p-1">
+                  <MenuRow
+                    title="나의 달력"
+                    icon={<CalendarDays className="h-4 w-4" />}
+                    onClick={() => setShowCalendar((value) => !value)}
+                  />
+                  {showCalendar && (
+                    <div className="pb-3">
+                      <PersonalCalendarPreview
+                        crewId={userInfo.crew.crewId}
+                        onOpen={
+                          onCalendarClick ?? (() => setShowCalendar(false))
+                        }
+                      />
+                    </div>
+                  )}
+                </div>
+              </section>
+            )}
+            <section
+              aria-label="계정과 이용 안내"
+              className="rounded-2xl border border-slate-200 bg-white p-1 sm:p-2"
+            >
+              {onAccountInfoClick && (
+                <MenuRow
+                  title="계정 관리"
+                  icon={<UserRound className="h-4 w-4" />}
+                  onClick={onAccountInfoClick}
+                />
+              )}
+              {onRoleGuideClick && (
+                <MenuRow
+                  title="역할 안내"
+                  icon={<Waypoints className="h-4 w-4" />}
+                  onClick={onRoleGuideClick}
+                />
+              )}
+              {isCrewCaptainRole(userInfo.role) && onCaptainOnboardingClick && (
+                <MenuRow
+                  title="크루장 시작 가이드"
+                  icon={<Map className="h-4 w-4" />}
+                  onClick={onCaptainOnboardingClick}
+                />
+              )}
+              {onEventManagerOnboardingClick && (
+                <MenuRow
+                  title="이벤트 운영 가이드"
+                  icon={<Sparkles className="h-4 w-4" />}
+                  onClick={onEventManagerOnboardingClick}
+                />
+              )}
+            </section>
+            <button
+              type="button"
+              disabled={signingOut}
+              onClick={async () => {
+                if (!confirm("로그아웃 하시겠습니까?")) return;
+                setSigningOut(true);
+                try {
+                  await signOut();
+                  window.location.href = "/";
+                } catch {
+                  setSigningOut(false);
+                }
+              }}
+              className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl text-sm font-semibold text-slate-500 hover:bg-slate-100 disabled:opacity-50"
+            >
+              <LogOut className="h-4 w-4" />
+              {signingOut ? "로그아웃 중…" : "로그아웃"}
+            </button>
+          </>
+        )}
+      </main>
+    </ReservationLayout>
+  );
 }

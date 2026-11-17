@@ -31,7 +31,7 @@ export default function Onboarding({ onBack, onSearch, onCreate, onCrew, onEvent
     const pendingRequest = requests.find(item => item.approvalStatus === 'PENDING');
     return <main className="min-h-0 flex-1 overflow-y-auto bg-[#FAF8F3] p-4 text-[#162660] sm:p-8">
         <div className="mx-auto max-w-4xl space-y-6">
-            <button type="button" onClick={onBack} className="flex min-h-11 items-center gap-2 text-sm font-bold"><ArrowLeft className="h-4 w-4" />홈으로</button>
+            <button type="button" onClick={onBack} className="flex min-h-11 items-center gap-2 text-sm font-bold"><ArrowLeft className="h-4 w-4" />{user?.crew ? '홈으로' : '다음에 하기'}</button>
             <div><p className="text-sm font-bold">BoardBuddy 시작하기</p><h1 className="mt-3 text-2xl font-black sm:text-3xl">{user?.crew ? `${user.crew.crewName}, 함께할 준비가 됐어요.` : '어떻게 함께할까요?'}</h1><p className="mt-3 text-sm leading-7 text-zinc-600">가입 정보는 한 번만 확인하고, 다음 할 일을 이어서 안내할게요.</p></div>
             {loading ? <p role="status" className="py-8 text-sm text-zinc-600">내 진행 상태를 확인하고 있어요.</p> : error && !user ? <p role="alert" className="text-sm text-red-700">{error}<button type="button" onClick={() => void load()} className="ml-2 min-h-11 underline">다시 시도</button></p> : user?.crew ? <>
                 <section className="rounded-3xl bg-white p-6 shadow-sm"><CheckCircle2 className="mb-4 h-8 w-8" /><h2 className="text-xl font-black">크루 연결 완료</h2><p className="my-4 text-sm leading-6 text-zinc-600">별도로 크루를 만들거나 연결할 필요 없이 바로 시작할 수 있어요.</p><Button onClick={continueToCrew} className="min-h-12 rounded-2xl border-[#162660] bg-[#162660] hover:bg-[#243878]">크루로 계속하기</Button></section>

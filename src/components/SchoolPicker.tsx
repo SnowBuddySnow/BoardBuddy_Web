@@ -66,12 +66,11 @@ export function SchoolPicker({ options, value, onChange, loading, error, onRetry
                     onPointerDown={event => event.preventDefault()} onClick={() => select(option)}
                     className={`block min-h-12 w-full rounded-xl px-3 py-3 text-left text-sm ${active === index ? 'bg-[#162660] text-white' : 'text-zinc-900 hover:bg-[#FAF8F3]'}`}>
                     <span className="block font-bold">{option.name}</span>
-                    <span className="mt-1 block break-words text-xs opacity-75">{[...option.aliases.slice(0, 2), option.schoolCode].join(' · ')}</span>
                 </button>)}
                 {matches.length === 0 && <p role="status" className="p-3 text-sm text-zinc-600">검색 결과가 없습니다. 학교명이나 약칭을 다시 확인해 주세요.</p>}
             </div>}
             <p id={`${id}-hint`} role="status" className="text-xs leading-5 text-zinc-600">
-                {loading ? '학교 목록을 불러오는 중입니다.' : value ? `${value.name} 선택됨` : '학교명 또는 약칭으로 검색한 뒤 결과를 선택해 주세요.'}
+                {loading ? '학교 목록을 불러오는 중입니다.' : value ? `${value.name} 선택됨` : '학교를 검색해 선택해 주세요.'}
             </p>
             {error && <div role="alert" className="text-sm text-red-700">{error}
                 <button type="button" onClick={onRetry} className="ml-2 min-h-11 underline">다시 시도</button>

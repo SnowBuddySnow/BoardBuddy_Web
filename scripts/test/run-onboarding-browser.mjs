@@ -11,7 +11,7 @@ const completed = [];
 const assert = (condition, message) => { if (!condition) throw new Error(message); };
 try {
     server = spawn(process.execPath, ['node_modules/vite/bin/vite.js', '--host', '127.0.0.1', '--port', '5188', '--strictPort'], {
-        cwd: root, stdio: 'ignore', env: { ...process.env, VITE_API_BASE_URL: `${origin}/__scenario_api`, VITE_OPERATING_MODE_OVERRIDE: 'OFF_SEASON', VITE_KAKAO_JAVASCRIPT_KEY: '' },
+        cwd: root, stdio: 'ignore', env: { ...process.env, BOARDBUDDY_VITE_CACHE_DIR: 'node_modules/.vite-onboarding-test', VITE_API_BASE_URL: `${origin}/__scenario_api`, VITE_OPERATING_MODE_OVERRIDE: 'OFF_SEASON', VITE_KAKAO_JAVASCRIPT_KEY: '' },
     });
     let ready = false;
     for (let attempt = 0; attempt < 100; attempt++) {
@@ -32,7 +32,10 @@ try {
             await page.getByRole('button', { name: 'Kakao Login', exact: true }).click();
             await page.waitForURL('**/?view=home');
             assert(await page.evaluate(() => history.length) === before, `${name}: successful login retained the auth entry`);
-            await page.getByRole('button', { name: '내 가입·크루 생성 진행 상태 이어보기', exact: true }).click();
+            const continuation = page.getByRole('button', { name: '가입·크루 진행 상태 이어보기', exact: true });
+            const continuationBox = await continuation.boundingBox();
+            assert(continuationBox && continuationBox.x >= 16 && continuationBox.height <= 60, 'Home continuation action lost its compact inset layout');
+            await continuation.click();
             await page.waitForURL('**/?view=onboarding');
             await page.goBack(); await page.waitForURL('**/?view=home');
             assert(await page.getByRole('button', { name: 'Kakao Login', exact: true }).count() === 0, `${name}: back restored login`);
@@ -64,13 +67,14 @@ try {
     {
         const context = await browser.newContext({ viewport: { width: 390, height: 844 }, serviceWorkers: 'block' });
         const page = await context.newPage(); const state = await installOnboardingBoundary(page);
-        state.signupPrefill = { name: '가상 실명', phoneNumber: '+82 10-0000-0000' };
+        state.signupPrefill = { gender:'FEMALE', name: '가상 실명', phoneNumber: '+82 10-0000-0000' };
         await page.goto(`${origin}/?view=login`);
         await page.getByRole('button', { name: 'Kakao Login', exact: true }).click();
         const name = page.getByRole('textbox', { name: '실명 *', exact: true });
         await name.waitFor();
         assert(await name.inputValue() === '가상 실명', 'Provider account name was not carried through login');
         assert(await name.evaluate(el => el.readOnly), 'Provider name confirmation was not shown');
+        assert(await page.getByRole('radio',{name:'여자',exact:true}).isChecked(),'Provider gender was not prefilled');
         await page.getByRole('button', { name: '내 이름이 아니에요 · 수정하기', exact: true }).click();
         await name.fill('수정한 실명');
         await page.getByRole('combobox', { name: '학교 *', exact: true }).fill('제2캠퍼스');
@@ -81,10 +85,13 @@ try {
         await domain.selectOption('students.mail.campus.ac.kr');
         await page.getByRole('textbox', { name: /^학번/ }).fill('20260001');
         await page.getByRole('radio', { name: '여자', exact: true }).check();
-        await page.getByRole('button', { name: '다음', exact: true }).click();
         assert(await page.getByRole('textbox', { name: '휴대전화번호 *', exact: true }).inputValue() === '010-0000-0000', 'Provider phone prefill was lost');
-        assert(await page.getByRole('button', { name: '인증번호 받기', exact: true }).isVisible(), 'Provider phone bypassed verification');
+        assert(await page.getByRole('button', { name: '전화번호 인증', exact: true }).isVisible(), 'Provider phone bypassed verification');
         assert(!state.traffic.some(item => item.path.endsWith('/profile') || item.path === '/accounts/phone-verifications'), 'Provider hint triggered a write or SMS');
+        await page.getByRole('button',{name:'학교 이메일 인증',exact:true}).click();
+        await page.getByRole('textbox',{name:'이메일 인증번호',exact:true}).fill('123456');
+        await page.getByRole('button',{name:'이메일 확인',exact:true}).click();
+        await page.getByText('학교 이메일 인증 완료',{exact:true}).waitFor();
         assert(state.unknown.length === 0 && state.errors.length === 0, 'Provider hint browser boundary failed');
         completed.push('kakao-login-hints-confirm-correct-and-require-sms');
         await context.close();
@@ -105,7 +112,9 @@ try {
         } else await page.goto(`${origin}/?view=user_info`);
         await page.getByRole('textbox', { name: '실명 *', exact: true }).fill('가상 회원');
         const school = page.getByRole('combobox', { name: '학교 *', exact: true });
-        await school.fill('제2캠퍼스'); await school.press('ArrowDown'); await school.press('Enter');
+        await school.fill('제2캠퍼스');
+        assert((await page.getByRole('option').allTextContents()).every(text => text.trim() === '한국대학교'), 'School result exposed aliases or internal codes');
+        await school.press('ArrowDown'); await school.press('Enter');
         assert(await school.inputValue() === '한국대학교', 'Keyboard school selection failed');
         if (viewport.width === 390) {
             await school.fill('제2캠퍼스'); await page.getByRole('option').tap();
@@ -116,16 +125,19 @@ try {
         await page.getByRole('radio', { name: '여자', exact: true }).check();
         assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), `Signup overflows at ${viewport.width}`);
         if ([390, 1440].includes(viewport.width)) await page.screenshot({ path: `${root}/output/playwright/signup-${viewport.width}.png` });
-        await page.getByRole('button', { name: '다음', exact: true }).click();
         await page.getByRole('textbox', { name: '휴대전화번호 *', exact: true }).fill('01000000000');
-        await page.getByRole('button', { name: '인증번호 받기', exact: true }).click();
-        try { await page.getByRole('textbox', { name: '인증번호 *', exact: true }).waitFor({ timeout: 5000 }); }
+        const phoneInputBox = await page.getByRole('textbox', { name: '휴대전화번호 *', exact: true }).boundingBox();
+        const phoneButton = page.getByRole('button', { name: '전화번호 인증', exact: true });
+        const phoneButtonBox = await phoneButton.boundingBox();
+        assert(phoneInputBox && phoneButtonBox && Math.abs(phoneInputBox.y-phoneButtonBox.y)<2 && phoneButtonBox.x >= phoneInputBox.x + phoneInputBox.width-1, 'Phone verification button moved below the number field');
+        await phoneButton.click();
+        try { await page.getByRole('textbox', { name: '인증번호', exact: true }).waitFor({ timeout: 5000 }); }
         catch (error) { await page.screenshot({ path: `${root}/output/playwright/signup-phone-failure.png` }); console.error({ viewport, body: await page.locator('body').innerText(), traffic: boundary.traffic, errors }); throw error; }
-        await page.getByRole('textbox', { name: '인증번호 *', exact: true }).fill('123456');
+        await page.getByRole('textbox', { name: '인증번호', exact: true }).fill('123456');
         await page.getByRole('button', { name: '인증번호 확인', exact: true }).click();
         await page.getByText('본인 확인 완료', { exact: true }).waitFor();
-        await page.getByRole('button', { name: '다음', exact: true }).click();
-        const finish = page.getByRole('button', { name: '필수 약관 전체 동의 후 가입 완료', exact: true });
+        await page.getByRole('button', { name: '동의 단계로', exact: true }).click();
+        const finish = page.getByRole('button', { name: '전체 동의 후 가입 완료', exact: true });
         assert(!await finish.isEnabled(), 'Consent was preselected');
         const read = page.getByRole('button', { name: '보드버디 서비스 이용약관 자세히 보기', exact: true });
         if (viewport.width === 390) await page.setViewportSize({ width: 390, height: 480 });
@@ -169,6 +181,13 @@ try {
             completed.push('new-member-invitation-signup-pending-approval-return');
         }
         if (viewport.width === 320) {
+            await page.getByRole('button', { name: '다음에 하기', exact: true }).click();
+            await page.waitForURL('**/?view=home');
+            await page.getByRole('button', { name: '크루 가입하기 크루를 찾아 PIN으로 가입 신청하세요.', exact: true }).click();
+            await page.getByRole('button', { name: '다음에 하기', exact: true }).click();
+            await page.waitForURL('**/?view=home'); await page.reload();
+            assert(!boundary.applied && !boundary.approved, 'Skipping crew setup created membership or an application');
+            await page.getByRole('button', { name: '가입·크루 진행 상태 이어보기', exact: true }).click();
             await page.getByRole('button', { name: '내 크루 찾기', exact: true }).click();
             await page.getByRole('heading', { name: '내 동아리를 찾아볼까요?' }).waitFor();
             await page.getByPlaceholder('크루명, 학교명 또는 크루 코드 검색').fill('가상');

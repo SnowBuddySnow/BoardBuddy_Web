@@ -1,11 +1,11 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import {
   getStayAnnouncements,
   sendStayAnnouncement,
   type StayAnnouncement,
 } from "../../services/seasonStays";
 
-export default function StayAnnouncementPanel({
+function AnnouncementContent({
   crewId,
   date,
   confirmedCount,
@@ -30,14 +30,20 @@ export default function StayAnnouncementPanel({
     let cancelled = false;
     const request = ++revision.current;
     setLoading(true);
-    void getStayAnnouncements(crewId, date).then(data => {
-      if (!cancelled && request === revision.current) setItems(data);
-    }).catch(() => {
-      if (!cancelled && request === revision.current) setMessage("공지 이력을 불러오지 못했습니다.");
-    }).finally(() => {
-      if (!cancelled && request === revision.current) setLoading(false);
-    });
-    return () => { cancelled = true; };
+    void getStayAnnouncements(crewId, date)
+      .then((data) => {
+        if (!cancelled && request === revision.current) setItems(data);
+      })
+      .catch(() => {
+        if (!cancelled && request === revision.current)
+          setMessage("공지 이력을 불러오지 못했습니다.");
+      })
+      .finally(() => {
+        if (!cancelled && request === revision.current) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [crewId, date, refreshVersion]);
   const send = async () => {
     if (lock.current || !body.trim() || !title.trim() || !confirmedCount)
@@ -130,7 +136,7 @@ export default function StayAnnouncementPanel({
         <h4 className="text-xs font-bold text-slate-600">최근 공지</h4>
         <button
           disabled={loading}
-          onClick={() => setRefreshVersion(value => value + 1)}
+          onClick={() => setRefreshVersion((value) => value + 1)}
           className="min-h-10 text-xs text-blue-700"
         >
           읽음 현황 새로고침
@@ -180,5 +186,34 @@ export default function StayAnnouncementPanel({
         ))}
       </div>
     </section>
+  );
+}
+
+export default function StayAnnouncementPanel(props: {
+  crewId: number;
+  date: string;
+  confirmedCount: number;
+}) {
+  const [open, setOpen] = useState(false),
+    [opened, setOpened] = useState(false);
+  const id = useId();
+  return (
+    <div className="mt-4">
+      <button
+        type="button"
+        aria-expanded={open}
+        aria-controls={id}
+        onClick={() => {
+          setOpened(true);
+          setOpen((value) => !value);
+        }}
+        className="reservation-secondary min-h-11 w-full"
+      >
+        {open ? "공지 닫기" : "공지하기"}
+      </button>
+      <div id={id} hidden={!open} className="mt-3">
+        {opened && <AnnouncementContent {...props} />}
+      </div>
+    </div>
   );
 }

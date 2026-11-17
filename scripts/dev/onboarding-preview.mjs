@@ -11,6 +11,8 @@ const state = await installOnboardingBoundary({
     context: () => ({ addInitScript(callback) { initScripts.push(`(${callback.toString()})();`); } }),
     route(_pattern, callback) { handle = callback; },
 }, { origin });
+const previewPrefill = {name:'김버디',gender:'FEMALE',phoneNumber:'+82 10-0000-0000',missingConsentScopes:[]};
+state.signupPrefill = previewPrefill;
 const initialEvent = structuredClone(state.managedEvent);
 const initialParticipants = structuredClone(state.participants);
 const localKey = date => `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`;
@@ -37,7 +39,7 @@ const server = await createServer({ root, cacheDir: 'node_modules/.vite-ui-previ
     configureServer(vite) {
         vite.middlewares.use(async (req, res, next) => {
             if (req.url === '/__preview/reset' && req.method === 'POST') {
-                Object.assign(state, { managedEvent: structuredClone(initialEvent), participants: structuredClone(initialParticipants), writes: [], bookings: [], seasonPasses: {}, stayAnnouncements: [], notifications: [], seasonOpen: false, nextBookingId: 80, seedReservation: { reservationId: 77, participantAccountId: 99102, status: 'CONFIRMED', paymentStatus: 'UNPAID', managerMemo: null }, newUser: true, approved: false, applied: false, role: 'CREW_MEMBER', requests: [], invitations: [], groups: [], profileBody: null });
+                Object.assign(state, { managedEvent: structuredClone(initialEvent), participants: structuredClone(initialParticipants), writes: [], bookings: [], seasonPasses: {}, stayAnnouncements: [], notifications: [], seasonOpen: false, nextBookingId: 80, seedReservation: { reservationId: 77, participantAccountId: 99102, status: 'CONFIRMED', paymentStatus: 'UNPAID', managerMemo: null }, newUser: true, signupPrefill: previewPrefill, signupEmailProofs: {}, approved: false, applied: false, role: 'CREW_MEMBER', requests: [], invitations: [], groups: [], profileBody: null });
                 res.end('{}'); return;
             }
             if (req.url === '/__preview/season' && req.method === 'POST') {

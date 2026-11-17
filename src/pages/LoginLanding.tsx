@@ -1,3 +1,4 @@
+import { kakaoSignupScopes } from '../lib/kakaoScopes';
 import { setSignupPrefill } from '../lib/signupPrefill';
 
 import { useEffect, useState } from 'react';
@@ -52,6 +53,7 @@ export default function LoginLanding({ onLogin, onSignupNeeded, onProfileTypeNee
         setIsLoggingIn(true);
         const continuation = beginOnboardingLogin();
         window.Kakao.Auth.login({
+            scope: kakaoSignupScopes(),
             success: async (authObj) => {
                 if (!isCurrentOnboardingLogin(continuation)) {
                     setIsLoggingIn(false);

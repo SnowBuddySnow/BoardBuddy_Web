@@ -1,7 +1,7 @@
 import { Button } from '../components/Button';
-import { ChevronLeftIcon, ChevronRightIcon, Crown, GraduationCap, UsersRound, SettingsIcon } from 'lucide-react';
+import { ChevronLeftIcon, ChevronRightIcon, Crown, GraduationCap, UsersRound, SettingsIcon, Ticket } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { getCrewInfo, getCrewManagers } from '../services/crew';
+import { getCrewInfo } from '../services/crew';
 import { getUserInfo } from '../services/user';
 import { CrewDetail as CrewDetailType } from '../types/api';
 import { isCrewManagerRole } from '../constants/crewRole';
@@ -13,10 +13,11 @@ interface CrewDetailProps {
     onCalendarClick: () => void;
     onMemberClick: () => void;
     onSettingsClick: () => void;
+    onPassesClick?: () => void;
     seasonAvailable: boolean;
 }
 
-export default function CrewDetail({ onBack, onCalendarClick, onMemberClick, onSettingsClick, seasonAvailable }: CrewDetailProps) {
+export default function CrewDetail({ onBack, onCalendarClick, onMemberClick, onSettingsClick, onPassesClick, seasonAvailable }: CrewDetailProps) {
     const [crewInfo, setCrewInfo] = useState<CrewDetailType | null>(null);
     const [loading, setLoading] = useState(true);
     const [isManager, setIsManager] = useState(false);
@@ -32,18 +33,9 @@ export default function CrewDetail({ onBack, onCalendarClick, onMemberClick, onS
                 if (userData.crew) {
                     const crewId = userData.crew.crewId;
 
-                    // 3. Fetch Full Crew Details and Managers in parallel
-                    const [crewData, managers] = await Promise.all([
-                        getCrewInfo(crewId),
-                        getCrewManagers(crewId)
-                    ]);
+                    const crewData = await getCrewInfo(crewId);
                     setCrewInfo(crewData);
-
-                    // 4. Check permissions
-                    const currentUser = managers.find(m => m.user_id === userData.userId);
-                    if (currentUser && isCrewManagerRole(currentUser.role)) {
-                        setIsManager(true);
-                    }
+                    setIsManager(isCrewManagerRole(userData.role));
                 } else {
                     console.warn('User does not belong to a crew.');
                 }
@@ -133,6 +125,7 @@ export default function CrewDetail({ onBack, onCalendarClick, onMemberClick, onS
                     </section>
 
                     {/* Manager Settings Button */}
+                    {isManager && onPassesClick && <button type="button" onClick={onPassesClick} className="mt-4 flex min-h-14 w-full items-center justify-between gap-3 rounded-2xl border border-zinc-200 bg-white px-5 py-3 text-left text-sm font-bold text-[#162660]"><span className="flex items-center gap-3"><Ticket className="h-5 w-5" />이용권 관리</span><ChevronRightIcon className="h-4 w-4 text-zinc-400" /></button>}
                     {isManager && (
                         <button
                             type="button"
