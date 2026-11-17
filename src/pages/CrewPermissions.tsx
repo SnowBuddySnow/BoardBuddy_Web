@@ -18,12 +18,14 @@ interface CrewPermissionsProps {
   onBack: () => void;
   onPermissionsChanged?: () => void;
   initialSection?: "permissions" | "passes";
+  canAssignRoles?: boolean;
 }
 
 export default function CrewPermissions({
   onBack,
   onPermissionsChanged,
   initialSection = "permissions",
+  canAssignRoles = false,
 }: CrewPermissionsProps) {
   const [section, setSection] = useState(initialSection);
   const [canManageCrew, setCanManageCrew] = useState(false);
@@ -81,7 +83,8 @@ export default function CrewPermissions({
   }, [canManageCrew, crewId, section]);
 
   const toggleEventManager = async (member: CrewMemberAccess) => {
-    if (crewId == null || member.crewRole === "CREW_CAPTAIN") return;
+    if (!canAssignRoles || crewId == null || member.crewRole === "CREW_CAPTAIN")
+      return;
     setChangingAccountId(member.accountId);
     setError("");
     try {
@@ -108,7 +111,8 @@ export default function CrewPermissions({
   };
 
   const toggleGeneralAdmin = async (member: CrewMemberAccess) => {
-    if (crewId == null || member.crewRole === "CREW_CAPTAIN") return;
+    if (!canAssignRoles || crewId == null || member.crewRole === "CREW_CAPTAIN")
+      return;
     setChangingAccountId(member.accountId);
     setError("");
     try {
@@ -196,6 +200,12 @@ export default function CrewPermissions({
           </div>
         ) : (
           <div className="overflow-hidden rounded-lg border border-zinc-200 bg-white">
+            {!canAssignRoles && canManageCrew && (
+              <p className="border-b border-slate-100 px-5 py-3 text-xs text-slate-500">
+                역할 변경은 크루장만 할 수 있어요. 이용권 관리는 임원진도 할 수
+                있어요.
+              </p>
+            )}
             {members.map((member) => (
               <div
                 key={member.accountId}
@@ -221,6 +231,7 @@ export default function CrewPermissions({
                   <button
                     type="button"
                     disabled={
+                      !canAssignRoles ||
                       member.crewRole === "CREW_CAPTAIN" ||
                       changingAccountId === member.accountId
                     }
@@ -237,6 +248,7 @@ export default function CrewPermissions({
                   <button
                     type="button"
                     disabled={
+                      !canAssignRoles ||
                       member.crewRole === "CREW_CAPTAIN" ||
                       changingAccountId === member.accountId
                     }
