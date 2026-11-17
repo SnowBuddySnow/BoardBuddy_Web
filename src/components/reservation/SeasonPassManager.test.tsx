@@ -121,7 +121,7 @@ it("keeps bulk selection after a rejected assignment and retries the same member
   expect(api.assign).toHaveBeenCalledWith(
     17,
     [1, 2],
-    expect.objectContaining({ name: "풀상주권", totalNights: null }),
+    { name: "풀상주권", totalNights: null },
   );
   expect(container.querySelector('[role="dialog"]')).toBeNull();
   expect(container.textContent).toContain("2명에게 이용권을 할당했습니다.");

@@ -1,5 +1,6 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react';
-import { BadgeCheck, ChevronLeftIcon, Search, ShieldCheck, UsersRound, X } from 'lucide-react';
+import { BadgeCheck, ChevronLeftIcon, ShieldCheck, UsersRound, X } from 'lucide-react';
+import SearchField from '../components/SearchField';
 import { Button } from '../components/Button';
 import { applyToCrew, discoverCrews, type DiscoverableCrew } from '../services/crew';
 import { getApiErrorMessage } from '../lib/apiError';
@@ -84,7 +85,7 @@ export default function SearchCrew({ onBack, onJoined, onApplied, onSkip }: Sear
     return (
         <div className="relative flex h-full flex-1 flex-col overflow-hidden bg-[#FAF8F3]">
             <header className="relative z-10 flex items-center justify-between border-b border-zinc-200 bg-white px-4 py-3 lg:px-6">
-                <Button variant="ghost" onClick={onBack} className="-ml-2 gap-1 text-zinc-900 hover:bg-transparent">
+                <Button variant="ghost" onClick={onBack} aria-label="뒤로 가기" className="-ml-2 gap-1 text-zinc-900 hover:bg-transparent">
                     <ChevronLeftIcon className="h-7 w-7" />
                 </Button>
                 <h1 className="absolute left-1/2 -translate-x-1/2 text-xl font-bold text-zinc-900">크루 검색</h1>
@@ -99,15 +100,12 @@ export default function SearchCrew({ onBack, onJoined, onApplied, onSkip }: Sear
                         <ol aria-label="크루 가입 단계" className="mt-4 flex flex-wrap gap-3 text-sm text-[#162660]"><li className="font-bold">1. 크루 찾기</li><li>2. PIN 확인·신청</li><li>3. 가입 상태 확인</li></ol>
                         <p className="mt-4 text-sm leading-6 text-zinc-600">초대 링크 없이도 가입할 수 있어요. 크루를 선택하고 운영진에게 받은 4자리 PIN을 입력해 주세요. 크루 정책에 따라 운영진 승인이나 학교 인증이 필요할 수 있어요.</p>
                     </section>
-                    <div className="relative">
-                        <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
-                        <input
+                    <SearchField
+                            aria-label="크루 검색"
                             value={query}
                             onChange={(event) => setQuery(event.target.value)}
                             placeholder="크루명, 학교명 또는 크루 코드 검색"
-                            className="h-12 w-full rounded-2xl border border-zinc-200 bg-white pl-11 pr-4 text-sm text-zinc-900 outline-none focus:border-[#162660] focus:ring-2 focus:ring-[#162660]/10"
                         />
-                    </div>
 
                     {appliedCrewId != null && (
                         <div className="mt-4 flex items-center gap-2 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-bold text-emerald-800">

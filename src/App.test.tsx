@@ -94,6 +94,36 @@ describe('real App management navigation with synthetic HTTP', () => {
         expect(hasCrew).toBe(false);
     });
 
+    it('returns crew search to Home when opened from Home', async () => {
+        permissions = []; await render();
+        await click('크루 가입하기크루를 찾아 PIN으로 가입 신청하세요.');
+        await act(async () => (container.querySelector('[aria-label="뒤로 가기"]') as HTMLButtonElement).click());
+        await settle();
+        expect(new URL(window.location.href).searchParams.get('view')).toBe('home');
+        expect(container.textContent).not.toContain('어떻게 함께할까요?');
+    });
+
+    it('returns crew search to onboarding when opened from the onboarding guide', async () => {
+        permissions = []; window.history.replaceState(null, '', '/?view=onboarding');
+        await render(); await click('내 크루 찾기');
+        await act(async () => (container.querySelector('[aria-label="뒤로 가기"]') as HTMLButtonElement).click());
+        await settle();
+        expect(new URL(window.location.href).searchParams.get('view')).toBe('onboarding');
+        expect(container.textContent).toContain('어떻게 함께할까요?');
+    });
+
+    it('returns a nested crew search to crew creation and then to its Home entry', async () => {
+        permissions = []; await render();
+        await click('크루 만들기새 크루를 등록하고 운영을 시작하세요.');
+        await click('기존 크루 먼저 찾기');
+        await act(async () => (container.querySelector('[aria-label="뒤로 가기"]') as HTMLButtonElement).click());
+        await settle();
+        expect(container.querySelector('h1')?.textContent).toBe('크루 만들기');
+        const back = container.querySelector('header button') as HTMLButtonElement;
+        await act(async () => back.click()); await settle();
+        expect(new URL(window.location.href).searchParams.get('view')).toBe('home');
+    });
+
     it.each(['CREW_CAPTAIN', 'CREW_MANAGER'])('lets %s open settings directly from Home and My Crew without a manager-list request', async role => {
         hasCrew = true; crewRole = role; permissions = ['CREW_MEMBERS_MANAGE'];
         localStorage.setItem('boardbuddy_captain_onboarding_v1:7', 'completed');

@@ -49,6 +49,56 @@ try {
             completed.push(`${name}-mobile-login-back-forward-reload-logout`); await context.close();
         }
     } finally { await safari.close(); }
+    for (const width of [320, 768, 1024, 1440]) {
+        const context = await browser.newContext({ viewport: { width, height: 900 }, serviceWorkers: 'block' });
+        await context.addInitScript(() => { localStorage.setItem('accessToken', 'synthetic-active'); localStorage.setItem('accountId', '99101'); });
+        const page = await context.newPage(); const state = await installOnboardingBoundary(page); state.newUser = false;
+        await page.goto(`${origin}/?view=home`);
+        const continuation = page.getByRole('button', { name: '가입·크루 진행 상태 이어보기', exact: true });
+        await continuation.waitFor();
+        const home = page.locator('main').filter({ has: continuation }).last();
+        const homeBox = await home.boundingBox(); const continueBox = await continuation.boundingBox();
+        assert(homeBox && continueBox && continueBox.x - homeBox.x >= 16 && homeBox.x + homeBox.width - continueBox.x - continueBox.width >= 16, `Home continuation has no side margins at ${width}`);
+        assert(homeBox.width >= Math.min(1100, (width >= 1024 ? width - 256 : width) - 8), `Home is constrained to a phone frame at ${width}`);
+        const join = page.getByRole('button', { name: '크루 가입하기 크루를 찾아 PIN으로 가입 신청하세요.', exact: true });
+        const create = page.getByRole('button', { name: '크루 만들기 새 크루를 등록하고 운영을 시작하세요.', exact: true });
+        if (width >= 768) {
+            const a = await join.boundingBox(); const b = await create.boundingBox();
+            assert(a && b && Math.abs(a.y - b.y) < 2 && b.x >= a.x + a.width, `Entry cards kept their mobile stacking at ${width}`);
+        }
+        await page.screenshot({ path: `${root}/output/playwright/home-entry-${width}.png` });
+        await join.click(); await page.waitForURL('**/?view=search_crew');
+        const search = page.getByRole('textbox', { name: '크루 검색', exact: true });
+        const searchBox = await search.boundingBox();
+        const iconBox = await page.locator('label').filter({ has: search }).locator('svg').boundingBox();
+        assert(searchBox && iconBox && searchBox.x >= iconBox.x + iconBox.width + 8, `Crew search icon overlaps input text at ${width}`);
+        await search.fill('한국');
+        await page.goBack(); await page.waitForURL('**/?view=home');
+        await page.goForward(); await page.waitForURL('**/?view=search_crew');
+        await page.getByRole('button', { name: '뒤로 가기', exact: true }).click();
+        await page.waitForURL('**/?view=home');
+        await create.click(); await page.waitForURL('**/?view=crew_create');
+        const creationForm = page.locator('form'); const formBox = await creationForm.boundingBox();
+        if (width >= 1024) {
+            const explanation = page.getByRole('heading', { name: '이미 등록된 크루가 있나요?' });
+            const explanationBox = await explanation.boundingBox();
+            assert(formBox && explanationBox && formBox.x > explanationBox.x, `Crew creation did not use its desktop columns at ${width}`);
+        }
+        await page.screenshot({ path: `${root}/output/playwright/crew-create-entry-${width}.png` });
+        await page.getByRole('button', { name: '기존 크루 먼저 찾기', exact: true }).click();
+        await page.waitForURL('**/?view=search_crew');
+        await page.getByRole('button', { name: '뒤로 가기', exact: true }).click();
+        await page.waitForURL('**/?view=crew_create');
+        await page.locator('header').filter({ has: page.getByRole('heading', { name: '크루 만들기', exact: true }) }).getByRole('button').click();
+        await page.waitForURL('**/?view=home');
+        await continuation.click(); await page.waitForURL('**/?view=onboarding');
+        await page.getByRole('button', { name: '내 크루 찾기', exact: true }).click();
+        await page.getByRole('button', { name: '뒤로 가기', exact: true }).click();
+        await page.waitForURL('**/?view=onboarding');
+        assert(!state.writes.length && !state.unknown.length && !state.errors.length, `Entry navigation wrote data or crossed the HTTP fixture at ${width}`);
+        assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), `Entry flow overflows at ${width}`);
+        completed.push(`entry-spacing-search-back-and-desktop-${width}`); await context.close();
+    }
     for (const viewport of [{ width: 320, height: 568 }, { width: 390, height: 844 }, { width: 768, height: 600 }, { width: 1440, height: 720 }, { width: 960, height: 420 }]) {
         const context = await browser.newContext({ viewport, serviceWorkers: 'block' });
         const page = await context.newPage();

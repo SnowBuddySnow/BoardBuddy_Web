@@ -71,7 +71,7 @@ it("discards a canceled edit and refreshes the authoritative summary after save"
   expect(api.save).toHaveBeenCalledWith(
     17,
     1,
-    expect.objectContaining({ totalNights: 10 }),
+    { name: "10박권", totalNights: 10 },
   );
   expect(container.textContent).toContain("10박권");
 });

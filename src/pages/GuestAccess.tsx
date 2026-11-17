@@ -9,6 +9,7 @@ interface GuestAccessProps {
     onEventAccess: (eventId: number) => void;
     seasonAvailable: boolean;
     offSeasonAvailable: boolean;
+    seasonBookingCrewId: number | null;
 }
 
 type GuestDestination = { type: 'SEASON'; id: number } | { type: 'EVENT'; id: number };
@@ -32,7 +33,7 @@ const parseGuestCode = (rawCode: string): GuestDestination | null => {
     return null;
 };
 
-export default function GuestAccess({ onBack, onSeasonHouseAccess, onEventAccess, seasonAvailable, offSeasonAvailable }: GuestAccessProps) {
+export default function GuestAccess({ onBack, onSeasonHouseAccess, onEventAccess, seasonAvailable, offSeasonAvailable, seasonBookingCrewId }: GuestAccessProps) {
     const [code, setCode] = useState('');
     const [error, setError] = useState('');
     const [scanning, setScanning] = useState(false);
@@ -63,6 +64,10 @@ export default function GuestAccess({ onBack, onSeasonHouseAccess, onEventAccess
         if (destination.type === 'SEASON') {
             if (!SEASON_HOUSE_RESERVATIONS_ENABLED || !seasonAvailable) {
                 setError('현재는 오프시즌 운영 중이라 시즌방 게스트 예약을 이용할 수 없습니다.');
+                return;
+            }
+            if (seasonBookingCrewId !== destination.id) {
+                setError('시즌방 게스트 예약은 해당 크루의 부원이 대신 접수할 수 있어요. 크루 운영진이나 초대한 부원에게 요청해 주세요.');
                 return;
             }
             onSeasonHouseAccess(destination.id);
@@ -112,7 +117,7 @@ export default function GuestAccess({ onBack, onSeasonHouseAccess, onEventAccess
         <ReservationLayout title="게스트 이용" onBack={onBack}>
 
             <main className="reservation-content reservation-guest-content">
-                <ReservationSummary title="초대 코드로 입장" description={seasonAvailable ? '초대장을 스캔하거나 코드를 입력해 예약을 시작하세요.' : '초대장을 스캔하거나 코드를 입력해주세요.'} />
+                <ReservationSummary title="게스트 초대 확인" description="게스트 전용 코드·링크로 신청할 곳을 확인하세요." />
 
                 <section className="reservation-panel mb-5">
                     {scanning ? <video ref={videoRef} muted playsInline className="aspect-[4/3] w-full rounded-2xl bg-zinc-900 object-cover" /> : (
@@ -129,7 +134,7 @@ export default function GuestAccess({ onBack, onSeasonHouseAccess, onEventAccess
                     <div className="my-5 flex items-center gap-3 text-xs font-bold text-zinc-400"><span className="h-px flex-1 bg-zinc-200" />또는 코드 입력<span className="h-px flex-1 bg-zinc-200" /></div>
                     <label htmlFor="guest-invite-code" className="block text-sm font-black text-zinc-800">초대 코드</label>
                     <div className="mt-2 flex gap-2">
-                        <div className="flex flex-1 items-center gap-2 rounded-2xl border border-zinc-200 bg-white px-3 focus-within:border-[#162660]"><Keyboard className="h-4 w-4 text-zinc-400" /><input id="guest-invite-code" value={code} onChange={event => setCode(event.target.value)} onKeyDown={event => event.key === 'Enter' && openDestination(code)} placeholder={seasonAvailable ? 'BB:SEASON:12' : 'BB:EVENT:34'} className="min-w-0 flex-1 py-3 text-sm font-semibold outline-none" /></div>
+                        <div className="flex min-w-0 flex-1 items-center gap-2 rounded-2xl border border-zinc-200 bg-white px-3 focus-within:border-[#162660]"><Keyboard aria-hidden="true" className="h-4 w-4 shrink-0 text-zinc-400" /><input id="guest-invite-code" value={code} onChange={event => setCode(event.target.value)} onKeyDown={event => event.key === 'Enter' && openDestination(code)} placeholder={seasonAvailable ? 'BB:SEASON:12' : 'BB:EVENT:34'} className="min-w-0 flex-1 py-3 text-sm font-semibold outline-none" /></div>
                         <button onClick={() => openDestination(code)} className="reservation-primary px-4 text-sm">확인</button>
                     </div>
                     {error && <p className="mt-3 rounded-xl bg-red-50 px-3 py-2 text-xs font-bold leading-5 text-red-600">{error}</p>}
@@ -138,6 +143,9 @@ export default function GuestAccess({ onBack, onSeasonHouseAccess, onEventAccess
                         {seasonAvailable && offSeasonAvailable && <span> · </span>}
                         {offSeasonAvailable && <span>이벤트: <strong>BB:EVENT:이벤트번호</strong></span>}
                     </p>
+                    <p className="mt-3 text-xs leading-5 text-zinc-500">확인 후 신청 화면으로 이동해요.<br />예약·참여는 신청을 마쳐야 접수돼요.</p>
+                    {seasonAvailable && <p className="mt-2 text-xs leading-5 text-zinc-500">시즌방 게스트 예약은 해당 크루의 부원이<br />로그인한 뒤 대신 접수해요.</p>}
+                    <p className="mt-2 text-xs leading-5 text-zinc-500">크루 가입 초대 링크는 이곳에 입력하지 않고,<br />전달받은 링크를 직접 열어 주세요.</p>
                 </div>
             </main>
         </ReservationLayout>

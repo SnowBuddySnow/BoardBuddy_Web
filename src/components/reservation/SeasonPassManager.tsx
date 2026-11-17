@@ -1,5 +1,6 @@
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
-import { Search, X } from "lucide-react";
+import { X } from "lucide-react";
+import SearchField from '../SearchField';
 import {
   assignSeasonPasses,
   getMemberStayHistory,
@@ -9,8 +10,6 @@ import {
   type StayHistoryItem,
 } from "../../services/seasonStays";
 import { getApiErrorMessage } from "../../lib/apiError";
-import { getReservationSeason } from "../../lib/reservationSeason";
-import { localDateKey } from "../../lib/personalCalendar";
 import SeasonPassEditor from "./SeasonPassEditor";
 
 function ManagementDialog({
@@ -221,9 +220,6 @@ export default function SeasonPassManager({ crewId }: { crewId: number }) {
   const [kind, setKind] = useState<string | null>(null),
     [busy, setBusy] = useState(false);
   const lock = useRef(false);
-  const season = getReservationSeason();
-  const [startsOn, setStartsOn] = useState(localDateKey(season.start)),
-    [endsOn, setEndsOn] = useState(localDateKey(season.end));
   useEffect(() => {
     const timer = setTimeout(() => {
       setQuery(search.trim());
@@ -255,15 +251,7 @@ export default function SeasonPassManager({ crewId }: { crewId: number }) {
   const rows = data?.items ?? [];
   const pending = loading || query !== search.trim();
   const assign = async () => {
-    if (
-      lock.current ||
-      !kind ||
-      !selected.length ||
-      !startsOn ||
-      !endsOn ||
-      startsOn > endsOn
-    )
-      return;
+    if (lock.current || !kind || !selected.length) return;
     lock.current = true;
     setBusy(true);
     setError("");
@@ -271,8 +259,6 @@ export default function SeasonPassManager({ crewId }: { crewId: number }) {
       const result = await assignSeasonPasses(crewId, selected, {
         name: kind === "unlimited" ? "풀상주권" : `${kind}박권`,
         totalNights: kind === "unlimited" ? null : Number(kind),
-        startsOn,
-        endsOn,
       });
       setMessage(`${result.updated}명에게 이용권을 할당했습니다.`);
       setKind(null);
@@ -281,7 +267,7 @@ export default function SeasonPassManager({ crewId }: { crewId: number }) {
     } catch (err) {
       setError(
         getApiErrorMessage(err) ||
-          "할당하지 못했습니다. 이용 기간과 확정 박수를 확인해 주세요.",
+          "할당하지 못했습니다. 확정 박수와 권한을 확인해 주세요.",
       );
     } finally {
       lock.current = false;
@@ -294,12 +280,7 @@ export default function SeasonPassManager({ crewId }: { crewId: number }) {
       <p className="mt-1 text-xs leading-5 text-slate-500">
         이용권 할당·변경은 크루장과 임원진만 할 수 있어요.
       </p>
-      <label className="relative mt-4 block">
-        <Search
-          aria-hidden="true"
-          className="absolute left-3 top-3 h-5 w-5 text-slate-400"
-        />
-        <input
+      <SearchField className="mt-4"
           aria-label="부원 검색"
           placeholder="이름 또는 학번 검색"
           value={search}
@@ -308,9 +289,7 @@ export default function SeasonPassManager({ crewId }: { crewId: number }) {
             setSearch(event.target.value);
             setSelected([]);
           }}
-          className="reservation-input w-full pl-10"
         />
-      </label>
       <div className="my-3 rounded-2xl border border-slate-200 bg-white p-3">
         <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
           <label className="flex min-h-10 items-center gap-2">
@@ -379,77 +358,42 @@ export default function SeasonPassManager({ crewId }: { crewId: number }) {
         </p>
       ) : (
         <>
-          <ul aria-label="부원 이용권 목록" className="space-y-2">
+          <div aria-hidden="true" className="mb-1 flex items-center gap-2 px-3 text-[11px] sm:px-4 font-semibold text-slate-400">
+            <span className="w-4 shrink-0" />
+            <div className="grid min-w-0 flex-1 grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)_minmax(0,1fr)_minmax(3rem,.65fr)] items-center gap-2">
+              <span>이름</span><span>학번</span><span>이용권</span><span className="text-center">잔여</span>
+            </div>
+          </div>
+          <ul aria-label="부원 이용권 목록" className="overflow-hidden rounded-xl border border-slate-200 bg-white divide-y divide-slate-100">
             {rows.map((row) => (
-              <li
-                key={row.accountId}
-                className="rounded-2xl border border-slate-200 bg-white p-4"
-              >
-                <div className="flex items-center gap-3">
-                  <input
-                    type="checkbox"
-                    aria-label={`${row.name} 선택`}
-                    checked={selected.includes(row.accountId)}
-                    disabled={busy}
-                    onChange={(event) =>
-                      setSelected((current) =>
-                        event.target.checked
-                          ? [...current, row.accountId]
-                          : current.filter((id) => id !== row.accountId),
-                      )
-                    }
-                    className="h-4 w-4 shrink-0 accent-[#162660]"
-                  />
-                  <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <strong className="break-words text-sm">
-                        {row.name}
-                      </strong>
-                      {row.role !== "CREW_MEMBER" && (
-                        <span className="rounded bg-blue-50 px-1.5 py-0.5 text-[10px] text-blue-700">
-                          {row.role === "CREW_CAPTAIN" ? "크루장" : "임원진"}
-                        </span>
-                      )}
-                    </div>
-                    {row.studentNumber && (
-                      <p className="mt-1 text-xs text-slate-500">
-                        {row.studentNumber}
-                      </p>
-                    )}
-                  </div>
-                  <button
-                    type="button"
-                    aria-label={`${row.name} 이력·수정`}
-                    onClick={() => setPerson(row)}
-                    className="min-h-10 shrink-0 text-xs font-semibold text-blue-700"
-                  >
-                    이력·수정 →
-                  </button>
-                </div>
-                <div className="mt-3 grid grid-cols-3 gap-2 border-t border-slate-100 pt-3 text-xs">
-                  <div>
-                    <span className="block text-slate-400">이용권</span>
-                    <strong className="mt-1 block text-[#162660]">
-                      {row.pass.registered ? row.pass.name : "미등록"}
-                    </strong>
-                  </div>
-                  <div>
-                    <span className="block text-slate-400">누적 이용 완료</span>
-                    <strong className="mt-1 block">
-                      {row.completedNights}박
-                    </strong>
-                  </div>
-                  <div>
-                    <span className="block text-slate-400">잔여</span>
-                    <strong className="mt-1 block">
-                      {!row.pass.registered
-                        ? "—"
-                        : row.pass.remainingNights == null
-                          ? "무제한"
-                          : `${row.pass.remainingNights}박`}
-                    </strong>
-                  </div>
-                </div>
+              <li key={row.accountId} className="flex min-w-0 items-center gap-2 px-3 hover:bg-slate-50 sm:px-4">
+                <input
+                  type="checkbox"
+                  aria-label={`${row.name} 선택`}
+                  checked={selected.includes(row.accountId)}
+                  disabled={busy}
+                  onChange={(event) =>
+                    setSelected((current) =>
+                      event.target.checked
+                        ? [...current, row.accountId]
+                        : current.filter((id) => id !== row.accountId),
+                    )
+                  }
+                  className="h-4 w-4 shrink-0 accent-[#162660]"
+                />
+                <button
+                  type="button"
+                  aria-label={`${row.name} 이력·수정`}
+                  onClick={() => setPerson(row)}
+                  className="grid min-h-11 min-w-0 flex-1 grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)_minmax(0,1fr)_minmax(3rem,.65fr)] items-center gap-2 text-left text-xs focus-visible:outline-2 focus-visible:outline-[#162660] focus-visible:outline-offset-[-2px]"
+                >
+                  <span title={row.name} className="truncate font-semibold text-slate-900">{row.name}</span>
+                  <span title={row.studentNumber || undefined} className="truncate text-[11px] tabular-nums text-slate-500">{row.studentNumber || "—"}</span>
+                  <span title={row.pass.registered ? row.pass.name ?? "이용권" : "미등록"} className="truncate text-[11px] font-medium text-[#162660] sm:text-xs">{row.pass.registered ? row.pass.name ?? "이용권" : "미등록"}</span>
+                  <span className="whitespace-nowrap text-center font-semibold tabular-nums text-slate-900">
+                    {!row.pass.registered ? "—" : row.pass.remainingNights == null ? "무제한" : `${row.pass.remainingNights}박`}
+                  </span>
+                </button>
               </li>
             ))}
           </ul>
@@ -487,6 +431,11 @@ export default function SeasonPassManager({ crewId }: { crewId: number }) {
       )}
       {person && (
         <ManagementDialog title={person.name} onClose={() => setPerson(null)}>
+          <div className="mb-4 flex flex-wrap items-center gap-2 text-xs text-slate-500">
+            <span>{person.studentNumber || "학번 미등록"}</span>
+            {person.role !== "CREW_MEMBER" && <span className="rounded bg-blue-50 px-1.5 py-0.5 text-[10px] text-blue-700">{person.role === "CREW_CAPTAIN" ? "크루장" : "임원진"}</span>}
+            <span>누적 이용 완료 {person.completedNights}박</span>
+          </div>
           <SeasonPassEditor
             key={person.accountId}
             crewId={crewId}
@@ -509,9 +458,9 @@ export default function SeasonPassManager({ crewId }: { crewId: number }) {
             {kind === "unlimited" ? "풀상주권" : `${kind}박권`}
           </p>
           <p className="mt-2 text-xs leading-5 text-slate-500">
-            선택한 기간의 이용권을 등록하거나 변경해요.
+            선택한 부원의 이용권을 등록하거나 변경해요.
             <br />
-            기간이 겹치거나 확정된 박수보다 적으면 전체 할당을 취소해요.
+            확정된 박수보다 적으면 전체 할당을 취소해요.
           </p>
           <p className="my-3 text-xs">
             {rows
@@ -519,30 +468,6 @@ export default function SeasonPassManager({ crewId }: { crewId: number }) {
               .map((row) => row.name)
               .join(", ")}
           </p>
-          <div className="grid grid-cols-2 gap-2">
-            <label className="text-xs">
-              시작일 *
-              <input
-                type="date"
-                aria-label="할당 시작일"
-                value={startsOn}
-                disabled={busy}
-                onChange={(event) => setStartsOn(event.target.value)}
-                className="reservation-input mt-1 w-full min-w-0"
-              />
-            </label>
-            <label className="text-xs">
-              종료일 *
-              <input
-                type="date"
-                aria-label="할당 종료일"
-                value={endsOn}
-                disabled={busy}
-                onChange={(event) => setEndsOn(event.target.value)}
-                className="reservation-input mt-1 w-full min-w-0"
-              />
-            </label>
-          </div>
           {error && (
             <p role="alert" className="mt-3 text-sm text-red-700">
               {error}
@@ -550,13 +475,7 @@ export default function SeasonPassManager({ crewId }: { crewId: number }) {
           )}
           <button
             type="button"
-            disabled={
-              busy ||
-              !selected.length ||
-              !startsOn ||
-              !endsOn ||
-              startsOn > endsOn
-            }
+            disabled={busy || !selected.length}
             onClick={() => void assign()}
             className="reservation-primary mt-4 min-h-11 w-full"
           >

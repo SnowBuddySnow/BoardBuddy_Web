@@ -3,7 +3,8 @@ import { formatEventDateTime, getEventRegistrationLabel, getEventRegistrationSta
 import { Button } from '../components/Button';
 import { listParties } from '../services/event';
 import { Event } from '../types/api';
-import { ChevronLeft, Calendar, MapPin, Users, Search, Sparkles, AlertCircle } from 'lucide-react';
+import { ChevronLeft, Calendar, MapPin, Users, Sparkles, AlertCircle } from 'lucide-react';
+import SearchField from '../components/SearchField';
 import { PlanningModeBadge } from '../components/event/PlanningModeBadge';
 import { getEventActivityLabel, EVENT_ACTIVITY_OPTIONS } from '../constants/eventActivity';
 
@@ -99,16 +100,13 @@ export default function Parties({ onBack, onEventClick, onCreateClick, canCreate
 
             {/* Search and Filter */}
             <div className="px-4 py-3 bg-[#FAF8F3] space-y-3">
-                <div className="relative flex items-center">
-                    <Search className="absolute left-3 w-5 h-5 text-zinc-400" />
-                    <input
+                <SearchField
+                        aria-label="이벤트 검색"
                         type="text"
                         placeholder="이벤트, 활동, 장소 검색..."
                         value={searchQuery}
                         onChange={e => setSearchQuery(e.target.value)}
-                        className="w-full pl-10 pr-4 py-2.5 bg-white border border-zinc-200 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-[#162660]/20 transition-all text-zinc-800 placeholder-zinc-400"
                     />
-                </div>
 
                 {/* Filter Tags */}
                 <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar">

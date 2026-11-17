@@ -184,11 +184,26 @@ try {
         await page.goto(`${origin}/?view=crew_detail`);
         await page.getByRole('button',{name:'이용권 관리',exact:true}).click();
         await page.getByRole('heading',{name:'크루 관리',exact:true}).waitFor();
-        await page.getByRole('list',{name:'부원 이용권 목록',exact:true}).getByText('가상 회원',{exact:true}).waitFor();
+        try { await page.getByRole('list',{name:'부원 이용권 목록',exact:true}).getByText('가상 회원',{exact:true}).waitFor(); }
+        catch (error) {
+          await page.screenshot({path:`${root}/output/playwright/pass-list-failure-${name}-${width}.png`});
+          console.error(JSON.stringify({engine:name,width,body:await page.locator('body').innerText(),errors:state.errors,unknown:state.unknown,traffic:state.traffic.slice(-15)}));
+          throw error;
+        }
         assert(await page.getByRole('combobox',{name:'이용권 부원'}).count()===0,'Pass directory still uses a member dropdown');
+        const compactRows = await page.getByRole('list',{name:'부원 이용권 목록',exact:true}).locator('li').evaluateAll(rows => rows.every(row => {
+          const rect = row.getBoundingClientRect();
+          const elements = Array.from(row.querySelectorAll('button > span'));
+          const fields = elements.map(field => field.getBoundingClientRect());
+          const remainingText = document.createRange(); remainingText.selectNodeContents(elements[3]);
+          return rect.height <= 48 && fields.length === 4 && remainingText.getBoundingClientRect().right <= rect.right - 16 && fields.every(field => Math.abs(field.y + field.height / 2 - (fields[0].y + fields[0].height / 2)) < 2 && field.right <= rect.right);
+        }));
+        assert(compactRows, 'Member pass rows are not four aligned fields on a compact single line');
+        await page.screenshot({path:`${root}/output/playwright/compact-pass-list-${name}-${width}.png`});
         await page.getByRole('button',{name:'가상 회원 이력·수정',exact:true}).click();
         await page.getByRole('region',{name:'숙박 이력',exact:true}).getByText('2026.11.12',{exact:true}).waitFor();
         await page.getByRole('button',{name:'이용권 수정',exact:true}).click();
+        assert(await page.getByRole('dialog').locator('input[type="date"]').count()===0,'Pass editor still asks for start/end dates');
         await page
           .getByRole("combobox", { name: "이용권 종류" })
           .selectOption("10");
@@ -206,7 +221,11 @@ try {
           path: `${root}/output/playwright/season-stays-${name}-${width}.png`,
         });
         await page.getByRole('dialog').getByRole('button',{name:'닫기',exact:true}).click();
-        await page.getByRole('textbox',{name:'부원 검색',exact:true}).fill('20260002');
+        const memberSearch = page.getByRole('textbox',{name:'부원 검색',exact:true});
+        const memberSearchBox = await memberSearch.boundingBox();
+        const memberSearchIcon = await page.locator('label').filter({has:memberSearch}).locator('svg').boundingBox();
+        assert(memberSearchBox && memberSearchIcon && memberSearchBox.x >= memberSearchIcon.x + memberSearchIcon.width + 8, 'Pass search icon overlaps placeholder or typed text');
+        await memberSearch.fill('20260002');
         await page.getByRole('list',{name:'부원 이용권 목록',exact:true}).getByText('가상 부원',{exact:true}).waitFor();
         assert(await page.getByRole('list',{name:'부원 이용권 목록',exact:true}).getByText('가상 회원',{exact:true}).count()===0,'Member search did not filter');
         await page.getByRole('textbox',{name:'부원 검색',exact:true}).fill('');
@@ -214,6 +233,7 @@ try {
         await page.getByRole('checkbox',{name:'현재 목록 전체 선택',exact:true}).check();
         await page.getByRole('button',{name:'풀상주 할당',exact:true}).click();
         const bulk=page.getByRole('dialog');
+        assert(await bulk.locator('input[type="date"]').count()===0,'Bulk pass assignment still asks for start/end dates');
         await bulk.getByRole('button',{name:'선택 2명에게 할당',exact:true}).click();
         await page.getByText('2명에게 이용권을 할당했습니다.',{exact:true}).waitFor();
         assert(state.seasonPasses[99101].totalNights===null&&state.seasonPasses[99102].totalNights===null,'Bulk unlimited assignment failed');
