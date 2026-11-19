@@ -174,12 +174,12 @@ export default function DashboardEventDetail({ eventId, onBack, onEditClick, onO
     return (
         <div className="flex-1 flex flex-col h-full bg-[#FAF8F3] overflow-hidden">
             {/* Header */}
-            <header className="bg-white border-b border-zinc-100 px-6 py-4 flex items-center justify-between">
+            <header className="bg-white border-b border-zinc-100 px-4 py-4 flex flex-wrap items-center justify-between gap-3 sm:px-6">
                 <div className="flex items-center gap-3">
                     <Button variant="ghost" onClick={onBack} className="-ml-2 gap-1 text-zinc-600 hover:bg-transparent">
                         <ChevronLeft className="w-5 h-5" />
                     </Button>
-                    <h1 className="text-lg font-bold text-zinc-900">{event.title} (관리)</h1>
+                    <h1 className="min-w-0 break-words text-lg font-bold text-zinc-900">{event.title} (관리)</h1>
                 </div>
                 <div className="flex items-center gap-2">
                     <Button
@@ -212,9 +212,9 @@ export default function DashboardEventDetail({ eventId, onBack, onEditClick, onO
                 </div>
             </header>
 
-            <main className="flex-1 overflow-y-auto p-6 max-w-6xl w-full mx-auto grid grid-cols-3 gap-6">
+            <main className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6 max-w-6xl w-full mx-auto grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6">
                 {/* Column 1 & 2: Small gathering details & participants */}
-                <div className="col-span-2 space-y-6">
+                <div className="min-w-0 lg:col-span-2 space-y-6">
                     {/* Basic Info panel */}
                     <div className="bg-white rounded-3xl p-6 border border-zinc-100 shadow-sm space-y-4">
                         <h2 className="text-base font-bold text-zinc-900">모임 요약</h2>
@@ -258,7 +258,7 @@ export default function DashboardEventDetail({ eventId, onBack, onEditClick, onO
                     <div className="bg-white rounded-3xl p-6 border border-zinc-100 shadow-sm space-y-4">
                         {!event.parentEventId && <div className="space-y-3">
                         <button className="rounded-xl bg-[#162660] px-5 py-3 text-sm font-bold text-white"
-                            onClick={() => setShowGroupize(current => !current)}>{showGroupize ? 'Groupize 접기' : 'Groupize · 소모임 편성'}</button>
+                            onClick={() => setShowGroupize(current => !current)}>{showGroupize ? '소모임 편성 접기' : '소모임 편성'}</button>
                         {showGroupize && <GroupizePanel key={event.id} eventId={event.id} onOpenEvent={onOpenEvent ?? onEditClick}
                             onChanged={() => { void getEventDashboard(eventId).then(setEvent); }} />}
                     </div>}
@@ -268,7 +268,7 @@ export default function DashboardEventDetail({ eventId, onBack, onEditClick, onO
                         <p className="text-xs text-zinc-500">
                             참가 확정 {participants.filter(part => part.status === 'JOINED').length}명 · 승인 대기 {participants.filter(part => part.status === 'PENDING').length}명 · 동의 대기 {participants.filter(part => part.status === 'CONSENT_PENDING').length}명
                         </p>
-                        <div className="flex gap-2" aria-label="참가자 목록 필터">
+                        <div className="flex flex-wrap gap-2" aria-label="참가자 목록 필터">
                             <Button variant={showParticipantHistory ? 'outline' : 'primary'} aria-pressed={!showParticipantHistory} onClick={() => setShowParticipantHistory(false)}>
                                 진행 중 ({activeParticipants.length})
                             </Button>
@@ -283,7 +283,7 @@ export default function DashboardEventDetail({ eventId, onBack, onEditClick, onO
                             </div>
                         ) : (
                             <div className="overflow-x-auto">
-                                <table className="w-full min-w-[680px] text-left border-collapse text-sm">
+                                <table className="participant-table w-full text-left border-collapse text-sm">
                                     <thead>
                                         <tr className="bg-zinc-50 text-zinc-400 font-bold text-xs uppercase border-b border-zinc-100">
                                             <th className="px-2 py-3">참가자</th>
@@ -302,10 +302,10 @@ export default function DashboardEventDetail({ eventId, onBack, onEditClick, onO
 
                                             return (
                                                 <tr key={part.id} className="hover:bg-zinc-50/50 transition-colors">
-                                                    <td className="px-2 py-3.5 font-bold text-zinc-800 whitespace-nowrap">
+                                                    <td data-label="참가자" className="px-2 py-3.5 font-bold text-zinc-800 whitespace-nowrap">
                                                         {part.userName || '이름 없음'}
                                                     </td>
-                                                    <td className="px-2 py-3.5">
+                                                    <td data-label="상태" className="px-2 py-3.5">
                                                         <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-bold ${
                                                             part.status === 'JOINED' ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' :
                                                             part.status === 'PENDING' ? 'bg-amber-50 text-amber-700 border border-amber-100 animate-pulse' :
@@ -315,42 +315,42 @@ export default function DashboardEventDetail({ eventId, onBack, onEditClick, onO
                                                             {participantStatusLabel[part.status]}
                                                         </span>
                                                     </td>
-                                                    <td className="px-2 py-3.5 text-zinc-400 text-xs font-semibold whitespace-nowrap">
+                                                    <td data-label="신청 일시" className="px-2 py-3.5 text-zinc-400 text-xs font-semibold whitespace-nowrap">
                                                         {formatCompactDate(part.joinedAt || part.createdAt || '')}
                                                     </td>
-                                                    <td className="px-2 py-3.5">
+                                                    <td data-label="입금 상태" className="px-2 py-3.5">
                                                         <select
                                                             value={part.paymentStatus ?? ''}
                                                             onChange={event => updateParticipantDraft(part.id, {
                                                                 paymentStatus: (event.target.value || null) as PaymentStatus | null,
                                                             })}
-                                                            className="w-24 px-2 py-2 bg-white border border-zinc-200 rounded-lg text-xs font-semibold text-zinc-700 focus:outline-none focus:ring-2 focus:ring-[#162660]/20"
-                                                            aria-label={`User ${part.userId} 입금 상태`}
+                                                            className="w-full sm:w-24 min-h-11 px-2 py-2 bg-white border border-zinc-200 rounded-lg text-xs font-semibold text-zinc-700 focus:outline-none focus:ring-2 focus:ring-[#162660]/20"
+                                                            aria-label={`${part.userName || '이름 없는 참가자'} 입금 상태`}
                                                         >
                                                             <option value="">미설정</option>
                                                             <option value="UNPAID">미입금</option>
                                                             <option value="PAID">입금 완료</option>
                                                         </select>
                                                     </td>
-                                                    <td className="px-2 py-3.5">
+                                                    <td data-label="호스트 메모" className="px-2 py-3.5">
                                                         <input
                                                             type="text"
                                                             value={part.managerMemo ?? ''}
                                                             onChange={event => updateParticipantDraft(part.id, { managerMemo: event.target.value })}
                                                             placeholder="호스트만 보는 메모"
                                                             maxLength={1000}
-                                                            className="w-36 px-2.5 py-2 bg-white border border-zinc-200 rounded-lg text-xs text-zinc-700 focus:outline-none focus:ring-2 focus:ring-[#162660]/20"
-                                                            aria-label={`User ${part.userId} 호스트 메모`}
+                                                            className="w-full sm:w-36 min-h-11 px-2.5 py-2 bg-white border border-zinc-200 rounded-lg text-xs text-zinc-700 focus:outline-none focus:ring-2 focus:ring-[#162660]/20"
+                                                            aria-label={`${part.userName || '이름 없는 참가자'} 호스트 메모`}
                                                         />
                                                     </td>
-                                                    <td className="px-2 py-3.5 text-right">
-                                                        <div className="flex items-center justify-end gap-1.5">
+                                                    <td data-label="관리" className="px-2 py-3.5 text-right">
+                                                        <div className="flex flex-wrap items-center justify-end gap-1.5">
                                                             <button
                                                                 onClick={() => handleParticipantManagementSave(part)}
                                                                 disabled={participantManagementId === part.id}
-                                                                className="p-1 text-[#162660] hover:bg-blue-50 rounded-full border border-zinc-200 transition-colors disabled:opacity-50"
+                                                                className="inline-flex min-h-11 min-w-11 items-center justify-center p-1 text-[#162660] hover:bg-blue-50 rounded-full border border-zinc-200 transition-colors disabled:opacity-50"
                                                                 title="입금 상태와 메모 저장"
-                                                                aria-label={`User ${part.userId} 관리 정보 저장`}
+                                                                aria-label={`${part.userName || '이름 없는 참가자'} 관리 정보 저장`}
                                                             >
                                                                 <Save className="w-4 h-4" />
                                                             </button>
@@ -358,7 +358,7 @@ export default function DashboardEventDetail({ eventId, onBack, onEditClick, onO
                                                                 <button
                                                                     onClick={() => handleParticipantStatusChange(part.userId, 'JOINED')}
                                                                     disabled={isDisabled}
-                                                                    className="p-1 text-emerald-600 hover:bg-emerald-50 rounded-full border border-zinc-200 transition-colors"
+                                                                    className="inline-flex min-h-11 min-w-11 items-center justify-center p-1 text-emerald-600 hover:bg-emerald-50 rounded-full border border-zinc-200 transition-colors"
                                                                     title="멤버 승인"
                                                                 >
                                                                     <Check className="w-4 h-4" />
@@ -368,7 +368,7 @@ export default function DashboardEventDetail({ eventId, onBack, onEditClick, onO
                                                                 <button
                                                                     onClick={() => handleParticipantStatusChange(part.userId, 'REMOVED')}
                                                                     disabled={isDisabled}
-                                                                    className="p-1 text-red-500 hover:bg-red-50 rounded-full border border-zinc-200 transition-colors"
+                                                                    className="inline-flex min-h-11 min-w-11 items-center justify-center p-1 text-red-500 hover:bg-red-50 rounded-full border border-zinc-200 transition-colors"
                                                                     title="멤버 제외"
                                                                 >
                                                                     <X className="w-4 h-4" />
@@ -378,7 +378,7 @@ export default function DashboardEventDetail({ eventId, onBack, onEditClick, onO
                                                                 <button
                                                                     onClick={() => handleParticipantStatusChange(part.userId, 'PENDING')}
                                                                     disabled={isDisabled}
-                                                                    className="p-1 text-zinc-400 hover:bg-zinc-100 rounded-full border border-zinc-200 transition-colors"
+                                                                    className="inline-flex min-h-11 min-w-11 items-center justify-center p-1 text-zinc-400 hover:bg-zinc-100 rounded-full border border-zinc-200 transition-colors"
                                                                     title="승인 대기로 되돌리기"
                                                                 >
                                                                     <Clock className="w-4 h-4" />
@@ -479,14 +479,14 @@ export default function DashboardEventDetail({ eventId, onBack, onEditClick, onO
                     <div className="bg-white rounded-3xl p-6 border border-zinc-100 shadow-sm space-y-4">
                         <h2 className="text-base font-bold text-zinc-900">도움말 / 팁</h2>
                         <ul className="text-xs text-zinc-500 space-y-2 list-disc pl-4 leading-relaxed">
-                            <li>생성 직후에는 <strong>DRAFT (초안)</strong> 상태로 저장됩니다. 초안 상태에서는 일반 모바일 멤버가 모임을 볼 수 없습니다.</li>
-                            <li><strong>"모집 오픈"</strong> 버튼을 누르면 일반 이용자가 보고 즉시 참가 또는 승인 대기가 가능해집니다.</li>
-                            <li>모집 정책이 호스트 승인 필요인 경우, 멤버들이 참가 신청을 보내면 좌측 리스트에 <strong>PENDING</strong> 상태로 나타나게 됩니다. Check(승인) 버튼을 눌러 확정처리 하세요.</li>
+                            <li>새 이벤트는 <strong>준비 중</strong>으로 저장됩니다. 모집을 열기 전에는 참가자에게 공개되지 않습니다.</li>
+                            <li><strong>모집 오픈</strong>을 누르면 설정한 신청 시작 시간부터 참가 신청을 받을 수 있습니다.</li>
+                            <li>승인이 필요한 신청은 <strong>승인 대기</strong>로 표시됩니다. 명단에서 승인 버튼을 눌러 참가를 확정하세요.</li>
                         </ul>
                     </div>
                 </div>
 
-                <div className="col-span-3">
+                <div className="min-w-0 lg:col-span-3">
                     <ManagerConsentResponseSheet eventId={eventId} />
                 </div>
             </main>

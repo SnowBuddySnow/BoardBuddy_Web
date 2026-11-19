@@ -40,6 +40,28 @@ import {
 } from './devMocks';
 
 // --- User-facing APIs ---
+export interface EventPage {
+    items: Event[];
+    page: number;
+    size: number;
+    hasNext: boolean;
+}
+
+/** Bounded alternative to the compatibility array routes; preserves server visibility filtering. */
+export const listEventsPage = async (page = 0, size = 30, dashboard = false): Promise<EventPage> => {
+    if (!Number.isInteger(page) || page < 0 || !Number.isInteger(size) || size < 1 || size > 100) {
+        throw new Error('Invalid event page');
+    }
+    if (isDevMode()) {
+        const events = getDevParties();
+        return { items: events.slice(page * size, (page + 1) * size), page, size, hasNext: (page + 1) * size < events.length };
+    }
+    const response = await apiClient.get<ApiResponse<EventPage>>(
+        dashboard ? '/dashboard/events/page' : '/events/page', { params: { page, size } },
+    );
+    return response.data.data;
+};
+
 export const listParties = async (): Promise<Event[]> => {
     if (isDevMode()) {
         return getDevParties();

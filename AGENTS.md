@@ -1,5 +1,12 @@
 # BoardBuddy Web Agent Instructions
 
+Start feature/fix branches from an up-to-date `develop`, and target `develop` for their PRs.
+Follow existing branch types such as `feat/...` and `fix/...`; do not use `codex/...`.
+After validation, open a PR for a maintainer to review and merge. Do not merge it yourself unless
+the user explicitly authorizes that merge. Pushes to `develop` trigger staging deployment.
+After an authorized merge, follow the staging deployment to completion, verify the deployment
+and test the affected journeys before handoff. Production promotion to `main` is separate.
+
 BoardBuddy Web is deployed only through Vercel: `develop` is staging and `main` is production. Do
 not add a web Docker container or server-side web deployment to the backend hosts.
 

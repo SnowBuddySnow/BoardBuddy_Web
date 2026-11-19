@@ -1,0 +1,43 @@
+/* Restore the pre-refresh crew calendar's gray frame, white cards and small occupancy dots. */
+.reservation-shell.crew-calendar-screen { background: #fff; color: #26344b; }
+.reservation-shell.crew-calendar-screen .reservation-header { display: grid; grid-template-columns: 72px minmax(0, 1fr) 72px; min-height: 56px; padding: 6px 16px; border: 0; }
+.reservation-shell.crew-calendar-screen .reservation-header h1 { text-align: center; font-size: 17px; }
+.reservation-shell.crew-calendar-screen .reservation-back { border: 0; border-radius: 10px; }
+.reservation-shell.crew-calendar-screen .reservation-header-action { justify-content: flex-end; font-size: 11px; white-space: nowrap; }
+.reservation-shell.crew-calendar-screen .reservation-content { padding-top: 4px; }
+.reservation-shell.crew-calendar-screen .reservation-calendar.is-classic { border: 0; border-radius: 20px; padding: 14px; background: #f3f4f6; box-shadow: none; }
+.reservation-calendar.is-classic .calendar-toolbar { justify-content: space-between; min-height: 32px; margin-bottom: 10px; }
+.reservation-calendar.is-classic .calendar-year { padding: 4px 18px; border-radius: 999px; background: #fff; color: #26344b; font-size: 14px; font-weight: 700; }
+.reservation-calendar.is-classic .calendar-month { min-height: 40px; padding: 2px 8px; border-radius: 14px; background: #fff; margin-bottom: 10px; }
+.reservation-calendar.is-classic .calendar-month h2 { color: #26344b; font-size: 16px; }
+.reservation-calendar.is-classic .calendar-nav { border: 0; background: transparent; color: #374151; }
+.reservation-calendar.is-classic .calendar-card { padding: 12px 10px 6px; border-radius: 16px; background: #fff; }
+.reservation-calendar.is-classic .calendar-weekdays { padding-bottom: 10px; border-color: #f0f1f3; }
+.reservation-calendar.is-classic .calendar-weekdays > div { color: #9298a2; font-weight: 600; }
+.reservation-shell.crew-calendar-screen .is-classic .calendar-week { min-height: 56px; padding-block: 4px; gap: 3px; border-color: #f2f3f5; }
+.reservation-shell.crew-calendar-screen .is-classic .reservation-date-cell { min-height: 46px; padding: 5px 2px; gap: 7px; border-radius: 10px; color: #6b7280; }
+.reservation-shell.crew-calendar-screen .is-classic .reservation-date-cell:hover { background: #f4f5f7; }
+.reservation-shell.crew-calendar-screen .is-classic .reservation-date-cell.is-selected { color: #fff; background: #28384e; box-shadow: none; }
+.reservation-shell.crew-calendar-screen .is-classic .reservation-date-cell.is-today:not(.is-selected) { color: #26344b; background: #f0f1f4; }
+.reservation-shell.crew-calendar-screen .crew-occupancy-dot { display: inline-block; width: 7px; height: 7px; flex-shrink: 0; border-radius: 50%; box-shadow: none; }
+.reservation-shell.crew-calendar-screen .reservation-dot-low { border: 1.5px solid #719d8d; background: transparent; }
+.reservation-shell.crew-calendar-screen .reservation-dot-medium { border: 1px solid #c1a064; background: linear-gradient(90deg, #c1a064 50%, transparent 50%); }
+.reservation-shell.crew-calendar-screen .reservation-dot-high { border: 0; background: #bd827e; }
+.reservation-shell.crew-calendar-screen .reservation-dot-none { border: 0; width: 6px; height: 2px; margin-block: 2.5px; border-radius: 2px; background: #c7cbd1; }
+.reservation-shell.crew-calendar-screen .crew-calendar-legend { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 8px 12px; padding: 12px 0 0; color: #777e89; font-size: 10px; }
+.reservation-shell.crew-calendar-screen .crew-calendar-legend > span { display: inline-flex; align-items: center; gap: 5px; }
+.reservation-shell.crew-calendar-screen .reservation-panel { border: 0; border-radius: 20px; padding: 16px; background: #f4f5f7; box-shadow: none; }
+.reservation-shell.crew-calendar-screen .reservation-member-row { padding: 7px 0; border: 0; border-radius: 0; background: transparent; }
+.reservation-shell.crew-calendar-screen .reservation-member-controls .reservation-input { background: #fff; }
+.reservation-shell.crew-calendar-screen .reservation-input.reservation-sort { min-height: 36px; border-color: transparent; background: #fff; }
+@media (min-width: 768px) {
+    .reservation-shell.crew-calendar-screen .reservation-content { padding-top: 8px; }
+    .reservation-shell.crew-calendar-screen .reservation-calendar.is-classic { padding: 18px; }
+    .reservation-calendar.is-classic .calendar-card { padding-inline: 14px; }
+    .reservation-shell.crew-calendar-screen .is-classic .calendar-week { min-height: 64px; }
+    .reservation-shell.crew-calendar-screen .is-classic .reservation-date-cell { min-height: 52px; padding-top: 8px; }
+}
+
+.reservation-shell.crew-calendar-screen .is-classic .reservation-date-cell.has-personal-reservation { gap: 5px; }
+.reservation-shell.crew-calendar-screen .reservation-date-cell > :is(.reservation-confirmed, .reservation-pending) { width: 26px; height: 26px; margin-top: 0; font-size: 12px; }
+.reservation-shell.crew-calendar-screen .reservation-pending { background: #a1aab7; color: #fff; box-shadow: none; }

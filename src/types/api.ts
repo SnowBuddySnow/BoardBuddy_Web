@@ -32,6 +32,9 @@ export interface CrewDetail {
     isCapacityLimited: boolean;
     kusbfAssociated?: boolean;
     seasonHouseActive?: boolean;
+    teachingEnabled?: boolean;
+    reservationWindowDays?: number | null;
+    reservationAlwaysOpen?: boolean;
     schoolVerificationRequired: boolean;
     schoolVerificationEnforcementEnabled?: boolean;
     configuredSchoolVerificationRequired?: boolean;
@@ -87,6 +90,7 @@ export interface CrewApplicant {
 // --- New Reservation DTOs ---
 
 export interface ReservationCreateRequest {
+    stayPolicyVersion?: number;
     dates: string[];
     guestId?: number;
 }
@@ -108,6 +112,10 @@ export interface ReservationCreateResponse {
 }
 
 export interface ReservationBookingResponse {
+    memberRole?: string | null;
+    teachingRequested?: boolean;
+    participantName?: string | null;
+    stayCompleted?: boolean;
     reservationId: number;
     participantAccountId?: number;
     guestId?: number;
@@ -119,7 +127,10 @@ export interface ReservationBookingResponse {
 }
 
 export interface ReservationDayResponse {
-    reservationDayId: number;
+    bookable?: boolean;
+    opensAt?: string | null;
+    unavailableReason?: string | null;
+    reservationDayId: number | null;
     crewId: number;
     reservationDate: string;
     capacityLimited: boolean;
@@ -138,6 +149,9 @@ export interface ReservationDaysPrepareRequest {
 // --- End New Reservation DTOs ---
 
 export interface CrewInfoUpdateRequest {
+    teachingEnabled?: boolean;
+    reservationWindowDays?: number | null;
+    reservationAlwaysOpen?: boolean;
     crewName: string;
     reservationOpenDay: string;
     reservationOpenTime: string;

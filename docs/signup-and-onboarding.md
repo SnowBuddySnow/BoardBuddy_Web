@@ -1,0 +1,197 @@
+# Responsive signup and crew onboarding
+
+The owner approved the existing proposal and requested school/terms fixes, responsive web/mobile
+screens, conventional `feat/...` branches, and maintainer-reviewed PRs into develop. Implementation
+is reviewed locally before the user authorizes PR creation. The maintainer merges and develop pushes
+deploy staging.
+
+## Shipped behavior in this branch
+
+- Signup uses two steps: profile and inline verification → agreements and signup. Navy/cream/yellow and
+  rounded surfaces are retained. Data stays in the form while navigating steps or retrying a failed
+  request; personal profile inputs are not persisted as browser drafts.
+  A rejected submission that refreshes signup policy returns to personal review before retrying,
+  so a newly selected profile type is visible to the applicant.
+- School selection stores a school ID separately from search text. It supports Korean aliases,
+  keyboard navigation/Enter/Escape/IME composition, pointer/touch choice, empty results and retry.
+  Editing text invalidates the selected identity. A successful retry clears loading; no fabricated
+  development school replaces a failed catalogue. Own school/student ID/gender remain required.
+- The terms modal renders above application scroll boundaries, has a bounded scrollable body and
+  reachable actions at small viewport heights, traps/restores focus and handles Escape. Reading or
+  closing never checks consent. “이 약관에 동의” checks only that document. Required-all excludes
+  the optional sharing preference, whose default remains confirmation each time. Existing legal
+  text is preserved; this change does not introduce a new legal policy or claim a server consent ledger.
+  The optional preference is bound to its account and cleared on logout or account change. Legacy
+  preferences without a known owner reset to confirmation each time on their first app load.
+- The caller's server-verified phone may be reused after interrupted signup. Late recovery responses
+  cannot overwrite an edited number or an account switch. Editing a number invalidates local
+  verification, and backend profile completion remains authoritative.
+- A minimal public crew invitation precedes login. Signup/login return to that invitation. Acceptance
+  is explicit and creates an operator-reviewed application. Existing members skip signup. Status can
+  be restored after reload even if the already-used invitation is no longer publicly available.
+- New members choose joining an existing crew or requesting creation. Own creation/application
+  progress is available after reload and from the home screen. Approval links the captain through
+  the existing backend workflow. Intent selection does not grant any role.
+- Approved captains can issue expiring, bounded-use invitations/QR and revoke them, then check a
+  host group before their first event. Current event-management desktop requirements are retained.
+  Pending operators see upcoming tasks but cannot issue usable invites or create live operations.
+- Approval/rejection notifications link to onboarding. On resuming a completed membership, an
+  account-bound, allowlisted original event can be opened. The event API still checks visibility.
+
+## Proof handling
+
+Invitation proof is in a fragment, stripped before telemetry and retained in sessionStorage for the
+current tab for up to seven days (memory fallback if storage is unavailable). Public preview uses
+an isolated Axios client without account interceptors. API proof is sent in POST bodies. QR generation
+runs locally, with no external QR service. Explicit logout clears the pending invitation. Existing
+JavaScript-accessible account token storage is unchanged.
+
+See the sibling backend's `docs/member-onboarding.md` for lifecycle, locking, rate quotas and limits.
+Deploy the backend PR before the web PR. Neither PR is an assertion of staging acceptance before merge.
+
+## Verification
+
+`pnpm test`, `pnpm typecheck`, `pnpm lint`, `pnpm check:contracts`, `pnpm build` and
+`pnpm test:onboarding` cover the implementation. Browser tests use isolated localhost HTTP fixtures
+and block external traffic. They exercise 320/390/768/1440px signup, touch choice/checking, a 480px-high consent viewport, school keyboard selection and
+identity, phone verification, explicit consent/read/close, modal geometry/focus, new-member invite →
+signup → pending → approval → original event, existing-member login and pending reload, same-tab invitation replacement, and president
+approval → invitation QR → revoke → first host-group setup. Evidence is in ignored `output/playwright`.
+These tests create no real account, agreement, SMS, membership or staging event.
+
+## Follow-up: signup without an invitation and provider hints
+
+The ordinary path is signup → choose joining → find a crew → PIN/application → restored approval
+status. The search screen explains all three connection steps; existing school and auto-join policy
+still determine admission. No invitation is required, and the PIN is not removed.
+
+Required inputs use `*`; optional email/sharing uses `(선택)`. The final CTA explicitly refers to
+all required agreements and never includes optional sharing. Kakao's account `name` (not profile
+nickname) and phone can prefill pending signup. A supplied name is shown for confirmation with an
+explicit correction action. No heuristic certifies a nickname as a real name. Phone prefill never
+sets the local verification flag or creates a verified identity. Existing server-verified recovery
+and the SMS/account-linking workflow stay authoritative.
+
+Hints are returned only for PENDING_PROFILE by the authenticated backend provider exchange, marked
+no-store, and kept in memory bound to account and auth revision. Reload falls back to ordinary
+input/recovery rather than persisting new personal drafts. Edits remain possible. Missing, declined
+or unsupported provider scopes fall back to manual input. No unapproved scope is forced into login.
+An operator must confirm Kakao app permission and consent configuration for `name` and `phone_number`
+before expecting live values; code alone cannot grant those permissions. Gender also requires its
+own configured consent scope. The provider's real-name field is distinct from its profile nickname.
+
+## Compact verification and home/profile follow-up (November 16, 2026)
+
+School choices display only their representative names, while aliases remain searchable. School
+email verification now sits directly below the email input in the first step. Empty optional email
+can be skipped. If a supported school email is supplied, it must be verified before advancing.
+The verified proof survives a return from terms but is invalidated when its school/email/account
+changes or it expires. Phone input and its verification action share one row; entering a provider
+phone number never replaces SMS verification. Final signup adopts the server-validated school
+proof atomically; it does not send the user to a surprise verification screen after agreements.
+
+Kakao consent is not necessarily shown again when an account has already granted access. Login still
+establishes provider identity without optional profile fields. Approved scopes can be configured with
+`VITE_KAKAO_SIGNUP_SCOPES`; leave unset until Kakao app permissions are ready. If the backend reports
+that additional consent is needed, the user may import that information or continue manually.
+The import rejects a different provider account and does not overwrite fields already edited.
+
+Home shows Phoenix weather, the crew summary, then the two-week personal calendar. The calendar
+uses colored dates and one legend, retaining spoken reservation states for assistive technology.
+Small Buddy placements crop the existing artwork to its face; larger desktop signup artwork uses
+the full character. MyPage shares the reservation layout and card styling, shows the server-derived
+crew role beside the name and the authoritative season-pass balance, and loads calendar data only
+when expanded. The no-crew state never implies manager access.
+
+The redundant crew-name strip above the Home crew card is removed. Captains and crew managers can
+open `크루 설정` directly from that card or Operations Center, as well as the existing My Crew page.
+My Crew uses the authenticated member role instead of an extra manager-list dependency. Returning
+from settings goes back to its entry screen. Direct member/no-crew entry does not load the settings
+form; captain-only controls and server authorization remain in place.
+
+Signup onboarding and crew search both offer `다음에 하기`, returning to Home without creating a
+membership or application. Home retains the crew-joining/progress actions so setup can resume later.
+
+Deploy the backend changes first, including the three authenticated pre-signup school-email proof
+routes, then the frontend. No schema change is required. Neither synthetic browser previews nor
+passing local checks establish that live Kakao scopes, SMTP or staging deployment are configured.
+Google school-account sign-in is a proposal, not a connected provider in this branch: see
+[the review and recommended flow](google-school-account-review.md).
+
+### Kakao permissions before business registration
+
+Official documentation checked November 16, 2026 distinguishes personal-developer Biz App conversion
+from approval for additional personal data. Conversion is available without business registration
+after owner identity confirmation and Kakao Business terms. Basic nickname/photo permissions and
+Biz App email access do not include automatic access to real name, gender or phone number. Those
+fields need approved consent-item permissions; the official FAQ limits applications to Biz Apps
+with registered business information. Test apps can exercise these fields for app members and are
+not a public-launch workaround.
+
+Until business registration and approval, retain Kakao identity login, direct entry of required
+profile fields, phone verification and school-email verification. Provider nickname must never be
+silently promoted to a real name; a Kakao account email must not silently become a verified school
+email. School Google sign-in remains an optional future shortcut for compatible schools.
+Once permitted, the implemented provider hint/import flow can prefill returned name/phone/gender;
+live console permissions and user consent are still prerequisites. This change does not convert
+the app, accept business terms, submit permission requests or claim those fields are live.
+
+Sources:
+- [Biz App and personal developer conversion](https://developers.kakao.com/docs/ko/app-setting/app)
+- [Consent-item permission table](https://developers.kakao.com/docs/ko/kakaologin/utilize)
+- [No-business-information FAQ](https://developers.kakao.com/docs/ko/kakaologin/faq)
+- [Permission review prerequisites](https://developers.kakao.com/docs/ko/kakaologin/prerequisite)
+
+Validation adds same-account Kakao import/decline, alias-only search display, inline email proof
+adoption/invalidation, right-aligned phone actions, home section order, date-only labels, member
+role tags and overflow checks at 320/390/768/1440px, including WebKit mobile. The sibling backend
+tests include real MySQL ownership, expiry, failed attempts and atomic proof adoption.
+
+Kakao references: [REST API](https://developers.kakao.com/docs/ko/kakaologin/rest-api),
+[consent prerequisites](https://developers.kakao.com/docs/ko/kakaologin/prerequisite).
+
+References checked November 13, 2026:
+- https://developers.kakao.com/docs/ko/kakaologin/utilize : distinct nickname/name/phone scopes and consent permissions.
+- https://ohou.se/normal_users/new : social entry alongside explicit nickname input and individually listed agreements.
+- https://ohou.se/contact_us : social login still has service-side identity/email verification concerns.
+These references inform the design; their authenticated private flows were not inspected.
+
+## Entry layout and school-domain follow-up
+
+The first Kakao entry screen now shares the invitation/signup navy, cream, yellow and rounded-card
+layout. It uses the app's available flex height and an internal scrolling surface, replacing a
+viewport-height minimum nested inside an overflow-hidden app viewport. Login joins the full-width
+onboarding shell. Browser checks cover 320/390/768/1440px and a short 960×420 viewport, including
+reachable footer and horizontal overflow checks.
+
+School selection chooses a registered email domain automatically. Multiple configured domains use
+a dropdown; the local part remains editable. Empty optional email stays empty rather than submitting
+`@domain`. Email/domain assistance does not mark school verification complete. The student-number
+hint is now “동명이인 구분을 위해 필수입니다.”.
+
+Release investigation on November 13, 2026 found the API live at `1d1fabed` (health UP), while
+https://stg.boardbuddy.kr still served `1.0.0+4717f8f`, despite develop `f896c64` having merged.
+The Web GitHub workflow performs verification/build/browser checks only, and the merge commit has
+no Vercel commit status. A successful GitHub build alone is not proof of a frontend staging release.
+Vercel project access/configuration must be restored and the actual deployed version verified.
+
+## Mobile history, safe areas and local UI sandbox
+
+The same develop-based PR adds authentication-boundary history replacement. Successful login/signup
+completion replaces its entry, authenticated back/forward to legacy login/signup URLs normalizes to
+home, and persisted pageshow rechecks current session state. This does not block browser back or
+trap users in the site. Explicit crew invitations and school-verification links remain available;
+clearing authentication still prevents private screens from being restored.
+
+Chromium and WebKit mobile browser journeys cover login, back/forward, legacy-entry reload and
+logout. These are browser-engine tests, not an assertion of an actual iPhone hardware test. Safe-area
+insets, dynamic viewport height, desktop flex sizing and larger profile inputs improve mobile/PC fit.
+
+Run `pnpm dev:preview` and open http://127.0.0.1:5175 for an interactive sandbox using the actual React
+screens and synthetic HTTP fixtures. It binds loopback only, removes the real Kakao SDK and isolates
+its Vite cache. No staging/production data or actual SMS is used. Click the Kakao button for synthetic
+signup; use a synthetic 010 phone, six digits such as 123456 for SMS and a four-digit PIN such as 1234.
+The banner's “가상 승인” advances only local mock requests/membership. “처음부터” clears this sandbox's
+local state and starts over. It is intended for one local reviewer; fixture server state is shared
+across tabs. No real personal details should be entered. None of these fixture controls ships in the
+hosted app or changes backend authorization.

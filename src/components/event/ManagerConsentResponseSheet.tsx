@@ -296,7 +296,7 @@ export function ManagerConsentResponseSheet({ eventId }: ManagerConsentResponseS
                                         >
                                             <span className="block font-black text-zinc-900 hover:text-[#162660]">{participant.displayName}</span>
                                             <span className="mt-0.5 block text-[10px] font-bold text-zinc-400">
-                                                {participantStatusLabel[participant.status] || participant.status}
+                                                {participantStatusLabel[participant.status] || '상태 확인 필요'}
                                             </span>
                                         </button>
                                     </td>

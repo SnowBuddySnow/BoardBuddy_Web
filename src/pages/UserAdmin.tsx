@@ -6,13 +6,16 @@ import {
     ShieldCheck,
     UserRound,
 } from 'lucide-react';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Button } from '../components/Button';
+import AdminCrewApplications from '../components/AdminCrewApplications';
 import StudentProfileDialog from '../components/StudentProfileDialog';
 import SignupPolicySettings from '../components/SignupPolicySettings';
 import { getApiErrorMessage } from '../lib/apiError';
 import {
     searchAdminUsers,
+    approveAdminCrewApplication,
+    type AdminCrewApplication,
     updateAdminCrewManager,
     updateAdminCrewRole,
     updateAdminEventManager,
@@ -41,6 +44,13 @@ const accountStatusCopy: Record<AccountStatus, { label: string; className: strin
     DELETED: { label: '탈퇴', className: 'bg-zinc-100 text-zinc-500 ring-zinc-200' },
 };
 
+const verificationCopy = {
+    NOT_VERIFIED: '학교 미인증',
+    PENDING: '학교 인증 대기',
+    VERIFIED: '학교 인증 완료',
+    REJECTED: '학교 인증 거절',
+} as const;
+
 const userTypeCopy = {
     GENERAL: '유형 확인 전',
     REGULAR: '일반',
@@ -63,6 +73,7 @@ function AccountStatusBadge({ status }: { status: AccountStatus }) {
 }
 
 export default function UserAdmin({ onBack }: UserAdminProps) {
+    const approvalInFlight = useRef(false);
     const [query, setQuery] = useState('');
     const [users, setUsers] = useState<AdminUser[]>([]);
     const [loading, setLoading] = useState(true);
@@ -172,6 +183,34 @@ export default function UserAdmin({ onBack }: UserAdminProps) {
         }
     };
 
+    const handleApproveApplication = async (user: AdminUser, application: AdminCrewApplication) => {
+        if (changingKey !== null || approvalInFlight.current) return;
+        approvalInFlight.current = true;
+        setChangingKey(`approve-${application.applicationId}`);
+        setError('');
+        setNotice('');
+        try {
+            const updated = await approveAdminCrewApplication(user.accountId, application.applicationId);
+            setUsers(current => current.map(item => item.accountId === updated.accountId ? updated : item));
+            setNotice(`${user.name || user.userCode} 사용자의 ${application.crewName} 가입을 승인했습니다.`);
+        } catch (updateError) {
+            setError(getApiErrorMessage(updateError) || '크루 가입을 승인하지 못했습니다. 새로고침 후 신청 상태를 확인해 주세요.');
+        } finally {
+            approvalInFlight.current = false;
+            setChangingKey(null);
+        }
+    };
+
+    const handleApproveClick = (user: AdminUser, application: AdminCrewApplication) => {
+        if (changingKey !== null) return;
+        setPendingConfirmation({
+            title: '크루 가입 즉시 승인',
+            message: `${user.name || user.userCode} 사용자의 ${application.crewName} 가입 신청을 크루장 승인과 학교 인증 조건을 건너뛰고 승인합니다. 일반 부원으로 가입되며 학교 인증 상태는 변경되지 않습니다.`,
+            confirmLabel: '즉시 승인',
+            onConfirm: () => void handleApproveApplication(user, application),
+        });
+    };
+
     const handleCaptainClick = (user: AdminUser, membership: AdminCrewMembership) => {
         if (membership.role === 'CREW_CAPTAIN') {
             setNotice('현재 크루장입니다. 크루장을 변경하려면 같은 크루의 다른 멤버에서 크루장 지정을 선택해 주세요.');
@@ -243,7 +282,7 @@ export default function UserAdmin({ onBack }: UserAdminProps) {
                         <div className="flex items-center gap-2 text-xs font-black uppercase tracking-[0.16em] text-[#162660]">
                             <ShieldCheck className="h-4 w-4" /> Developer
                         </div>
-                        <h1 className="mt-1 text-xl font-black lg:text-2xl">사용자 권한 관리</h1>
+                        <h1 className="mt-1 text-xl font-black lg:text-2xl">사용자 가입·권한 관리</h1>
                     </div>
                     <button
                         type="button"
@@ -340,18 +379,19 @@ export default function UserAdmin({ onBack }: UserAdminProps) {
                                                         <p>{user.userCode}</p>
                                                         <p className="mt-1 text-zinc-400">ID {user.accountId}</p>
                                                     </td>
-                                                    <td className="px-5 py-4"><AccountStatusBadge status={user.accountStatus} /></td>
+                                                    <td className="px-5 py-4">
+                                                        <AccountStatusBadge status={user.accountStatus} />
+                                                        <p className="mt-2 text-xs font-semibold text-zinc-500">{verificationCopy[user.universityVerificationStatus]}</p>
+                                                    </td>
                                                     <td className="min-w-72 px-5 py-4">
+                                                        <AdminCrewApplications user={user} busy={changingKey !== null} onApprove={application => handleApproveClick(user, application)} />
                                                         {user.crewMemberships.length === 0 ? (
                                                             <span className="text-xs text-zinc-400">가입 크루 없음</span>
                                                         ) : (
                                                             <div className="space-y-2">
                                                                 {user.crewMemberships.map(membership => {
-                                                                    const roleKey = `crew-${user.accountId}-${membership.crewId}`;
-                                                                    const managerKey = `manager-${user.accountId}-${membership.crewId}`;
-                                                                    const eventKey = `event-${user.accountId}-${membership.crewId}`;
                                                                     const isCaptain = membership.role === 'CREW_CAPTAIN';
-                                                                    const busy = changingKey === roleKey || changingKey === managerKey || changingKey === eventKey;
+                                                                    const busy = changingKey !== null;
                                                                     return (
                                                                         <div key={membership.crewId} className="space-y-2 rounded-xl border border-zinc-100 bg-zinc-50 p-2.5">
                                                                             <span className="block truncate text-xs font-black text-zinc-700">{membership.crewName}</span>
@@ -395,7 +435,7 @@ export default function UserAdmin({ onBack }: UserAdminProps) {
                                                             type="button"
                                                             aria-pressed={user.platformAdmin}
                                                             onClick={() => handlePlatformAccessClick(user)}
-                                                            disabled={changingKey === `platform-${user.accountId}` || (!user.platformAdmin && user.accountStatus !== 'ACTIVE')}
+                                                            disabled={changingKey !== null || (!user.platformAdmin && user.accountStatus !== 'ACTIVE')}
                                                             title={!user.platformAdmin && user.accountStatus !== 'ACTIVE' ? '활성 계정만 플랫폼 관리자로 지정할 수 있습니다.' : undefined}
                                                             className={`rounded-lg border px-3 py-2 text-xs font-black transition disabled:opacity-40 ${user.platformAdmin ? 'border-emerald-700 bg-emerald-700 text-white' : 'border-zinc-200 bg-white text-zinc-600 hover:bg-zinc-100'}`}
                                                         >
@@ -425,16 +465,15 @@ export default function UserAdmin({ onBack }: UserAdminProps) {
                                                     학생으로 변경
                                                 </button>
                                             )}
+                                            <p className="text-xs font-semibold text-zinc-500">{verificationCopy[user.universityVerificationStatus]}</p>
+                                            <AdminCrewApplications user={user} busy={changingKey !== null} onApprove={application => handleApproveClick(user, application)} />
                                             <div className="space-y-2 rounded-xl bg-zinc-50 p-3">
                                                 <p className="text-[10px] font-black uppercase tracking-wider text-zinc-400">크루 역할</p>
                                                 {user.crewMemberships.length === 0 ? (
                                                     <p className="text-xs text-zinc-400">가입 크루 없음</p>
                                                 ) : user.crewMemberships.map(membership => {
-                                                    const roleKey = `crew-${user.accountId}-${membership.crewId}`;
-                                                    const managerKey = `manager-${user.accountId}-${membership.crewId}`;
-                                                    const eventKey = `event-${user.accountId}-${membership.crewId}`;
                                                     const isCaptain = membership.role === 'CREW_CAPTAIN';
-                                                    const busy = changingKey === roleKey || changingKey === managerKey || changingKey === eventKey;
+                                                    const busy = changingKey !== null;
                                                     return (
                                                         <div key={membership.crewId} className="space-y-2">
                                                             <span className="block truncate text-xs font-black text-zinc-700">{membership.crewName}</span>
@@ -477,7 +516,7 @@ export default function UserAdmin({ onBack }: UserAdminProps) {
                                                     type="button"
                                                     aria-pressed={user.platformAdmin}
                                                     onClick={() => handlePlatformAccessClick(user)}
-                                                    disabled={changingKey === `platform-${user.accountId}` || (!user.platformAdmin && user.accountStatus !== 'ACTIVE')}
+                                                    disabled={changingKey !== null || (!user.platformAdmin && user.accountStatus !== 'ACTIVE')}
                                                     className={`rounded-lg border px-3 py-2 text-xs font-black disabled:opacity-40 ${user.platformAdmin ? 'border-emerald-700 bg-emerald-700 text-white' : 'border-zinc-200 bg-white text-zinc-600'}`}
                                                 >
                                                     플랫폼 관리자

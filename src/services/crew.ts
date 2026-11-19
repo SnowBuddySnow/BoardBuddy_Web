@@ -9,7 +9,6 @@ import {
     CrewUsageStatistic, 
     MyCalendarResponse, 
     MyApplication, 
-    ReservationInfo,
     ReservationCreateRequest,
     ReservationCreateResponse,
     ReservationDayResponse,
@@ -280,8 +279,8 @@ export const prepareReservationDays = async (crewId: number, from: string, to: s
     return response.data.data;
 };
 
-export const createReservation = async (crewId: number, dates: string[], guestId?: number): Promise<ReservationCreateResponse> => {
-    const payload: ReservationCreateRequest = { dates, guestId };
+export const createReservation = async (crewId: number, dates: string[], guestId?: number, stayPolicyVersion?: number): Promise<ReservationCreateResponse> => {
+    const payload: ReservationCreateRequest = { dates, guestId, stayPolicyVersion };
     const response = await apiClient.post<ApiResponse<ReservationCreateResponse>>(`/crews/${crewId}/reservations`, payload);
     return response.data.data;
 };
@@ -307,12 +306,6 @@ export const updateReservationManagement = async (
 // @deprecated: Replaced by cancelReservation
 export const deleteReservation = async (crewId: number, reservationId: number): Promise<void> => {
     await apiClient.delete(`/crews/${crewId}/reservations/${reservationId}`);
-};
-
-// @deprecated: Details fetched via getReservationDetail (which hits /days/{date})
-export const getReservation = async (crewId: number, reservationId: number): Promise<ReservationInfo> => {
-    const response = await apiClient.get<ApiResponse<ReservationInfo>>(`/crews/${crewId}/reservations/${reservationId}`);
-    return response.data.data;
 };
 
 // --- Deprecated / Missing Calendar & Teaching Endpoints ---

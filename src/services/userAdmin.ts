@@ -13,6 +13,19 @@ export interface AdminCrewMembership {
     eventManager: boolean;
 }
 
+export type CrewApplicationStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'CANCELED';
+
+export interface AdminCrewApplication {
+    applicationId: number;
+    crewId: number;
+    crewCode: string;
+    crewName: string;
+    status: CrewApplicationStatus;
+    createdAt: string | null;
+    processedAt: string | null;
+    crewJoinable: boolean;
+}
+
 export interface AdminUser {
     accountId: number;
     userCode: string;
@@ -23,6 +36,7 @@ export interface AdminUser {
     platformAdmin: boolean;
     createdAt: string;
     crewMemberships: AdminCrewMembership[];
+    crewApplications: AdminCrewApplication[];
 }
 
 export const searchAdminUsers = async (query: string): Promise<AdminUser[]> => {
@@ -92,6 +106,16 @@ export const updateAdminEventManager = async (
     const response = await apiClient.patch<ApiResponse<AdminUser>>(
         `/admin/users/${accountId}/crews/${crewId}/event-manager`,
         { eventManager },
+    );
+    return response.data.data;
+};
+
+export const approveAdminCrewApplication = async (
+    accountId: number,
+    applicationId: number,
+): Promise<AdminUser> => {
+    const response = await apiClient.patch<ApiResponse<AdminUser>>(
+        `/admin/users/${accountId}/crew-applications/${applicationId}/approve`,
     );
     return response.data.data;
 };

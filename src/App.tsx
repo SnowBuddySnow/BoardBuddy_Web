@@ -1,17 +1,19 @@
 import { claimEventManagerOnboarding, completeEventManagerOnboarding, dismissEventManagerOnboarding, hasEventManagementAccess } from './lib/eventManagerOnboarding';
 import EventManagerOnboarding, { EventManagerOnboardingReturnButton, type EventManagerOnboardingDestination } from './components/EventManagerOnboarding';
-import { isSchoolEmailActivationEntry } from './lib/schoolEmailActivation';
 import { lazy, useState, useEffect, useRef } from 'react';
+import AccountToolbar from './components/AccountToolbar';
 import { LowerMenuBar } from './components/LowerMenuBar';
 import Home from './pages/Home';
 import LoginLanding from './pages/LoginLanding';
 import DesktopShell, { type DesktopDestination } from './components/DesktopShell';
-import DesktopRequired from './components/DesktopRequired';
+import SeasonCalendar from './pages/SeasonCalendar';
 
 import PageBoundary from './components/PageBoundary';
 import DevPanel from './components/DevPanel';
 import CaptainOnboarding, { CaptainOnboardingReturnButton, type CaptainOnboardingDestination } from './components/CaptainOnboarding';
-import { getAccessToken, getSignupToken, hasDevOverride, isAutoLoginEnabled } from './lib/session';
+import { getAccessToken } from './lib/session';
+import { getInitialView, viewTabs, tabViews, viewsWithoutBottomNav, seasonMemberViews, offSeasonViews, eventGuideEntryViews, type View } from './navigation/routes';
+import { readNavigation, useBrowserNavigation } from './navigation/useBrowserNavigation';
 import { claimCaptainOnboarding, completeCaptainOnboarding, dismissCaptainOnboarding } from './lib/captainOnboarding';
 import { getOperationsContext, type OperationPermission } from './services/operations';
 import { getUserInfo } from './services/user';
@@ -23,6 +25,7 @@ import { listParties } from './services/event';
 import type { CrewDetail as CrewDetailData } from './types/api';
 import { isCrewCaptainRole } from './constants/crewRole';
 import { isEventRegistrationAvailable } from './lib/eventDateTime';
+import { captureCrewInvitation, CREW_INVITATION_CHANGED, getCrewInvitationIntent } from './lib/onboardingIntent';
 
 // Keep login/home immediate; fetch heavier screens only when their existing route is entered.
 const Reservation = lazy(() => import('./pages/Reservation'));
@@ -34,6 +37,8 @@ const ProfileTypeConfirmation = lazy(() => import('./pages/ProfileTypeConfirmati
 const StudentVerification = lazy(() => import('./pages/StudentVerification'));
 const CrewMember = lazy(() => import('./pages/CrewMember'));
 const SearchCrew = lazy(() => import('./pages/SearchCrew'));
+const CrewInvite = lazy(() => import('./pages/CrewInvite'));
+const Onboarding = lazy(() => import('./pages/Onboarding'));
 const CrewSettings = lazy(() => import('./pages/CrewSettings'));
 const MyPage = lazy(() => import('./pages/MyPage'));
 const AccountInfo = lazy(() => import('./pages/AccountInfo'));
@@ -57,169 +62,6 @@ const RoleGuide = lazy(() => import('./pages/RoleGuide'));
 const GuestAccess = lazy(() => import('./pages/GuestAccess'));
 const OrganizerInviteAccept = lazy(() => import('./pages/OrganizerInviteAccept'));
 
-type Tab = 'home' | 'events' | 'calendar' | 'edit' | 'heart' | 'user';
-type View =
-  | 'login'
-  | 'home'
-  | 'reservation'
-  | 'stats'
-  | 'my_reservations'
-  | 'crew_detail'
-  | 'search_crew'
-  | 'user_info'
-  | 'profile_type_confirmation'
-  | 'student_verification'
-  | 'crew_member'
-  | 'crew_settings'
-  | 'guest_reservation'
-  | 'guest_access'
-  | 'my_page'
-  | 'account_info'
-  | 'crew_create'
-  | 'crew_admin'
-  | 'school_admin'
-  | 'user_admin'
-  | 'signup_audit'
-  | 'crew_permissions'
-  | 'role_guide'
-  | 'notifications'
-  | 'parties'
-  | 'event_detail'
-  | 'my_parties'
-  | 'operations_center'
-  | 'dashboard_parties'
-  | 'dashboard_event_new'
-  | 'dashboard_event_detail'
-  | 'dashboard_event_edit'
-  | 'dashboard_groups'
-  | 'dashboard_group_detail'
-  | 'organizer_invite';
-
-const knownViews = new Set<View>([
-  'login',
-  'home',
-  'reservation',
-  'stats',
-  'my_reservations',
-  'crew_detail',
-  'search_crew',
-  'user_info',
-  'profile_type_confirmation',
-  'student_verification',
-  'crew_member',
-  'crew_settings',
-  'guest_reservation',
-  'guest_access',
-  'guest_access',
-  'my_page',
-  'account_info',
-  'crew_create',
-  'crew_admin',
-  'school_admin',
-  'user_admin',
-  'signup_audit',
-  'crew_permissions',
-  'role_guide',
-  'notifications',
-  'parties',
-  'event_detail',
-  'my_parties',
-  'operations_center',
-  'dashboard_parties',
-  'dashboard_event_new',
-  'dashboard_event_detail',
-  'dashboard_event_edit',
-  'dashboard_groups',
-  'dashboard_group_detail',
-  'organizer_invite',
-]);
-
-const publicEntryViews = new Set<View>(['login', 'guest_access']);
-const signupViews = new Set<View>(['user_info', 'profile_type_confirmation', 'student_verification']);
-const eventGuideEntryViews = new Set<View>(['home', 'my_page', 'operations_center', 'dashboard_groups', 'dashboard_parties']);
-
-const parseView = (value: string | null): View | null => {
-  if (!value || !knownViews.has(value as View)) return null;
-  return value as View;
-};
-
-const viewTabs: Partial<Record<View, Tab>> = {
-  home: 'home',
-  parties: 'events',
-  event_detail: 'events',
-  my_parties: 'home',
-  my_reservations: 'calendar',
-  reservation: 'edit',
-  guest_reservation: 'edit',
-  crew_detail: 'heart',
-  crew_settings: 'heart',
-  crew_member: 'heart',
-  stats: 'heart',
-  my_page: 'user',
-  account_info: 'user',
-};
-
-const tabViews: Record<Tab, View> = {
-  home: 'home',
-  events: 'parties',
-  calendar: 'my_reservations',
-  edit: 'reservation',
-  heart: 'crew_detail',
-  user: 'my_page',
-};
-
-const viewsWithoutBottomNav: View[] = [
-  'event_detail',
-  'login',
-  'user_info',
-  'profile_type_confirmation',
-  'student_verification',
-  'my_page',
-  'account_info',
-  'crew_create',
-  'reservation',
-  'guest_reservation',
-  'crew_admin',
-  'school_admin',
-  'user_admin',
-  'signup_audit',
-  'crew_permissions',
-  'role_guide',
-  'notifications',
-  'organizer_invite',
-];
-
-const getInitialView = (): View => {
-  const params = new URLSearchParams(window.location.search);
-  const requestedView = parseView(params.get('view'));
-  const hasOrganizerInvite = params.has('organizerInvite');
-  if (hasOrganizerInvite) return 'organizer_invite';
-  if (isSchoolEmailActivationEntry(requestedView, params.get('token'))) return 'student_verification';
-  if (requestedView && publicEntryViews.has(requestedView)) return requestedView;
-  if (requestedView && getAccessToken()) return requestedView;
-  if (requestedView && signupViews.has(requestedView) && getSignupToken()) return requestedView;
-  if (hasDevOverride()) {
-    return requestedView || 'home';
-  }
-  if (getAccessToken() && isAutoLoginEnabled()) {
-    return 'home';
-  }
-  return 'login';
-};
-
-const seasonMemberViews: View[] = ['reservation', 'stats', 'my_reservations'];
-const offSeasonViews: View[] = [
-  'parties',
-  'event_detail',
-  'my_parties',
-  'dashboard_parties',
-  'dashboard_event_new',
-  'dashboard_event_detail',
-  'dashboard_event_edit',
-  'dashboard_groups',
-  'dashboard_group_detail',
-];
-
 function FeatureUnavailable({ title, description, onBack }: { title: string; description: string; onBack: () => void }) {
   return (
     <div className="flex h-full items-center justify-center bg-[#FAF8F3] px-6">
@@ -236,18 +78,33 @@ function FeatureUnavailable({ title, description, onBack }: { title: string; des
 
 function App() {
   const [currentView, setCurrentView] = useState<View>(() => getInitialView());
+  const [crewInviteRevision, setCrewInviteRevision] = useState(0);
+  useEffect(() => {
+    const capture = () => captureCrewInvitation();
+    const changed = () => { setCrewInviteRevision(value => value + 1); setCurrentView('crew_invite'); };
+    window.addEventListener('hashchange', capture);
+    window.addEventListener(CREW_INVITATION_CHANGED, changed);
+    return () => { window.removeEventListener('hashchange', capture); window.removeEventListener(CREW_INVITATION_CHANGED, changed); };
+  }, []);
   const [hasCrew, setHasCrew] = useState(false);
   const [hasPendingCrewApplication, setHasPendingCrewApplication] = useState(false);
   const [selectedEventId, setSelectedEventId] = useState<number | null>(() => {
-    const raw = new URLSearchParams(window.location.search).get('eventId');
-    return raw ? Number(raw) : null;
+    return readNavigation().eventId;
   });
   const [guestCrewId, setGuestCrewId] = useState<number | null>(null);
   const [isGuestEventApplication, setIsGuestEventApplication] = useState(false);
-  const [selectedGroupId, setSelectedGroupId] = useState<number | null>(null);
+  const [selectedGroupId, setSelectedGroupId] = useState<number | null>(() => readNavigation().groupId);
   const [organizerInviteToken, setOrganizerInviteToken] = useState(
     () => new URLSearchParams(window.location.search).get('organizerInvite') || '',
   );
+  useBrowserNavigation({
+    view: currentView, eventId: selectedEventId, groupId: selectedGroupId, organizerInviteToken,
+  }, route => {
+    setCurrentView(route.view);
+    setSelectedEventId(route.eventId);
+    setSelectedGroupId(route.groupId);
+    setOrganizerInviteToken(route.organizerInviteToken);
+  });
   const [notificationRefreshKey, setNotificationRefreshKey] = useState(0);
   const [notificationReturnView, setNotificationReturnView] = useState<View>('home');
   const [canManage, setCanManage] = useState(false);
@@ -259,6 +116,18 @@ function App() {
   const [crewDetail, setCrewDetail] = useState<CrewDetailData | null>(null);
   const [isCaptain, setIsCaptain] = useState(false);
   const [crewAccessRevision, setCrewAccessRevision] = useState(0);
+  const [crewSettingsReturnView, setCrewSettingsReturnView] = useState<View>('crew_detail');
+  const [crewSearchReturnView, setCrewSearchReturnView] = useState<View>('home');
+  const [crewCreateReturnView, setCrewCreateReturnView] = useState<View>('home');
+  const openCrewSearch = (from: View) => { setCrewSearchReturnView(from); setCurrentView('search_crew'); };
+  const openCrewCreate = (from: View) => { setCrewCreateReturnView(from); setCurrentView('crew_create'); };
+  const [crewManagementSection, setCrewManagementSection] = useState<'permissions'|'passes'>('permissions');
+  const [crewManagementReturnView, setCrewManagementReturnView] = useState<View>('operations_center');
+  const openCrewManagement = (section: 'permissions'|'passes', from: View) => { setCrewManagementSection(section); setCrewManagementReturnView(from); setCurrentView('crew_permissions'); };
+  const openCrewSettings = (from: View) => {
+    setCrewSettingsReturnView(from);
+    setCurrentView('crew_settings');
+  };
   const [onboardingUserId, setOnboardingUserId] = useState<number | null>(null);
   const [captainOnboardingOpen, setCaptainOnboardingOpen] = useState(false);
   const [captainOnboardingDismissed, setCaptainOnboardingDismissed] = useState(false);
@@ -270,7 +139,7 @@ function App() {
   const [eventManagerGuideReturnVisible, setEventManagerGuideReturnVisible] = useState(false);
   const isDesktop = useDesktopViewport();
   const usedDesktopLanding = useRef(false);
-  const shouldLoadPermissions = !['login', 'user_info', 'profile_type_confirmation', 'student_verification'].includes(currentView);
+  const shouldLoadPermissions = !['login', 'user_info', 'profile_type_confirmation', 'student_verification', 'crew_invite'].includes(currentView);
   const operatingMode = getOperatingMode();
   const operatingFeatures = getOperatingFeatures(operatingMode);
   const seasonHouseAvailable = operatingFeatures.season
@@ -330,6 +199,7 @@ function App() {
   }, [shouldLoadPermissions, crewAccessRevision]);
 
   useEffect(() => {
+    if (currentView === 'onboarding' || currentView === 'crew_invite') return;
     if (!shouldLoadPermissions || !managementAccessResolved || !isCaptain || onboardingUserId == null) return;
     if (captainOnboardingDismissed || captainOnboardingOpen || eventManagerOnboardingOpen) return;
     if (claimCaptainOnboarding(onboardingUserId)) {
@@ -344,6 +214,7 @@ function App() {
     isCaptain,
     managementAccessResolved,
     shouldLoadPermissions,
+    currentView,
   ]);
 
   useEffect(() => {
@@ -428,7 +299,7 @@ function App() {
   useEffect(() => {
     if (!isDesktop) {
       usedDesktopLanding.current = false;
-      // Keep the requested destination so DesktopRequired can explain the restriction.
+      // Mobile keeps the requested management destination and its permission checks.
       return;
     }
 
@@ -454,6 +325,7 @@ function App() {
   const showBottomNav = !viewsWithoutBottomNav.includes(currentView) && !isDashboardView && !isPublicGuestFlow;
 
   const getDesktopDestination = (): DesktopDestination => {
+    if (currentView === 'season_calendar') return 'season_calendar';
     if (currentView === 'crew_admin') return 'crew_admin';
     if (currentView === 'school_admin') return 'school_admin';
     if (currentView === 'user_admin') return 'user_admin';
@@ -578,10 +450,6 @@ function App() {
       );
     }
 
-    if (isManagementView && !isDesktop) {
-      return <DesktopRequired onBack={() => setCurrentView('home')} />;
-    }
-
     if (isManagementView && !managementAccessResolved) {
       return (
         <div className="flex h-full items-center justify-center bg-[#FAF8F3]">
@@ -608,7 +476,7 @@ function App() {
       case 'login':
         return (
           <LoginLanding
-            onLogin={() => setCurrentView(organizerInviteToken ? 'organizer_invite' : 'home')}
+            onLogin={() => setCurrentView(getCrewInvitationIntent() ? 'crew_invite' : organizerInviteToken ? 'organizer_invite' : 'home')}
             onSignupNeeded={() => setCurrentView('user_info')}
             onProfileTypeNeeded={() => setCurrentView('profile_type_confirmation')}
             onDebugUserInfo={() => setCurrentView('user_info')}
@@ -625,7 +493,10 @@ function App() {
           onEventAccess={openGuestEventApplication}
           seasonAvailable={operatingFeatures.season}
           offSeasonAvailable={operatingFeatures.offSeason}
+          seasonBookingCrewId={hasCrew && !hasPendingCrewApplication ? crewDetail?.crew_id ?? null : null}
         />;
+      case 'season_calendar':
+        return <SeasonCalendar onBack={() => setCurrentView('home')} onMyCalendarClick={() => setCurrentView('my_reservations')} onReservationClick={() => setCurrentView('reservation')} />;
       case 'stats':
         return (
           <ReservationStats
@@ -640,23 +511,24 @@ function App() {
         return (
           <CrewDetail
             onBack={() => setCurrentView('home')}
-            onCalendarClick={() => setCurrentView('stats')}
+            onCalendarClick={() => setCurrentView('season_calendar')}
             onMemberClick={() => setCurrentView('crew_member')}
-            onSettingsClick={() => setCurrentView('crew_settings')}
+            onSettingsClick={() => openCrewSettings('crew_detail')}
+            onPassesClick={() => openCrewManagement('passes','crew_detail')}
             seasonAvailable={seasonHouseAvailable}
           />
         );
       case 'crew_settings':
         return (
           <CrewSettings
-            onBack={() => setCurrentView('crew_detail')}
+            onBack={() => setCurrentView(crewSettingsReturnView)}
             onCaptainGuideClick={isCaptain ? openCaptainOnboarding : undefined}
           />
         );
       case 'crew_member':
         return <CrewMember onBack={() => setCurrentView('crew_detail')} />;
       case 'search_crew':
-        return <SearchCrew onBack={() => setCurrentView('home')} onJoined={() => {
+        return <SearchCrew onBack={() => setCurrentView(crewSearchReturnView)} onSkip={() => setCurrentView('home')} onApplied={() => setCurrentView('onboarding')} onJoined={() => {
           setHasCrew(true);
           setHasPendingCrewApplication(false);
           setCrewAccessRevision(revision => revision + 1);
@@ -667,7 +539,7 @@ function App() {
           <UserInfoInput
             onBack={() => setCurrentView('login')}
             onSuccess={(requiresStudentVerification) => setCurrentView(
-              requiresStudentVerification ? 'student_verification' : organizerInviteToken ? 'organizer_invite' : 'home'
+              requiresStudentVerification ? 'student_verification' : getCrewInvitationIntent() ? 'crew_invite' : organizerInviteToken ? 'organizer_invite' : 'onboarding'
             )}
           />
         );
@@ -675,7 +547,7 @@ function App() {
         return (
           <ProfileTypeConfirmation
             onSuccess={(requiresStudentVerification) => setCurrentView(
-              requiresStudentVerification ? 'student_verification' : organizerInviteToken ? 'organizer_invite' : 'home'
+              requiresStudentVerification ? 'student_verification' : getCrewInvitationIntent() ? 'crew_invite' : organizerInviteToken ? 'organizer_invite' : 'home'
             )}
           />
         );
@@ -684,7 +556,7 @@ function App() {
           <StudentVerification
             onDone={() => {
               window.history.replaceState({}, '', window.location.pathname);
-              setCurrentView(getAccessToken() ? (organizerInviteToken ? 'organizer_invite' : 'home') : 'login');
+              setCurrentView(getAccessToken() ? (getCrewInvitationIntent() ? 'crew_invite' : organizerInviteToken ? 'organizer_invite' : 'home') : 'login');
             }}
           />
         );
@@ -708,6 +580,8 @@ function App() {
         return (
           <MyPage
             onBack={() => setCurrentView('home')}
+            onCalendarClick={() => setCurrentView('my_reservations')}
+            seasonAvailable={seasonHouseAvailable}
             onAccountInfoClick={() => setCurrentView('account_info')}
             onRoleGuideClick={() => setCurrentView('role_guide')}
             onCaptainOnboardingClick={isCaptain ? openCaptainOnboarding : undefined}
@@ -726,7 +600,15 @@ function App() {
       case 'crew_admin':
         return <CrewAdmin mode="review" onBack={() => setCurrentView('home')} />;
       case 'crew_create':
-        return <CrewAdmin mode="create" onBack={() => setCurrentView('home')} />;
+        return <CrewAdmin mode="create" onBack={() => setCurrentView(crewCreateReturnView)} onSearch={() => openCrewSearch('crew_create')} onRequested={() => setCurrentView('onboarding')} />;
+      case 'crew_invite':
+        return <CrewInvite key={crewInviteRevision} onLogin={() => setCurrentView('login')} onSignup={() => setCurrentView('user_info')}
+          onExit={() => setCurrentView(getAccessToken() ? 'home' : 'login')} onEvents={() => setCurrentView('parties')}
+          onDone={(eventId) => { setCrewAccessRevision(value => value + 1); setManagementRefreshKey(value => value + 1); if (eventId) openEventDetail(eventId); else setCurrentView('crew_detail'); }} />;
+      case 'onboarding':
+        return <Onboarding onBack={() => setCurrentView('home')} onSearch={() => openCrewSearch('onboarding')} onCreate={() => openCrewCreate('onboarding')}
+          onEvents={() => setCurrentView('parties')} onFirstEvent={(hasGroup) => setCurrentView(hasGroup ? 'dashboard_event_new' : 'dashboard_groups')}
+          onCrew={(eventId) => { setCrewAccessRevision(value => value + 1); setManagementRefreshKey(value => value + 1); if (eventId) openEventDetail(eventId); else setCurrentView('crew_detail'); }} />;
       case 'school_admin':
         return <SchoolAdmin onBack={() => setCurrentView('home')} />;
       case 'user_admin':
@@ -736,19 +618,21 @@ function App() {
       case 'crew_permissions':
         return (
           <CrewPermissions
-            onBack={() => setCurrentView('operations_center')}
+            onBack={() => setCurrentView(crewManagementReturnView)}
+            initialSection={crewManagementSection}
+            canAssignRoles={operationPermissions.includes('CREW_EVENT_MANAGERS_ASSIGN')}
             onPermissionsChanged={() => setManagementRefreshKey(key => key + 1)}
           />
         );
       case 'notifications':
-        return <Notifications onBack={() => setCurrentView(notificationReturnView)} onChanged={() => setNotificationRefreshKey(key => key + 1)} />;
+        return <Notifications onBack={() => setCurrentView(notificationReturnView)} onChanged={() => setNotificationRefreshKey(key => key + 1)} onOnboarding={() => setCurrentView('onboarding')} onMyReservations={() => setCurrentView('my_reservations')} />;
       case 'parties':
         return (
           <Parties
             onBack={() => setCurrentView('home')}
             onEventClick={(id) => openEventDetail(id)}
             onCreateClick={() => setCurrentView('dashboard_event_new')}
-            canCreate={operationPermissions.includes('PARTIES_CREATE') && isDesktop}
+            canCreate={operationPermissions.includes('PARTIES_CREATE')}
           />
         );
       case 'event_detail':
@@ -764,13 +648,15 @@ function App() {
             onReservationsClick={() => setCurrentView('stats')}
             onPartiesClick={() => setCurrentView('dashboard_parties')}
             onGroupsClick={() => setCurrentView('dashboard_groups')}
-            onCrewClick={() => setCurrentView('crew_permissions')}
+            onCrewClick={() => openCrewManagement('permissions','operations_center')}
+            onCrewSettingsClick={() => openCrewSettings('operations_center')}
             onEventManagerOnboardingClick={canUseEventManagerGuide ? openEventManagerOnboarding : undefined}
           />
         );
       case 'dashboard_parties':
         return (
           <DashboardParties
+            canCreate={operationPermissions.includes('PARTIES_CREATE')}
             onCreateEventClick={() => setCurrentView('dashboard_event_new')}
             onEditEventClick={(id) => openEventDetail(id, 'dashboard_event_edit')}
             onViewDetailClick={(id) => openEventDetail(id, 'dashboard_event_detail')}
@@ -829,15 +715,19 @@ function App() {
             onMakeReservationClick={() => setCurrentView('reservation')}
             onGuestReservationClick={() => setCurrentView('guest_access')}
             onCalendarClick={() => setCurrentView('my_reservations')}
+            onSeasonCalendarClick={() => setCurrentView('season_calendar')}
             onTeamClick={() => setCurrentView('crew_detail')}
-            onSearchClick={() => setCurrentView('search_crew')}
-            onCreateCrewClick={() => setCurrentView('crew_create')}
+            onCrewSettingsClick={() => openCrewSettings('home')}
+            onSearchClick={() => openCrewSearch('home')}
+            onCreateCrewClick={() => openCrewCreate('home')}
+            onOnboardingClick={() => setCurrentView('onboarding')}
             hasCrew={hasCrew}
             onJoinCrew={() => setHasCrew(true)}
             onEventClick={(id) => openEventDetail(id)}
             onSeeAllPartiesClick={() => setCurrentView('parties')}
             onMyPlansClick={() => setCurrentView('my_parties')}
             onDashboardClick={() => setCurrentView('operations_center')}
+            onStudentVerificationClick={() => setCurrentView('student_verification')}
             operatingMode={operatingMode}
             crewDetail={crewDetail}
           />
@@ -848,16 +738,20 @@ function App() {
   const usesDesktopShell = isDesktop
     && !isDashboardView
     && !isPublicGuestFlow
-    && !['login', 'user_info', 'profile_type_confirmation', 'student_verification', 'organizer_invite'].includes(currentView);
+    && !['login', 'user_info', 'profile_type_confirmation', 'student_verification', 'organizer_invite', 'crew_invite', 'onboarding'].includes(currentView);
 
   const currentContent = renderCurrentView();
 
   return (
-    <div className="w-full h-screen bg-zinc-100 dark:bg-zinc-900 flex items-center justify-center overflow-hidden">
-      <div className={isDesktop || isDashboardView || usesDesktopShell || (['crew_admin', 'school_admin', 'user_admin', 'signup_audit'].includes(currentView) && canReviewCrews)
+    <div className="w-full h-dvh bg-zinc-100 dark:bg-zinc-900 flex items-center justify-center overflow-hidden">
+      <div className={isDesktop || isDashboardView || usesDesktopShell || ['login', 'user_info', 'crew_invite', 'onboarding'].includes(currentView) || (['crew_admin', 'school_admin', 'user_admin', 'signup_audit'].includes(currentView) && canReviewCrews)
         ? "w-full h-full bg-white dark:bg-zinc-950 relative overflow-hidden flex flex-col" 
-        : "w-full h-full max-w-md bg-[#FAF8F3] relative shadow-2xl overflow-hidden flex flex-col"
+        : 'w-full h-full bg-[#FAF8F3] relative overflow-hidden flex flex-col'
       }>
+        {showBottomNav && !isDesktop && <AccountToolbar onHome={() => setCurrentView('home')} onProfile={() => setCurrentView('my_page')}
+            onManage={canManage ? () => setCurrentView('operations_center') : undefined}
+            notificationRefreshKey={notificationRefreshKey} onNotifications={() => { setNotificationReturnView(currentView); setCurrentView('notifications'); }} />}
+        <div className="min-h-0 flex-1 flex flex-col">
         {usesDesktopShell ? (
           <DesktopShell
             activeDestination={getDesktopDestination()}
@@ -877,21 +771,16 @@ function App() {
             <PageBoundary key={currentView} onBack={() => setCurrentView('home')}>{currentContent}</PageBoundary>
           </DesktopShell>
         ) : <PageBoundary key={currentView} onBack={() => setCurrentView('home')}>{currentContent}</PageBoundary>}
+        </div>
 
         {showBottomNav && !isDesktop && (
           <LowerMenuBar
             activeTab={activeTab}
             availableEventCount={availableEventCount}
             hasCrew={hasCrew && !hasPendingCrewApplication}
-            seasonAvailable={seasonHouseAvailable}
             offSeasonAvailable={operatingFeatures.offSeason}
             onTabChange={(tab) => {
               setCurrentView(tabViews[tab]);
-            }}
-            notificationRefreshKey={notificationRefreshKey}
-            onNotificationsClick={() => {
-              setNotificationReturnView(currentView);
-              setCurrentView('notifications');
             }}
           />
         )}

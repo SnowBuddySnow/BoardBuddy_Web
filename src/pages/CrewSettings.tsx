@@ -1,13 +1,14 @@
-import { Button } from '../components/Button';
-import { BadgeCheckIcon, CheckCircle2Icon, ChevronLeftIcon, ChevronRightIcon, CopyIcon, KeyRoundIcon, Link2Icon, MapIcon, RefreshCwIcon, SaveIcon } from 'lucide-react';
+import { ReservationLayout } from '../components/reservation/ReservationLayout';
+import { BadgeCheckIcon, CheckCircle2Icon, ChevronRightIcon, CopyIcon, KeyRoundIcon, Link2Icon, MapIcon, RefreshCwIcon, SaveIcon } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { getCrewInfo, resetCrewPin, updateCrew } from '../services/crew';
 import { getUserInfo } from '../services/user';
 import { getSchools, type SchoolOption } from '../services/schools';
 import { CrewInfoUpdateRequest } from '../types/api';
-import { isCrewCaptainRole } from '../constants/crewRole';
+import { isCrewCaptainRole, isCrewManagerRole } from '../constants/crewRole';
 import Promote from './Promote';
 import { SEASON_HOUSE_RESERVATIONS_ENABLED } from '../constants/operatingSeason';
+import { CrewInvitationPanel } from '../components/onboarding/CrewInvitationPanel';
 
 interface CrewSettingsProps {
     onBack: () => void;
@@ -29,6 +30,8 @@ export default function CrewSettings({ onBack, onCaptainGuideClick }: CrewSettin
     const [crewId, setCrewId] = useState<number | null>(null);
     const [showPromote, setShowPromote] = useState(false);
     const [isCaptain, setIsCaptain] = useState(false);
+    const [canConfigure, setCanConfigure] = useState(false);
+    const [loadFailed, setLoadFailed] = useState(false);
     const [verificationEnforced, setVerificationEnforced] = useState(false);
     const [schools, setSchools] = useState<SchoolOption[]>([]);
     const [selectedSchoolId, setSelectedSchoolId] = useState('');
@@ -36,6 +39,7 @@ export default function CrewSettings({ onBack, onCaptainGuideClick }: CrewSettin
     const [requestCopied, setRequestCopied] = useState(false);
     const [formData, setFormData] = useState<CrewInfoUpdateRequest>({
         crewName: '',
+        teachingEnabled: false,
         reservationOpenDay: 'FRIDAY',
         reservationOpenTime: '18:00',
         reservationOpenOffsetDays: 3,
@@ -57,18 +61,15 @@ export default function CrewSettings({ onBack, onCaptainGuideClick }: CrewSettin
     // const [targetTime, setTargetTime] = useState('18:00');
 
     const calculateOpenDay = () => {
-        const days = ['SUNDAY', 'MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY'];
-        const targetIndex = days.indexOf(formData.reservationOpenDay);
-        if (targetIndex === -1) return 'UNKNOWN';
-        let openIndex = (targetIndex - formData.reservationOpenOffsetDays) % 7;
-        if (openIndex < 0) openIndex += 7;
-        return days[openIndex];
+        return formData.reservationOpenDay;
     };
 
     useEffect(() => {
         const fetchData = async () => {
             try {
                 const user = await getUserInfo();
+                if (!user.crew || !isCrewManagerRole(user.role)) return;
+                setCanConfigure(true);
                 if (user.crew) {
                     const cId = user.crew.crewId;
                     setCrewId(cId);
@@ -90,16 +91,20 @@ export default function CrewSettings({ onBack, onCaptainGuideClick }: CrewSettin
                         crewName: info.name,
                         reservationOpenDay: info.reservationOpenDay || 'FRIDAY',
                         reservationOpenTime: info.reservationOpenTime || '18:00',
-                        reservationOpenOffsetDays: info.reservationOpenOffsetDays || 3, // Default fallback
+                        reservationOpenOffsetDays: info.reservationOpenOffsetDays ?? 3, // Default fallback
                         dailyCapacity: info.dailyCapacity,
                         isCapacityLimited: info.isCapacityLimited,
-                        reservationPeriodLimitDays: info.reservationPeriodLimitDays || 7,
+                        teachingEnabled: info.teachingEnabled === true,
+                        reservationPeriodLimitDays: info.reservationPeriodLimitDays ?? 7,
+                        reservationWindowDays: info.reservationWindowDays ?? ((info.reservationPeriodLimitDays ?? 7) > 0 ? (info.reservationPeriodLimitDays ?? 7) + 1 : 0),
                         schoolVerificationRequired: info.configuredSchoolVerificationRequired ?? info.schoolVerificationRequired,
                         verifiedSchoolAutoJoinEnabled: info.verifiedSchoolAutoJoinEnabled ?? false,
                     });
+                    setIsAlwaysOpen(!info.reservationOpenDay || !info.reservationOpenTime);
                     setCrewPin(info.crewPin || '');
                 }
             } catch (error) {
+                setLoadFailed(true);
                 console.error("Failed to fetch crew settings", error);
             } finally {
                 setLoading(false);
@@ -113,14 +118,17 @@ export default function CrewSettings({ onBack, onCaptainGuideClick }: CrewSettin
     };
 
     const handleSave = async () => {
-        if (!crewId) return;
+        if (!crewId || !canConfigure || loadFailed) return;
 
         // Construct payload with possible aliases to handle API strictness
         // Only the crew captain can change the crew name.
         const payload: Partial<CrewInfoUpdateRequest> & { id: number; name?: string } = {
             ...formData,
             id: crewId,
+            reservationAlwaysOpen: isAlwaysOpen,
+            reservationWindowDays: isAlwaysOpen ? 0 : (formData.reservationWindowDays ?? 8),
         };
+        if (isAlwaysOpen) { delete payload.reservationOpenDay; delete payload.reservationOpenTime; }
         if (!SEASON_HOUSE_RESERVATIONS_ENABLED) {
             delete payload.reservationOpenDay;
             delete payload.reservationOpenTime;
@@ -147,7 +155,7 @@ export default function CrewSettings({ onBack, onCaptainGuideClick }: CrewSettin
             onBack();
         } catch (error) {
             console.error("Failed to update crew", error);
-            alert("저장 중 오류가 발생했습니다. (Console을 확인해주세요)");
+            alert("설정을 저장하지 못했습니다. 잠시 후 다시 시도해주세요.");
         }
     };
 
@@ -199,32 +207,28 @@ export default function CrewSettings({ onBack, onCaptainGuideClick }: CrewSettin
 
     if (loading) return <div className="flex-1 flex items-center justify-center">로딩 중...</div>;
 
+    if (!canConfigure || loadFailed) return <ReservationLayout title="크루 설정" onBack={onBack}><main className="reservation-content"><p role="alert" className="rounded-2xl border border-slate-200 bg-white p-4 text-sm leading-6 text-slate-600">{loadFailed ? '크루 설정을 불러오지 못했습니다. 잠시 후 다시 들어와 주세요.' : '크루장과 임원진만 설정을 관리할 수 있어요.'}</p></main></ReservationLayout>;
+
     if (showPromote && crewId) {
         return <Promote crewId={crewId} onBack={() => setShowPromote(false)} />;
     }
 
     return (
-        <div className="flex-1 flex flex-col h-full overflow-hidden bg-white dark:bg-zinc-950">
-            {/* Header */}
-            <header className="px-4 pt-2 pb-2 flex items-center justify-between relative bg-white dark:bg-zinc-950 z-10">
-                <Button variant="ghost" onClick={onBack} className="-ml-2 text-zinc-900 dark:text-zinc-100">
-                    <ChevronLeftIcon className="w-6 h-6" />
-                </Button>
-                <h1 className="flex-1 text-center text-lg font-bold text-zinc-900">크루 설정</h1>
-                <div className="w-10" />
-            </header>
+        <ReservationLayout title="크루 설정" onBack={onBack}>
 
-            <main className="flex-1 overflow-y-auto px-6 py-6 pb-28">
+            <main className="reservation-content reservation-settings-content">
                 <div className="space-y-6">
+                    {isCaptain && crewId !== null && <CrewInvitationPanel crewId={crewId} />}
                     {/* Crew Name */}
                     <div className="space-y-2">
-                        <label className="text-sm font-bold text-zinc-900">크루 이름</label>
+                        <label htmlFor="crew-settings-name" className="text-sm font-bold text-zinc-900">크루 이름</label>
                         <input
+                            id="crew-settings-name"
                             type="text"
                             value={formData.crewName}
                             onChange={(e) => handleChange('crewName', e.target.value)}
                             disabled={!isCaptain}
-                            className={`w-full px-4 py-3 rounded-xl border-none focus:ring-2 focus:ring-black/5 ${!isCaptain ? 'bg-zinc-100 text-zinc-500 cursor-not-allowed' : 'bg-zinc-50'
+                            className={`w-full px-4 py-3 rounded-xl border-none focus:ring-2 focus:ring-blue-500/20 ${!isCaptain ? 'bg-zinc-100 text-zinc-500 cursor-not-allowed' : 'bg-zinc-50'
                                 }`}
                         />
                     </div>
@@ -256,21 +260,21 @@ export default function CrewSettings({ onBack, onCaptainGuideClick }: CrewSettin
                         <button
                             type="button"
                             onClick={onCaptainGuideClick}
-                            className="flex w-full items-center gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-left transition-colors hover:bg-amber-100"
+                            className="flex w-full items-center gap-3 rounded-2xl border border-blue-200 bg-blue-50 p-4 text-left transition-colors hover:bg-blue-100"
                         >
-                            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-200 text-amber-900">
+                            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-100 text-blue-900">
                                 <MapIcon className="h-5 w-5" />
                             </span>
                             <span className="min-w-0 flex-1">
-                                <span className="block text-sm font-black text-amber-950">크루장 시작 가이드</span>
-                                <span className="mt-1 block text-xs leading-5 text-amber-800">필요할 때 크루 운영 흐름을 다시 확인하세요.</span>
+                                <span className="block text-sm font-black text-blue-950">크루장 시작 가이드</span>
+                                <span className="mt-1 block text-xs leading-5 text-blue-800">필요할 때 크루 운영 흐름을 다시 확인하세요.</span>
                             </span>
-                            <ChevronRightIcon className="h-5 w-5 shrink-0 text-amber-800" />
+                            <ChevronRightIcon className="h-5 w-5 shrink-0 text-blue-800" />
                         </button>
                     )}
 
                     {/* School affiliation */}
-                    <section className="space-y-4 rounded-xl border border-zinc-200 bg-white p-4">
+                    <section className="reservation-panel space-y-4">
                         <div className="flex items-start gap-3">
                             <div className="rounded-lg bg-blue-50 p-2 text-[#162660]">
                                 <Link2Icon className="h-5 w-5" />
@@ -302,7 +306,7 @@ export default function CrewSettings({ onBack, onCaptainGuideClick }: CrewSettin
                                     <select
                                         value={selectedSchoolId}
                                         onChange={(event) => setSelectedSchoolId(event.target.value)}
-                                        className="mt-1.5 w-full rounded-xl border-none bg-zinc-50 px-3 py-3 text-sm text-zinc-900 focus:ring-2 focus:ring-black/5"
+                                        className="mt-1.5 w-full rounded-xl border-none bg-zinc-50 px-3 py-3 text-sm text-zinc-900 focus:ring-2 focus:ring-blue-500/20"
                                     >
                                         <option value="">학교를 선택해 주세요</option>
                                         {schools.map((school) => (
@@ -323,12 +327,12 @@ export default function CrewSettings({ onBack, onCaptainGuideClick }: CrewSettin
                             </div>
                         ) : (
                             <p className="rounded-lg bg-zinc-50 px-3 py-3 text-xs leading-5 text-zinc-500">
-                                학교 연동 요청은 CAPTAIN 배지가 있는 계정만 진행할 수 있습니다.
+                                학교 연동 요청은 크루장만 진행할 수 있습니다.
                             </p>
                         )}
                     </section>
 
-                    <section className="rounded-xl border border-zinc-200 bg-white p-4">
+                    <section className="reservation-panel">
                         <label className="flex cursor-pointer items-start gap-3">
                             <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700">
                                 <BadgeCheckIcon className="h-5 w-5" />
@@ -352,7 +356,7 @@ export default function CrewSettings({ onBack, onCaptainGuideClick }: CrewSettin
                         </label>
                     </section>
 
-                    <section className="rounded-xl border border-zinc-200 bg-white p-4">
+                    <section className="reservation-panel">
                         <label className="flex cursor-pointer items-start gap-3">
                             <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-[#162660]">
                                 <BadgeCheckIcon className="h-5 w-5" />
@@ -378,7 +382,7 @@ export default function CrewSettings({ onBack, onCaptainGuideClick }: CrewSettin
 
                     {/* Updated Reservation Scheme */}
                     {SEASON_HOUSE_RESERVATIONS_ENABLED && <>
-                    <div className="p-4 rounded-xl border border-zinc-200 bg-white space-y-4">
+                    <div className="reservation-panel space-y-4">
                         <div className="flex items-center gap-2 mb-2">
                             <h3 className="text-sm font-bold text-zinc-900">예약 오픈 설정</h3>
                         </div>
@@ -393,7 +397,7 @@ export default function CrewSettings({ onBack, onCaptainGuideClick }: CrewSettin
                                     setIsAlwaysOpen(e.target.checked);
                                     // Should we reset offset? For now, we keep it as is or default
                                 }}
-                                className="rounded border-zinc-300 text-zinc-900 focus:ring-zinc-900"
+                                className="rounded border-zinc-300 text-blue-700 focus:ring-blue-500"
                             />
                             <label htmlFor="isAlwaysOpen" className="text-sm font-bold text-zinc-900 cursor-pointer">
                                 예약 상시 오픈 (날짜 제한 없음)
@@ -409,16 +413,16 @@ export default function CrewSettings({ onBack, onCaptainGuideClick }: CrewSettin
                                         value={formData.reservationOpenTime}
                                         onChange={(e) => handleChange('reservationOpenTime', e.target.value)}
                                         disabled={isAlwaysOpen}
-                                        className="w-full px-3 py-2 rounded-xl bg-zinc-50 border-none focus:ring-2 focus:ring-black/5 text-sm"
+                                        className="w-full px-3 py-2 rounded-xl bg-blue-50/50 border border-blue-100 focus:ring-2 focus:ring-blue-500/20 text-sm"
                                     />
                                 </div>
                                 <div className="space-y-2">
-                                    <label className="text-xs font-bold text-zinc-500">예약 대상 요일</label>
+                                    <label className="text-xs font-bold text-zinc-500">매주 오픈 요일</label>
                                     <select
                                         value={formData.reservationOpenDay}
                                         onChange={(e) => handleChange('reservationOpenDay', e.target.value)}
                                         disabled={isAlwaysOpen}
-                                        className="w-full px-3 py-2 rounded-xl bg-zinc-50 border-none focus:ring-2 focus:ring-black/5 text-sm"
+                                        className="w-full px-3 py-2 rounded-xl bg-blue-50/50 border border-blue-100 focus:ring-2 focus:ring-blue-500/20 text-sm"
                                     >
                                         {['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY', 'SUNDAY'].map(day => (
                                             <option key={day} value={day}>{DAY_TO_KR[day]}</option>
@@ -429,8 +433,8 @@ export default function CrewSettings({ onBack, onCaptainGuideClick }: CrewSettin
 
                             <div className="space-y-2">
                                 <div className="flex justify-between">
-                                    <label className="text-xs font-bold text-zinc-500">오픈일 설정 (D-{formData.reservationOpenOffsetDays})</label>
-                                    <span className="text-xs text-zinc-400">{formData.reservationOpenOffsetDays}일 전 오픈</span>
+                                    <label className="text-xs font-bold text-zinc-500">오픈일부터 숙박 시작일까지</label>
+                                    <span className="text-xs text-zinc-400">오픈 후 {formData.reservationOpenOffsetDays}일부터 예약</span>
                                 </div>
                                 <input
                                     type="number"
@@ -439,16 +443,13 @@ export default function CrewSettings({ onBack, onCaptainGuideClick }: CrewSettin
                                     value={formData.reservationOpenOffsetDays}
                                     onChange={(e) => handleChange('reservationOpenOffsetDays', parseInt(e.target.value) || 0)}
                                     disabled={isAlwaysOpen}
-                                    className="w-full px-4 py-3 rounded-xl bg-zinc-50 border-none focus:ring-2 focus:ring-black/5 text-sm"
+                                    className="w-full px-4 py-3 rounded-xl bg-blue-50/50 border border-blue-100 focus:ring-2 focus:ring-blue-500/20 text-sm"
                                 />
                             </div>
 
-                            {/* Simulated Calendar */}
-                            <SimulatedCalendar
-                                targetDay={formData.reservationOpenDay}
-                                daysBefore={formData.reservationOpenOffsetDays}
-                                targetTime={formData.reservationOpenTime}
-                            />
+                            <label className="block text-xs font-bold text-zinc-500">한 번에 오픈할 숙박 일수 (0은 제한 없음)
+                                <input aria-label="한 번에 오픈할 숙박 일수" type="number" min="0" max="366" value={formData.reservationWindowDays ?? 8} onChange={event => handleChange('reservationWindowDays', Math.max(0,Math.min(366,Number(event.target.value))))} className="mt-2 w-full rounded-xl border border-blue-100 bg-blue-50/50 px-3 py-2 text-sm" />
+                            </label>
                         </div>
 
                         <div className="pt-2 border-t border-zinc-200 mt-2">
@@ -470,7 +471,7 @@ export default function CrewSettings({ onBack, onCaptainGuideClick }: CrewSettin
                                     type="checkbox"
                                     checked={formData.isCapacityLimited}
                                     onChange={(e) => handleChange('isCapacityLimited', e.target.checked)}
-                                    className="rounded border-zinc-300 text-zinc-900 focus:ring-zinc-900"
+                                    className="rounded border-zinc-300 text-blue-700 focus:ring-blue-500"
                                 />
                                 정원 제한
                             </label>
@@ -480,7 +481,7 @@ export default function CrewSettings({ onBack, onCaptainGuideClick }: CrewSettin
                             value={formData.dailyCapacity}
                             onChange={(e) => handleChange('dailyCapacity', parseInt(e.target.value) || 0)}
                             disabled={!formData.isCapacityLimited}
-                            className={`w-full px-4 py-3 rounded-xl bg-zinc-50 border-none focus:ring-2 focus:ring-black/5 ${!formData.isCapacityLimited ? 'opacity-50' : ''
+                            className={`w-full px-4 py-3 rounded-xl bg-blue-50/50 border border-blue-100 focus:ring-2 focus:ring-blue-500/20 ${!formData.isCapacityLimited ? 'opacity-50' : ''
                                 }`}
                         />
                     </div>
@@ -489,18 +490,17 @@ export default function CrewSettings({ onBack, onCaptainGuideClick }: CrewSettin
                     </>}
                     <button
                         onClick={handleSave}
-                        className="w-full py-4 bg-zinc-900 text-white rounded-2xl font-bold text-lg mt-8 hover:bg-zinc-800 transition-colors flex items-center justify-center gap-2"
+                        className="reservation-primary w-full py-4 mt-8 flex items-center justify-center gap-2"
                     >
                         <SaveIcon className="w-5 h-5" />
                         저장하기
                     </button>
 
-
                     {/* Manage Managers Button */}
                     {isCaptain && (
                         <button
                             onClick={() => setShowPromote(true)}
-                            className="w-full py-4 bg-white border-2 border-zinc-100 text-zinc-900 rounded-2xl font-bold text-lg hover:bg-zinc-50 transition-colors"
+                            className="reservation-secondary w-full py-4 text-sm"
                         >
                             운영진 관리
                         </button>
@@ -508,207 +508,7 @@ export default function CrewSettings({ onBack, onCaptainGuideClick }: CrewSettin
 
                     <div className="h-10" />
                 </div>
-            </main>
-        </div>
+            <label className="mx-4 mb-4 flex items-center justify-between rounded-xl border border-slate-200 p-4 text-sm font-bold"><span>시즌방 강습 신청 사용<small className="mt-1 block text-xs font-normal text-slate-500">켜면 확정 예약한 부원이 강습을 신청할 수 있어요.</small></span><input type="checkbox" checked={formData.teachingEnabled === true} onChange={event => handleChange('teachingEnabled', event.target.checked)} /></label></main>
+        </ReservationLayout>
     );
 }
-
-
-
-
-// Helper Simulations
-const SimulatedCalendar = ({ targetDay, daysBefore, targetTime }: { targetDay: string, daysBefore: number, targetTime?: string }) => {
-    // 1. Calculate Target Dates
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    const dayMap: { [key: string]: number } = {
-        'SUNDAY': 0, 'MONDAY': 1, 'TUESDAY': 2, 'WEDNESDAY': 3, 'THURSDAY': 4, 'FRIDAY': 5, 'SATURDAY': 6
-    };
-
-    const targetDayIndex = dayMap[targetDay];
-
-    // Find next target day
-    // Logic: The calendar is simulating: "If I set these settings, what happens?"
-    // The "Open Day" is defined by (Target Day - daysBefore).
-    // Let's assume we are showing the *Next* valid cycle.
-    // If Today + daysBefore leads to a date, we find the next TargetDay after that date.
-
-    const minTargetDate = new Date(today);
-    minTargetDate.setDate(today.getDate() + daysBefore);
-
-    const diff = (targetDayIndex - minTargetDate.getDay() + 7) % 7;
-    const targetStart = new Date(minTargetDate);
-    targetStart.setDate(minTargetDate.getDate() + diff);
-
-    // Derived Real Open Date
-    const realOpenDate = new Date(targetStart);
-    realOpenDate.setDate(targetStart.getDate() - daysBefore);
-
-    // Target End (1 week duration)
-    const targetEnd = new Date(targetStart);
-    targetEnd.setDate(targetStart.getDate() + 6);
-
-    // 2. Generate Trimming Range (Relevant Weeks Only)
-    // Start from the Sunday of the Open Date's week
-    const viewStart = new Date(realOpenDate);
-    viewStart.setDate(realOpenDate.getDate() - realOpenDate.getDay());
-
-    // End at the Saturday of the Target End's week
-    const viewEnd = new Date(targetEnd);
-    viewEnd.setDate(targetEnd.getDate() + (6 - targetEnd.getDay()));
-
-    // Generate dates
-    const calendarDays: Date[] = [];
-    const current = new Date(viewStart);
-    while (current <= viewEnd) {
-        calendarDays.push(new Date(current));
-        current.setDate(current.getDate() + 1);
-    }
-
-    // 3. Download Logic
-    const handleDownload = () => {
-        // Create an SVG string representing the calendar
-        const width = 400;
-        const cellWidth = width / 7;
-        const headerHeight = 40;
-        const rowHeight = 60;
-        const rows = Math.ceil(calendarDays.length / 7);
-        const height = headerHeight + 30 + (rows * rowHeight);
-
-        // Colors
-        const bgTarget = "#D0E6FD"; // Light Blue for Target
-        const textOpen = "#EF4444";
-        const textTarget = "#162660";
-
-        let svgContent = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" style="font-family: sans-serif; background: white;">
-            <rect width="100%" height="100%" fill="white"/>
-            <text x="${width / 2}" y="25" text-anchor="middle" font-size="14" font-weight="bold" fill="#18181B">
-                ${realOpenDate.getMonth() + 1}월 ${realOpenDate.getDate()}일 예약 오픈 예시
-            </text>
-            
-            <!-- Week Headers -->
-            <g transform="translate(0, 45)">
-                ${['일', '월', '화', '수', '목', '금', '토'].map((d, i) =>
-            `<text x="${i * cellWidth + cellWidth / 2}" y="15" text-anchor="middle" font-size="10" fill="#A1A1AA">${d}</text>`
-        ).join('')}
-            </g>
-            
-            <!-- Days -->
-            <g transform="translate(0, 70)">
-        `;
-
-        calendarDays.forEach((date, i) => {
-            const x = (i % 7) * cellWidth;
-            const y = Math.floor(i / 7) * rowHeight;
-
-            const isOpenDate = date.toDateString() === realOpenDate.toDateString();
-            const curr = new Date(date); curr.setHours(0, 0, 0, 0);
-            const tStart = new Date(targetStart); tStart.setHours(0, 0, 0, 0);
-            const tEnd = new Date(targetEnd); tEnd.setHours(0, 0, 0, 0);
-            const isTargetRange = curr >= tStart && curr <= tEnd;
-
-            // Background
-            if (isTargetRange) {
-                // Round corners if start/end
-                svgContent += `<rect x="${x}" y="${y}" width="${cellWidth}" height="${rowHeight}" fill="${bgTarget}" />`;
-            }
-
-            // Date Number
-            let fill = "#52525B";
-            if (date.getMonth() !== realOpenDate.getMonth() && !isTargetRange) fill = "#D4D4D8";
-            if (isTargetRange) fill = textTarget;
-            if (isOpenDate) fill = textOpen;
-
-            svgContent += `<text x="${x + cellWidth / 2}" y="${y + 20}" text-anchor="middle" font-size="12" font-weight="${isOpenDate || isTargetRange ? 'bold' : 'normal'}" fill="${fill}">${date.getDate()}</text>`;
-
-            // Open Label / Time
-            if (isOpenDate) {
-                svgContent += `<rect x="${x + 5}" y="${y + 30}" width="${cellWidth - 10}" height="14" rx="4" fill="${textOpen}" />`;
-                svgContent += `<text x="${x + cellWidth / 2}" y="${y + 40}" text-anchor="middle" font-size="8" fill="white" font-weight="bold">OPEN ${targetTime || ''}</text>`;
-            }
-        });
-
-        svgContent += `</g></svg>`;
-
-        // Conversion
-        const blob = new Blob([svgContent], { type: 'image/svg+xml;charset=utf-8' });
-        const url = URL.createObjectURL(blob);
-        const img = new Image();
-        img.onload = () => {
-            const canvas = document.createElement('canvas');
-            canvas.width = width;
-            canvas.height = height;
-            const ctx = canvas.getContext('2d');
-            if (ctx) {
-                ctx.drawImage(img, 0, 0);
-                const pngUrl = canvas.toDataURL('image/png');
-                const a = document.createElement('a');
-                a.href = pngUrl;
-                a.download = `reservation_calendar_preview.png`;
-                a.click();
-            }
-            URL.revokeObjectURL(url);
-        };
-        img.src = url;
-    };
-
-    return (
-        <div className="bg-white rounded-lg border border-zinc-200 p-3 mt-2">
-            <div className="flex justify-between items-center mb-2">
-                <div className="text-xs font-bold text-zinc-900">
-                    {realOpenDate.getMonth() + 1}월 {realOpenDate.getDate()}일 예약 오픈 예시
-                </div>
-                <Button variant="ghost" size="small" onClick={handleDownload} className="h-6 text-[10px] px-2 bg-zinc-100 hover:bg-zinc-200 text-zinc-600">
-                    이미지 다운로드
-                </Button>
-            </div>
-
-            {/* Week Headers */}
-            <div className="grid grid-cols-7 mb-1">
-                {['일', '월', '화', '수', '목', '금', '토'].map(d => (
-                    <div key={d} className="text-[10px] text-center text-zinc-400">{d}</div>
-                ))}
-            </div>
-
-            {/* Days */}
-            <div className="grid grid-cols-7 gap-y-1">
-                {calendarDays.map((date, idx) => {
-                    const isOpenDate = date.toDateString() === realOpenDate.toDateString();
-
-                    const tStart = new Date(targetStart); tStart.setHours(0, 0, 0, 0);
-                    const tEnd = new Date(targetEnd); tEnd.setHours(0, 0, 0, 0);
-                    const curr = new Date(date); curr.setHours(0, 0, 0, 0);
-                    const isTargetRange = curr >= tStart && curr <= tEnd;
-
-                    let bgClass = "bg-transparent";
-                    let textClass = "text-zinc-600";
-
-                    // Dim days from other months unless they are relevant
-                    if (curr.getMonth() !== realOpenDate.getMonth() && !isTargetRange) {
-                        textClass = "text-zinc-300";
-                    }
-
-                    if (isTargetRange) {
-                        bgClass = "bg-[#D0E6FD]";
-                        textClass = "text-[#162660] font-bold";
-                        if (curr.getTime() === tStart.getTime()) bgClass += " rounded-l-md";
-                        if (curr.getTime() === tEnd.getTime()) bgClass += " rounded-r-md";
-                    }
-
-                    return (
-                        <div key={idx} className={`relative flex flex-col items-center justify-start py-1 min-h-[50px] ${bgClass} ${textClass}`}>
-                            <span className={`text-xs ${isOpenDate ? 'text-red-500 font-bold' : ''}`}>{date.getDate()}</span>
-                            {isOpenDate && (
-                                <div className="mt-1 flex flex-col items-center">
-                                    <span className="text-[10px] bg-red-500 text-white font-bold px-1.5 py-0.5 rounded-full leading-none mb-0.5">OPEN</span>
-                                    <span className="text-[9px] text-red-500 font-bold leading-none">{targetTime}</span>
-                                </div>
-                            )}
-                        </div>
-                    );
-                })}
-            </div>
-        </div>
-    );
-};

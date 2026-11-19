@@ -100,7 +100,7 @@ const allSteps: OnboardingStep[] = [
       '가입 신청, 예약 정원, 결제 상태와 관리 메모를 같은 기준으로 관리해요.',
       '이용 통계는 다음 일정과 정원 설정을 조정하는 근거로 사용해요.',
     ],
-    action: { label: '운영 센터 열기', destination: 'operations_center', desktopOnly: true },
+    action: { label: '운영 센터 열기', destination: 'operations_center' },
   },
   {
     id: 'event-operations',
@@ -113,7 +113,7 @@ const allSteps: OnboardingStep[] = [
       '호스트 역할과 그룹 오너를 확인한 뒤 이벤트를 만들어요.',
       '응답 시트는 꼭 필요한 항목만 받고, 민감정보는 필요한 순간에만 열어봐요.',
     ],
-    action: { label: '호스트 그룹 열기', destination: 'dashboard_groups', desktopOnly: true },
+    action: { label: '호스트 그룹 열기', destination: 'dashboard_groups' },
   },
   {
     id: 'launch-check',

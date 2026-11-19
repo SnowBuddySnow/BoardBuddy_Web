@@ -1,29 +1,34 @@
+import PersonalCalendarPreview from '../components/PersonalCalendarPreview';
 import { useState, useEffect } from 'react';
 import { getUserInfo } from '../services/user';
 import { getMyApplications, withdrawCrewApplication } from '../services/crew';
 import { listParties } from '../services/event';
-import { listOrganizerGroups } from '../services/organizerGroup';
 import { UserDetail, CrewDetail, MyApplication, Event } from '../types/api';
-import { UserPlus, Sparkles, Users, Calendar as CalendarIcon, ChevronRight, Clock3, ShieldCheck, X, TentTree, CalendarHeart, CloudSun, LockKeyhole } from 'lucide-react';
+import { UserPlus, Sparkles, Users, Calendar as CalendarIcon, ChevronRight, Clock3, ShieldCheck, X, TentTree, CalendarHeart, CloudSun, LockKeyhole, Settings } from 'lucide-react';
+import { isCrewManagerRole } from '../constants/crewRole';
 import { getWeather, WeatherData } from '../services/weather';
 import { getEventActivityLabel } from '../constants/eventActivity';
 import { getOperatingFeatures, OperatingMode } from '../constants/operatingSeason';
-import boardBuddyLogo from '../assets/boardbuddy-logo.png';
+import { PendingCrewVerificationNotice } from '../components/PendingCrewVerificationNotice';
 import { formatEventDateTime, isEventRegistrationAvailable, parseEventDateTime } from '../lib/eventDateTime';
 
 interface HomeProps {
     onMakeReservationClick: () => void;
     onGuestReservationClick: () => void;
     onCalendarClick: () => void;
+    onSeasonCalendarClick?: () => void;
     onTeamClick: () => void;
+    onCrewSettingsClick?: () => void;
     onSearchClick: () => void;
     onCreateCrewClick: () => void;
+    onOnboardingClick?: () => void;
     hasCrew?: boolean;
     onJoinCrew?: () => void;
     onEventClick: (eventId: number) => void;
     onSeeAllPartiesClick: () => void;
     onMyPlansClick: () => void;
     onDashboardClick: () => void;
+    onStudentVerificationClick: () => void;
     operatingMode: OperatingMode;
     crewDetail: CrewDetail | null;
 }
@@ -32,14 +37,17 @@ export default function Home({
     onMakeReservationClick,
     onGuestReservationClick,
     onCalendarClick,
+    onSeasonCalendarClick,
     onTeamClick,
+    onCrewSettingsClick,
     onSearchClick,
     onCreateCrewClick,
+    onOnboardingClick,
     hasCrew: initialHasCrew = true,
     onEventClick,
     onSeeAllPartiesClick,
     onMyPlansClick,
-    onDashboardClick,
+    onStudentVerificationClick,
     operatingMode,
     crewDetail,
 }: HomeProps) {
@@ -47,6 +55,7 @@ export default function Home({
     const [myApplications, setMyApplications] = useState<MyApplication[]>([]);
     const [hasCrew, setHasCrew] = useState(initialHasCrew);
     const [weather, setWeather] = useState<WeatherData | null>(null);
+    const [weatherFailed, setWeatherFailed] = useState(false);
     const [currentDate, setCurrentDate] = useState<string>('');
     const [applicationToWithdraw, setApplicationToWithdraw] = useState<MyApplication | null>(null);
     const [isWithdrawing, setIsWithdrawing] = useState(false);
@@ -54,7 +63,6 @@ export default function Home({
 
     // Small gathering related states
     const [parties, setParties] = useState<Event[]>([]);
-    const [hasOrganizerPermission, setHasOrganizerPermission] = useState(false);
     const operatingFeatures = getOperatingFeatures(operatingMode);
 
     useEffect(() => {
@@ -87,12 +95,8 @@ export default function Home({
                 // Fetch public small gatherings
                 const partiesList = await listParties();
                 // Show only OPEN parties in recommended lists
-                const openParties = partiesList.filter(p => p.status === 'OPEN');
-                setParties(openParties);
+                setParties(partiesList);
 
-                // Fetch organizer groups to verify create permissions
-                const groups = await listOrganizerGroups();
-                setHasOrganizerPermission(groups.length > 0);
             } catch (err) {
                 console.error("Failed to fetch small gathering data for home screen", err);
             }
@@ -103,19 +107,19 @@ export default function Home({
 
         // Fetch Weather
         if (operatingFeatures.season) {
+            setWeatherFailed(false);
             getWeather().then(data => {
                 setWeather(data);
-            }).catch(err => console.error("Weather fetch failed", err));
+            }).catch(err => { setWeatherFailed(true); console.error("Weather fetch failed", err); });
         }
 
         // Set Current Date
         const now = new Date();
-        const year = now.getFullYear();
         const month = String(now.getMonth() + 1).padStart(2, '0');
         const day = String(now.getDate()).padStart(2, '0');
-        const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+        const days = ['일', '월', '화', '수', '목', '금', '토'];
         const weekday = days[now.getDay()];
-        setCurrentDate(`${year}. ${month}. ${day} ${weekday}`);
+        setCurrentDate(`${month}.${day} (${weekday})`);
 
     }, [operatingFeatures.offSeason, operatingFeatures.season]);
 
@@ -129,7 +133,6 @@ export default function Home({
 
     const seasonHouseUnavailable = operatingFeatures.season && crewDetail?.seasonHouseActive === false;
     const seasonHouseAvailable = operatingFeatures.season && crewDetail !== null && crewDetail.seasonHouseActive !== false;
-    const showCrewUniversity = crewDetail?.kusbfAssociated === true && Boolean(crewDetail.univ);
 
     // Plans user has joined or has pending
     const myPlansCount = parties.filter(p => (
@@ -163,43 +166,28 @@ export default function Home({
 
     return (
         <div className="flex-1 flex flex-col h-full overflow-hidden bg-[#FAF8F3] relative">
-            {/* Header */}
-            <header className="px-4 pt-4 pb-3 flex items-center justify-between z-10 bg-[#FAF8F3] lg:hidden">
-                <div className="flex h-8 w-32 items-center">
-                    <img src={boardBuddyLogo} alt="BoardBuddy" className="h-full w-full object-cover object-center" />
-                </div>
-
-                {hasOrganizerPermission && (
-                    <button
-                        onClick={onDashboardClick}
-                        className="text-xs font-black bg-[#162660] text-white px-3 py-1.5 rounded-full hover:bg-blue-900 transition-colors shadow-sm flex items-center gap-1"
-                    >
-                        <Sparkles className="w-3 h-3" /> 운영 센터
-                    </button>
-                )}
-            </header>
-
             {/* Content Area */}
-            <main className="flex-1 overflow-y-auto pb-[110px] space-y-5">
+            <main className="mx-auto w-full max-w-6xl flex-1 overflow-y-auto px-4 pt-5 pb-6 space-y-5 sm:px-6 lg:px-8 lg:pt-6">
 
-                {/* Team Info / Host Metadata (De-emphasized compact row) */}
-                {(hasCrew && userInfo?.crew || pendingApplication) && (
-                    <div className="px-4">
-                    {hasCrew && userInfo?.crew ? (
-                        <div className="bg-white/80 border border-zinc-100 rounded-2xl px-4 py-2.5 flex items-center justify-between text-xs shadow-sm">
-                            <div className="flex items-center gap-2">
-                                {showCrewUniversity && (
-                                    <>
-                                        <span className="font-bold text-zinc-400">{crewDetail.univ}</span>
-                                        <span className="h-3 w-px bg-zinc-200"></span>
-                                    </>
-                                )}
-                                <span onClick={onTeamClick} className="font-black text-zinc-700 hover:text-[#162660] cursor-pointer flex items-center gap-0.5">
-                                    {userInfo.crew.crewName} <ChevronRight className="w-3.5 h-3.5 text-zinc-400" />
-                                </span>
-                            </div>
-                        </div>
-                    ) : pendingApplication ? (
+                        {operatingFeatures.season && (
+                            <section aria-label="휘닉스파크 날씨">
+                                <div className="flex items-center justify-between rounded-2xl border border-zinc-200 bg-white px-4 py-3">
+                                    <span className="flex items-center gap-3">
+                                        <CloudSun className="h-5 w-5 text-sky-600" />
+                                        <span>
+                                            <span className="block text-xs font-black text-zinc-800">휘닉스파크</span>
+                                            <span className="block text-[11px] text-zinc-400">{currentDate} · {weather?.weatherLabel || (weatherFailed ? '날씨를 불러오지 못했어요' : '날씨 확인 중')}</span>
+                                        </span>
+                                    </span>
+                                    <span className="text-xl font-black text-zinc-800">{weather ? Math.round(weather.temperature) : '--'}°</span>
+                                </div>
+                            </section>
+                        )}
+
+                {/* Pending applications remain visible without repeating the member's crew name. */}
+                {!hasCrew && onOnboardingClick && <div><button type="button" onClick={onOnboardingClick} className="flex min-h-12 w-full items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-left text-sm font-semibold text-[#162660]"><span>가입·크루 진행 상태</span><span className="flex shrink-0 items-center gap-1 text-xs text-slate-500">이어보기<ChevronRight className="h-4 w-4" /></span></button></div>}
+                {!hasCrew && pendingApplication && (
+                    <div>
                         <div className="overflow-hidden rounded-3xl border border-blue-100 bg-white shadow-sm">
                             <div className="bg-gradient-to-br from-[#162660] to-[#273c83] px-5 py-5 text-white">
                                 <div className="mb-4 flex items-center justify-between">
@@ -212,6 +200,7 @@ export default function Home({
                                 <h2 className="mt-1 text-xl font-black tracking-tight">{pendingApplication.crew_name}</h2>
                                 <p className="mt-2 text-xs leading-5 text-blue-100">크루 운영진이 신청을 확인하고 있어요. 승인되면 크루 예약과 파티 기능을 이용할 수 있습니다.</p>
                             </div>
+                            {userInfo && <PendingCrewVerificationNotice crewId={pendingApplication.crew_id} user={userInfo} onVerify={onStudentVerificationClick} />}
                             <div className="flex items-center justify-between gap-4 px-5 py-4">
                                 <div className="flex min-w-0 items-center gap-2 text-xs font-semibold text-zinc-500">
                                     <ShieldCheck className="h-4 w-4 shrink-0 text-emerald-600" />
@@ -226,18 +215,17 @@ export default function Home({
                                 </button>
                             </div>
                         </div>
-                    ) : null}
                     </div>
                 )}
 
                 {!hasCrew && !pendingApplication && (
-                    <section className="px-4">
+                    <section>
                         <div className="mb-3">
                             <h2 className="text-base font-black text-zinc-900">시작하기</h2>
                             <p className="mt-0.5 text-xs font-medium text-zinc-500">내게 맞는 방식으로 지금 바로 이용해 보세요.</p>
                         </div>
-                        <div className="grid grid-cols-2 gap-3">
-                            <button type="button" onClick={onSearchClick} className="col-span-2 flex min-h-[152px] items-center justify-between overflow-hidden rounded-3xl bg-[#162660] p-6 text-left text-white shadow-sm transition-transform hover:bg-[#0f1b48] active:scale-[0.99]">
+                        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4">
+                            <button type="button" onClick={onSearchClick} className="col-span-2 sm:col-span-1 flex min-h-[152px] sm:min-h-48 items-center justify-between overflow-hidden rounded-3xl bg-[#162660] p-6 text-left text-white shadow-sm transition-transform hover:bg-[#0f1b48] active:scale-[0.99]">
                                 <span>
                                     <span className="mb-3 flex h-11 w-11 -rotate-6 items-center justify-center rounded-2xl border border-white/20 bg-white/15 shadow-sm"><Sparkles className="h-5 w-5 text-amber-200" /></span>
                                     <span className="block text-base font-black">크루 가입하기</span>
@@ -245,15 +233,15 @@ export default function Home({
                                 </span>
                                 <span className="flex h-11 w-11 rotate-6 items-center justify-center rounded-full bg-white/10"><ChevronRight className="h-5 w-5 text-blue-100" /></span>
                             </button>
-                            <button type="button" onClick={onCreateCrewClick} className="min-h-[164px] rounded-3xl border border-sky-100 bg-sky-50 p-5 text-left transition-colors hover:bg-sky-100 active:scale-[0.99]">
+                            <button type="button" onClick={onCreateCrewClick} className="min-h-[164px] sm:min-h-48 rounded-3xl border border-sky-100 bg-sky-50 p-5 text-left transition-colors hover:bg-sky-100 active:scale-[0.99]">
                                 <span className="mb-4 flex h-11 w-11 rotate-3 items-center justify-center rounded-2xl border border-sky-100 bg-white text-sky-700 shadow-sm"><TentTree className="h-5 w-5" /></span>
                                 <span className="block text-base font-black text-zinc-900">크루 만들기</span>
                                 <span className="mt-1.5 block text-xs leading-4 font-medium text-zinc-500">새 크루를 등록하고 운영을 시작하세요.</span>
                             </button>
-                            <button type="button" onClick={onGuestReservationClick} className="min-h-[164px] rounded-3xl border border-rose-100 bg-rose-50 p-5 text-left transition-colors hover:bg-rose-100 active:scale-[0.99]">
+                            <button type="button" onClick={onGuestReservationClick} className="min-h-[164px] sm:min-h-48 rounded-3xl border border-rose-100 bg-rose-50 p-5 text-left transition-colors hover:bg-rose-100 active:scale-[0.99]">
                                 <span className="mb-4 flex h-11 w-11 -rotate-3 items-center justify-center rounded-2xl border border-rose-100 bg-white text-rose-500 shadow-sm"><CalendarHeart className="h-5 w-5" /></span>
                                 <span className="block text-base font-black text-zinc-900">{operatingFeatures.season ? '게스트 예약하기' : '게스트 이벤트 참여'}</span>
-                                <span className="mt-1.5 block text-xs leading-4 font-medium text-zinc-500">{operatingFeatures.season ? '크루 가입 전에도 게스트로 예약할 수 있어요.' : '초대 코드로 이벤트에 참여할 수 있어요.'}</span>
+                                <span className="mt-1.5 block text-xs leading-4 font-medium text-zinc-500">{operatingFeatures.season ? '게스트 신청 방법을 확인해 보세요.' : '초대 코드로 이벤트에 참여할 수 있어요.'}</span>
                             </button>
                         </div>
                     </section>
@@ -285,8 +273,27 @@ export default function Home({
 
                 {hasCrew && (
                     <>
+                        <section>
+                            <div className="rounded-3xl bg-[#162660] p-5 text-white sm:p-7">
+                                <div className="flex items-center justify-between gap-3">
+                                    <p className="text-xs font-bold text-blue-200">MY CREW</p>
+                                    {userInfo?.crew && isCrewManagerRole(userInfo.role) && onCrewSettingsClick && <button type="button" onClick={onCrewSettingsClick} className="inline-flex min-h-10 shrink-0 items-center gap-1.5 rounded-xl bg-white/10 px-3 text-xs font-semibold text-white hover:bg-white/20"><Settings className="h-4 w-4" />크루 설정</button>}
+                                </div>
+                                <h2 className="mt-2 text-2xl font-black">{userInfo?.crew?.crewName || crewDetail?.crewName || '내 크루'}와 함께하는 오늘</h2>
+                                <p className="mt-3 text-sm leading-6 text-blue-100">새로운 모임을 찾아보고, 내 일정과 시즌방 현황을 한곳에서 확인해요.</p>
+                                <div className="mt-5 grid grid-cols-2 gap-3">
+                                    <button type="button" onClick={onMyPlansClick} className="min-h-16 rounded-2xl bg-white/10 p-3 text-left"><span className="block text-2xl font-black">{myPlansCount}</span><span className="text-xs text-blue-100">내 참여·대기 일정</span></button>
+                                    <button type="button" onClick={onSeeAllPartiesClick} className="min-h-16 rounded-2xl bg-white/10 p-3 text-left"><span className="block text-2xl font-black">{upcomingParties.length}</span><span className="text-xs text-blue-100">지금 참가 가능한 이벤트</span></button>
+                                </div>
+                            </div>
+                        </section>
+                {seasonHouseAvailable && userInfo?.crew && <PersonalCalendarPreview crewId={userInfo.crew.crewId} onOpen={onCalendarClick} />}
+                        <section className="grid gap-3 sm:grid-cols-2">
+                            <button type="button" onClick={onSeasonCalendarClick || onCalendarClick} className="min-h-24 rounded-2xl border border-zinc-200 bg-white p-5 text-left"><CalendarIcon className="h-5 w-5 text-[#162660]" /><span className="mt-2 block font-black text-[#162660]">시즌방 캘린더</span><span className="mt-1 block text-xs leading-6 text-zinc-500">날짜별 이용 현황 조회 · {seasonHouseAvailable ? '예약 운영 중' : '크루 예약 접수 전'}</span></button>
+                            <button type="button" onClick={onMyPlansClick} className="min-h-24 rounded-2xl border border-zinc-200 bg-white p-5 text-left"><CalendarHeart className="h-5 w-5 text-[#162660]" /><span className="mt-2 block font-black text-[#162660]">내 참여 일정</span><span className="mt-1 block text-xs leading-6 text-zinc-500">참여·대기 중인 이벤트를 확인해요.</span></button>
+                        </section>
                         {seasonHouseAvailable && (
-                            <section className="px-4">
+                            <section>
                                 <button
                                     type="button"
                                     onClick={onMakeReservationClick}
@@ -306,7 +313,7 @@ export default function Home({
                             </section>
                         )}
 
-                        {operatingFeatures.offSeason && <section className="space-y-2.5 px-4">
+                        {operatingFeatures.offSeason && <section className="space-y-2.5">
                             <div className="flex items-end justify-between gap-3">
                                 <div>
                                     <p className="text-[11px] font-black text-[#162660]">CREW EVENTS</p>
@@ -366,7 +373,7 @@ export default function Home({
                         </section>}
 
                         {operatingFeatures.offSeason && myPlansCount > 0 && (
-                            <section className="px-4">
+                            <section>
                                 <button
                                     type="button"
                                     onClick={onMyPlansClick}
@@ -385,7 +392,7 @@ export default function Home({
                         )}
 
                         {seasonHouseUnavailable && (
-                            <section className="px-4">
+                            <section>
                                 <div className="flex items-center gap-3 rounded-2xl border border-zinc-200 bg-white px-4 py-3.5">
                                     <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-zinc-100 text-zinc-500">
                                         <LockKeyhole className="h-4 w-4" />
@@ -398,7 +405,7 @@ export default function Home({
                             </section>
                         )}
 
-                        <section className="px-4">
+                        <section>
                             <h2 className="mb-2.5 text-xs font-black text-zinc-500">바로가기</h2>
                             <div className={`grid gap-2 ${seasonHouseAvailable ? 'grid-cols-3' : 'grid-cols-1'}`}>
                                 {seasonHouseAvailable && (
@@ -420,20 +427,7 @@ export default function Home({
                             </div>
                         </section>
 
-                        {seasonHouseAvailable && (
-                            <section className="px-4">
-                                <div className="flex items-center justify-between rounded-2xl border border-zinc-200 bg-white px-4 py-3">
-                                    <span className="flex items-center gap-3">
-                                        <CloudSun className="h-5 w-5 text-sky-600" />
-                                        <span>
-                                            <span className="block text-xs font-black text-zinc-800">휘닉스파크</span>
-                                            <span className="block text-[11px] text-zinc-400">{currentDate} · {weather?.weatherLabel || '날씨 확인 중'}</span>
-                                        </span>
-                                    </span>
-                                    <span className="text-xl font-black text-zinc-800">{weather ? Math.round(weather.temperature) : '--'}°</span>
-                                </div>
-                            </section>
-                        )}
+
                     </>
                 )}
             </main>

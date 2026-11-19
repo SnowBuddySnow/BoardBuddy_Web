@@ -2,23 +2,27 @@ import { useEffect, useState } from 'react';
 import { ArrowLeft, Bell, Check, LoaderCircle } from 'lucide-react';
 import { getNotifications, markNotificationRead, type NotificationFeed, type NotificationItem } from '../services/notifications';
 
-interface Props { onBack: () => void; onChanged: () => void; }
+interface Props { onBack: () => void; onChanged: () => void; onOnboarding?: () => void; onMyReservations?: () => void; }
 
 const senderLabel = (item: NotificationItem) => item.senderType === 'MANAGER' ? '크루 매니저' : item.senderType === 'DEVELOPER' ? 'BoardBuddy' : '시스템';
 
-export default function Notifications({ onBack, onChanged }: Props) {
+export default function Notifications({ onBack, onChanged, onOnboarding, onMyReservations }: Props) {
     const [feed, setFeed] = useState<NotificationFeed | null>(null);
     const [error, setError] = useState('');
 
     useEffect(() => { getNotifications().then(setFeed).catch(() => setError('알림을 불러오지 못했습니다.')); }, []);
 
     const open = async (item: NotificationItem) => {
+        try {
         if (!item.read) {
             await markNotificationRead(item.id);
             setFeed(current => current ? { unreadCount: Math.max(0, current.unreadCount - 1), items: current.items.map(n => n.id === item.id ? { ...n, read: true } : n) } : current);
             onChanged();
         }
-        if (item.actionUrl?.startsWith('http')) window.location.assign(item.actionUrl);
+        } catch { setError('읽음 상태를 저장하지 못했습니다. 다시 시도해 주세요.'); return; }
+        if (item.actionUrl === '?view=my_reservations') onMyReservations?.();
+        else if (item.actionUrl === '?view=onboarding') onOnboarding?.();
+        else if (item.actionUrl?.startsWith('http')) window.location.assign(item.actionUrl);
     };
 
     return (

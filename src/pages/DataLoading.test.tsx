@@ -1,13 +1,13 @@
 // @vitest-environment jsdom
-import { act } from 'react';
+import { act, type ReactNode } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const http = vi.hoisted(() => ({ get: vi.fn(), post: vi.fn() }));
 vi.mock('../lib/axios', () => ({ default: http }));
 // Exercise page effects without conflating them with the unchanged calendar widget.
-vi.mock('../components/Calendar', () => ({ Calendar: ({ onDayClick }: { onDayClick: (day: number) => void }) => (
-    <button onClick={() => onDayClick(19)}>Synthetic day 19</button>
+vi.mock('../components/Calendar', () => ({ Calendar: ({ onDayClick, headerRight }: { onDayClick: (day: number) => void; headerRight?: ReactNode }) => (
+    <div>{headerRight}<button onClick={() => onDayClick(19)}>Synthetic day 19</button></div>
 ) }));
 import MemberStats from './MemberStats';
 import Promote from './Promote';
@@ -24,8 +24,9 @@ describe('page fetch dependencies and reservation cache refresh (synthetic HTTP 
         vi.resetAllMocks(); vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true); vi.stubGlobal('alert', vi.fn());
         vi.useFakeTimers({ toFake: ['Date'] }); vi.setSystemTime(new Date('2026-02-19T09:00:00Z'));
         localStorage.clear();
-        dayData = { date: '2026-02-19', confirmedCount: 0, reservations: [] };
+        dayData = { bookable: true, date: '2026-02-19', confirmedCount: 0, reservations: [] };
         http.get.mockImplementation(async (path: string) => {
+            if (path.endsWith('/season-stays/pass')) return result({ registered: false });
             if (path === '/users/me') return result({ userId: 7, crew: { crewId: 1 } });
             if (path === '/users/me/reservations') return result([]);
             if (/^\/crews\/[12]$/.test(path)) return result({ dailyCapacity: 2 });
@@ -35,7 +36,7 @@ describe('page fetch dependencies and reservation cache refresh (synthetic HTTP 
             if (path.includes('/reservations/days/')) return result(dayData);
             throw new Error(`Unexpected synthetic GET: ${path}`);
         });
-        http.post.mockResolvedValue(result({}));
+        http.post.mockResolvedValue(result({ results: [{ date: '2026-02-19', success: true, status: 'CONFIRMED' }] }));
         container = document.createElement('div'); document.body.append(container); root = createRoot(container);
     });
     afterEach(async () => {
@@ -43,6 +44,7 @@ describe('page fetch dependencies and reservation cache refresh (synthetic HTTP 
         vi.useRealTimers(); vi.unstubAllGlobals();
     });
     const countGets = (fragment: string) => http.get.mock.calls.filter(([path]) => String(path).includes(fragment)).length;
+    const agree = async () => { await act(async () => (container.querySelector('[aria-label="숙박일 안내"] input') as HTMLInputElement).click()); };
     const click = async (text: string) => {
         const button = Array.from(container.querySelectorAll('button')).find(node => node.textContent?.trim() === text);
         expect(button, text).toBeTruthy(); await act(async () => button!.click());
@@ -98,11 +100,68 @@ describe('page fetch dependencies and reservation cache refresh (synthetic HTTP 
     it('refreshes cached day details after a successful reservation write', async () => {
         await act(async () => root.render(<ReservationStats onBack={vi.fn()} />));
         await click('Synthetic day 19');
+        expect(container.textContent).toContain('2월 19일');
         expect(countGets('/reservations/days/')).toBe(1);
-        dayData = { date: '2026-02-19', confirmedCount: 1, reservations: [] };
-        await click('예약하기');
+        dayData = { bookable: true, date: '2026-02-19', confirmedCount: 1, reservations: [] };
+        await agree(); await click('예약하기');
         expect(http.post).toHaveBeenCalledOnce();
         expect(countGets('/reservations/days/')).toBe(2);
-        expect(container.textContent).toContain('1명/2');
+        expect(container.textContent).toContain('확정 1/2');
     });
+    it('does not report a rejected booking as success or issue a refresh', async () => {
+        http.post.mockResolvedValue(result({ results: [{ date: '2026-02-19', success: false, message: '접수 전입니다.' }] }));
+        await act(async () => root.render(<ReservationStats onBack={vi.fn()} />));
+        await agree(); await click('예약하기');
+        expect(alert).toHaveBeenCalledWith('접수 전입니다.');
+        expect(countGets('/reservations/days/')).toBe(1);
+    });
+
+    it('coalesces repeated clicks while a booking is pending', async () => {
+        let finish!: (value: unknown) => void;
+        http.post.mockImplementation(() => new Promise(resolve => { finish = resolve; }));
+        await act(async () => root.render(<ReservationStats onBack={vi.fn()} />));
+        await agree();
+        const button = Array.from(container.querySelectorAll('button')).find(node => node.textContent?.trim() === '예약하기')!;
+        await act(async () => { button.click(); button.click(); });
+        expect(http.post).toHaveBeenCalledOnce();
+        expect((button as HTMLButtonElement).disabled).toBe(true);
+        await act(async () => finish(result({ results: [{ date: '2026-02-19', success: true, status: 'CONFIRMED' }] })));
+    });
+
+    it('shows a processing notice for a delayed request and closes it after the response', async () => {
+        vi.useFakeTimers({ toFake: ['Date', 'setTimeout', 'clearTimeout'] });
+        vi.setSystemTime(new Date('2026-02-19T09:00:00Z'));
+        let finish!: (value: unknown) => void;
+        http.post.mockImplementation(() => new Promise(resolve => { finish = resolve; }));
+        await act(async () => root.render(<ReservationStats onBack={vi.fn()} />));
+        await agree(); await click('예약하기');
+        await act(async () => vi.advanceTimersByTime(800));
+        expect(container.textContent).toContain('예약 요청을 처리하고 있어요');
+        expect(http.post).toHaveBeenCalledOnce();
+        await act(async () => finish(result({ results: [{ date: '2026-02-19', success: true, status: 'CONFIRMED' }] })));
+        expect(container.textContent).not.toContain('예약 요청을 처리하고 있어요');
+    });
+
+    it('toggles the personal overlay by pointer and keyboard without refetching the active member month', async () => {
+        await act(async () => root.render(<ReservationStats onBack={vi.fn()} />));
+        const toggle = container.querySelector('[role="switch"]') as HTMLElement;
+        expect(toggle.getAttribute('aria-checked')).toBe('false');
+        await act(async () => toggle.click());
+        expect(toggle.getAttribute('aria-checked')).toBe('true');
+        await act(async () => toggle.click());
+        expect(toggle.getAttribute('aria-checked')).toBe('false');
+        await act(async () => toggle.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true })));
+        expect(toggle.getAttribute('aria-checked')).toBe('true');
+        expect(countGets('/calendar?')).toBe(1);
+    });
+
+    it('disables unopened dates and displays the server opening time', async () => {
+        dayData = { bookable: false, opensAt: '2026-02-20T18:00:00', unavailableReason: 'NOT_OPEN_YET', confirmedCount: 0, reservations: [] };
+        await act(async () => root.render(<ReservationStats onBack={vi.fn()} />));
+        expect(container.textContent).toContain('2026.02.20 18:00 오픈 예정');
+        const button = Array.from(container.querySelectorAll('button')).find(node => node.textContent?.trim() === '예약 오픈 전') as HTMLButtonElement;
+        expect(button.disabled).toBe(true);
+        await act(async()=>button.click()); expect(http.post).not.toHaveBeenCalled();
+    });
+
 });

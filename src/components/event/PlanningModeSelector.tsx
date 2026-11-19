@@ -38,7 +38,7 @@ export function PlanningModeSelector({ value, onChange }: PlanningModeSelectorPr
                     return (
                         <label
                             key={option.value}
-                            className={`cursor-pointer border p-4 transition-colors ${selected
+                            className={`cursor-pointer rounded-2xl border-2 p-4 focus-within:ring-2 focus-within:ring-[#162660]/30 transition-colors ${selected
                                 ? 'border-[#162660] bg-blue-50'
                                 : 'border-zinc-200 bg-white hover:border-zinc-300'}`}
                         >
@@ -59,7 +59,7 @@ export function PlanningModeSelector({ value, onChange }: PlanningModeSelectorPr
                     );
                 })}
             </div>
-            <div className="flex items-start gap-2 border border-zinc-200 bg-zinc-50 px-3 py-2.5 text-xs leading-5 text-zinc-600">
+            <div className="flex items-start gap-2 rounded-2xl border border-zinc-200 bg-zinc-50 px-3 py-2.5 text-xs leading-5 text-zinc-600">
                 <Info className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#162660]" aria-hidden="true" />
                 <p>{PLANNING_MODE_COPY[value].details}</p>
             </div>

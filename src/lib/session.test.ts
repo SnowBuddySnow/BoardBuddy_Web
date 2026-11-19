@@ -6,6 +6,9 @@ import {
     saveAuthTokens,
     saveTempAccessToken,
     SESSION_KEYS,
+    saveAccountId,
+    clearAuthSession,
+    initializePhoneConsentPreference,
 } from './session';
 
 class MemoryStorage implements Storage {
@@ -64,5 +67,24 @@ describe('authentication session transitions', () => {
         expect(getRefreshToken()).toBe('refresh');
         expect(localStorage.getItem(SESSION_KEYS.tempAccessToken)).toBeNull();
         expect(getSignupToken()).toBe('access');
+    });
+    it('does not transfer an optional phone opt-in to another account', () => {
+        saveAccountId(1); localStorage.setItem('phone_sharing_consent_preference', 'always');
+        saveAccountId(2); expect(localStorage.getItem('phone_sharing_consent_preference')).toBeNull();
+    });
+    it('preserves a bound preference for the same person', () => {
+        saveAccountId(1); localStorage.setItem('phone_sharing_consent_preference', 'always');
+        saveAccountId(1); initializePhoneConsentPreference();
+        expect(localStorage.getItem('phone_sharing_consent_preference')).toBe('always');
+    });
+    it('clears phone opt-in and its owner on logout', () => {
+        saveAccountId(1); localStorage.setItem('phone_sharing_consent_preference', 'always');
+        clearAuthSession(); expect(localStorage.getItem('phone_sharing_consent_preference')).toBeNull();
+        expect(localStorage.getItem('phone_sharing_consent_account_id')).toBeNull();
+    });
+    it('requires fresh choice for a legacy preference without a trustworthy owner', () => {
+        localStorage.setItem('accountId', '1'); localStorage.setItem('phone_sharing_consent_preference', 'always');
+        initializePhoneConsentPreference(); expect(localStorage.getItem('phone_sharing_consent_preference')).toBeNull();
+        expect(localStorage.getItem('phone_sharing_consent_account_id')).toBe('1');
     });
 });

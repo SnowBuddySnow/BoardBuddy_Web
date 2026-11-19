@@ -18,6 +18,8 @@ describe('real App management navigation with synthetic HTTP', () => {
     let permissions: string[];
     let events: unknown[];
     let hasCrew: boolean;
+    let crewOpen: boolean;
+    let crewRole: string;
     const listeners = new Set<(event: { matches: boolean }) => void>();
     beforeEach(() => {
         vi.resetAllMocks();
@@ -28,7 +30,7 @@ describe('real App management navigation with synthetic HTTP', () => {
         localStorage.setItem('autoLogin', 'true');
         localStorage.setItem('dev_operating_mode', 'OFF_SEASON');
         window.history.replaceState(null, '', '/?view=home');
-        width = 390; permissions = ['PARTIES_MANAGE', 'EVENT_GROUPS_VIEW']; events = []; hasCrew = false; listeners.clear();
+        width = 390; permissions = ['PARTIES_MANAGE', 'EVENT_GROUPS_VIEW']; events = []; hasCrew = false; crewOpen = true; crewRole = 'CREW_MEMBER'; listeners.clear();
         vi.stubGlobal('matchMedia', () => ({
             matches: width >= 1024,
             addEventListener: (_type: string, listener: (event: { matches: boolean }) => void) => listeners.add(listener),
@@ -36,10 +38,14 @@ describe('real App management navigation with synthetic HTTP', () => {
         }));
         http.get.mockImplementation(async (path: string) => {
             let data: unknown;
-            if (path === '/users/me') data = { userId: 7, userType: 'REGULAR', name: 'Synthetic host', role: 'CREW_MEMBER', crew: hasCrew ? { crewId: 1 } : null };
-            else if (path === '/crews/1') data = { crewId: 1, crewName: 'Synthetic crew', seasonHouseActive: true };
+            if (path === '/users/me') data = { userId: 7, userType: 'REGULAR', name: 'Synthetic host', role: crewRole, crew: hasCrew ? { crewId: 1, crewName:'Synthetic crew' } : null };
+            else if (path === '/crews/1/season-stays/pass') data = {registered:true,name:'5박권',startsOn:'2026-10-01',endsOn:'2027-05-31',totalNights:5,usedNights:1,reservedNights:1,remainingNights:3};
+            else if (path === '/crews/1') data = { crewId: 1, crew_id: 1, crewName: 'Synthetic crew', name: 'Synthetic crew', member_count: 2, seasonHouseActive: crewOpen };
+            else if (path === '/schools' || path === '/crews/1/invitations' || path === '/crews/discover') data = [];
+            else if (path.startsWith('/crews/1/calendar')) data = { calendar: [], my_reservations: [] };
             else if (path === '/operations/context') data = { permissions };
             else if (path === '/admin/crews') data = { developerAccess: false, crews: [], schools: [] };
+            else if (path === '/users/me/reservations') data = [];
             else if (path === '/events') data = events;
             else if (path === '/crews/my-applications' || path === '/dashboard/events') data = [];
             else if (path === '/notifications') data = { items: [], unreadCount: 0 };
@@ -58,7 +64,7 @@ describe('real App management navigation with synthetic HTTP', () => {
     const render = async () => { await act(async () => { root.render(<App />); }); await settle(); };
     const settle = async () => { await act(async () => { await vi.dynamicImportSettled(); }); };
     const click = async (label: string) => {
-        const button = Array.from(container.querySelectorAll('button')).find(node => node.textContent?.trim() === label);
+        const button = Array.from(container.querySelectorAll('button')).find(node => node.textContent?.trim() === label || node.querySelector('h2')?.textContent === label);
         expect(button, label).toBeTruthy(); await act(async () => button!.click()); await settle();
     };
     const resize = async (nextWidth: number) => {
@@ -67,10 +73,100 @@ describe('real App management navigation with synthetic HTTP', () => {
         await settle();
     };
 
-    it.each([320, 390, 768, 1023, 1024])('blocks every direct reservation view at %spx, including a season override', async viewport => {
-        width = viewport; hasCrew = true;
+    it('keeps only core destinations below and opens profile from the top right', async () => {
+        hasCrew = true; permissions = []; localStorage.setItem('dev_operating_mode', 'BOTH');
+        await render();
+        const nav = container.querySelector('nav[aria-label="하단 메뉴"]')!;
+        expect(Array.from(nav.querySelectorAll('button')).map(button => button.textContent?.trim())).toEqual(['홈', '시즌방', '이벤트', '내 크루']);
+        expect(nav.querySelector('[aria-label="내 정보"]')).toBeNull();
+        const toolbar = container.querySelector('header[aria-label="계정 메뉴"]')!;
+        expect(toolbar.querySelector('[aria-label="알림"]')).toBeTruthy();
+        await act(async () => (toolbar.querySelector('[aria-label="내 정보"]') as HTMLButtonElement).click());
+        await settle(); expect(container.textContent).toContain('내 정보');
+    });
+
+    it('lets a new member skip crew search and resume it from Home without applying', async () => {
+        permissions=[];window.history.replaceState(null,'','/?view=search_crew');
+        await render();await click('다음에 하기');
+        expect(new URL(window.location.href).searchParams.get('view')).toBe('home');
+        await click('크루 가입하기크루를 찾아 PIN으로 가입 신청하세요.');
+        expect(container.querySelector('h1')?.textContent).toBe('크루 검색');
+        expect(hasCrew).toBe(false);
+    });
+
+    it('returns crew search to Home when opened from Home', async () => {
+        permissions = []; await render();
+        await click('크루 가입하기크루를 찾아 PIN으로 가입 신청하세요.');
+        await act(async () => (container.querySelector('[aria-label="뒤로 가기"]') as HTMLButtonElement).click());
+        await settle();
+        expect(new URL(window.location.href).searchParams.get('view')).toBe('home');
+        expect(container.textContent).not.toContain('어떻게 함께할까요?');
+    });
+
+    it('returns crew search to onboarding when opened from the onboarding guide', async () => {
+        permissions = []; window.history.replaceState(null, '', '/?view=onboarding');
+        await render(); await click('내 크루 찾기');
+        await act(async () => (container.querySelector('[aria-label="뒤로 가기"]') as HTMLButtonElement).click());
+        await settle();
+        expect(new URL(window.location.href).searchParams.get('view')).toBe('onboarding');
+        expect(container.textContent).toContain('어떻게 함께할까요?');
+    });
+
+    it('returns a nested crew search to crew creation and then to its Home entry', async () => {
+        permissions = []; await render();
+        await click('크루 만들기새 크루를 등록하고 운영을 시작하세요.');
+        await click('기존 크루 먼저 찾기');
+        await act(async () => (container.querySelector('[aria-label="뒤로 가기"]') as HTMLButtonElement).click());
+        await settle();
+        expect(container.querySelector('h1')?.textContent).toBe('크루 만들기');
+        const back = container.querySelector('header button') as HTMLButtonElement;
+        await act(async () => back.click()); await settle();
+        expect(new URL(window.location.href).searchParams.get('view')).toBe('home');
+    });
+
+    it.each(['CREW_CAPTAIN', 'CREW_MANAGER'])('lets %s open settings directly from Home and My Crew without a manager-list request', async role => {
+        hasCrew = true; crewRole = role; permissions = ['CREW_MEMBERS_MANAGE'];
+        localStorage.setItem('boardbuddy_captain_onboarding_v1:7', 'completed');
+        await render();
+        expect(container.querySelector('h2')?.textContent).toBe('Synthetic crew와 함께하는 오늘');
+        expect(Array.from(container.querySelectorAll('span')).some(node => node.textContent?.trim() === 'Synthetic crew')).toBe(false);
+        await click('크루 설정');
+        expect(container.querySelector('h1')?.textContent).toBe('크루 설정');
+        await act(async () => (container.querySelector('[aria-label="뒤로 가기"]') as HTMLButtonElement).click()); await settle();
+        expect(container.querySelector('h2')?.textContent).toBe('Synthetic crew와 함께하는 오늘');
+        await click('내 크루');
+        expect(container.querySelector('h1')?.textContent).toBe('내 크루');
+        await click('크루 설정');
+        expect(container.querySelector('h1')?.textContent).toBe('크루 설정');
+        expect(http.get).not.toHaveBeenCalledWith('/crews/1/managers');
+    });
+
+    it.each(['CREW_CAPTAIN', 'CREW_MANAGER'])('offers desktop crew settings in Operations Center for %s', async role => {
+        width = 1440; hasCrew = true; crewRole = role; permissions = ['CREW_MEMBERS_MANAGE'];
+        localStorage.setItem('boardbuddy_captain_onboarding_v1:7', 'completed');
+        window.history.replaceState(null, '', '/?view=operations_center');
+        await render(); await click('크루 설정');
+        expect(container.querySelector('h1')?.textContent).toBe('크루 설정');
+        await act(async () => (container.querySelector('[aria-label="뒤로 가기"]') as HTMLButtonElement).click()); await settle();
+        expect(container.querySelector('h1')?.textContent).toBe('운영 센터');
+    });
+
+    it('hides member settings and rejects direct settings entry before loading the form', async () => {
+        hasCrew = true; permissions = [];
+        await render();
+        expect(Array.from(container.querySelectorAll('button')).some(node=>node.textContent?.trim()==='크루 설정')).toBe(false);
+        await act(async () => root.unmount()); root = createRoot(container);
+        window.history.replaceState(null, '', '/?view=crew_settings');
+        await render();
+        expect(container.querySelector('[role="alert"]')?.textContent).toContain('크루장과 임원진만');
+        expect(http.get).not.toHaveBeenCalledWith('/schools');
+        expect(container.querySelector('input')).toBeNull();
+    });
+
+    it.each([320, 390, 768, 1023, 1024])('blocks member reservation views for a closed crew at %spx', async viewport => {
+        width = viewport; hasCrew = true; crewOpen = false;
         localStorage.setItem('dev_operating_mode', 'BOTH');
-        for (const view of ['reservation', 'guest_reservation', 'stats', 'my_reservations']) {
+        for (const view of ['reservation', 'stats', 'my_reservations']) {
             window.history.replaceState(null, '', `/?view=${view}`);
             await render();
             expect(container.textContent).toContain('시즌방 예약을 이용할 수 없습니다');
@@ -80,54 +176,63 @@ describe('real App management navigation with synthetic HTTP', () => {
         expect(http.get.mock.calls.some(([path]) => /reservations|calendar|usage-statistics/.test(path))).toBe(false);
     });
 
-    it('does not expose or fetch the personal reservation calendar', async () => {
+    it('uses authoritative pass balances and lazily opens the shared personal calendar', async () => {
+        hasCrew = true; permissions = []; localStorage.setItem('dev_operating_mode','BOTH');
         window.history.replaceState(null, '', '/?view=my_page');
         await render();
-        expect(container.textContent).toContain('My Page');
-        expect(container.textContent).not.toContain('나의 달력');
-        expect(container.textContent).not.toContain('시즌방 이용 횟수');
+        expect(container.textContent).toContain('내 정보');
+        expect(container.textContent).toContain('나의 달력');
+        expect(container.textContent).toContain('추가 예약 3박 가능');
         expect(http.get).not.toHaveBeenCalledWith('/users/me/reservations');
+        expect(http.get.mock.calls.some(([path])=>path.includes('/calendar/my?'))).toBe(false);
+        await click('나의 달력');
+        expect(http.get.mock.calls.some(([path])=>path.includes('/calendar/my?'))).toBe(true);
     });
 
-    it('hides reservation management even from a desktop host granted the legacy permission', async () => {
-        width = 1024; hasCrew = true; permissions.push('RESERVATIONS_MANAGE');
+    it('shows reservation management to a permitted desktop host during the season', async () => {
+        width = 1024; hasCrew = true; permissions.push('RESERVATIONS_MANAGE'); localStorage.setItem('dev_operating_mode', 'BOTH');
         window.history.replaceState(null, '', '/?view=operations_center');
         await render();
         expect(container.textContent).toContain('이벤트 관리');
-        expect(container.textContent).not.toContain('예약 관리');
-        expect(Array.from(container.querySelectorAll('button')).some(button => /예약|나의 달력/.test(button.textContent || ''))).toBe(false);
+        expect(container.textContent).toContain('예약 관리');
+
     });
 
-    it('keeps the desktop-required explanation visible after a mobile host clicks Operations Center', async () => {
+    it('allows an authorized mobile host into Operations Center and event management', async () => {
         await render(); await click('운영 센터');
-        expect(container.textContent).toContain('데스크톱에서 관리해 주세요');
-        expect(container.textContent).toContain('1024px');
-        await settle();
-        expect(container.textContent).toContain('데스크톱에서 관리해 주세요');
-        expect(http.get).not.toHaveBeenCalledWith('/dashboard/events');
-        await click('홈으로 돌아가기');
-        expect(container.textContent).toContain('시작하기');
-    });
-
-    it('preserves the desktop-only gate for a direct dashboard entry at 1023px', async () => {
-        width = 1023; window.history.replaceState(null, '', '/?view=dashboard_parties');
-        await render();
-        expect(container.textContent).toContain('데스크톱에서 관리해 주세요');
-        expect(http.get).not.toHaveBeenCalledWith('/dashboard/events');
-    });
-
-    it('allows existing authorized desktop management and survives both breakpoint crossings', async () => {
-        width = 1024; await render();
         expect(container.querySelector('h1')?.textContent).toBe('운영 센터');
-        await resize(390);
-        expect(container.textContent).toContain('데스크톱에서 관리해 주세요');
-        await resize(1024);
-        expect(container.querySelector('h1')?.textContent).toBe('운영 센터');
+        await click('이벤트 관리');
+        expect(http.get).toHaveBeenCalledWith('/dashboard/events');
         expect(container.textContent).not.toContain('데스크톱에서 관리해 주세요');
     });
 
-    it('does not grant a non-host dashboard access', async () => {
-        width = 1024; permissions = []; window.history.replaceState(null, '', '/?view=operations_center');
+    it('allows direct dashboard entry on narrow screens', async () => {
+        width = 320; window.history.replaceState(null, '', '/?view=dashboard_parties');
+        await render();
+        expect(http.get).toHaveBeenCalledWith('/dashboard/events');
+        expect(container.textContent).toContain('관리 중인 이벤트가 없습니다');
+    });
+
+    it('keeps authorized management available across both breakpoint crossings', async () => {
+        width = 1024; await render();
+        expect(container.querySelector('h1')?.textContent).toBe('운영 센터');
+        await resize(390);
+        expect(container.querySelector('h1')?.textContent).toBe('운영 센터');
+        await resize(1024);
+        expect(container.querySelector('h1')?.textContent).toBe('운영 센터');
+    });
+
+    it('supports calendar-only access in explicit off-season mode', async () => {
+        hasCrew = true; permissions = [];
+        await render(); await click('시즌방');
+        expect(container.querySelector('h1')?.textContent).toContain('시즌방 캘린더');
+        expect(container.textContent).toContain('현재는 이용 현황만 조회');
+        expect(http.get.mock.calls.some(([path]) => path.startsWith('/crews/1/calendar'))).toBe(true);
+        expect(http.get.mock.calls.some(([path]) => /reservations|usage-statistics/.test(path))).toBe(false);
+    });
+
+    it.each([390, 1024])('does not grant a non-host dashboard access at %spx', async viewport => {
+        width = viewport; permissions = []; window.history.replaceState(null, '', '/?view=operations_center');
         await render();
         expect(container.textContent).toContain('관리 권한이 없습니다');
         expect(http.get).not.toHaveBeenCalledWith('/dashboard/events');

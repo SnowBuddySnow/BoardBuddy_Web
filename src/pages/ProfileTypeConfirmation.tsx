@@ -206,7 +206,7 @@ export default function ProfileTypeConfirmation({ onSuccess }: ProfileTypeConfir
                                 maxLength={50}
                                 placeholder={currentName ? `현재 프로필: ${currentName}` : '김보드'}
                                 autoComplete="name"
-                                className="mt-2 h-12 w-full rounded-2xl border border-zinc-200 px-4 text-sm outline-none focus:border-[#162660] focus:ring-2 focus:ring-[#162660]/10"
+                                className="mt-2 h-12 w-full rounded-2xl border border-zinc-200 px-4 text-base outline-none focus:border-[#162660] focus:ring-2 focus:ring-[#162660]/10"
                             />
                             <p className="ml-1 mt-2 text-xs leading-5 text-zinc-500">
                                 크루 운영진이 재학 명단과 대조합니다. 닉네임이 아닌 실명을 다시 입력해주세요.
@@ -224,7 +224,7 @@ export default function ProfileTypeConfirmation({ onSuccess }: ProfileTypeConfir
                                 onFocus={() => setShowSchools(true)}
                                 placeholder="학교명을 검색하세요"
                                 autoComplete="off"
-                                className="mt-2 h-12 w-full rounded-2xl border border-zinc-200 px-4 text-sm outline-none focus:border-[#162660] focus:ring-2 focus:ring-[#162660]/10"
+                                className="mt-2 h-12 w-full rounded-2xl border border-zinc-200 px-4 text-base outline-none focus:border-[#162660] focus:ring-2 focus:ring-[#162660]/10"
                             />
                             {showSchools && filteredSchools.length > 0 && (
                                 <div className="absolute left-0 right-0 top-[78px] z-20 max-h-48 overflow-y-auto rounded-2xl border border-zinc-200 bg-white p-1 shadow-xl">
@@ -252,10 +252,10 @@ export default function ProfileTypeConfirmation({ onSuccess }: ProfileTypeConfir
                                 onChange={event => setStudentNumber(event.target.value)}
                                 maxLength={30}
                                 placeholder="20260001"
-                                className="mt-2 h-12 w-full rounded-2xl border border-zinc-200 px-4 text-sm outline-none focus:border-[#162660] focus:ring-2 focus:ring-[#162660]/10"
+                                className="mt-2 h-12 w-full rounded-2xl border border-zinc-200 px-4 text-base outline-none focus:border-[#162660] focus:ring-2 focus:ring-[#162660]/10"
                             />
                             <p className="ml-1 mt-2 text-xs leading-5 text-zinc-500">
-                                동일한 실명을 사용하는 학생을 구분하기 위해 필수입니다.
+                                동명이인 구분을 위해 필수입니다.
                             </p>
                         </div>
                         <div className="sm:col-span-2">
@@ -270,7 +270,7 @@ export default function ProfileTypeConfirmation({ onSuccess }: ProfileTypeConfir
                                 maxLength={150}
                                 placeholder="아직 사용할 수 없습니다"
                                 autoComplete="email"
-                                className="mt-2 h-12 w-full rounded-2xl border border-zinc-200 px-4 text-sm outline-none focus:border-[#162660] focus:ring-2 focus:ring-[#162660]/10 disabled:bg-zinc-100 disabled:text-zinc-400"
+                                className="mt-2 h-12 w-full rounded-2xl border border-zinc-200 px-4 text-base outline-none focus:border-[#162660] focus:ring-2 focus:ring-[#162660]/10 disabled:bg-zinc-100 disabled:text-zinc-400"
                             />
                             <p className="ml-1 mt-2 text-xs leading-5 text-zinc-500">
                                 학교 이메일 인증은 아직 준비 중입니다. 이메일 없이 학생 프로필을 등록할 수 있습니다.

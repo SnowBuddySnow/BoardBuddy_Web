@@ -83,8 +83,8 @@ export default function DashboardGroups({
     return (
         <div className="flex-1 flex flex-col h-full bg-[#FAF8F3] overflow-hidden">
             {/* Top Desktop Navigation */}
-            <header className="bg-white border-b border-zinc-100 px-6 py-4 flex items-center justify-between">
-                <div className="flex items-center gap-6">
+            <header className="bg-white border-b border-zinc-100 px-4 py-4 flex flex-wrap items-center justify-between gap-3 sm:px-6">
+                <div className="flex min-w-0 flex-wrap items-center gap-3 sm:gap-6">
                     <div className="flex h-8 items-center gap-2"><img src={boardBuddyLogo} alt="BoardBuddy" className="h-8 w-32 object-cover object-center" /><span className="text-sm font-black text-[#162660]">운영</span></div>
                     <span className="h-4 w-px bg-zinc-200"></span>
                     <div className="flex gap-1 bg-zinc-100 p-1 rounded-full text-xs font-bold shrink-0">
@@ -101,7 +101,7 @@ export default function DashboardGroups({
                         </button>
                     </div>
                 </div>
-                <div className="flex items-center gap-3">
+                <div className="flex flex-wrap items-center gap-3">
                     {canCreate && (
                         <Button
                             variant="primary"
@@ -116,7 +116,7 @@ export default function DashboardGroups({
                         onClick={onBackToHomeClick}
                         className="rounded-full border-zinc-200 text-zinc-600 hover:bg-zinc-50 font-medium h-10 py-0"
                     >
-                        모바일 홈으로
+                        홈으로
                     </Button>
                 </div>
             </header>
@@ -169,7 +169,7 @@ export default function DashboardGroups({
                             <p className="text-sm">그룹 정보를 가져오는 중...</p>
                         </div>
                     ) : groups.length === 0 ? (
-                        <div className="bg-white border border-zinc-100 rounded-3xl p-16 text-center text-zinc-400 shadow-sm flex flex-col items-center justify-center max-w-2xl mx-auto mt-12">
+                        <div className="bg-white border border-zinc-100 rounded-3xl p-6 sm:p-16 text-center text-zinc-400 shadow-sm flex flex-col items-center justify-center max-w-2xl mx-auto mt-12">
                             <ShieldAlert className="w-16 h-16 stroke-[1.2] mb-3 text-zinc-300" />
                             <h2 className="text-xl font-bold text-zinc-900 mb-1">가입된 그룹이 없습니다</h2>
                             <p className="text-sm max-w-md mt-1 mb-6">

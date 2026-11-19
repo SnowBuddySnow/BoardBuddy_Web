@@ -33,8 +33,24 @@ export const setAutoLoginPreference = (enabled: boolean) => {
 
 export const getAccountId = () => localStorage.getItem(SESSION_KEYS.accountId);
 
+const PHONE_CONSENT_OWNER = 'phone_sharing_consent_account_id';
+
+/** Unbound legacy opt-ins cannot be attributed to the current person. Ask again once. */
+export const initializePhoneConsentPreference = () => {
+    const accountId = getAccountId();
+    if (!accountId || localStorage.getItem(PHONE_CONSENT_OWNER) !== accountId) {
+        localStorage.removeItem('phone_sharing_consent_preference');
+    }
+    if (accountId) localStorage.setItem(PHONE_CONSENT_OWNER, accountId);
+    else localStorage.removeItem(PHONE_CONSENT_OWNER);
+};
+
 export const saveAccountId = (accountId: number | string) => {
+    if (getAccountId() !== String(accountId)) {
+        localStorage.removeItem('phone_sharing_consent_preference');
+    }
     localStorage.setItem(SESSION_KEYS.accountId, String(accountId));
+    initializePhoneConsentPreference();
 };
 
 export const clearAccountId = () => {
@@ -73,6 +89,8 @@ export const clearAuthSession = () => {
     localStorage.removeItem(SESSION_KEYS.tempAccessToken);
     localStorage.removeItem(SESSION_KEYS.autoLogin);
     localStorage.removeItem(SESSION_KEYS.accountId);
+    localStorage.removeItem('phone_sharing_consent_preference');
+    localStorage.removeItem(PHONE_CONSENT_OWNER);
 };
 
 export const getDevCrewOverride = () => localStorage.getItem(SESSION_KEYS.devCrewOverride);

@@ -18,7 +18,7 @@ export function EventFamilyLinks({ event, onOpen }: { event: Event; onOpen?: (id
     return <nav aria-label="연결된 모임" className="my-4 space-y-2 rounded-2xl border border-blue-100 bg-blue-50 p-4">
         <h2 className="text-sm font-bold text-[#162660]">연결된 모임</h2>
         {failed && <p className="text-xs text-red-700">연결된 모임을 불러오지 못했습니다. 화면을 다시 열어 주세요.</p>}
-        {family?.parent && <button className="block text-left text-sm font-semibold text-[#162660] underline" onClick={() => onOpen?.(family.parent!.id)}>부모 모임: {family.parent.title}</button>}
+        {family?.parent && <button className="block text-left text-sm font-semibold text-[#162660] underline" onClick={() => onOpen?.(family.parent!.id)}>전체 모임: {family.parent.title}</button>}
         {family?.children.filter(child => child.id !== event.id).map(child => <button key={child.id}
             className="block text-left text-sm text-[#162660] underline" onClick={() => onOpen?.(child.id)}>
             {child.title}{child.currentUserStatus && ` · ${participantStatusLabel[child.currentUserStatus]}`}

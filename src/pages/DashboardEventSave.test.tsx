@@ -44,7 +44,7 @@ describe('rendered create/edit forms with real save orchestration and synthetic 
         });
         http.post.mockResolvedValue(result(event));
         http.patch.mockResolvedValue(result(event));
-        http.put.mockResolvedValue(result());
+        http.put.mockResolvedValue(result(event));
         container = document.createElement('div'); document.body.append(container);
         root = createRoot(container);
     });
@@ -90,28 +90,16 @@ describe('rendered create/edit forms with real save orchestration and synthetic 
         expect(http.put).not.toHaveBeenCalled(); expect(success).toHaveBeenCalledOnce();
     });
 
-    it('creates once, blocks double submits, and never overlaps consent/refund writes', async () => {
-        const pending = deferred(); http.put.mockReturnValueOnce(pending.promise).mockResolvedValue(result());
+    it('creates once, blocks double submits, and navigates only after the atomic commit', async () => {
+        const pending = deferred(); http.post.mockReturnValueOnce(pending.promise);
         await renderNew(); await submit(); await submit();
         expect(http.post).toHaveBeenCalledTimes(1);
-        expect(http.put).toHaveBeenCalledTimes(1);
-        expect(http.put).toHaveBeenCalledWith('/dashboard/events/1/consents', expect.objectContaining({ consentWindowMinutes: 10, items: [expect.objectContaining({ title: 'TEST ONLY' })] }));
-        expect(success).not.toHaveBeenCalled();
-        await act(async () => pending.resolve(result()));
-        expect(http.put).toHaveBeenLastCalledWith('/dashboard/events/1/refund-policy', { refundPolicy: 'TEST ONLY no payment' });
-        expect(success).toHaveBeenCalledWith(1);
-    });
-
-    it.each(['consents', 'refund'] as const)('retains input and draft identity after %s failure; retry edits that draft', async stage => {
-        if (stage === 'consents') http.put.mockRejectedValueOnce(httpError(500));
-        else http.put.mockResolvedValueOnce(result()).mockRejectedValueOnce(httpError(500));
-        await renderNew(); await submit();
-        expect(container.querySelector('[role="alert"]')?.textContent).toContain('초안 #1');
-        expect(container.querySelector<HTMLInputElement>('input[placeholder="항목 제목"]')!.value).toBe('TEST ONLY');
-        expect(success).not.toHaveBeenCalled();
-        await submit();
-        expect(http.post).toHaveBeenCalledTimes(1);
-        expect(http.patch).toHaveBeenCalledWith('/dashboard/events/1', expect.objectContaining({ title: event.title }));
+        expect(http.post).toHaveBeenCalledWith('/dashboard/events/configurations', expect.objectContaining({
+            consents: expect.objectContaining({ items: [expect.objectContaining({ title: 'TEST ONLY' })] }),
+            refundPolicy: 'TEST ONLY no payment',
+        }));
+        expect(http.put).not.toHaveBeenCalled(); expect(success).not.toHaveBeenCalled();
+        await act(async () => pending.resolve(result(event)));
         expect(success).toHaveBeenCalledWith(1);
     });
 
@@ -119,7 +107,7 @@ describe('rendered create/edit forms with real save orchestration and synthetic 
         http.post.mockRejectedValue(httpError(status));
         await renderNew(); await submit(); await submit();
         expect(http.post).toHaveBeenCalledTimes(1);
-        expect(button('DRAFT 저장하기').disabled).toBe(true);
+        expect(button('준비 중으로 저장하기').disabled).toBe(true);
         expect(container.querySelector('[role="alert"]')?.textContent).toContain('목록에서');
         await act(async () => button('목록에서 확인').click());
         expect(back).toHaveBeenCalledOnce(); expect(success).not.toHaveBeenCalled();
@@ -129,7 +117,7 @@ describe('rendered create/edit forms with real save orchestration and synthetic 
         http.post.mockRejectedValueOnce(httpError(400)).mockResolvedValue(result(event));
         await renderNew(); await submit();
         expect(container.querySelector('[role="alert"]')?.textContent).toContain('Synthetic failure');
-        expect(button('DRAFT 저장하기').disabled).toBe(false);
+        expect(button('준비 중으로 저장하기').disabled).toBe(false);
         await submit(); expect(success).toHaveBeenCalledWith(1);
     });
 
@@ -141,7 +129,7 @@ describe('rendered create/edit forms with real save orchestration and synthetic 
             await act(async () => root.render(<DashboardEventEdit eventId={1} onBack={back} onSuccess={success} />));
             expect(container.querySelectorAll<HTMLInputElement>('input[type="datetime-local"]')[1].value).toBe('2026-10-25T18:00');
             await submit();
-            expect(http.patch).toHaveBeenCalledWith('/dashboard/events/1', expect.objectContaining({ startsAt: '2026-10-25T18:00:00' }));
+            expect(http.put).toHaveBeenCalledWith('/dashboard/events/1/configuration', expect.objectContaining({ event: expect.objectContaining({ startsAt: '2026-10-25T18:00:00' }) }));
         },
     );
 
@@ -172,14 +160,14 @@ describe('rendered create/edit forms with real save orchestration and synthetic 
         expect(back).not.toHaveBeenCalled(); expect(http.patch).not.toHaveBeenCalled();
     });
 
-    it('edits through sequential writes and navigates only after all three commits', async () => {
-        const pending = deferred(); http.put.mockReturnValueOnce(pending.promise).mockResolvedValue(result());
+    it('edits with one atomic request and navigates only after commit', async () => {
+        const pending = deferred(); http.put.mockReturnValueOnce(pending.promise);
         await act(async () => root.render(<DashboardEventEdit eventId={1} onBack={back} onSuccess={success} />));
         await submit(); await submit();
-        expect(http.patch).toHaveBeenCalledTimes(1); expect(http.post).not.toHaveBeenCalled();
+        expect(http.patch).not.toHaveBeenCalled(); expect(http.post).not.toHaveBeenCalled();
         expect(http.put).toHaveBeenCalledTimes(1); expect(success).not.toHaveBeenCalled();
-        await act(async () => pending.resolve(result()));
-        expect(http.put).toHaveBeenLastCalledWith('/dashboard/events/1/refund-policy', { refundPolicy: 'TEST ONLY no payment' });
+        expect(http.put).toHaveBeenCalledWith('/dashboard/events/1/configuration', expect.objectContaining({ refundPolicy: 'TEST ONLY no payment' }));
+        await act(async () => pending.resolve(result(event)));
         expect(success).toHaveBeenCalledOnce();
     });
 

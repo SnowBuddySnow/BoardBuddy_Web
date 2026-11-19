@@ -12,7 +12,7 @@ vi.mock('./devMocks', async importOriginal => ({
     isDevMode: () => false,
 }));
 
-import { cancelEvent, getEventConsents, getEventPaymentInfo, joinEvent,
+import { cancelEvent, getEventConsents, getEventPaymentInfo, joinEvent, listEventsPage,
     saveEventConsentDraft, saveEventConsentDraftKeepalive, submitEventConsents } from './event';
 
 const responses: ConsentResponseInput[] = [{
@@ -22,6 +22,18 @@ const responses: ConsentResponseInput[] = [{
 describe('event HTTP contracts (not a browser or live-server acceptance test)', () => {
     beforeEach(() => { vi.resetAllMocks(); });
     afterEach(() => { vi.unstubAllGlobals(); vi.unstubAllEnvs(); });
+
+    it('preserves bounded page metadata and separates dashboard access', async () => {
+        const page = { items: [], page: 2, size: 20, hasNext: true };
+        http.get.mockResolvedValue({ data: { data: page } });
+        expect(await listEventsPage(2, 20, true)).toEqual(page);
+        expect(http.get).toHaveBeenCalledWith('/dashboard/events/page', { params: { page: 2, size: 20 } });
+    });
+
+    it.each([[-1, 30], [0, 101], [0, 0], [0.5, 20]])('rejects invalid page %s size %s', async (page, size) => {
+        await expect(listEventsPage(page, size)).rejects.toThrow('Invalid event page');
+        expect(http.get).not.toHaveBeenCalled();
+    });
 
     it.each<ParticipantStatus>(['CONSENT_PENDING', 'PENDING', 'JOINED'])(
         'preserves server join state %s instead of assuming automatic acceptance', async status => {

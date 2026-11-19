@@ -5,7 +5,7 @@ import { getNotifications } from '../services/notifications';
 interface Props {
     onClick: () => void;
     refreshKey?: number;
-    variant?: 'sidebar' | 'bottom-navigation';
+    variant?: 'sidebar' | 'bottom-navigation' | 'icon';
 }
 
 export default function NotificationBell({ onClick, refreshKey = 0, variant = 'sidebar' }: Props) {
@@ -19,6 +19,11 @@ export default function NotificationBell({ onClick, refreshKey = 0, variant = 's
         const timer = window.setInterval(refresh, 60_000);
         return () => window.clearInterval(timer);
     }, [refresh, refreshKey]);
+
+    if (variant === 'icon') return <button type="button" onClick={onClick} aria-label={`알림${count ? `, 읽지 않음 ${count}개` : ''}`} className="relative flex h-10 w-10 items-center justify-center rounded-full text-[#162660] hover:bg-blue-50">
+        <Bell className="h-5 w-5" />
+        {count > 0 && <span className="absolute right-0 top-0 min-w-4 rounded-full bg-rose-500 px-1 text-[9px] font-bold text-white">{count > 99 ? '99+' : count}</span>}
+    </button>;
 
     if (variant === 'bottom-navigation') {
         return (

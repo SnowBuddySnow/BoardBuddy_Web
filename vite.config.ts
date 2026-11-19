@@ -27,6 +27,8 @@ export default defineConfig(({ mode }) => {
     : packageMetadata.version
 
   return {
+    // Keep independently configured browser fixtures from invalidating one another.
+    cacheDir: env.BOARDBUDDY_VITE_CACHE_DIR || 'node_modules/.vite',
     plugins: [react()],
     define: {
       __APP_VERSION__: JSON.stringify(buildVersion),
