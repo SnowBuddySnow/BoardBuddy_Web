@@ -262,7 +262,13 @@ try {
         await page.getByText("추가 예약 6박 가능", { exact: true }).waitFor();
         await fits();
         // The batch reservation entry point also fails closed until consent.
-        await page.getByRole("button", { name: "예약 취소", exact: true }).click();
+        await Promise.all([
+          page.waitForResponse((res) => res.url().includes("/season-stays/pass")),
+          page.waitForResponse((res) => res.url().includes("/reservations/days/2026-11-13")),
+          page.waitForResponse((res) => res.url().includes("/calendar/my")),
+          page.getByRole("button", { name: "예약 취소", exact: true }).click(),
+        ]);
+        await page.getByText("예약 내역이 없습니다.", { exact: true }).waitFor();
         await page.goto(`${origin}/?view=reservation`);
         await day(13).click();
         const batchApply = page.getByRole("button", { name: "1일 예약 신청", exact: true });
