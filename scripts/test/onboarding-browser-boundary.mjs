@@ -109,6 +109,13 @@ export const installOnboardingBoundary = async (page, { origin = 'http://127.0.0
             if(state.role!=='CREW_CAPTAIN')return respond(null,403); const id=Number(path.split('/').at(-2)); const item=state.bookings.find(item=>item.reservationId===id)??state.seedReservation; item.stayCompleted=request.postDataJSON().completed; return respond(null);
         }
         if (path === '/crews/my-applications') return respond(state.applied ? [{ application_id: 71, crew_id: 17, crew_name: '가상 크루', status: state.approved ? 'APPROVED' : 'PENDING' }] : []);
+        if (path === '/dashboard/organizer-groups' && method === 'POST') {
+            const body = request.postDataJSON();
+            const group = { id: state.groups.length + 1, name: body.name, createdAt: '2026-11-13T00:00:00', myRole: 'EVENT_GROUP_OWNER', memberCount: 1, crewCount: 1 };
+            state.groups.unshift(group);
+            state.writes.push({ path, body });
+            return respond(group, 201);
+        }
         if (path === '/dashboard/organizer-groups') return respond(state.groups);
         if (path === '/dashboard/organizer-group-invitations') return respond([]);
         if (path === '/crews/17/invitations' && method === 'POST') {
