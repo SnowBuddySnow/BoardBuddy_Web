@@ -1,7 +1,8 @@
 import { ReservationLayout, ReservationSummary } from '../components/reservation/ReservationLayout';
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Keyboard, ScanLine } from 'lucide-react';
 import { SEASON_HOUSE_RESERVATIONS_ENABLED } from '../constants/operatingSeason';
+import { createVideoQrDecoder, isVideoFrameReady, type VideoQrDecoder } from '../lib/qrCodeScanner';
 
 interface GuestAccessProps {
     onBack: () => void;
@@ -37,21 +38,35 @@ export default function GuestAccess({ onBack, onSeasonHouseAccess, onEventAccess
     const [code, setCode] = useState('');
     const [error, setError] = useState('');
     const [scanning, setScanning] = useState(false);
+    const [startingScanner, setStartingScanner] = useState(false);
     const videoRef = useRef<HTMLVideoElement>(null);
     const streamRef = useRef<MediaStream | null>(null);
     const scanTimerRef = useRef<number | null>(null);
+    const scannerSessionRef = useRef(0);
 
-    const stopScanner = () => {
-        if (scanTimerRef.current) window.clearTimeout(scanTimerRef.current);
-        scanTimerRef.current = null;
+    const stopScanner = useCallback(() => {
+        scannerSessionRef.current += 1;
+        if (scanTimerRef.current !== null) {
+            window.clearTimeout(scanTimerRef.current);
+            scanTimerRef.current = null;
+        }
         streamRef.current?.getTracks().forEach(track => track.stop());
         streamRef.current = null;
+        if (videoRef.current) {
+            videoRef.current.srcObject = null;
+        }
+        setStartingScanner(false);
         setScanning(false);
-    };
+    }, []);
 
     useEffect(() => () => {
-        if (scanTimerRef.current) window.clearTimeout(scanTimerRef.current);
-        if (streamRef.current) streamRef.current.getTracks().forEach(track => track.stop());
+        scannerSessionRef.current += 1;
+        if (scanTimerRef.current !== null) {
+            window.clearTimeout(scanTimerRef.current);
+            scanTimerRef.current = null;
+        }
+        streamRef.current?.getTracks().forEach(track => track.stop());
+        streamRef.current = null;
     }, []);
 
     const openDestination = (rawCode: string) => {
@@ -80,34 +95,103 @@ export default function GuestAccess({ onBack, onSeasonHouseAccess, onEventAccess
         }
     };
 
+    const openDestinationRef = useRef(openDestination);
+    openDestinationRef.current = openDestination;
+
+    useEffect(() => {
+        if (!scanning) return;
+        const video = videoRef.current;
+        const stream = streamRef.current;
+        if (!video || !stream) {
+            stopScanner();
+            return;
+        }
+
+        const sessionId = scannerSessionRef.current;
+        let cancelled = false;
+        const isActive = () => !cancelled && scannerSessionRef.current === sessionId && Boolean(streamRef.current);
+
+        const runScanner = async () => {
+            try {
+                video.srcObject = stream;
+                await video.play();
+            } catch {
+                if (!isActive()) return;
+                stopScanner();
+                setError('카메라를 열 수 없습니다. 카메라 권한을 확인하거나 초대 코드를 입력해 주세요.');
+                return;
+            }
+            if (!isActive()) return;
+
+            let decodeFrame: VideoQrDecoder;
+            try {
+                decodeFrame = await createVideoQrDecoder();
+            } catch {
+                if (!isActive()) return;
+                stopScanner();
+                setError('이 기기에서는 카메라 스캔을 지원하지 않습니다. 아래에 초대 코드를 입력해 주세요.');
+                return;
+            }
+            if (!isActive()) return;
+
+            const scan = async () => {
+                if (!isActive() || !videoRef.current) return;
+                const currentVideo = videoRef.current;
+                if (isVideoFrameReady(currentVideo)) {
+                    try {
+                        const rawValue = await decodeFrame(currentVideo);
+                        if (!isActive()) return;
+                        if (rawValue) {
+                            setCode(rawValue);
+                            stopScanner();
+                            openDestinationRef.current(rawValue);
+                            return;
+                        }
+                    } catch {
+                        // Ignore transient frame decode errors and retry on the next tick.
+                    }
+                }
+                if (!isActive()) return;
+                scanTimerRef.current = window.setTimeout(() => {
+                    void scan();
+                }, 350);
+            };
+
+            void scan();
+        };
+
+        void runScanner();
+
+        return () => {
+            cancelled = true;
+            if (scanTimerRef.current !== null) {
+                window.clearTimeout(scanTimerRef.current);
+                scanTimerRef.current = null;
+            }
+            video.srcObject = null;
+        };
+    }, [scanning, stopScanner]);
+
     const startScanner = async () => {
+        if (startingScanner || scanning) return;
         setError('');
-        const Detector = (window as unknown as { BarcodeDetector?: new (options: { formats: string[] }) => { detect: (source: HTMLVideoElement) => Promise<Array<{ rawValue?: string }>> } }).BarcodeDetector;
-        if (!Detector || !navigator.mediaDevices?.getUserMedia) {
+        if (!navigator.mediaDevices?.getUserMedia) {
             setError('이 기기에서는 카메라 스캔을 지원하지 않습니다. 아래에 초대 코드를 입력해 주세요.');
             return;
         }
+        const sessionId = ++scannerSessionRef.current;
+        setStartingScanner(true);
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
-            streamRef.current = stream;
-            if (videoRef.current) {
-                videoRef.current.srcObject = stream;
-                await videoRef.current.play();
+            if (scannerSessionRef.current !== sessionId) {
+                stream.getTracks().forEach(track => track.stop());
+                return;
             }
+            streamRef.current = stream;
+            setStartingScanner(false);
             setScanning(true);
-            const detector = new Detector({ formats: ['qr_code'] });
-            const scan = async () => {
-                if (!videoRef.current || !streamRef.current) return;
-                const result = await detector.detect(videoRef.current);
-                if (result[0]?.rawValue) {
-                    setCode(result[0].rawValue);
-                    openDestination(result[0].rawValue);
-                    return;
-                }
-                scanTimerRef.current = window.setTimeout(scan, 350);
-            };
-            void scan();
         } catch {
+            if (scannerSessionRef.current !== sessionId) return;
             stopScanner();
             setError('카메라를 열 수 없습니다. 카메라 권한을 확인하거나 초대 코드를 입력해 주세요.');
         }
@@ -120,14 +204,14 @@ export default function GuestAccess({ onBack, onSeasonHouseAccess, onEventAccess
                 <ReservationSummary title="게스트 초대 확인" description="게스트 전용 코드·링크로 신청할 곳을 확인하세요." />
 
                 <section className="reservation-panel mb-5">
-                    {scanning ? <video ref={videoRef} muted playsInline className="aspect-[4/3] w-full rounded-2xl bg-zinc-900 object-cover" /> : (
-                        <button onClick={startScanner} className="flex aspect-[4/3] w-full flex-col items-center justify-center rounded-2xl border-2 border-dashed border-blue-200 bg-blue-50 text-[#162660] hover:bg-blue-100">
+                    {scanning ? <video ref={videoRef} muted playsInline autoPlay aria-label="초대 QR 코드 카메라 미리보기" className="aspect-[4/3] w-full rounded-2xl bg-zinc-900 object-cover" /> : (
+                        <button type="button" disabled={startingScanner} onClick={startScanner} className="flex aspect-[4/3] w-full flex-col items-center justify-center rounded-2xl border-2 border-dashed border-blue-200 bg-blue-50 text-[#162660] hover:bg-blue-100 disabled:opacity-60">
                             <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white shadow-sm"><ScanLine className="h-7 w-7" /></span>
                             <span className="mt-3 text-sm font-black">QR 코드 스캔</span>
-                            <span className="mt-1 text-xs text-zinc-500">카메라로 초대장을 비춰 주세요</span>
+                            <span className="mt-1 text-xs text-zinc-500">{startingScanner ? '카메라를 준비하고 있어요' : '카메라로 초대장을 비춰 주세요'}</span>
                         </button>
                     )}
-                    {scanning && <button onClick={stopScanner} className="mt-3 w-full rounded-xl bg-zinc-100 py-3 text-sm font-bold text-zinc-700">스캔 그만두기</button>}
+                    {scanning && <button type="button" onClick={stopScanner} className="mt-3 w-full rounded-xl bg-zinc-100 py-3 text-sm font-bold text-zinc-700">스캔 그만두기</button>}
                 </section>
 
                 <div className="lg:col-start-2">
