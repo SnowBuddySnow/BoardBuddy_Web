@@ -32,6 +32,7 @@ export interface CrewDetail {
     isCapacityLimited: boolean;
     kusbfAssociated?: boolean;
     seasonHouseActive?: boolean;
+    seasonHouseGuestEnabled?: boolean;
     teachingEnabled?: boolean;
     reservationWindowDays?: number | null;
     reservationAlwaysOpen?: boolean;
@@ -149,6 +150,7 @@ export interface ReservationDaysPrepareRequest {
 // --- End New Reservation DTOs ---
 
 export interface CrewInfoUpdateRequest {
+    seasonHouseGuestEnabled?: boolean;
     teachingEnabled?: boolean;
     reservationWindowDays?: number | null;
     reservationAlwaysOpen?: boolean;

@@ -11,6 +11,7 @@ interface GuestAccessProps {
     seasonAvailable: boolean;
     offSeasonAvailable: boolean;
     seasonBookingCrewId: number | null;
+    seasonGuestEnabled?: boolean;
 }
 
 type GuestDestination = { type: 'SEASON'; id: number } | { type: 'EVENT'; id: number };
@@ -34,7 +35,7 @@ const parseGuestCode = (rawCode: string): GuestDestination | null => {
     return null;
 };
 
-export default function GuestAccess({ onBack, onSeasonHouseAccess, onEventAccess, seasonAvailable, offSeasonAvailable, seasonBookingCrewId }: GuestAccessProps) {
+export default function GuestAccess({ onBack, onSeasonHouseAccess, onEventAccess, seasonAvailable, offSeasonAvailable, seasonBookingCrewId, seasonGuestEnabled = true }: GuestAccessProps) {
     const [code, setCode] = useState('');
     const [error, setError] = useState('');
     const [scanning, setScanning] = useState(false);
@@ -83,6 +84,10 @@ export default function GuestAccess({ onBack, onSeasonHouseAccess, onEventAccess
             }
             if (seasonBookingCrewId !== destination.id) {
                 setError('시즌방 게스트 예약은 해당 크루의 부원이 대신 접수할 수 있어요. 크루 운영진이나 초대한 부원에게 요청해 주세요.');
+                return;
+            }
+            if (!seasonGuestEnabled) {
+                setError('이 크루는 현재 시즌방 게스트 예약을 사용하지 않습니다.');
                 return;
             }
             onSeasonHouseAccess(destination.id);
