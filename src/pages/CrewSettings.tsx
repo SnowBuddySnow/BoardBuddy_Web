@@ -12,10 +12,11 @@ import { CrewInvitationPanel } from '../components/onboarding/CrewInvitationPane
 
 interface CrewSettingsProps {
     onBack: () => void;
+    onSaved?: () => void;
     onCaptainGuideClick?: () => void;
 }
 
-export default function CrewSettings({ onBack, onCaptainGuideClick }: CrewSettingsProps) {
+export default function CrewSettings({ onBack, onSaved, onCaptainGuideClick }: CrewSettingsProps) {
     const DAY_TO_KR: { [key: string]: string } = {
         'MONDAY': '월요일',
         'TUESDAY': '화요일',
@@ -39,6 +40,7 @@ export default function CrewSettings({ onBack, onCaptainGuideClick }: CrewSettin
     const [requestCopied, setRequestCopied] = useState(false);
     const [formData, setFormData] = useState<CrewInfoUpdateRequest>({
         crewName: '',
+        seasonHouseGuestEnabled: true,
         teachingEnabled: false,
         reservationOpenDay: 'FRIDAY',
         reservationOpenTime: '18:00',
@@ -94,6 +96,7 @@ export default function CrewSettings({ onBack, onCaptainGuideClick }: CrewSettin
                         reservationOpenOffsetDays: info.reservationOpenOffsetDays ?? 3, // Default fallback
                         dailyCapacity: info.dailyCapacity,
                         isCapacityLimited: info.isCapacityLimited,
+                        seasonHouseGuestEnabled: info.seasonHouseGuestEnabled !== false,
                         teachingEnabled: info.teachingEnabled === true,
                         reservationPeriodLimitDays: info.reservationPeriodLimitDays ?? 7,
                         reservationWindowDays: info.reservationWindowDays ?? ((info.reservationPeriodLimitDays ?? 7) > 0 ? (info.reservationPeriodLimitDays ?? 7) + 1 : 0),
@@ -151,6 +154,7 @@ export default function CrewSettings({ onBack, onCaptainGuideClick }: CrewSettin
         try {
             console.log("Saving Crew Settings:", { crewId, payload });
             await updateCrew(crewId, payload);
+            onSaved?.();
             alert("설정이 저장되었습니다.");
             onBack();
         } catch (error) {
@@ -485,6 +489,23 @@ export default function CrewSettings({ onBack, onCaptainGuideClick }: CrewSettin
                                 }`}
                         />
                     </div>
+
+                    <section className="reservation-panel">
+                        <label className="flex cursor-pointer items-start justify-between gap-3">
+                            <span className="min-w-0 flex-1">
+                                <span className="block text-sm font-bold text-zinc-900">시즌방 게스트 예약 사용</span>
+                                <span className="mt-1 block text-xs leading-5 text-zinc-500">
+                                    켜면 크루 부원이 시즌방 게스트 예약을 대신 접수할 수 있어요. 기본값은 켜짐입니다.
+                                </span>
+                            </span>
+                            <input
+                                type="checkbox"
+                                checked={formData.seasonHouseGuestEnabled !== false}
+                                onChange={(event) => handleChange('seasonHouseGuestEnabled', event.target.checked)}
+                                className="mt-1 h-5 w-5 rounded border-zinc-300 text-[#162660] focus:ring-[#162660]"
+                            />
+                        </label>
+                    </section>
 
                     {/* Save Button */}
                     </>}
