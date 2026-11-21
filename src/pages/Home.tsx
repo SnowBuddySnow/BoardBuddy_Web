@@ -407,14 +407,18 @@ export default function Home({
 
                         <section>
                             <h2 className="mb-2.5 text-xs font-black text-zinc-500">바로가기</h2>
-                            <div className={`grid gap-2 ${seasonHouseAvailable ? 'grid-cols-3' : 'grid-cols-1'}`}>
+                            {(() => {
+                                const seasonHouseGuestAvailable = seasonHouseAvailable && crewDetail?.seasonHouseGuestEnabled !== false;
+                                const gridColumns = !seasonHouseAvailable ? 'grid-cols-1' : seasonHouseGuestAvailable ? 'grid-cols-3' : 'grid-cols-2';
+                                return (
+                            <div className={`grid gap-2 ${gridColumns}`}>
                                 {seasonHouseAvailable && (
                                     <button type="button" onClick={onCalendarClick} className="flex min-h-20 flex-col items-center justify-center gap-2 rounded-2xl border border-zinc-200 bg-white px-2 py-3 text-xs font-black text-zinc-700 transition-colors hover:bg-zinc-50">
                                         <CalendarIcon className="h-5 w-5 text-[#162660]" />
                                         <span>내 예약</span>
                                     </button>
                                 )}
-                                {seasonHouseAvailable && (
+                                {seasonHouseGuestAvailable && (
                                     <button type="button" onClick={onGuestReservationClick} className="flex min-h-20 flex-col items-center justify-center gap-2 rounded-2xl border border-zinc-200 bg-white px-2 py-3 text-xs font-black text-zinc-700 transition-colors hover:bg-zinc-50">
                                         <UserPlus className="h-5 w-5 text-[#162660]" />
                                         <span>게스트 예약</span>
@@ -425,6 +429,8 @@ export default function Home({
                                     <span>내 크루</span>
                                 </button>
                             </div>
+                                );
+                            })()}
                         </section>
 
 
