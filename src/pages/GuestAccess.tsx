@@ -2,7 +2,16 @@ import { ReservationLayout, ReservationSummary } from '../components/reservation
 import { useEffect, useRef, useState } from 'react';
 import { Keyboard, ScanLine } from 'lucide-react';
 import { SEASON_HOUSE_RESERVATIONS_ENABLED } from '../constants/operatingSeason';
-import { clearGuestInvitationFromUrl, formatGuestCode, parseGuestCode } from '../lib/guestInvitation';
+import {
+    clearGuestInvitationFromUrl,
+    extractGuestInvitationToken,
+    formatGuestCode,
+    formatGuestTokenCode,
+    parseGuestCode,
+    type GuestDestination,
+} from '../lib/guestInvitation';
+import { redeemGuestInvitation } from '../services/guestInvitation';
+import { getApiErrorMessage, getApiErrorStatus } from '../lib/apiError';
 import { GuestInviteShareCard } from '../components/guest/GuestInviteShareCard';
 
 interface GuestAccessProps {
@@ -33,10 +42,12 @@ export default function GuestAccess({
     const [code, setCode] = useState('');
     const [error, setError] = useState('');
     const [scanning, setScanning] = useState(false);
+    const [redeeming, setRedeeming] = useState(false);
     const videoRef = useRef<HTMLVideoElement>(null);
     const streamRef = useRef<MediaStream | null>(null);
     const scanTimerRef = useRef<number | null>(null);
     const consumedInitialCodeRef = useRef<string | null>(null);
+    const redeemingRef = useRef(false);
 
     const stopScanner = () => {
         if (scanTimerRef.current) window.clearTimeout(scanTimerRef.current);
@@ -51,13 +62,7 @@ export default function GuestAccess({
         if (streamRef.current) streamRef.current.getTracks().forEach(track => track.stop());
     }, []);
 
-    const openDestination = (rawCode: string) => {
-        const destination = parseGuestCode(rawCode);
-        if (!destination) {
-            setError('초대 코드를 확인해 주세요. 예: BB:SEASON:12 또는 BB:EVENT:34');
-            return;
-        }
-        stopScanner();
+    const openParsedDestination = (destination: GuestDestination) => {
         if (destination.type === 'SEASON') {
             if (!SEASON_HOUSE_RESERVATIONS_ENABLED || !seasonAvailable) {
                 setError('현재는 오프시즌 운영 중이라 시즌방 게스트 예약을 이용할 수 없습니다.');
@@ -81,6 +86,44 @@ export default function GuestAccess({
         }
     };
 
+    const openDestination = async (rawCode: string) => {
+        setError('');
+        const token = extractGuestInvitationToken(rawCode);
+        if (token) {
+            if (redeemingRef.current) return;
+            stopScanner();
+            redeemingRef.current = true;
+            setRedeeming(true);
+            try {
+                const redeemed = await redeemGuestInvitation(token);
+                const id = redeemed.targetType === 'SEASON' ? redeemed.crewId : redeemed.eventId;
+                if (!id) {
+                    setError('초대 링크 정보를 확인하지 못했습니다.');
+                    return;
+                }
+                openParsedDestination({ type: redeemed.targetType, id });
+            } catch (requestError) {
+                if (getApiErrorStatus(requestError) === 401) {
+                    setError('로그인한 뒤 게스트 초대 링크를 다시 열어 주세요.');
+                } else {
+                    setError(getApiErrorMessage(requestError) || '게스트 초대 링크가 유효하지 않거나 이미 사용되었습니다.');
+                }
+            } finally {
+                redeemingRef.current = false;
+                setRedeeming(false);
+            }
+            return;
+        }
+
+        const destination = parseGuestCode(rawCode);
+        if (!destination) {
+            setError('초대 코드를 확인해 주세요. 예: BB:SEASON:12 또는 BB:EVENT:34');
+            return;
+        }
+        stopScanner();
+        openParsedDestination(destination);
+    };
+
     const openDestinationRef = useRef(openDestination);
     openDestinationRef.current = openDestination;
     const onInitialCodeConsumedRef = useRef(onInitialCodeConsumed);
@@ -89,12 +132,17 @@ export default function GuestAccess({
     useEffect(() => {
         if (!initialCode || !accessResolved || consumedInitialCodeRef.current === initialCode) return;
         consumedInitialCodeRef.current = initialCode;
-        const parsed = parseGuestCode(initialCode);
-        const normalizedCode = parsed ? formatGuestCode(parsed) : initialCode;
+        const token = extractGuestInvitationToken(initialCode);
+        const parsed = token ? null : parseGuestCode(initialCode);
+        const normalizedCode = token
+            ? formatGuestTokenCode(token)
+            : parsed
+                ? formatGuestCode(parsed)
+                : initialCode;
         setCode(normalizedCode);
         clearGuestInvitationFromUrl();
         onInitialCodeConsumedRef.current?.();
-        openDestinationRef.current(normalizedCode);
+        void openDestinationRef.current(normalizedCode);
     }, [accessResolved, initialCode]);
 
     const startScanner = async () => {
@@ -151,8 +199,8 @@ export default function GuestAccess({
                     <div className="my-5 flex items-center gap-3 text-xs font-bold text-zinc-400"><span className="h-px flex-1 bg-zinc-200" />또는 코드 입력<span className="h-px flex-1 bg-zinc-200" /></div>
                     <label htmlFor="guest-invite-code" className="block text-sm font-black text-zinc-800">초대 코드</label>
                     <div className="mt-2 flex gap-2">
-                        <div className="flex min-w-0 flex-1 items-center gap-2 rounded-2xl border border-zinc-200 bg-white px-3 focus-within:border-[#162660]"><Keyboard aria-hidden="true" className="h-4 w-4 shrink-0 text-zinc-400" /><input id="guest-invite-code" value={code} onChange={event => setCode(event.target.value)} onKeyDown={event => event.key === 'Enter' && openDestination(code)} placeholder={seasonAvailable ? 'BB:SEASON:12' : 'BB:EVENT:34'} className="min-w-0 flex-1 py-3 text-sm font-semibold outline-none" /></div>
-                        <button onClick={() => openDestination(code)} className="reservation-primary px-4 text-sm">확인</button>
+                        <div className="flex min-w-0 flex-1 items-center gap-2 rounded-2xl border border-zinc-200 bg-white px-3 focus-within:border-[#162660]"><Keyboard aria-hidden="true" className="h-4 w-4 shrink-0 text-zinc-400" /><input id="guest-invite-code" value={code} onChange={event => setCode(event.target.value)} onKeyDown={event => event.key === 'Enter' && void openDestination(code)} placeholder={seasonAvailable ? 'BB:SEASON:12' : 'BB:EVENT:34'} className="min-w-0 flex-1 py-3 text-sm font-semibold outline-none" /></div>
+                        <button type="button" disabled={redeeming} onClick={() => void openDestination(code)} className="reservation-primary px-4 text-sm disabled:opacity-60">{redeeming ? '확인 중' : '확인'}</button>
                     </div>
                     {error && <p className="mt-3 rounded-xl bg-red-50 px-3 py-2 text-xs font-bold leading-5 text-red-600">{error}</p>}
                     <p className="mt-3 text-xs leading-5 text-zinc-400">

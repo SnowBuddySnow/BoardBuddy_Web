@@ -26,7 +26,7 @@ import type { CrewDetail as CrewDetailData } from './types/api';
 import { isCrewCaptainRole } from './constants/crewRole';
 import { isEventRegistrationAvailable } from './lib/eventDateTime';
 import { captureCrewInvitation, CREW_INVITATION_CHANGED, getCrewInvitationIntent } from './lib/onboardingIntent';
-import { formatGuestCode, readGuestInvitationFromSearch } from './lib/guestInvitation';
+import { readGuestInvitationEntryFromUrl } from './lib/guestInvitation';
 
 // Keep login/home immediate; fetch heavier screens only when their existing route is entered.
 const Reservation = lazy(() => import('./pages/Reservation'));
@@ -93,10 +93,7 @@ function App() {
     return readNavigation().eventId;
   });
   const [guestCrewId, setGuestCrewId] = useState<number | null>(null);
-  const [pendingGuestCode, setPendingGuestCode] = useState<string | null>(() => {
-    const destination = readGuestInvitationFromSearch();
-    return destination ? formatGuestCode(destination) : null;
-  });
+  const [pendingGuestCode, setPendingGuestCode] = useState<string | null>(() => readGuestInvitationEntryFromUrl());
   const [isGuestEventApplication, setIsGuestEventApplication] = useState(false);
   const [selectedGroupId, setSelectedGroupId] = useState<number | null>(() => readNavigation().groupId);
   const [organizerInviteToken, setOrganizerInviteToken] = useState(
@@ -110,8 +107,7 @@ function App() {
     setSelectedGroupId(route.groupId);
     setOrganizerInviteToken(route.organizerInviteToken);
     if (route.view === 'guest_access') {
-      const destination = readGuestInvitationFromSearch();
-      setPendingGuestCode(destination ? formatGuestCode(destination) : null);
+      setPendingGuestCode(readGuestInvitationEntryFromUrl());
     }
   });
   const [notificationRefreshKey, setNotificationRefreshKey] = useState(0);
