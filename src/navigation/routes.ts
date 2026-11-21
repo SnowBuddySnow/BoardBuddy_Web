@@ -1,6 +1,7 @@
 import { getAccessToken, getSignupToken, hasDevOverride, isAutoLoginEnabled } from '../lib/session';
 import { isSchoolEmailActivationEntry } from '../lib/schoolEmailActivation';
 import { captureCrewInvitation } from '../lib/onboardingIntent';
+import { readGuestInvitationEntryFromUrl } from '../lib/guestInvitation';
 
 export type Tab = 'home' | 'events' | 'calendar' | 'edit' | 'heart' | 'user' | 'season';
 export type View =
@@ -148,6 +149,7 @@ export const getInitialView = (): View => {
   const hasOrganizerInvite = params.has('organizerInvite');
   if (hasOrganizerInvite) return 'organizer_invite';
   if (isSchoolEmailActivationEntry(requestedView, params.get('token'))) return 'student_verification';
+  if (readGuestInvitationEntryFromUrl(window.location.href)) return 'guest_access';
   if (getAccessToken() && (requestedView === 'login' || requestedView === 'user_info')) return 'home';
   if (requestedView && publicEntryViews.has(requestedView)) return requestedView;
   if (requestedView && getAccessToken()) return requestedView;
