@@ -32,6 +32,7 @@ export interface CrewDetail {
     isCapacityLimited: boolean;
     kusbfAssociated?: boolean;
     seasonHouseActive?: boolean;
+    seasonHouseGuestEnabled?: boolean;
     teachingEnabled?: boolean;
     reservationWindowDays?: number | null;
     reservationAlwaysOpen?: boolean;

@@ -2,6 +2,8 @@ import { ReservationLayout, ReservationSummary } from '../components/reservation
 import { useEffect, useRef, useState } from 'react';
 import { Keyboard, ScanLine } from 'lucide-react';
 import { SEASON_HOUSE_RESERVATIONS_ENABLED } from '../constants/operatingSeason';
+import { clearGuestInvitationFromUrl, formatGuestCode, parseGuestCode } from '../lib/guestInvitation';
+import { GuestInviteShareCard } from '../components/guest/GuestInviteShareCard';
 
 interface GuestAccessProps {
     onBack: () => void;
@@ -10,36 +12,31 @@ interface GuestAccessProps {
     seasonAvailable: boolean;
     offSeasonAvailable: boolean;
     seasonBookingCrewId: number | null;
+    seasonGuestEnabled?: boolean;
+    initialCode?: string | null;
+    accessResolved?: boolean;
+    onInitialCodeConsumed?: () => void;
 }
 
-type GuestDestination = { type: 'SEASON'; id: number } | { type: 'EVENT'; id: number };
-
-const parseGuestCode = (rawCode: string): GuestDestination | null => {
-    const code = rawCode.trim();
-    const match = code.match(/^(?:BB:)?(SEASON|EVENT)[:\-/](\d+)$/i);
-    if (match) {
-        const id = Number(match[2]);
-        return Number.isSafeInteger(id) && id > 0 ? { type: match[1].toUpperCase() as 'SEASON' | 'EVENT', id } : null;
-    }
-
-    try {
-        const url = new URL(code);
-        const type = url.searchParams.get('type')?.toUpperCase();
-        const id = Number(url.searchParams.get('id'));
-        if ((type === 'SEASON' || type === 'EVENT') && Number.isSafeInteger(id) && id > 0) return { type, id };
-    } catch {
-        // The code may be a short code rather than a URL.
-    }
-    return null;
-};
-
-export default function GuestAccess({ onBack, onSeasonHouseAccess, onEventAccess, seasonAvailable, offSeasonAvailable, seasonBookingCrewId }: GuestAccessProps) {
+export default function GuestAccess({
+    onBack,
+    onSeasonHouseAccess,
+    onEventAccess,
+    seasonAvailable,
+    offSeasonAvailable,
+    seasonBookingCrewId,
+    seasonGuestEnabled = true,
+    initialCode = null,
+    accessResolved = true,
+    onInitialCodeConsumed,
+}: GuestAccessProps) {
     const [code, setCode] = useState('');
     const [error, setError] = useState('');
     const [scanning, setScanning] = useState(false);
     const videoRef = useRef<HTMLVideoElement>(null);
     const streamRef = useRef<MediaStream | null>(null);
     const scanTimerRef = useRef<number | null>(null);
+    const consumedInitialCodeRef = useRef<string | null>(null);
 
     const stopScanner = () => {
         if (scanTimerRef.current) window.clearTimeout(scanTimerRef.current);
@@ -70,6 +67,10 @@ export default function GuestAccess({ onBack, onSeasonHouseAccess, onEventAccess
                 setError('시즌방 게스트 예약은 해당 크루의 부원이 대신 접수할 수 있어요. 크루 운영진이나 초대한 부원에게 요청해 주세요.');
                 return;
             }
+            if (!seasonGuestEnabled) {
+                setError('이 크루는 현재 시즌방 게스트 예약을 사용하지 않습니다.');
+                return;
+            }
             onSeasonHouseAccess(destination.id);
         } else {
             if (!offSeasonAvailable) {
@@ -79,6 +80,22 @@ export default function GuestAccess({ onBack, onSeasonHouseAccess, onEventAccess
             onEventAccess(destination.id);
         }
     };
+
+    const openDestinationRef = useRef(openDestination);
+    openDestinationRef.current = openDestination;
+    const onInitialCodeConsumedRef = useRef(onInitialCodeConsumed);
+    onInitialCodeConsumedRef.current = onInitialCodeConsumed;
+
+    useEffect(() => {
+        if (!initialCode || !accessResolved || consumedInitialCodeRef.current === initialCode) return;
+        consumedInitialCodeRef.current = initialCode;
+        const parsed = parseGuestCode(initialCode);
+        const normalizedCode = parsed ? formatGuestCode(parsed) : initialCode;
+        setCode(normalizedCode);
+        clearGuestInvitationFromUrl();
+        onInitialCodeConsumedRef.current?.();
+        openDestinationRef.current(normalizedCode);
+    }, [accessResolved, initialCode]);
 
     const startScanner = async () => {
         setError('');
@@ -146,6 +163,15 @@ export default function GuestAccess({ onBack, onSeasonHouseAccess, onEventAccess
                     <p className="mt-3 text-xs leading-5 text-zinc-500">확인 후 신청 화면으로 이동해요.<br />예약·참여는 신청을 마쳐야 접수돼요.</p>
                     {seasonAvailable && <p className="mt-2 text-xs leading-5 text-zinc-500">시즌방 게스트 예약은 해당 크루의 부원이<br />로그인한 뒤 대신 접수해요.</p>}
                     <p className="mt-2 text-xs leading-5 text-zinc-500">크루 가입 초대 링크는 이곳에 입력하지 않고,<br />전달받은 링크를 직접 열어 주세요.</p>
+                    {seasonAvailable && seasonBookingCrewId != null && seasonGuestEnabled && (
+                        <GuestInviteShareCard
+                            compact
+                            className="mt-5"
+                            destination={{ type: 'SEASON', id: seasonBookingCrewId }}
+                            title="내 크루 시즌방 게스트 초대 보내기"
+                            description="링크를 열면 QR 코드를 스캔한 것과 동일하게 연결돼요."
+                        />
+                    )}
                 </div>
             </main>
         </ReservationLayout>

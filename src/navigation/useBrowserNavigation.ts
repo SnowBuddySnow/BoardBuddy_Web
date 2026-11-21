@@ -33,6 +33,10 @@ export const navigationUrl = (route: NavigationState): string => {
     if (route.view === 'organizer_invite' && route.organizerInviteToken) url.searchParams.set('organizerInvite', route.organizerInviteToken);
     else url.searchParams.delete('organizerInvite');
     if (route.view !== 'student_verification') url.searchParams.delete('token');
+    if (route.view !== 'guest_access') {
+        url.searchParams.delete('type');
+        url.searchParams.delete('id');
+    }
     return url.pathname + url.search + url.hash;
 };
 

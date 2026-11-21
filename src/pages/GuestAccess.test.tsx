@@ -46,4 +46,65 @@ describe('guest-code entry with crew season availability disabled', () => {
         else { expect(season).not.toHaveBeenCalled(); expect(container.textContent).toContain('크루 운영진이나 초대한 부원에게 요청'); }
         expect(event).not.toHaveBeenCalled();
     });
+
+    it('auto-opens a guest invitation link once crew access resolves, with the same effect as scanning QR', async () => {
+        window.history.replaceState(null, '', '/?view=guest_access&type=SEASON&id=12');
+        const consumed = vi.fn();
+
+        // While crew access is still loading, wait before evaluating the link.
+        await act(async () => root.render(
+            <GuestAccess
+                onBack={vi.fn()}
+                onSeasonHouseAccess={season}
+                onEventAccess={event}
+                seasonAvailable
+                offSeasonAvailable
+                seasonBookingCrewId={null}
+                initialCode="BB:SEASON:12"
+                accessResolved={false}
+                onInitialCodeConsumed={consumed}
+            />
+        ));
+        expect(season).not.toHaveBeenCalled();
+        expect(consumed).not.toHaveBeenCalled();
+
+        // Once crew access finishes loading for crew 12, opens season house guest booking and cleans URL params.
+        await act(async () => root.render(
+            <GuestAccess
+                onBack={vi.fn()}
+                onSeasonHouseAccess={season}
+                onEventAccess={event}
+                seasonAvailable
+                offSeasonAvailable
+                seasonBookingCrewId={12}
+                initialCode="BB:SEASON:12"
+                accessResolved
+                onInitialCodeConsumed={consumed}
+            />
+        ));
+        expect(season).toHaveBeenCalledExactlyOnceWith(12);
+        expect(consumed).toHaveBeenCalledOnce();
+        expect(window.location.search).toBe('?view=guest_access');
+    });
+
+    it('auto-opens an event guest invitation link and shows season guest share link for active crew members', async () => {
+        const consumed = vi.fn();
+        await act(async () => root.render(
+            <GuestAccess
+                onBack={vi.fn()}
+                onSeasonHouseAccess={season}
+                onEventAccess={event}
+                seasonAvailable
+                offSeasonAvailable
+                seasonBookingCrewId={12}
+                initialCode="BB:EVENT:34"
+                accessResolved
+                onInitialCodeConsumed={consumed}
+            />
+        ));
+        expect(event).toHaveBeenCalledExactlyOnceWith(34);
+        expect(consumed).toHaveBeenCalledOnce();
+        expect(container.textContent).toContain('내 크루 시즌방 게스트 초대 보내기');
+        expect(container.textContent).toContain('BB:SEASON:12');
+    });
 });

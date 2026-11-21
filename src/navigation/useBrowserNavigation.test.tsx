@@ -78,4 +78,16 @@ describe('URL navigation with existing authentication gates', () => {
         localStorage.clear(); window.history.replaceState(null, '', '/?view=dashboard_event_edit&eventId=42');
         expect(readNavigation().view).toBe('login');
     });
+
+    it('routes guest invitation links to guest_access and clears type/id when leaving', () => {
+        window.history.replaceState(null, '', '/?type=SEASON&id=12');
+        const seasonRoute = readNavigation();
+        expect(seasonRoute.view).toBe('guest_access');
+        expect(navigationUrl(seasonRoute)).toContain('type=SEASON&id=12');
+        expect(navigationUrl({ ...seasonRoute, view: 'guest_reservation' })).toBe('/?view=guest_reservation');
+
+        localStorage.clear();
+        window.history.replaceState(null, '', '/?view=guest_access&type=EVENT&id=34');
+        expect(readNavigation().view).toBe('guest_access');
+    });
 });
