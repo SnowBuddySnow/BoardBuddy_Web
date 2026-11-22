@@ -252,7 +252,7 @@ export default function AccountInfo({ onBack, onStudentVerificationClick }: Acco
                         type="button"
                         disabled={actionBusy !== null}
                         onClick={async () => {
-                            if (!confirm('회원 탈퇴할까요?\n탈퇴 후 같은 카카오 계정으로 언제든 새로 가입할 수 있습니다.')) return;
+                            if (!confirm('회원 탈퇴할까요?\n탈퇴 후 같은 소셜 계정으로 언제든 새로 가입할 수 있습니다.')) return;
                             setActionBusy('delete');
                             setActionError('');
                             try {

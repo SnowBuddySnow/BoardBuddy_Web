@@ -486,7 +486,14 @@ function App() {
       case 'login':
         return (
           <LoginLanding
-            onLogin={() => setCurrentView(getCrewInvitationIntent() ? 'crew_invite' : organizerInviteToken ? 'organizer_invite' : 'home')}
+            organizerInviteToken={organizerInviteToken}
+            onLogin={(restoredOrganizerInviteToken) => {
+              const effectiveOrganizerInvite = restoredOrganizerInviteToken || organizerInviteToken;
+              if (restoredOrganizerInviteToken && !organizerInviteToken) {
+                setOrganizerInviteToken(restoredOrganizerInviteToken);
+              }
+              setCurrentView(getCrewInvitationIntent() ? 'crew_invite' : effectiveOrganizerInvite ? 'organizer_invite' : 'home');
+            }}
             onSignupNeeded={() => setCurrentView('user_info')}
             onProfileTypeNeeded={() => setCurrentView('profile_type_confirmation')}
             onDebugUserInfo={() => setCurrentView('user_info')}
