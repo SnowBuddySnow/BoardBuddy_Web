@@ -52,71 +52,78 @@ export default function LoginLanding({ onLogin, onSignupNeeded, onProfileTypeNee
 
         setIsLoggingIn(true);
         const continuation = beginOnboardingLogin();
-        window.Kakao.Auth.login({
-            scope: kakaoSignupScopes(),
-            success: async (authObj) => {
-                if (!isCurrentOnboardingLogin(continuation)) {
-                    setIsLoggingIn(false);
-                    alert('로그인 중 초대가 변경되었습니다. 현재 초대를 확인한 뒤 다시 로그인해 주세요.');
-                    return;
-                }
-                try {
-                    const response = await apiClient.post('/auth/social/kakao', undefined, {
-                        headers: {
-                            'Authorization': `Bearer ${authObj.access_token}`,
-                        },
-                    });
-
-                    const data = response.data;
-
+        const scope = kakaoSignupScopes();
+        try {
+            window.Kakao.Auth.login({
+                ...(scope ? { scope } : {}),
+                success: async (authObj) => {
                     if (!isCurrentOnboardingLogin(continuation)) {
                         setIsLoggingIn(false);
                         alert('로그인 중 초대가 변경되었습니다. 현재 초대를 확인한 뒤 다시 로그인해 주세요.');
                         return;
                     }
+                    try {
+                        const response = await apiClient.post('/auth/social/kakao', undefined, {
+                            headers: {
+                                'Authorization': `Bearer ${authObj.access_token}`,
+                            },
+                        });
 
-                    if (response.status >= 200 && response.status < 300 && data.data) {
-                        const { status, userType, accountId, accessToken, refreshToken } = data.data;
+                        const data = response.data;
 
-                        // Save the account ID
-                        if (accountId) {
-                            saveAccountId(accountId);
+                        if (!isCurrentOnboardingLogin(continuation)) {
+                            setIsLoggingIn(false);
+                            alert('로그인 중 초대가 변경되었습니다. 현재 초대를 확인한 뒤 다시 로그인해 주세요.');
+                            return;
                         }
 
-                        if (status === 'PENDING_PROFILE') {
-                            // New User: Temporary token for signup
-                            saveTempAccessToken(accessToken);
-                            // Save auto-login preference
-                            setAutoLoginPreference(autoLogin);
-                            setSignupPrefill(accountId, data.data.signupPrefill);
-                            onSignupNeeded();
-                        } else {
-                            // Existing User: Login success
-                            saveAuthTokens(accessToken, refreshToken);
-                            // Save auto-login preference
-                            setAutoLoginPreference(autoLogin);
-                            if (userType === 'GENERAL') {
-                                onProfileTypeNeeded();
-                            } else {
-                                onLogin();
+                        if (response.status >= 200 && response.status < 300 && data.data) {
+                            const { status, userType, accountId, accessToken, refreshToken } = data.data;
+
+                            // Save the account ID
+                            if (accountId) {
+                                saveAccountId(accountId);
                             }
+
+                            if (status === 'PENDING_PROFILE') {
+                                // New User: Temporary token for signup
+                                saveTempAccessToken(accessToken);
+                                // Save auto-login preference
+                                setAutoLoginPreference(autoLogin);
+                                setSignupPrefill(accountId, data.data.signupPrefill);
+                                onSignupNeeded();
+                            } else {
+                                // Existing User: Login success
+                                saveAuthTokens(accessToken, refreshToken);
+                                // Save auto-login preference
+                                setAutoLoginPreference(autoLogin);
+                                if (userType === 'GENERAL') {
+                                    onProfileTypeNeeded();
+                                } else {
+                                    onLogin();
+                                }
+                            }
+                        } else {
+                            setIsLoggingIn(false);
+                            alert('로그인 응답을 확인할 수 없습니다. 다시 시도해주세요.');
                         }
-                    } else {
+                    } catch (error: unknown) {
+                        console.error('Network Error:', error);
                         setIsLoggingIn(false);
-                        alert('로그인 응답을 확인할 수 없습니다. 다시 시도해주세요.');
+                        alert(getApiErrorMessage(error) || '로그인 처리 중 네트워크 오류가 발생했습니다.');
                     }
-                } catch (error: unknown) {
-                    console.error('Network Error:', error);
+                },
+                fail: (err) => {
+                    console.error('Kakao Login Failed:', err);
                     setIsLoggingIn(false);
-                    alert(getApiErrorMessage(error) || '로그인 처리 중 네트워크 오류가 발생했습니다.');
-                }
-            },
-            fail: (err) => {
-                console.error('Kakao Login Failed:', err);
-                setIsLoggingIn(false);
-                alert('카카오 로그인이 취소되었거나 실패했습니다.');
-            },
-        });
+                    alert('카카오 로그인이 취소되었거나 실패했습니다.');
+                },
+            });
+        } catch (err: unknown) {
+            console.error('Kakao Login Error:', err);
+            setIsLoggingIn(false);
+            alert('카카오 로그인을 시작할 수 없습니다. 잠시 후 다시 시도해 주세요.');
+        }
     };
     return (
         <main className="min-h-0 min-w-0 flex-1 overflow-y-auto bg-[#FAF8F3] text-[#162660]">
