@@ -26,6 +26,7 @@ import type { CrewDetail as CrewDetailData } from './types/api';
 import { isCrewCaptainRole } from './constants/crewRole';
 import { isEventRegistrationAvailable } from './lib/eventDateTime';
 import { captureCrewInvitation, CREW_INVITATION_CHANGED, getCrewInvitationIntent } from './lib/onboardingIntent';
+import { readGuestInvitationEntryFromUrl } from './lib/guestInvitation';
 
 // Keep login/home immediate; fetch heavier screens only when their existing route is entered.
 const Reservation = lazy(() => import('./pages/Reservation'));
@@ -92,6 +93,7 @@ function App() {
     return readNavigation().eventId;
   });
   const [guestCrewId, setGuestCrewId] = useState<number | null>(null);
+  const [pendingGuestCode, setPendingGuestCode] = useState<string | null>(() => readGuestInvitationEntryFromUrl());
   const [isGuestEventApplication, setIsGuestEventApplication] = useState(false);
   const [selectedGroupId, setSelectedGroupId] = useState<number | null>(() => readNavigation().groupId);
   const [organizerInviteToken, setOrganizerInviteToken] = useState(
@@ -104,6 +106,9 @@ function App() {
     setSelectedEventId(route.eventId);
     setSelectedGroupId(route.groupId);
     setOrganizerInviteToken(route.organizerInviteToken);
+    if (route.view === 'guest_access') {
+      setPendingGuestCode(readGuestInvitationEntryFromUrl());
+    }
   });
   const [notificationRefreshKey, setNotificationRefreshKey] = useState(0);
   const [notificationReturnView, setNotificationReturnView] = useState<View>('home');
@@ -114,6 +119,7 @@ function App() {
   const [managementRefreshKey, setManagementRefreshKey] = useState(0);
   const [availableEventCount, setAvailableEventCount] = useState(0);
   const [crewDetail, setCrewDetail] = useState<CrewDetailData | null>(null);
+  const [crewAccessResolved, setCrewAccessResolved] = useState(false);
   const [isCaptain, setIsCaptain] = useState(false);
   const [crewAccessRevision, setCrewAccessRevision] = useState(0);
   const [crewSettingsReturnView, setCrewSettingsReturnView] = useState<View>('crew_detail');
@@ -160,9 +166,13 @@ function App() {
   }, []);
 
   useEffect(() => {
-    if (!shouldLoadPermissions) return;
+    if (!shouldLoadPermissions) {
+      setCrewAccessResolved(true);
+      return;
+    }
 
     let cancelled = false;
+    setCrewAccessResolved(false);
     const loadCrewAccess = async () => {
       try {
         const user = await getUserInfo();
@@ -191,6 +201,8 @@ function App() {
           setIsCaptain(false);
           setOnboardingUserId(null);
         }
+      } finally {
+        if (!cancelled) setCrewAccessResolved(true);
       }
     };
 
@@ -505,6 +517,9 @@ function App() {
           offSeasonAvailable={operatingFeatures.offSeason}
           seasonBookingCrewId={hasCrew && !hasPendingCrewApplication ? crewDetail?.crew_id ?? null : null}
           seasonGuestEnabled={crewDetail?.seasonHouseGuestEnabled !== false}
+          initialCode={pendingGuestCode}
+          accessResolved={crewAccessResolved}
+          onInitialCodeConsumed={() => setPendingGuestCode(null)}
         />;
       case 'season_calendar':
         return <SeasonCalendar onBack={() => setCurrentView('home')} onMyCalendarClick={() => setCurrentView('my_reservations')} onReservationClick={() => setCurrentView('reservation')} />;

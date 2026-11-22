@@ -6,6 +6,7 @@ import { getUserInfo } from '../services/user';
 import { CrewDetail as CrewDetailType } from '../types/api';
 import { isCrewManagerRole } from '../constants/crewRole';
 import MemberStats from './MemberStats';
+import { GuestInviteShareCard } from '../components/guest/GuestInviteShareCard';
 
 
 interface CrewDetailProps {
@@ -161,6 +162,17 @@ export default function CrewDetail({ onBack, onCalendarClick, onMemberClick, onS
                                     <ChevronRightIcon className="w-5 h-5" />
                                 </div>
                             </button>}
+
+                            {seasonAvailable && crewInfo.seasonHouseGuestEnabled !== false && (
+                                <GuestInviteShareCard
+                                    className="mt-4"
+                                    destination={{ type: 'SEASON', id: crewInfo.crew_id }}
+                                    title="시즌방 게스트 초대 링크"
+                                    description="링크를 보내거나 QR을 보여주면 게스트 예약 화면으로 바로 연결돼요."
+                                    shareTitle={`${crewInfo.name} 시즌방 게스트 초대`}
+                                    shareText={`${crewInfo.name} 시즌방 게스트 초대 링크입니다.`}
+                                />
+                            )}
                         </>
                     )}
 

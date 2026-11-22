@@ -1,4 +1,5 @@
 import { EventFamilyLinks } from '../components/event/EventFamilyLinks';
+import { GuestInviteShareCard } from '../components/guest/GuestInviteShareCard';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Button } from '../components/Button';
 import {
@@ -573,6 +574,17 @@ export default function EventDetail({ eventId, onBack, isGuestApplication = fals
                             </div>
                         )}
                     </div>
+
+                    {event.id > 0 && (
+                        <GuestInviteShareCard
+                            compact
+                            destination={{ type: 'EVENT', id: event.id }}
+                            title="이벤트 게스트 초대 링크"
+                            description="링크를 보내거나 QR을 보여주면 이벤트 게스트 신청 화면으로 바로 연결돼요."
+                            shareTitle={`${event.title} 게스트 초대`}
+                            shareText={`${event.title} 이벤트 게스트 초대 링크입니다.`}
+                        />
+                    )}
 
                     {event.paymentRequired && (
                         <div className="rounded-3xl border border-blue-100 bg-blue-50/70 p-5 shadow-sm">
