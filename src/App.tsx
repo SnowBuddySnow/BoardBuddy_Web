@@ -440,6 +440,16 @@ function App() {
       );
     }
 
+    if (currentView === 'guest_reservation' && crewDetail?.seasonHouseGuestEnabled === false) {
+      return (
+        <FeatureUnavailable
+          title="시즌방 게스트 예약을 이용할 수 없습니다"
+          description="이 크루는 현재 시즌방 게스트 예약을 사용하지 않습니다."
+          onBack={() => setCurrentView('guest_access')}
+        />
+      );
+    }
+
     if (offSeasonViews.includes(currentView) && !operatingFeatures.offSeason) {
       return (
         <FeatureUnavailable
@@ -494,6 +504,7 @@ function App() {
           seasonAvailable={operatingFeatures.season}
           offSeasonAvailable={operatingFeatures.offSeason}
           seasonBookingCrewId={hasCrew && !hasPendingCrewApplication ? crewDetail?.crew_id ?? null : null}
+          seasonGuestEnabled={crewDetail?.seasonHouseGuestEnabled !== false}
         />;
       case 'season_calendar':
         return <SeasonCalendar onBack={() => setCurrentView('home')} onMyCalendarClick={() => setCurrentView('my_reservations')} onReservationClick={() => setCurrentView('reservation')} />;
@@ -522,6 +533,7 @@ function App() {
         return (
           <CrewSettings
             onBack={() => setCurrentView(crewSettingsReturnView)}
+            onSaved={() => setCrewAccessRevision(revision => revision + 1)}
             onCaptainGuideClick={isCaptain ? openCaptainOnboarding : undefined}
           />
         );

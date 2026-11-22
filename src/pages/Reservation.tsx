@@ -253,6 +253,10 @@ export default function Reservation({ onBack, isGuest = false, guestCrewId }: Re
             alert("크루 정보를 불러오는 중입니다. 잠시 후 다시 시도해주세요.");
             return;
         }
+        if (isGuest && crew?.seasonHouseGuestEnabled === false) {
+            alert("이 크루는 현재 시즌방 게스트 예약을 사용하지 않습니다.");
+            return;
+        }
 
         // Check phone sharing consent preference if NOT guest
         if (!isGuest) {
@@ -285,7 +289,8 @@ export default function Reservation({ onBack, isGuest = false, guestCrewId }: Re
             const result = await createReservation(crewId, formattedDates, guestId, 1);
             const failed = result.results?.filter(item => !item.success) ?? [];
             if (!result.results?.length || failed.length) {
-                alert(`예약하지 못한 날짜가 있습니다. 아직 오픈되지 않은 날짜는 크루 달력에서 오픈 시각을 확인해 주세요. ${failed.map(item => item.date).join(', ')}`);
+                const reason = failed.find(item => item.message)?.message;
+                alert(reason ?? `예약하지 못한 날짜가 있습니다. 아직 오픈되지 않은 날짜는 크루 달력에서 오픈 시각을 확인해 주세요. ${failed.map(item => item.date).join(', ')}`);
                 return;
             }
             alert("예약 신청이 완료되었습니다."); // Simple feedback

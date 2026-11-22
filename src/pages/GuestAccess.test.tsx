@@ -79,6 +79,25 @@ describe('guest-code entry with crew season availability disabled', () => {
         else { expect(season).not.toHaveBeenCalled(); expect(container.textContent).toContain('크루 운영진이나 초대한 부원에게 요청'); }
         expect(event).not.toHaveBeenCalled();
     });
+
+    it('blocks season guest codes when the crew disabled season house guests while keeping event guest access open', async () => {
+        await act(async () => root.render(<GuestAccess onBack={vi.fn()} onSeasonHouseAccess={season} onEventAccess={event} seasonAvailable offSeasonAvailable seasonBookingCrewId={12} seasonGuestEnabled={false} />));
+        const input = container.querySelector('input')!;
+        await act(async () => {
+            Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(input, 'BB:SEASON:12');
+            input.dispatchEvent(new Event('input', { bubbles: true }));
+        });
+        await act(async () => input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true })));
+        expect(season).not.toHaveBeenCalled();
+        expect(container.textContent).toContain('이 크루는 현재 시즌방 게스트 예약을 사용하지 않습니다.');
+
+        await act(async () => {
+            Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(input, 'BB:EVENT:34');
+            input.dispatchEvent(new Event('input', { bubbles: true }));
+        });
+        await act(async () => input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true })));
+        expect(event).toHaveBeenCalledExactlyOnceWith(34);
+    });
 });
 
 describe('guest QR scanner', () => {
