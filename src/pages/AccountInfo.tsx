@@ -158,6 +158,24 @@ export default function AccountInfo({ onBack, onStudentVerificationClick }: Acco
                                 <div className="text-xs text-zinc-500 mb-1">전화번호</div>
                                 <div className="text-base font-medium">{userInfo.phoneNumber}</div>
                             </div>
+                            {(() => {
+                                const providers = (
+                                    userInfo.socialProviders && userInfo.socialProviders.length > 0
+                                        ? userInfo.socialProviders
+                                        : userInfo.socialProvider
+                                            ? [userInfo.socialProvider]
+                                            : []
+                                ).map(provider =>
+                                    provider === 'KAKAO' ? '카카오' : provider === 'NAVER' ? '네이버' : provider
+                                );
+                                if (providers.length === 0) return null;
+                                return (
+                                    <div>
+                                        <div className="text-xs text-zinc-500 mb-1">연결된 로그인</div>
+                                        <div className="text-base font-medium">{providers.join(' · ')}</div>
+                                    </div>
+                                );
+                            })()}
                             <div>
                                 <div className="text-xs text-zinc-500 mb-1.5">전화번호 제공 동의 설정</div>
                                 <div className="flex gap-4 bg-white dark:bg-zinc-800 p-2.5 rounded-lg border border-zinc-200 dark:border-zinc-700 w-fit">

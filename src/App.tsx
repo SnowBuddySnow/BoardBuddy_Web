@@ -557,6 +557,15 @@ function App() {
         return (
           <UserInfoInput
             onBack={() => setCurrentView('login')}
+            onLinkedExistingAccount={(userType) => setCurrentView(
+              userType === 'GENERAL'
+                ? 'profile_type_confirmation'
+                : getCrewInvitationIntent()
+                  ? 'crew_invite'
+                  : organizerInviteToken
+                    ? 'organizer_invite'
+                    : 'home'
+            )}
             onSuccess={(requiresStudentVerification) => setCurrentView(
               requiresStudentVerification ? 'student_verification' : getCrewInvitationIntent() ? 'crew_invite' : organizerInviteToken ? 'organizer_invite' : 'onboarding'
             )}
