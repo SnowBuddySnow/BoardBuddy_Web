@@ -53,9 +53,10 @@ Assign `boardbuddy.kr` and `www.boardbuddy.kr` only to Production. A persistent 
 `stg.boardbuddy.kr` can be assigned to `develop`; feature branches keep their generated Preview
 URLs.
 
-When Vercel Preview Branch Tracking is disabled (to avoid building every feature branch), pushes to
-`develop` trigger a staging deployment automatically from `.github/workflows/ci-cd.yml` after
-`Verify & Build` and `Synthetic Browser Journeys` pass. Configure the GitHub Actions secret
+`vercel.json` disables automatic Git-push deployments for all non-`main` branches
+(`git.deploymentEnabled`), while Vercel Preview deployments remain enabled so pushes to `develop`
+trigger a staging deployment from `.github/workflows/ci-cd.yml` after `Verify & Build` and
+`Synthetic Browser Journeys` pass. Configure the GitHub Actions secret
 `VERCEL_STAGING_DEPLOY_HOOK_URL` (repository or `staging` environment) with a Vercel Deploy Hook
 pointing at `develop`.
 
