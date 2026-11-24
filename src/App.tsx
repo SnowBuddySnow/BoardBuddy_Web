@@ -31,6 +31,7 @@ import { readGuestInvitationEntryFromUrl } from './lib/guestInvitation';
 // Keep login/home immediate; fetch heavier screens only when their existing route is entered.
 const Reservation = lazy(() => import('./pages/Reservation'));
 const ReservationStats = lazy(() => import('./pages/ReservationStats'));
+const SeasonHouseMatrix = lazy(() => import('./pages/SeasonHouseMatrix'));
 const MyReservations = lazy(() => import('./pages/MyReservations'));
 const CrewDetail = lazy(() => import('./pages/CrewDetail'));
 const UserInfoInput = lazy(() => import('./pages/UserInfoInput'));
@@ -531,6 +532,13 @@ function App() {
             onReservationClick={() => setCurrentView('reservation')}
           />
         );
+      case 'season_house_matrix':
+        return (
+          <SeasonHouseMatrix
+            crewId={crewDetail?.crew_id ?? 0}
+            onBack={() => setCurrentView('operations_center')}
+          />
+        );
       case 'my_reservations':
         return <MyReservations onBack={() => setCurrentView('home')} onCrewClick={() => setCurrentView('stats')} />;
       case 'crew_detail':
@@ -541,6 +549,7 @@ function App() {
             onMemberClick={() => setCurrentView('crew_member')}
             onSettingsClick={() => openCrewSettings('crew_detail')}
             onPassesClick={() => openCrewManagement('passes','crew_detail')}
+            onSeasonMatrixClick={crewDetail?.crew_id ? () => setCurrentView('season_house_matrix') : undefined}
             seasonAvailable={seasonHouseAvailable}
           />
         );
@@ -673,6 +682,7 @@ function App() {
             operatingMode={operatingMode}
             seasonAvailable={seasonHouseAvailable}
             onReservationsClick={() => setCurrentView('stats')}
+            onSeasonMatrixClick={crewDetail?.crew_id ? () => setCurrentView('season_house_matrix') : undefined}
             onPartiesClick={() => setCurrentView('dashboard_parties')}
             onGroupsClick={() => setCurrentView('dashboard_groups')}
             onCrewClick={() => openCrewManagement('permissions','operations_center')}

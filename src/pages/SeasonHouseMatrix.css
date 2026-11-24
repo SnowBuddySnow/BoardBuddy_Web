@@ -1,0 +1,190 @@
+/* Excel-style Season House Operations Matrix (Responsive sticky table + scrollability shadows) */
+.sh-matrix-wrap {
+  --col-name-w: 11rem;
+  --col-pass-w: 6.5rem;
+  --cell-w: 2.75rem;
+  --week-even-bg: #eef3fb;
+  --week-odd-bg: #ffffff;
+  --week-even-head: #dfe9f8;
+  --week-odd-head: #f4f5f7;
+  --week-border: #93b4e8;
+  --grid-line: #e4e7ec;
+  --sticky-bg: #ffffff;
+  --sticky-head: #f4f5f7;
+  --sticky-foot: #f8fafc;
+}
+
+.sh-matrix-scroller {
+  overflow: auto;
+  max-inline-size: 100%;
+  max-block-size: min(680px, calc(100dvh - 17rem));
+  container-type: inline-size;
+  border-radius: 0.75rem;
+  border: 1px solid #d4d8e1;
+  background: #ffffff;
+}
+
+@supports (container-type: scroll-state) {
+  .sh-matrix-scroller {
+    container-type: inline-size scroll-state;
+  }
+
+  @container scroll-state(scrollable: inline-start) {
+    .sh-sticky-pass {
+      box-shadow: 6px 0 12px -4px rgb(22 38 96 / 0.14);
+    }
+  }
+
+  @container scroll-state(scrollable: block-start) {
+    .sh-matrix-table thead {
+      box-shadow: 0 6px 12px -4px rgb(22 38 96 / 0.14);
+    }
+  }
+
+  @container scroll-state(scrollable: block-end) {
+    .sh-matrix-table tfoot {
+      box-shadow: 0 -6px 12px -4px rgb(22 38 96 / 0.14);
+    }
+  }
+}
+
+@supports not (container-type: scroll-state) {
+  .sh-matrix-scroller.more-inline-start .sh-sticky-pass {
+    box-shadow: 6px 0 12px -4px rgb(22 38 96 / 0.14);
+  }
+  .sh-matrix-scroller.more-block-start .sh-matrix-table thead {
+    box-shadow: 0 6px 12px -4px rgb(22 38 96 / 0.14);
+  }
+  .sh-matrix-scroller.more-block-end .sh-matrix-table tfoot {
+    box-shadow: 0 -6px 12px -4px rgb(22 38 96 / 0.14);
+  }
+}
+
+@container (width < 760px) {
+  .sh-matrix-wrap {
+    --col-name-w: 8.75rem;
+    --col-pass-w: 5.25rem;
+    --cell-w: 2.35rem;
+  }
+}
+
+.sh-matrix-table {
+  border-collapse: separate;
+  border-spacing: 0;
+  width: max-content;
+  min-width: 100%;
+  font-variant-numeric: tabular-nums;
+}
+
+.sh-matrix-table th,
+.sh-matrix-table td {
+  border-inline-end: 1px solid var(--grid-line);
+  border-block-end: 1px solid var(--grid-line);
+  padding: 0;
+  text-align: center;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+.sh-matrix-table thead {
+  position: sticky;
+  inset-block-start: 0;
+  z-index: 30;
+  transition: box-shadow 0.2s ease;
+}
+
+.sh-matrix-table tfoot {
+  position: sticky;
+  inset-block-end: 0;
+  z-index: 25;
+  transition: box-shadow 0.2s ease;
+}
+
+.sh-sticky-name {
+  position: sticky;
+  inset-inline-start: 0;
+  inline-size: var(--col-name-w);
+  min-inline-size: var(--col-name-w);
+  max-inline-size: var(--col-name-w);
+  z-index: 20;
+  background: var(--sticky-bg);
+}
+
+.sh-sticky-pass {
+  position: sticky;
+  inset-inline-start: var(--col-name-w);
+  inline-size: var(--col-pass-w);
+  min-inline-size: var(--col-pass-w);
+  max-inline-size: var(--col-pass-w);
+  z-index: 20;
+  background: var(--sticky-bg);
+  border-inline-end: 2px solid #cbd5e1 !important;
+  transition: box-shadow 0.2s ease;
+}
+
+.sh-sticky-span {
+  position: sticky;
+  inset-inline-start: 0;
+  z-index: 20;
+  border-inline-end: 2px solid #cbd5e1 !important;
+  background: #f1f5f9;
+}
+
+.sh-matrix-table thead .sh-sticky-name,
+.sh-matrix-table thead .sh-sticky-pass,
+.sh-matrix-table thead .sh-sticky-span {
+  z-index: 40;
+  background: var(--sticky-head);
+}
+
+.sh-matrix-table tfoot .sh-sticky-name,
+.sh-matrix-table tfoot .sh-sticky-pass {
+  z-index: 35;
+  background: var(--sticky-foot);
+}
+
+.sh-origin-cell {
+  background:
+    linear-gradient(
+      to top right,
+      transparent calc(50% - 0.5px),
+      #cbd5e1 calc(50% - 0.5px),
+      #cbd5e1 calc(50% + 0.5px),
+      transparent calc(50% + 0.5px)
+    ),
+    var(--sticky-head) !important;
+}
+
+.sh-day-col {
+  inline-size: var(--cell-w);
+  min-inline-size: var(--cell-w);
+}
+
+.sh-week-odd { background-color: var(--week-odd-bg); }
+.sh-week-even { background-color: var(--week-even-bg); }
+.sh-week-head-odd { background-color: var(--week-odd-head); }
+.sh-week-head-even { background-color: var(--week-even-head); }
+.sh-week-start { border-inline-start: 2px solid var(--week-border) !important; }
+.sh-past-col { background-image: linear-gradient(rgb(15 23 42 / 0.03), rgb(15 23 42 / 0.03)); }
+
+.sh-matrix-table tbody tr.sh-row:hover td,
+.sh-matrix-table tbody tr.sh-row:hover th {
+  background-image: linear-gradient(rgb(22 38 96 / 0.08), rgb(22 38 96 / 0.08));
+}
+
+.sh-dialog {
+  padding: 0;
+  border: 1px solid #d4d8e1;
+  border-radius: 0.9rem;
+  background: #ffffff;
+  color: #0f172a;
+  width: min(520px, calc(100vw - 2rem));
+  max-height: calc(100dvh - 2rem);
+  margin: auto;
+  box-shadow: 0 24px 48px -12px rgb(15 23 42 / 0.25);
+}
+
+.sh-dialog::backdrop {
+  background: rgb(15 23 42 / 0.45);
+  backdrop-filter: blur(2px);
+}
