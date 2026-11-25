@@ -12,6 +12,7 @@ export type View =
   | 'home'
   | 'reservation'
   | 'stats'
+  | 'season_house_matrix'
   | 'my_reservations'
   | 'crew_detail'
   | 'search_crew'
@@ -51,6 +52,7 @@ const knownViews = new Set<View>([
   'home',
   'reservation',
   'stats',
+  'season_house_matrix',
   'my_reservations',
   'crew_detail',
   'search_crew',

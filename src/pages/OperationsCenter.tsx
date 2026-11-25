@@ -1,4 +1,4 @@
-import { ArrowRight, CalendarDays, Sparkles, ShieldCheck, UsersRound, Settings } from 'lucide-react';
+import { ArrowRight, CalendarDays, Sparkles, ShieldCheck, UsersRound, Settings, TableProperties } from 'lucide-react';
 import type { OperationPermission } from '../services/operations';
 import { hasEventManagementAccess } from '../lib/eventManagerOnboarding';
 import { getOperatingFeatures, OperatingMode, operatingModeCopy } from '../constants/operatingSeason';
@@ -8,6 +8,7 @@ interface OperationsCenterProps {
   operatingMode: OperatingMode;
   seasonAvailable: boolean;
   onReservationsClick: () => void;
+  onSeasonMatrixClick?: () => void;
   onPartiesClick: () => void;
   onGroupsClick: () => void;
   onCrewClick: () => void;
@@ -23,6 +24,7 @@ export default function OperationsCenter({
   operatingMode,
   seasonAvailable,
   onReservationsClick,
+  onSeasonMatrixClick,
   onPartiesClick,
   onGroupsClick,
   onCrewClick,
@@ -36,6 +38,14 @@ export default function OperationsCenter({
   const canManageCrew = hasAny(permissions, ['CREW_MEMBERS_MANAGE', 'CREW_EVENT_MANAGERS_ASSIGN']);
 
   const modules = [
+    features.season && seasonAvailable && canManageReservations && onSeasonMatrixClick && {
+      id: 'season-matrix',
+      title: '시즌방 이용 매트릭스',
+      description: '가나다순 일별 이용표·이용권·입금·비공개 메모를 한눈에 관리합니다.',
+      icon: TableProperties,
+      onClick: onSeasonMatrixClick,
+      priority: operatingMode === 'SEASON',
+    },
     features.season && seasonAvailable && canManageReservations && {
       id: 'reservations',
       title: '예약 관리',
