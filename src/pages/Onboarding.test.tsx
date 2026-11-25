@@ -36,6 +36,17 @@ describe('member and president onboarding', () => {
         await click('승인 상태 새로고침'); expect(container.textContent).toContain('이제 함께할 수 있어요');
         await click('크루로 계속하기'); expect(crew).toHaveBeenCalledWith(7);
     });
+    it('offers instant joining when the invite preview says approval is optional', async () => {
+        mocks.preview.mockResolvedValue({ crewName: '가상 크루', approvalRequired: false });
+        mocks.accept.mockResolvedValue({ crewId: 17, status: 'JOINED' });
+        await render(true);
+        expect(container.textContent).not.toContain('3. 운영진 승인');
+        expect(mocks.accept).not.toHaveBeenCalled();
+        await click('이 크루에 바로 가입');
+        expect(container.textContent).toContain('크루 가입이 완료됐어요.');
+        await click('크루로 계속하기');
+        expect(crew).toHaveBeenCalledWith(7);
+    });
     it('continues a pending signup without spending a member invitation', async () => {
         localStorage.removeItem('accessToken'); localStorage.setItem('tempAccessToken', 'synthetic-pending');
         await render(true); await click('회원가입 이어서 하기'); expect(signup).toHaveBeenCalledOnce(); expect(mocks.accept).not.toHaveBeenCalled();

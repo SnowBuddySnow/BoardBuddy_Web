@@ -40,6 +40,7 @@ export interface CrewDetail {
     schoolVerificationEnforcementEnabled?: boolean;
     configuredSchoolVerificationRequired?: boolean;
     verifiedSchoolAutoJoinEnabled?: boolean;
+    inviteLinkAutoJoinEnabled?: boolean;
 }
 
 export interface CrewSimple {
@@ -150,6 +151,7 @@ export interface ReservationDaysPrepareRequest {
 // --- End New Reservation DTOs ---
 
 export interface CrewInfoUpdateRequest {
+    inviteLinkAutoJoinEnabled?: boolean;
     seasonHouseGuestEnabled?: boolean;
     teachingEnabled?: boolean;
     reservationWindowDays?: number | null;

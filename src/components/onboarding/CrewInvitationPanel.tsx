@@ -50,14 +50,14 @@ export function CrewInvitationPanel({ crewId }: { crewId: number }) {
     };
     return <section className="min-w-0 space-y-5 rounded-3xl border border-zinc-200 bg-white p-5 text-[#162660] sm:p-6" aria-label="부원 초대">
         <div className="flex items-center gap-2"><Link2 className="h-5 w-5" /><h2 className="text-lg font-black">부원 초대하기</h2></div>
-        <p className="text-sm leading-6 text-zinc-600">링크나 QR을 전달하면 가입 신청까지 바로 이어져요. 멤버 권한은 운영진이 승인한 뒤 연결돼요.</p>
+        <p className="text-sm leading-6 text-zinc-600">초대받은 사람은 링크나 QR에서 크루 가입을 진행할 수 있어요.</p>
         <div className="grid min-w-0 gap-4 sm:grid-cols-2">
             <label className="min-w-0 text-sm font-bold">유효 기간<select value={hours} disabled={busy} onChange={event => setHours(Number(event.target.value))} className="mt-2 h-12 w-full rounded-xl border border-zinc-300 bg-white px-3 text-base">{[24, 72, 168].map(value => <option key={value} value={value}>{value / 24}일</option>)}</select></label>
             <label className="min-w-0 text-sm font-bold">최대 사용 횟수<input type="number" min={1} max={500} inputMode="numeric" value={maxUses} disabled={busy} onChange={event => setMaxUses(event.target.value)} className="mt-2 h-12 w-full min-w-0 rounded-xl border border-zinc-300 px-3 text-base" /></label>
         </div>
         <Button type="button" disabled={busy || loading} onClick={() => void create()} className="min-h-12 w-full rounded-2xl border-[#162660] bg-[#162660] hover:bg-[#243878]">{busy ? '처리 중...' : '새 초대 링크 만들기'}</Button>
         {created && <div className="min-w-0 space-y-3 rounded-2xl bg-[#FAF8F3] p-4">
-            {qr && <img src={qr} alt="크루 가입 신청 초대 QR" width={240} height={240} className="mx-auto h-auto max-w-full" />}
+            {qr && <img src={qr} alt="크루 가입 초대 QR" width={240} height={240} className="mx-auto h-auto max-w-full" />}
             <label className="block text-sm font-bold">새 초대 링크<textarea readOnly value={created.url} rows={3} className="mt-2 w-full resize-none break-all rounded-xl border border-zinc-300 bg-white p-3 text-sm" /></label>
             <button type="button" onClick={async () => { try { await navigator.clipboard.writeText(created.url); setCopied(true); } catch { setError('자동 복사를 사용할 수 없습니다. 링크를 직접 선택해 복사해 주세요.'); } }} className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl border border-[#162660] px-3 text-sm font-bold"><Copy className="h-4 w-4" />{copied ? '복사했어요' : '초대 링크 복사'}</button>
             <p className="text-xs leading-6 text-zinc-600">링크는 새로 만들었을 때만 표시돼요. 필요한 곳에 복사해 두세요. 언제든 아래 목록에서 회수할 수 있어요.</p>

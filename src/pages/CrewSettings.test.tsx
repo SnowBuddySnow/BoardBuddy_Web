@@ -40,6 +40,29 @@ describe('CrewSettings season house guest toggle', () => {
         vi.unstubAllGlobals();
     });
 
+    it.each([
+        { savedValue: undefined, nextValue: true },
+        { savedValue: true, nextValue: false },
+    ])('persists invitation auto-join as $nextValue from Danger Zone', async ({ savedValue, nextValue }) => {
+        api.getCrewInfo.mockResolvedValue({
+            name: 'Snow Crew',
+            dailyCapacity: 10,
+            isCapacityLimited: true,
+            schoolVerificationRequired: false,
+            inviteLinkAutoJoinEnabled: savedValue,
+        });
+        await act(async () => root.render(<CrewSettings onBack={vi.fn()} />));
+        const dangerZone = container.querySelector('section[aria-labelledby="crew-danger-zone"]')!;
+        const checkbox = dangerZone.querySelector('input')!;
+        expect(checkbox.checked).toBe(savedValue === true);
+        await act(async () => checkbox.click());
+
+        const save = Array.from(container.querySelectorAll('button')).find(node => node.textContent?.trim() === '저장하기')!;
+        await act(async () => save.click());
+
+        expect(api.updateCrew).toHaveBeenCalledWith(11, expect.objectContaining({ inviteLinkAutoJoinEnabled: nextValue }));
+    });
+
     it('defaults seasonHouseGuestEnabled to checked when omitted and saves false when toggled off', async () => {
         api.getCrewInfo.mockResolvedValue({
             name: 'Snow Crew',
@@ -66,6 +89,7 @@ describe('CrewSettings season house guest toggle', () => {
 
         expect(api.updateCrew).toHaveBeenCalledOnce();
         expect(api.updateCrew.mock.calls[0][1].seasonHouseGuestEnabled).toBe(false);
+        expect(api.updateCrew.mock.calls[0][1]).not.toHaveProperty('inviteLinkAutoJoinEnabled');
         expect(onSaved).toHaveBeenCalledOnce();
     });
 
