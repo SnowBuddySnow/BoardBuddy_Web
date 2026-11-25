@@ -4,7 +4,7 @@ import SignupSchoolEmailVerification, {
   type VerifiedSignupEmail,
 } from "../components/SignupSchoolEmailVerification";
 import { SchoolEmailInput } from "../components/SchoolEmailInput";
-import { getSignupPrefill } from "../lib/signupPrefill";
+import { getSignupPrefill, setSignupPrefill } from "../lib/signupPrefill";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import {
   ArrowLeft,
@@ -35,18 +35,27 @@ import { getApiErrorMessage, getApiErrorStatus } from "../lib/apiError";
 import { SCHOOL_EMAIL_AUTH_AVAILABLE } from "../config/features";
 import { getSignupPolicy, type SignupPolicy } from "../services/signupPolicy";
 import { getOnboardingStatus } from "../services/onboarding";
+import type { UserType } from "../types/api";
 
 interface UserInfoInputProps {
   onBack: () => void;
   onSuccess?: (requiresStudentVerification?: boolean) => void;
+  onLinkedExistingAccount?: (userType: UserType) => void;
 }
 const inputClass =
   "mt-2 h-12 w-full min-w-0 rounded-2xl border border-zinc-300 bg-white px-4 text-base text-zinc-900 focus-visible:outline-2 focus-visible:outline-[#162660] disabled:bg-zinc-100";
 const steps = ["정보·인증", "약관·가입"];
+const formatLinkedProviders = (providers?: Array<"KAKAO" | "NAVER">) => {
+  const labels = (providers ?? []).map((provider) =>
+    provider === "KAKAO" ? "카카오" : provider === "NAVER" ? "네이버" : provider,
+  );
+  return labels.length > 0 ? labels.join(" · ") : "카카오 · 네이버";
+};
 
 export default function UserInfoInput({
   onBack,
   onSuccess,
+  onLinkedExistingAccount,
 }: UserInfoInputProps) {
   const [step, setStep] = useState(0);
   const [profileType, setProfileType] = useState<"GENERAL" | "STUDENT">(
@@ -80,6 +89,11 @@ export default function UserInfoInput({
   const [phoneRetryAfter, setPhoneRetryAfter] = useState(0);
   const [phoneBusy, setPhoneBusy] = useState(false);
   const [phoneNotice, setPhoneNotice] = useState("");
+  const [linkedExistingAccount, setLinkedExistingAccount] = useState<{
+    userType: UserType;
+    linkedProviders: Array<"KAKAO" | "NAVER">;
+  } | null>(null);
+  const [showPausedAccountLink, setShowPausedAccountLink] = useState(false);
   const [terms, setTerms] = useState({ service: false, privacy: false });
   const [phoneConsentPreference, setPhoneConsentPreference] = useState<
     "each_time" | "always"
@@ -296,10 +310,29 @@ export default function UserInfoInput({
       ) {
         saveAuthTokens(result.accessToken, result.refreshToken);
         clearTempAccessToken();
-        onSuccess?.();
+        setSignupPrefill(result.accountId);
+        setLinkedExistingAccount({
+          userType: result.userType,
+          linkedProviders: result.linkedProviders ?? [],
+        });
+        setPhoneNotice("");
         return;
       }
-      setPhoneNotice("");
+      if (result.resolution === "LINKED_EXISTING_ACCOUNT") {
+        setPhoneNotice(
+          "이전에 시작한 가입 정보와 연결되었습니다. 남은 정보를 입력해 가입을 완료해 주세요.",
+        );
+      } else if (
+        signupPolicy &&
+        !signupPolicy.regularEnabled &&
+        !signupPolicy.studentEnabled
+      ) {
+        setPhoneNotice(
+          "해당 번호로 가입된 기존 계정이 없습니다. 현재 신규 회원가입은 일시 중단 상태입니다.",
+        );
+      } else {
+        setPhoneNotice("");
+      }
     } catch (requestError) {
       setError(
         getApiErrorMessage(requestError) ||
@@ -409,13 +442,47 @@ export default function UserInfoInput({
     }
   };
 
+  if (linkedExistingAccount)
+    return (
+      <div className="flex h-full flex-1 items-center justify-center bg-[#FAF8F3] p-6">
+        <main className="w-full max-w-md rounded-3xl bg-white p-6 text-center shadow-sm">
+          <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-700">
+            <ShieldCheck className="h-6 w-6" />
+          </span>
+          <h1 className="mt-4 text-xl font-black text-[#162660]">
+            기존 계정과 연결되었습니다
+          </h1>
+          <p role="status" className="mt-3 text-sm leading-6 text-zinc-600">
+            동일한 휴대전화번호로 가입된 기존 계정을 찾아 통합했습니다. 이제{" "}
+            <strong className="font-bold text-[#162660]">
+              {formatLinkedProviders(linkedExistingAccount.linkedProviders)}
+            </strong>{" "}
+            모두로 같은 계정에 로그인할 수 있어요.
+          </p>
+          <Button
+            type="button"
+            onClick={() => {
+              if (onLinkedExistingAccount) {
+                onLinkedExistingAccount(linkedExistingAccount.userType);
+              } else {
+                onSuccess?.();
+              }
+            }}
+            className="mt-6 w-full rounded-2xl border-[#162660] bg-[#162660]"
+          >
+            기존 계정으로 계속하기
+          </Button>
+        </main>
+      </div>
+    );
+
   if (
     !signupPolicy ||
     (!signupPolicy.regularEnabled && !signupPolicy.studentEnabled)
   )
     return (
-      <div className="flex h-full flex-1 items-center justify-center bg-[#FAF8F3] p-6">
-        <main className="w-full max-w-md rounded-3xl bg-white p-6 text-center">
+      <div className="flex h-full flex-1 items-center justify-center overflow-y-auto bg-[#FAF8F3] p-6">
+        <main className="w-full max-w-md rounded-3xl bg-white p-6 text-center shadow-sm">
           <h1 className="text-xl font-bold text-[#162660]">회원가입 안내</h1>
           <p
             role={policyError ? "alert" : "status"}
@@ -426,6 +493,108 @@ export default function UserInfoInput({
                 ? "현재 신규 회원가입을 일시 중단했습니다. 기존 회원은 계속 로그인할 수 있습니다."
                 : "가입 접수 상태를 확인하는 중...")}
           </p>
+          {signupPolicy && !policyError && !showPausedAccountLink && (
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => setShowPausedAccountLink(true)}
+              className="mt-5 w-full rounded-2xl"
+            >
+              이미 가입한 계정 연결하기
+            </Button>
+          )}
+          {signupPolicy && !policyError && showPausedAccountLink && (
+            <div className="mt-5 rounded-2xl bg-[#FAF8F3] p-4 text-left">
+              <p className="text-xs font-bold text-[#162660]">
+                이미 다른 소셜 계정으로 가입하셨나요?
+              </p>
+              <p className="mt-1 text-xs leading-5 text-zinc-600">
+                기존에 인증한 휴대전화번호를 확인하면 현재 로그인 수단을 기존
+                계정에 연결해 바로 이용할 수 있어요.
+              </p>
+              <div className="mt-3 flex gap-2">
+                <input
+                  id="paused-link-phone"
+                  type="tel"
+                  inputMode="tel"
+                  autoComplete="tel-national"
+                  aria-label="기존 계정 휴대전화번호"
+                  value={phoneNumber}
+                  disabled={phoneBusy}
+                  className="h-11 min-w-0 flex-1 rounded-xl border border-zinc-300 bg-white px-3 text-sm"
+                  placeholder="010-1234-5678"
+                  onChange={(event) => {
+                    phoneEdited.current = true;
+                    const digits = event.target.value
+                      .replace(/\D/g, "")
+                      .slice(0, 11);
+                    setPhoneNumber(
+                      digits.length > 7
+                        ? `${digits.slice(0, 3)}-${digits.slice(3, 7)}-${digits.slice(7)}`
+                        : digits.length > 3
+                          ? `${digits.slice(0, 3)}-${digits.slice(3)}`
+                          : digits,
+                    );
+                    setPhoneChallengeId(null);
+                    setPhoneCode("");
+                    setPhoneVerified(false);
+                    setPhoneNotice("");
+                  }}
+                />
+                <Button
+                  type="button"
+                  onClick={sendCode}
+                  disabled={phoneBusy || phoneRetryAfter > 0}
+                  className="h-11 shrink-0 rounded-xl border-[#162660] bg-[#162660] px-3 text-xs"
+                >
+                  {phoneBusy
+                    ? "확인 중"
+                    : phoneRetryAfter > 0
+                      ? `${phoneRetryAfter}초`
+                      : phoneChallengeId
+                        ? "재인증"
+                        : "인증"}
+                </Button>
+              </div>
+              {phoneChallengeId && (
+                <div className="mt-2 flex gap-2">
+                  <input
+                    id="paused-link-phone-code"
+                    value={phoneCode}
+                    disabled={phoneBusy}
+                    inputMode="numeric"
+                    autoComplete="one-time-code"
+                    maxLength={6}
+                    onChange={(event) =>
+                      setPhoneCode(
+                        event.target.value.replace(/\D/g, "").slice(0, 6),
+                      )
+                    }
+                    className="h-11 min-w-0 flex-1 rounded-xl border border-zinc-300 bg-white px-3 text-sm"
+                    placeholder="6자리 인증번호"
+                  />
+                  <Button
+                    type="button"
+                    onClick={confirmCode}
+                    disabled={phoneBusy || phoneCode.length !== 6}
+                    className="h-11 shrink-0 rounded-xl border-[#162660] bg-[#162660] px-3 text-xs"
+                  >
+                    인증번호 확인
+                  </Button>
+                </div>
+              )}
+              {phoneNotice && (
+                <p role="status" className="mt-2 text-xs leading-5 text-zinc-600">
+                  {phoneNotice}
+                </p>
+              )}
+              {error && (
+                <p role="alert" className="mt-2 text-xs font-semibold text-red-600">
+                  {error}
+                </p>
+              )}
+            </div>
+          )}
           {policyError && (
             <Button
               type="button"
@@ -511,6 +680,11 @@ export default function UserInfoInput({
           <form noValidate onSubmit={submit} className="mt-5 space-y-4">
             {step === 0 && (
               <>
+                <p className="rounded-2xl bg-[#FAF8F3] px-4 py-3 text-xs leading-5 text-zinc-600">
+                  이미 가입한 계정이 있나요? 아래 휴대전화번호 인증을 완료하면
+                  기존 계정과 자동으로 통합되어 카카오·네이버 모두로 로그인할 수
+                  있어요.
+                </p>
                 <KakaoSignupImport
                   scopes={missingKakaoScopes}
                   onImported={(value) => {
@@ -702,6 +876,10 @@ export default function UserInfoInput({
                   >
                     휴대전화번호 *
                   </label>
+                  <p className="mt-1 text-xs leading-5 text-zinc-500">
+                    한 번호당 하나의 계정만 유지됩니다. 같은 번호의 기존 계정이
+                    있으면 두 로그인 수단이 하나로 연결돼요.
+                  </p>
                   <div className="mt-2 flex gap-2">
                     <input
                       id="signup-phone"

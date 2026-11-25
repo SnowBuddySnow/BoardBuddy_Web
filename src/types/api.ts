@@ -63,6 +63,7 @@ export interface UserDetail {
     profileImageUrl: string;
     socialId: string;
     socialProvider: string;
+    socialProviders?: string[];
     isRegistered: boolean;
     createdAt: string;
     updatedAt: string;
