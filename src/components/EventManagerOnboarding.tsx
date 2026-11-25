@@ -34,7 +34,7 @@ const steps: EventManagerStep[] = [
     title: '호스트 그룹에서 운영을 시작해요',
     description: '크루에서 이벤트 권한을 받은 뒤, 함께 운영할 호스트 그룹에 참여하세요.',
     cards: [
-      { title: '크루의 이벤트 그룹 매니저', description: '크루장이 지정하는 이벤트 담당자예요. 크루 매니저 권한도 함께 가질 수 있어요.' },
+      { title: '크루 매니저', description: '크루장이 지정하며 크루 관리와 이벤트 운영 권한을 함께 가져요.' },
       { title: '호스트 그룹의 오너·매니저', description: '해당 그룹의 이벤트를 운영해요. 뷰어는 조회 역할이며, 멤버 초대·삭제는 오너가 맡아요.' },
     ],
     points: ['기존 그룹은 오너에게 초대 링크를 받아 수락하세요.', '그룹 상세에서 내 크루와 그룹 역할을 확인하세요. 크루 권한과 그룹 참여는 별도예요.'],
@@ -170,10 +170,10 @@ export default function EventManagerOnboarding({ open, canCreateEvents, initialS
         <header className="shrink-0 border-b border-zinc-200 bg-white px-5 py-5 sm:px-7">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
-              <p className="flex items-center gap-2 text-[11px] font-black text-indigo-700"><Sparkles className="h-4 w-4 shrink-0" /> 이벤트 그룹 매니저 시작 가이드</p>
+              <p className="flex items-center gap-2 text-[11px] font-black text-indigo-700"><Sparkles className="h-4 w-4 shrink-0" /> 이벤트 운영 시작 가이드</p>
               <h1 id="event-manager-onboarding-title" className="mt-1 text-xl font-black text-zinc-950 sm:text-2xl">이벤트 운영 시작하기</h1>
             </div>
-            <button ref={closeRef} type="button" onClick={onClose} aria-label="이벤트 그룹 매니저 시작 가이드 나중에 보기" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-zinc-200 text-zinc-500 hover:bg-zinc-100"><X className="h-5 w-5" /></button>
+            <button ref={closeRef} type="button" onClick={onClose} aria-label="이벤트 운영 시작 가이드 나중에 보기" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-zinc-200 text-zinc-500 hover:bg-zinc-100"><X className="h-5 w-5" /></button>
           </div>
           <div role="progressbar" aria-label="이벤트 가이드 진행률" aria-valuemin={0} aria-valuemax={steps.length} aria-valuenow={stepIndex + 1} className="mt-4 h-1.5 overflow-hidden rounded-full bg-zinc-100">
             <div className="h-full rounded-full bg-[#162660] transition-all" style={{ width: `${(stepIndex + 1) / steps.length * 100}%` }} />

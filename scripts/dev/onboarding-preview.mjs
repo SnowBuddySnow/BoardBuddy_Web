@@ -190,7 +190,7 @@ const server = await createServer({ root, cacheDir: 'node_modules/.vite-ui-previ
             const apiPath = parsedUrl.pathname.slice('/__scenario_api'.length);
             const json = (data, status = 200) => { res.writeHead(status, { 'Content-Type': 'application/json' }); res.end(JSON.stringify({ code: status, message: 'Local preview', data })); };
             if (apiPath === '/operations/context' && state.role === 'CREW_CAPTAIN') {
-                return json({ permissions: ['RESERVATIONS_MANAGE', 'CREW_MEMBERS_MANAGE', 'CREW_EVENT_MANAGERS_ASSIGN', 'PARTIES_CREATE', 'PARTIES_MANAGE', 'EVENT_GROUPS_CREATE', 'EVENT_GROUPS_VIEW', 'EVENT_GROUPS_MANAGE'] });
+                return json({ permissions: ['RESERVATIONS_MANAGE', 'CREW_MEMBERS_MANAGE', 'CREW_MANAGERS_ASSIGN', 'PARTIES_CREATE', 'PARTIES_MANAGE', 'EVENT_GROUPS_CREATE', 'EVENT_GROUPS_VIEW', 'EVENT_GROUPS_MANAGE'] });
             }
             if (apiPath === '/crews/17/season-house/matrix' && req.method === 'GET') {
                 const today = new Date();

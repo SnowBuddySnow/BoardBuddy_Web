@@ -672,7 +672,7 @@ function App() {
           <CrewPermissions
             onBack={() => setCurrentView(crewManagementReturnView)}
             initialSection={crewManagementSection}
-            canAssignRoles={operationPermissions.includes('CREW_EVENT_MANAGERS_ASSIGN')}
+            canAssignRoles={operationPermissions.includes('CREW_MANAGERS_ASSIGN')}
             onPermissionsChanged={() => setManagementRefreshKey(key => key + 1)}
           />
         );

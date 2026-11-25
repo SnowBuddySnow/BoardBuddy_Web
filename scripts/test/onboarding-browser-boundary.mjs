@@ -56,8 +56,8 @@ export const installOnboardingBoundary = async (page, { origin = 'http://127.0.0
         if (path === '/crews/17') return respond({ crewId: 17, crew_id: 17, crewName: '가상 크루', name: '가상 크루', univ: '한국대학교', status: 'ACTIVE', role: state.role, member_count: 2, seasonHouseActive: state.seasonOpen, dailyCapacity: 20, teachingEnabled: true, ...state.crewOverrides });
         if (path === '/crews/17/members') return respond([{user_id:99101,name:'가상 회원',role:state.role},{user_id:99102,name:'가상 부원',role:'CREW_MEMBER'}]);
         if (path === '/crews/17/managers') return respond([]);
-        if (path === '/operations/crews/17/members') return respond([{accountId:99101,displayName:'가상 회원',crewRole:state.role,eventManager:state.role==='CREW_CAPTAIN'},{accountId:99102,displayName:'가상 부원',crewRole:'CREW_MEMBER',eventManager:false}]);
-        if (path === '/operations/context') return respond({ permissions: state.role === 'CREW_CAPTAIN' ? ['CREW_MEMBERS_MANAGE', 'CREW_EVENT_MANAGERS_ASSIGN', 'PARTIES_CREATE', 'PARTIES_MANAGE', 'EVENT_GROUPS_CREATE', 'EVENT_GROUPS_VIEW', 'EVENT_GROUPS_MANAGE'] : state.role === 'CREW_MANAGER' ? ['CREW_MEMBERS_MANAGE'] : [] });
+        if (path === '/operations/crews/17/members') return respond([{accountId:99101,displayName:'가상 회원',crewRole:state.role},{accountId:99102,displayName:'가상 부원',crewRole:'CREW_MEMBER'}]);
+        if (path === '/operations/context') return respond({ permissions: state.role === 'CREW_CAPTAIN' ? ['CREW_MEMBERS_MANAGE', 'CREW_MANAGERS_ASSIGN', 'PARTIES_CREATE', 'PARTIES_MANAGE', 'EVENT_GROUPS_CREATE', 'EVENT_GROUPS_VIEW', 'EVENT_GROUPS_MANAGE'] : state.role === 'CREW_MANAGER' ? ['CREW_MEMBERS_MANAGE'] : [] });
         if (path === '/admin/crews' && method === 'POST') { const item = { id: 17, name: request.postDataJSON().name, approvalStatus: 'PENDING', status: 'INACTIVE', createdAt: '2026-11-13T00:00:00' }; state.requests.push(item); return respond(item, 201); }
         if (path === '/admin/crews') return respond({ crews: state.requests, schools: [], developerAccess: false });
         if (path === '/notifications/unread-count') return respond({ count: 0 });
