@@ -68,6 +68,7 @@ export const getCrewInfo = async (crewId: number): Promise<CrewDetail> => {
             schoolVerificationEnforcementEnabled: false,
             configuredSchoolVerificationRequired: localStorage.getItem(`dev_crew_school_verification_required_${crewId}`) === 'true',
             verifiedSchoolAutoJoinEnabled: localStorage.getItem(`dev_crew_auto_join_${crewId}`) === 'true',
+            inviteLinkAutoJoinEnabled: localStorage.getItem(`dev_crew_invite_link_auto_join_${crewId}`) === 'true',
         };
     }
 
@@ -198,6 +199,9 @@ export const updateCrew = async (crewId: number, data: Partial<CrewInfoUpdateReq
         }
         if (typeof data.verifiedSchoolAutoJoinEnabled === 'boolean') {
             localStorage.setItem(`dev_crew_auto_join_${crewId}`, String(data.verifiedSchoolAutoJoinEnabled));
+        }
+        if (typeof data.inviteLinkAutoJoinEnabled === 'boolean') {
+            localStorage.setItem(`dev_crew_invite_link_auto_join_${crewId}`, String(data.inviteLinkAutoJoinEnabled));
         }
         if (typeof data.seasonHouseGuestEnabled === 'boolean') {
             localStorage.setItem(`dev_crew_season_house_guest_enabled_${crewId}`, String(data.seasonHouseGuestEnabled));

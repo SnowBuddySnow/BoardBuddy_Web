@@ -291,7 +291,7 @@ try {
         state.approved = true; state.role = 'CREW_CAPTAIN';
         await page.getByRole('button', { name: '승인 상태 새로고침', exact: true }).click();
         await page.getByRole('button', { name: '새 초대 링크 만들기', exact: true }).click();
-        const qr = page.getByRole('img', { name: '크루 가입 신청 초대 QR', exact: true }); await qr.waitFor();
+        const qr = page.getByRole('img', { name: '크루 가입 초대 QR', exact: true }); await qr.waitFor();
         assert(await qr.evaluate(image => image.complete && image.naturalWidth > 0), 'Invitation QR did not render');
         const url = await page.getByRole('textbox', { name: '새 초대 링크', exact: true }).inputValue();
         assert(new URL(url).hash.includes('crewInvite=') && !new URL(url).search.includes('b'.repeat(43)), 'Issued invitation proof entered a query string');

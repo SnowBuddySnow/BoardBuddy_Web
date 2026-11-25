@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ArrowLeft, CheckCircle2, Clock3, ShieldCheck, UsersRound } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, Clock3, UsersRound } from 'lucide-react';
 import { Button } from '../components/Button';
 import { acceptCrewInvitation, previewCrewInvitation, type InvitationPreview } from '../services/onboarding';
 import { getUserInfo } from '../services/user';
@@ -19,6 +19,7 @@ export default function CrewInvite({ onLogin, onSignup, onDone, onExit, onEvents
     const [crewName, setCrewName] = useState('');
     const [error, setError] = useState('');
     const [unavailable, setUnavailable] = useState(false);
+    const approvalRequired = preview?.approvalRequired !== false;
     const load = useCallback(async () => {
         if (accepting.current) return;
         const revision = ++loadRevision.current;
@@ -65,7 +66,7 @@ export default function CrewInvite({ onLogin, onSignup, onDone, onExit, onEvents
             if (code === 404) setUnavailable(true);
             else if (code === 429) setError('요청이 많습니다. 잠시 후 다시 시도해 주세요.');
             else if (getApiErrorMessage(requestError) === 'Account already belongs to another crew') setError('이미 다른 크루에 가입되어 있어요. 현재 소속을 확인해 주세요.');
-            else setError(getApiErrorMessage(requestError) || '가입 신청을 보내지 못했습니다. 다시 시도해 주세요.');
+            else setError(getApiErrorMessage(requestError) || '가입 요청을 처리하지 못했습니다. 다시 시도해 주세요.');
         }
         finally { accepting.current = false; setBusy(false); }
     };
@@ -83,10 +84,17 @@ export default function CrewInvite({ onLogin, onSignup, onDone, onExit, onEvents
                     <h1 className="mt-2 text-2xl font-black leading-snug sm:text-3xl">{status === 'PENDING' ? '가입 신청을 보냈어요.' : status === 'JOINED' ? '이제 함께할 수 있어요.' : status === 'REJECTED' ? '신청 결과를 확인해 주세요.' : status === 'CANCELED' ? '취소한 가입 신청이에요.' : '함께할 크루가 기다리고 있어요.'}</h1>
                     {status === 'PREVIEW' ? <>
                         {preview?.schoolName && <p className="mt-3 text-sm text-zinc-600">{preview.schoolName}</p>}
-                        <ol className="my-7 space-y-4 text-sm leading-6"><li><strong>1. 내 계정 확인</strong><p className="text-zinc-600">기존 회원은 로그인만, 처음이라면 본인 확인과 가입을 진행해요.</p></li><li><strong>2. 크루 가입 신청</strong><p className="text-zinc-600">다시 검색하거나 PIN을 입력할 필요가 없어요.</p></li><li><strong>3. 운영진 승인</strong><p className="text-zinc-600">승인 후 크루의 멤버 기능을 이용할 수 있어요.</p></li></ol>
-                        <p className="mb-5 flex items-start gap-2 rounded-2xl bg-[#FAF8F3] p-4 text-xs leading-6 text-zinc-600"><ShieldCheck className="mt-1 h-4 w-4 shrink-0" />초대 링크를 받는 것만으로 멤버가 되지는 않아요. 내 프로필과 운영진 승인을 확인해요.</p>
-                        <Button onClick={accept} disabled={busy} className="min-h-14 w-full rounded-2xl border-[#162660] bg-[#162660] hover:bg-[#243878]">{busy ? '신청 중...' : getAccessToken() ? '이 크루에 가입 신청' : getSignupToken() ? '회원가입 이어서 하기' : '로그인하고 계속하기'}</Button>
-                    </> : status === 'JOINED' ? <><p className="my-5 text-sm leading-7 text-zinc-600">운영진이 가입을 승인했어요. 원래 보려던 크루나 행사로 이어갈게요.</p><Button onClick={finish} className="mt-2 min-h-14 w-full rounded-2xl border-[#162660] bg-[#162660] hover:bg-[#243878]">크루로 계속하기</Button></> : <>
+                        <ol className="my-7 space-y-4 text-sm leading-6">
+                            <li><strong>1. 내 계정 확인</strong><p className="text-zinc-600">기존 회원은 로그인만, 처음이라면 본인 확인과 가입을 진행해요.</p></li>
+                            {approvalRequired ? <>
+                                <li><strong>2. 크루 가입 신청</strong><p className="text-zinc-600">다시 검색하거나 PIN을 입력할 필요가 없어요.</p></li>
+                                <li><strong>3. 운영진 승인</strong><p className="text-zinc-600">승인 후 크루의 멤버 기능을 이용할 수 있어요.</p></li>
+                            </> : (
+                                <li><strong>2. 크루 바로 가입</strong><p className="text-zinc-600">학교 이메일 인증과 운영진 승인 없이 바로 멤버가 돼요.</p></li>
+                            )}
+                        </ol>
+                        <Button onClick={accept} disabled={busy} className="min-h-14 w-full rounded-2xl border-[#162660] bg-[#162660] hover:bg-[#243878]">{busy ? '처리 중...' : getAccessToken() ? (approvalRequired ? '이 크루에 가입 신청' : '이 크루에 바로 가입') : getSignupToken() ? '회원가입 이어서 하기' : '로그인하고 계속하기'}</Button>
+                    </> : status === 'JOINED' ? <><p className="my-5 text-sm leading-7 text-zinc-600">크루 가입이 완료됐어요. 원래 보려던 크루나 행사로 이어갈게요.</p><Button onClick={finish} className="mt-2 min-h-14 w-full rounded-2xl border-[#162660] bg-[#162660] hover:bg-[#243878]">크루로 계속하기</Button></> : <>
                         <p className="my-5 text-sm leading-7 text-zinc-600">{status === 'PENDING' ? '크루 운영진이 확인하면 알림으로 알려드려요. 기다리는 동안 공개 행사를 살펴볼 수 있어요.' : '자세한 내용은 크루 운영진에게 문의해 주세요. 다시 신청하려면 새 초대가 필요해요.'}</p>
                         <Button onClick={() => void load()} disabled={busy} className="min-h-12 w-full rounded-2xl border-[#162660] bg-[#162660] hover:bg-[#243878]">승인 상태 새로고침</Button>
                         <button type="button" onClick={onEvents} className="mt-3 min-h-12 w-full text-sm font-bold underline">행사 둘러보기</button>
