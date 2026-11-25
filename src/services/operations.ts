@@ -5,7 +5,7 @@ import { getDevRoleOverride } from '../lib/session';
 
 export type OperationPermission =
   | 'CREW_MEMBERS_MANAGE'
-  | 'CREW_EVENT_MANAGERS_ASSIGN'
+  | 'CREW_MANAGERS_ASSIGN'
   | 'RESERVATIONS_MANAGE'
   | 'PARTIES_CREATE'
   | 'PARTIES_MANAGE'
@@ -23,7 +23,7 @@ export const getOperationsContext = async (): Promise<OperationsContext> => {
     const permissionsByRole: Record<string, OperationPermission[]> = {
       admin: [
         'CREW_MEMBERS_MANAGE',
-        'CREW_EVENT_MANAGERS_ASSIGN',
+        'CREW_MANAGERS_ASSIGN',
         'RESERVATIONS_MANAGE',
         'PARTIES_CREATE',
         'PARTIES_MANAGE',

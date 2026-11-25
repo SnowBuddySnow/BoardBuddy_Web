@@ -35,7 +35,7 @@ export default function OperationsCenter({
   const canManageReservations = hasAny(permissions, ['RESERVATIONS_MANAGE']);
   const canManageParties = hasAny(permissions, ['PARTIES_CREATE', 'PARTIES_MANAGE']);
   const canManageGroups = hasAny(permissions, ['EVENT_GROUPS_CREATE', 'EVENT_GROUPS_MANAGE', 'EVENT_GROUPS_VIEW']);
-  const canManageCrew = hasAny(permissions, ['CREW_MEMBERS_MANAGE', 'CREW_EVENT_MANAGERS_ASSIGN']);
+  const canManageCrew = hasAny(permissions, ['CREW_MEMBERS_MANAGE', 'CREW_MANAGERS_ASSIGN']);
 
   const modules = [
     features.season && seasonAvailable && canManageReservations && onSeasonMatrixClick && {
@@ -115,7 +115,7 @@ export default function OperationsCenter({
             <span className="flex items-center gap-3">
               <Sparkles className="h-6 w-6 shrink-0 text-indigo-700" />
               <span>
-                <span className="block text-sm font-black text-indigo-950">이벤트 그룹 매니저 시작 가이드</span>
+                <span className="block text-sm font-black text-indigo-950">이벤트 운영 시작 가이드</span>
                 <span className="mt-1 block text-xs text-indigo-800">호스트 그룹부터 모집·참가자 관리까지</span>
               </span>
             </span>

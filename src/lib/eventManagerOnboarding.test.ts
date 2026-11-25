@@ -8,7 +8,7 @@ import {
 describe('event manager guide eligibility', () => {
   it.each<OperationPermission[]>([
     [], ['EVENT_GROUPS_VIEW'], ['RESERVATIONS_MANAGE'],
-    ['CREW_MEMBERS_MANAGE', 'CREW_EVENT_MANAGERS_ASSIGN'],
+    ['CREW_MEMBERS_MANAGE', 'CREW_MANAGERS_ASSIGN'],
   ])('does not treat non-event or view-only permissions as event management: %j', (...permissions) => {
     expect(hasEventManagementAccess(permissions)).toBe(false);
   });

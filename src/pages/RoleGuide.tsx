@@ -4,7 +4,6 @@ import {
   ChevronLeft,
   Crown,
   Plus,
-  Sparkles,
   UserRound,
 } from 'lucide-react';
 import { SEASON_HOUSE_RESERVATIONS_ENABLED } from '../constants/operatingSeason';
@@ -20,26 +19,24 @@ const basePermissions = [
   SEASON_HOUSE_RESERVATIONS_ENABLED ? '내 달력·활동 확인' : '내 이벤트 활동 확인',
 ] as const;
 
-const crewManagerPermissions = SEASON_HOUSE_RESERVATIONS_ENABLED ? [
-  '예약 현황·참가자 관리',
-  '결제 상태·관리 메모 수정',
+const crewManagerPermissions = [
   '가입 신청 승인·반려',
-  '예약 일정·정원 설정',
-  '크루 이용 통계 확인',
-] as const : ['가입 신청 승인·반려'] as const;
-
-const eventManagerPermissions = [
-  '이벤트 그룹 생성·참여',
-  '담당 이벤트 그룹 운영',
-  '모임 생성·수정',
-  '모임 참가자·결제 관리',
+  ...(SEASON_HOUSE_RESERVATIONS_ENABLED ? [
+    '예약 현황·참가자 관리',
+    '결제 상태·관리 메모 수정',
+    '예약 일정·정원 설정',
+    '크루 이용 통계 확인',
+  ] : []),
+  '호스트 그룹 생성·참여',
+  '담당 호스트 그룹 운영',
+  '이벤트 생성·수정',
+  '이벤트 참가자·결제 관리',
 ] as const;
 
 const captainPermissions = [
   '크루 이름 변경',
   '가입 PIN 확인·재발급',
   '크루 매니저 부여·회수',
-  '이벤트 그룹 매니저 부여·회수',
   '학교 연동 요청',
 ] as const;
 
@@ -117,7 +114,7 @@ export default function RoleGuide({ onBack }: RoleGuideProps) {
                 </div>
                 <div className="min-w-0">
                   <h2 className="text-lg font-black">크루장</h2>
-                  <p className="mt-0.5 text-xs font-bold text-zinc-500">두 매니저 역할을 모두 맡고 크루를 대표해요</p>
+                  <p className="mt-0.5 text-xs font-bold text-zinc-500">크루 매니저 권한을 갖고 크루를 대표해요</p>
                 </div>
               </div>
               <span className="shrink-0 rounded-full bg-amber-100 px-2.5 py-1 text-[11px] font-black text-amber-800">CAPTAIN</span>
@@ -125,8 +122,6 @@ export default function RoleGuide({ onBack }: RoleGuideProps) {
 
             <div className="mt-5 flex flex-wrap items-center gap-2 rounded-xl bg-amber-50 p-3 text-xs font-black text-amber-900">
               <span className="rounded-lg bg-white px-2.5 py-2">크루 매니저가 하는 일</span>
-              <Plus className="h-4 w-4 text-amber-500" aria-hidden="true" />
-              <span className="rounded-lg bg-white px-2.5 py-2">이벤트 그룹 매니저가 하는 일</span>
               <Plus className="h-4 w-4 text-amber-500" aria-hidden="true" />
               <span className="rounded-lg bg-amber-200 px-2.5 py-2">크루 대표가 하는 일</span>
             </div>
@@ -137,47 +132,21 @@ export default function RoleGuide({ onBack }: RoleGuideProps) {
             </div>
           </article>
 
-          <div className="relative mx-auto h-12 max-w-5xl" aria-hidden="true">
-            <div className="absolute left-1/2 top-0 h-full w-px -translate-x-1/2 bg-zinc-300" />
-            <div className="absolute bottom-0 left-[calc(25%_-_0.75rem)] right-[calc(25%_-_0.75rem)] hidden h-px bg-zinc-300 md:block" />
-          </div>
+          <div className="mx-auto h-10 w-px bg-zinc-300" aria-hidden="true" />
 
-          <div className="relative grid gap-4 md:grid-cols-2 md:gap-12">
-            <div className="absolute inset-y-0 left-1/2 w-px -translate-x-1/2 bg-zinc-300 md:hidden" aria-hidden="true" />
-            <div className="absolute left-1/2 top-1/2 z-20 hidden -translate-x-1/2 -translate-y-1/2 rounded-full border border-zinc-200 bg-white p-2 text-zinc-400 shadow-sm md:block" aria-hidden="true">
-              <Plus className="h-4 w-4" />
-            </div>
-            <div className="relative">
-              <ManagerNode
-                title="크루 매니저"
-                permissions={crewManagerPermissions}
-                icon={CalendarCheck2}
-                color="text-sky-800"
-                iconStyle="bg-sky-100"
-                borderStyle="border-sky-300"
-              />
-            </div>
-
-            <div className="relative z-20 mx-auto flex w-fit items-center justify-center gap-1 bg-[#FAF8F3] px-3 py-1 text-xs font-black text-zinc-500 md:hidden" aria-hidden="true">
-              <Plus className="h-4 w-4" />
-              두 역할을 함께 부여할 수 있어요
-            </div>
-
-            <div className="relative">
-              <ManagerNode
-                title="이벤트 그룹 매니저"
-                permissions={eventManagerPermissions}
-                icon={Sparkles}
-                color="text-indigo-800"
-                iconStyle="bg-indigo-100"
-                borderStyle="border-indigo-300"
-              />
-            </div>
+          <div className="mx-auto max-w-3xl">
+            <ManagerNode
+              title="크루 매니저"
+              permissions={crewManagerPermissions}
+              icon={CalendarCheck2}
+              color="text-sky-800"
+              iconStyle="bg-sky-100"
+              borderStyle="border-sky-300"
+            />
           </div>
 
           <div className="relative mx-auto h-16 max-w-5xl" aria-hidden="true">
             <div className="absolute left-1/2 top-0 h-full w-px -translate-x-1/2 bg-zinc-300" />
-            <div className="absolute left-[calc(25%_-_0.75rem)] right-[calc(25%_-_0.75rem)] top-0 hidden h-px bg-zinc-300 md:block" />
             <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 whitespace-nowrap rounded-full border border-zinc-200 bg-white px-3 py-1.5 text-[11px] font-black text-zinc-500 shadow-sm">
               모두 기본 활동부터 시작해요
             </div>

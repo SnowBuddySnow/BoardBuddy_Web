@@ -56,11 +56,11 @@ const allSteps: OnboardingStep[] = [
     navigationLabel: '역할 구조',
     eyebrow: '01 · 크루장의 위치',
     title: '크루장은 모든 일을 혼자 하는 사람이 아니에요',
-    description: '일반 멤버의 기본 활동 위에 두 매니저 역할이 쌓이고, 크루장은 크루를 대표하는 권한을 더 가집니다.',
+    description: '크루 매니저는 크루와 이벤트 운영을 맡고, 크루장은 매니저 권한에 더해 크루를 대표합니다.',
     icon: Crown,
     points: [
-      '크루 매니저와 이벤트 그룹 매니저 역할은 같은 사람에게 함께 부여할 수 있어요.',
-      '크루장은 두 역할의 업무를 이해하되, 실제 운영은 적절한 사람에게 나누는 것이 좋아요.',
+      '크루장은 함께 운영할 멤버를 크루 매니저로 지정할 수 있어요.',
+      '크루 설정과 매니저 지정은 크루장이 관리해요.',
     ],
   },
   {
@@ -80,12 +80,12 @@ const allSteps: OnboardingStep[] = [
     id: 'delegate',
     navigationLabel: '역할 배치',
     eyebrow: '03 · 운영진 구성하기',
-    title: '업무 단위로 역할을 부여하면 운영이 선명해져요',
-    description: '사람의 서열이 아니라 맡길 업무를 기준으로 크루 매니저와 이벤트 그룹 매니저를 부여하세요.',
+    title: '함께 운영할 크루 매니저를 지정해요',
+    description: '크루 매니저를 지정하면 한 번에 크루 관리와 이벤트 운영 권한이 부여돼요.',
     icon: UserCog,
     points: [
       SEASON_HOUSE_RESERVATIONS_ENABLED ? '예약·가입·결제 운영은 크루 매니저에게 맡겨요.' : '크루 가입 운영은 크루 매니저에게 맡겨요.',
-      '호스트 그룹·이벤트·참가자 운영은 이벤트 그룹 매니저에게 맡겨요.',
+      '크루 매니저는 호스트 그룹을 만들고, 맡은 그룹의 이벤트를 운영할 수 있어요.',
     ],
     action: { label: '역할 관리 열기', destination: 'crew_permissions' },
   },
@@ -124,7 +124,7 @@ const allSteps: OnboardingStep[] = [
     icon: ClipboardCheck,
     points: [
       '크루 정보와 가입 PIN을 확인했어요.',
-      '두 매니저 역할을 업무에 맞게 배치했어요.',
+      '함께 운영할 크루 매니저를 지정했어요.',
       SEASON_HOUSE_RESERVATIONS_ENABLED ? '예약과 이벤트의 담당자를 정했어요.' : '크루 가입과 이벤트의 담당자를 정했어요.',
       '개인정보를 필요한 범위에서만 다루기로 했어요.',
       '운영진에게 각자 시작할 화면을 알려줬어요.',
@@ -141,20 +141,14 @@ function RoleStackVisual() {
           <Crown className="h-4 w-4 text-amber-700" /> 크루장
         </div>
         <div className="mt-3 flex flex-wrap gap-1.5">
-          {['두 매니저 역할', '크루 대표', '역할 부여'].map(label => (
+          {['크루 매니저 권한', '크루 대표', '역할 부여'].map(label => (
             <span key={label} className="rounded-full bg-amber-200 px-2.5 py-1 text-[10px] font-black text-amber-900">{label}</span>
           ))}
         </div>
       </div>
-      <div className="grid gap-2 sm:grid-cols-2">
-        <div className="rounded-2xl border border-sky-200 bg-white p-4">
-          <p className="text-xs font-black text-sky-900">크루 매니저</p>
-          <p className="mt-1 text-[11px] leading-5 text-zinc-500">가입 · 예약 · 결제 · 통계</p>
-        </div>
-        <div className="rounded-2xl border border-indigo-200 bg-white p-4">
-          <p className="text-xs font-black text-indigo-900">이벤트 그룹 매니저</p>
-          <p className="mt-1 text-[11px] leading-5 text-zinc-500">호스트 그룹 · 이벤트 · 응답</p>
-        </div>
+      <div className="mx-auto max-w-sm rounded-2xl border border-sky-200 bg-white p-4">
+        <p className="text-xs font-black text-sky-900">크루 매니저</p>
+        <p className="mt-1 text-[11px] leading-5 text-zinc-500">가입 · 호스트 그룹 · 이벤트{SEASON_HOUSE_RESERVATIONS_ENABLED ? ' · 예약' : ''}</p>
       </div>
       <div className="rounded-2xl border border-emerald-200 bg-emerald-50/70 px-4 py-3 text-center text-[11px] font-bold text-emerald-900">
         모든 역할은 일반 멤버의 기본 활동 위에 더해져요
@@ -187,20 +181,20 @@ function DelegateVisual() {
     <div className="space-y-2">
       <div className="grid gap-2 sm:grid-cols-2">
         <div className="rounded-2xl border border-sky-200 bg-sky-50/60 p-4">
-          <p className="text-xs font-black text-sky-950">크루 매니저에게</p>
+          <p className="text-xs font-black text-sky-950">크루 운영</p>
           <div className="mt-3 flex flex-wrap gap-1.5">
             {['가입 승인', '예약 운영', '결제·메모', '이용 통계'].map(label => <span key={label} className="rounded-full bg-white px-2.5 py-1 text-[10px] font-bold text-sky-800">{label}</span>)}
           </div>
         </div>
         <div className="rounded-2xl border border-indigo-200 bg-indigo-50/60 p-4">
-          <p className="text-xs font-black text-indigo-950">이벤트 그룹 매니저에게</p>
+          <p className="text-xs font-black text-indigo-950">이벤트 운영</p>
           <div className="mt-3 flex flex-wrap gap-1.5">
             {['호스트 그룹', '이벤트 생성', '참가자·결제', '응답 시트'].map(label => <span key={label} className="rounded-full bg-white px-2.5 py-1 text-[10px] font-bold text-indigo-800">{label}</span>)}
           </div>
         </div>
       </div>
       <div className="flex items-center justify-center gap-2 rounded-xl bg-zinc-900 px-3 py-2.5 text-[11px] font-bold text-white">
-        <CheckCircle2 className="h-4 w-4 text-emerald-300" /> 필요하면 한 사람에게 두 역할을 함께 부여할 수 있어요
+        <CheckCircle2 className="h-4 w-4 text-emerald-300" /> 크루 매니저 한 역할로 두 업무를 맡을 수 있어요
       </div>
     </div>
   );

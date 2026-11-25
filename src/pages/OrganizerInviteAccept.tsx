@@ -22,9 +22,9 @@ interface OrganizerInviteAcceptProps {
 
 const eligibilityText = (reason: string) => {
     if (reason.startsWith('Eligible')) return '현재 계정으로 참여할 수 있습니다.';
-    if (reason.includes('crew captain or assigned event manager')) return '이벤트 그룹 관리 권한이 있는 계정만 수락할 수 있습니다.';
-    if (reason.includes('assigned event manager')) return '이 링크는 크루에서 지정된 이벤트 매니저만 수락할 수 있습니다.';
-    if (reason.includes('crew manager, captain')) return '이벤트 운영 권한이 있는 계정만 수락할 수 있습니다.';
+    if (reason.includes('crew manager') || reason.includes('assigned event manager')) {
+        return '이 링크는 크루장과 크루 매니저가 수락할 수 있습니다.';
+    }
     if (reason.includes('active crew membership')) return '활성 크루 가입 정보가 필요합니다.';
     if (reason.includes('already belong')) return '이미 이 호스트 그룹에 참여하고 있습니다.';
     if (reason.includes('expired, exhausted, or revoked')) return '만료되었거나 사용이 끝난 초대 링크입니다.';

@@ -1,42 +1,31 @@
 import apiClient from '../lib/axios';
 import type { ApiResponse } from '../types/api';
 import { hasDevOverride } from '../lib/session';
-
-export type CrewRole = 'CREW_MEMBER' | 'CREW_MANAGER' | 'CREW_CAPTAIN';
+import type { CrewRole } from '../constants/crewRole';
 
 export interface CrewMemberAccess {
   accountId: number;
   displayName: string | null;
   crewRole: CrewRole;
-  eventManager: boolean;
 }
 
-const DEV_CREW_ACCESS_KEY = 'dev_crew_member_access';
+const DEV_CREW_ACCESS_KEY = 'dev_crew_member_roles';
 
 const initialDevCrewAccess = (): CrewMemberAccess[] => [
   {
     accountId: 999,
     displayName: '크루장 샘플',
     crewRole: 'CREW_CAPTAIN',
-    eventManager: true,
   },
   {
     accountId: 1001,
     displayName: '크루 매니저 샘플',
     crewRole: 'CREW_MANAGER',
-    eventManager: false,
   },
   {
     accountId: 1002,
-    displayName: '이벤트 그룹 매니저 샘플',
+    displayName: '일반 멤버 샘플',
     crewRole: 'CREW_MEMBER',
-    eventManager: true,
-  },
-  {
-    accountId: 1003,
-    displayName: '겸임 매니저 샘플',
-    crewRole: 'CREW_MANAGER',
-    eventManager: true,
   },
 ];
 
@@ -63,23 +52,7 @@ export const listCrewMemberAccess = async (crewId: number): Promise<CrewMemberAc
   return response.data.data;
 };
 
-export const grantEventManager = async (crewId: number, accountId: number): Promise<void> => {
-  if (hasDevOverride()) {
-    updateDevCrewAccess(accountId, (member) => ({ ...member, eventManager: true }));
-    return;
-  }
-  await apiClient.post<ApiResponse<unknown>>(`/operations/crews/${crewId}/event-managers`, { accountId });
-};
-
-export const revokeEventManager = async (crewId: number, accountId: number): Promise<void> => {
-  if (hasDevOverride()) {
-    updateDevCrewAccess(accountId, (member) => ({ ...member, eventManager: false }));
-    return;
-  }
-  await apiClient.delete<ApiResponse<void>>(`/operations/crews/${crewId}/event-managers/${accountId}`);
-};
-
-export const grantGeneralAdmin = async (crewId: number, accountId: number): Promise<void> => {
+export const grantCrewManager = async (crewId: number, accountId: number): Promise<void> => {
   if (hasDevOverride()) {
     updateDevCrewAccess(accountId, (member) => ({ ...member, crewRole: 'CREW_MANAGER' }));
     return;
@@ -87,7 +60,7 @@ export const grantGeneralAdmin = async (crewId: number, accountId: number): Prom
   await apiClient.post<ApiResponse<void>>(`/crews/${crewId}/managers/${accountId}`);
 };
 
-export const revokeGeneralAdmin = async (crewId: number, accountId: number): Promise<void> => {
+export const revokeCrewManager = async (crewId: number, accountId: number): Promise<void> => {
   if (hasDevOverride()) {
     updateDevCrewAccess(accountId, (member) => ({ ...member, crewRole: 'CREW_MEMBER' }));
     return;
