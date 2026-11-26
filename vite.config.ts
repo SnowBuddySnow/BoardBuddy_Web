@@ -1,7 +1,24 @@
-import { defineConfig, loadEnv } from 'vite'
+import { defineConfig, loadEnv, type Plugin } from 'vite'
 import react from '@vitejs/plugin-react'
 import { configDefaults } from 'vitest/config'
 import packageMetadata from './package.json' with { type: 'json' }
+
+function publishBuildInfo(revision: string | undefined): Plugin {
+  return {
+    name: 'boardbuddy-build-info',
+    apply: 'build',
+    generateBundle(_, bundle) {
+      if (!revision || !/^[a-f0-9]{40}$/.test(revision)) return
+      const entry = Object.values(bundle).find(file => file.type === 'chunk' && file.isEntry)
+      if (!entry) this.error('Could not identify the BoardBuddy Web entry module')
+      this.emitFile({
+        type: 'asset',
+        fileName: 'build-info.json',
+        source: JSON.stringify({ revision, entry: `/${entry.fileName}` }),
+      })
+    },
+  }
+}
 
 // https://vite.dev/config/
 export default defineConfig(({ mode }) => {
@@ -30,7 +47,7 @@ export default defineConfig(({ mode }) => {
   return {
     // Keep independently configured browser fixtures from invalidating one another.
     cacheDir: env.BOARDBUDDY_VITE_CACHE_DIR || 'node_modules/.vite',
-    plugins: [react()],
+    plugins: [react(), publishBuildInfo(buildSha)],
     define: {
       __APP_VERSION__: JSON.stringify(buildVersion),
     },
@@ -43,6 +60,13 @@ export default defineConfig(({ mode }) => {
         reportsDirectory: 'output/test-results/coverage',
         reporter: ['text-summary', 'html', 'lcov'],
         reportOnFailure: true,
+        thresholds: {
+          lines: 58,
+          branches: 53,
+          'src/lib/axios.ts': { lines: 97, branches: 90 },
+          'src/lib/naverOAuth.ts': { lines: 95, branches: 95 },
+          'src/services/eventSave.ts': { lines: 60, branches: 60 },
+        },
       },
     },
     server: {
