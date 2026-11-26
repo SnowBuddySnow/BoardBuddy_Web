@@ -62,6 +62,7 @@ const OperationsCenter = lazy(() => import('./pages/OperationsCenter'));
 const CrewPermissions = lazy(() => import('./pages/CrewPermissions'));
 const RoleGuide = lazy(() => import('./pages/RoleGuide'));
 const GuestAccess = lazy(() => import('./pages/GuestAccess'));
+const EventGuestVerification = lazy(() => import('./pages/EventGuestVerification'));
 const OrganizerInviteAccept = lazy(() => import('./pages/OrganizerInviteAccept'));
 
 function FeatureUnavailable({ title, description, onBack }: { title: string; description: string; onBack: () => void }) {
@@ -146,7 +147,7 @@ function App() {
   const [eventManagerGuideReturnVisible, setEventManagerGuideReturnVisible] = useState(false);
   const isDesktop = useDesktopViewport();
   const usedDesktopLanding = useRef(false);
-  const shouldLoadPermissions = !['login', 'user_info', 'profile_type_confirmation', 'student_verification', 'crew_invite'].includes(currentView);
+  const shouldLoadPermissions = !['login', 'user_info', 'profile_type_confirmation', 'student_verification', 'crew_invite', 'event_guest_verification'].includes(currentView);
   const operatingMode = getOperatingMode();
   const operatingFeatures = getOperatingFeatures(operatingMode);
   const seasonHouseAvailable = operatingFeatures.season
@@ -329,11 +330,11 @@ function App() {
 
   const isDashboardView = currentView.startsWith('dashboard_');
   const isManagementView = isDashboardView || currentView === 'operations_center';
-  const isPublicGuestFlow = !getAccessToken() && (
+  const isPublicGuestFlow = currentView === 'event_guest_verification' || (!getAccessToken() && (
     currentView === 'guest_access'
     || currentView === 'guest_reservation'
     || (currentView === 'event_detail' && isGuestEventApplication)
-  );
+  ));
   const activeTab = viewTabs[currentView] || 'home';
   const showBottomNav = !viewsWithoutBottomNav.includes(currentView) && !isDashboardView && !isPublicGuestFlow;
 
@@ -516,6 +517,8 @@ function App() {
         return <Reservation onBack={() => setCurrentView('home')} />;
       case 'guest_reservation':
         return <Reservation onBack={() => setCurrentView('guest_access')} isGuest={true} guestCrewId={guestCrewId ?? undefined} />;
+      case 'event_guest_verification':
+        return <EventGuestVerification />;
       case 'guest_access':
         return <GuestAccess
           onBack={() => setCurrentView(getAccessToken() ? 'home' : 'login')}
@@ -878,7 +881,7 @@ function App() {
           />
         )}
       </div>
-      {import.meta.env.DEV && (
+      {import.meta.env.DEV && currentView !== 'event_guest_verification' && (
         <DevPanel
           onOpenCrewAdmin={() => setCurrentView('crew_admin')}
           onOpenSchoolAdmin={() => setCurrentView('school_admin')}

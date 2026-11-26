@@ -2,6 +2,7 @@ import { chromium } from 'playwright';
 import { spawn } from 'node:child_process';
 import { readFileSync, mkdirSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
+import { runEventGuestVerificationSmoke } from './event-guest-verification-smoke.mjs';
 
 const root = fileURLToPath(new URL('../../', import.meta.url));
 const origin = 'http://127.0.0.1:5187';
@@ -28,6 +29,12 @@ try {
     const load = name => new Function(`return (${readFileSync(new URL(name, import.meta.url), 'utf8')})`)();
     await load('event-browser-fixture.js')(page);
     const report = await load('event-browser-smoke.js')(page);
+    const guestContext = await browser.newContext({ viewport: { width: 390, height: 844 }, serviceWorkers: 'block' });
+    try {
+        report.completed.push(await runEventGuestVerificationSmoke(await guestContext.newPage(), origin));
+    } finally {
+        await guestContext.close();
+    }
     mkdirSync(`${root}/output/playwright`, { recursive: true });
     await page.screenshot({ path: `${root}/output/playwright/event-browser-smoke.png`, fullPage: true });
     writeFileSync(`${root}/output/playwright/event-browser-smoke.json`, JSON.stringify(report, null, 2));

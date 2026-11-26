@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { expect, test, type Page } from '@playwright/test';
+import { runEventGuestVerificationSmoke } from '../scripts/test/event-guest-verification-smoke.mjs';
 
 // The CLI also loads these function expressions without importing an ES module.
 function loadScenario<T>(name: string): (page: Page) => Promise<T> {
@@ -19,4 +20,8 @@ test('participants can register and cancel, and private details follow their sta
         body: JSON.stringify(result, null, 2),
         contentType: 'application/json',
     });
+});
+
+test('signed-out guests can apply, reverify their receipt, and cancel', async ({ page, baseURL }) => {
+    expect(await runEventGuestVerificationSmoke(page, baseURL!)).toBe('signed-out-guest-apply-reverify-lookup-cancel');
 });

@@ -23,6 +23,7 @@ export type View =
   | 'crew_settings'
   | 'guest_reservation'
   | 'guest_access'
+  | 'event_guest_verification'
   | 'my_page'
   | 'account_info'
   | 'crew_create'
@@ -63,6 +64,7 @@ const knownViews = new Set<View>([
   'crew_settings',
   'guest_reservation',
   'guest_access',
+  'event_guest_verification',
   'my_page',
   'account_info',
   'crew_create',
@@ -86,7 +88,7 @@ const knownViews = new Set<View>([
   'organizer_invite',
 ]);
 
-const publicEntryViews = new Set<View>(['login', 'guest_access', 'crew_invite']);
+const publicEntryViews = new Set<View>(['login', 'guest_access', 'crew_invite', 'event_guest_verification']);
 const signupViews = new Set<View>(['user_info', 'profile_type_confirmation', 'student_verification']);
 export const eventGuideEntryViews = new Set<View>(['home', 'my_page', 'operations_center', 'dashboard_groups', 'dashboard_parties']);
 
