@@ -9,6 +9,7 @@ import { ChevronLeft, Play, Power, Clock, Check, Save, X, MessageCircle } from '
 import { PlanningModeBadge } from '../components/event/PlanningModeBadge';
 import { eventStatusLabel, joinPolicyLabel, participantStatusLabel } from '../constants/displayLabels';
 import { ManagerConsentResponseSheet } from '../components/event/ManagerConsentResponseSheet';
+import { EventGuestVerificationSettings } from '../components/event/EventGuestVerificationSettings';
 
 interface DashboardEventDetailProps {
     eventId: number;
@@ -253,6 +254,8 @@ export default function DashboardEventDetail({ eventId, onBack, onEditClick, onO
                             </div>
                         </div>
                     </div>
+
+                    <EventGuestVerificationSettings key={event.id} eventId={event.id} />
 
                     {/* Participant Management panel */}
                     <div className="bg-white rounded-3xl p-6 border border-zinc-100 shadow-sm space-y-4">
