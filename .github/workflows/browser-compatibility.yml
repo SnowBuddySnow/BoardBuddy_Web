@@ -1,0 +1,45 @@
+name: Web Browser Compatibility
+
+on:
+  schedule:
+    - cron: '23 20 * * 0'
+  pull_request:
+    branches: [ develop, main ]
+    paths:
+      - '.github/workflows/browser-compatibility.yml'
+      - 'e2e/**'
+      - 'package.json'
+      - 'playwright.config.ts'
+      - 'pnpm-lock.yaml'
+      - 'scripts/test/event-browser-*'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  compatibility:
+    name: Firefox and WebKit Event Journeys
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'schedule' && 'develop' || github.ref }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install pinned dependencies
+        run: |
+          corepack enable
+          corepack prepare pnpm@11.9.0 --activate
+          pnpm install --frozen-lockfile
+      - name: Install Firefox and WebKit with system dependencies
+        run: pnpm exec playwright install --with-deps firefox webkit
+      - run: pnpm run test:browser:extended
+      - name: Upload compatibility reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: browser-compatibility-evidence
+          path: output/playwright/event/
