@@ -45,8 +45,9 @@ export const navigationUrl = (route: NavigationState): string => {
     }
     if (route.view !== 'event_guest_verification') {
         const fragment = new URLSearchParams(url.hash.slice(1));
-        if (fragment.has('eventGuest')) {
+        if (fragment.has('eventGuest') || fragment.has('eventGuestReceipt')) {
             fragment.delete('eventGuest');
+            fragment.delete('eventGuestReceipt');
             url.hash = fragment.toString();
         }
     }

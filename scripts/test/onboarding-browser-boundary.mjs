@@ -127,6 +127,7 @@ export const installOnboardingBoundary = async (page, { origin = 'http://127.0.0
         if (path === '/dashboard/events') return respond([state.managedEvent]);
         if (path === '/dashboard/events/9101' && method === 'PATCH') { const body = request.postDataJSON(); state.writes.push({ path, body }); Object.assign(state.managedEvent, body); return respond(state.managedEvent); }
         if (path === '/dashboard/events/9101') return respond(state.managedEvent);
+        if (path === '/dashboard/events/9101/guest-applications') return respond([]);
         if (path === '/dashboard/events/9101/guest-verification') return respond({ available: false, canIssue: false, linkActive: false, expiresAt: null });
         if (path === '/dashboard/events/9101/participants') return respond(state.participants);
         if (path.startsWith('/dashboard/events/9101/participants/') && method === 'PATCH') { const body = request.postDataJSON(); state.writes.push({ path, body }); Object.assign(state.participants[0], body); state.managedEvent.joinedCount = state.participants.filter(item => item.status === 'JOINED').length; return respond(state.participants[0]); }

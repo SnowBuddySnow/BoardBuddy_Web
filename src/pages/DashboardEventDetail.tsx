@@ -11,6 +11,10 @@ import { eventStatusLabel, joinPolicyLabel, participantStatusLabel } from '../co
 import { ManagerConsentResponseSheet } from '../components/event/ManagerConsentResponseSheet';
 import { EventGuestVerificationSettings } from '../components/event/EventGuestVerificationSettings';
 
+import { EventGuestApplicationRow } from '../components/event/EventGuestApplicationRow';
+import { listEventGuestApplications, updateEventGuestApplication, type EventGuestApplication } from '../services/eventGuestVerification';
+import { getApiErrorStatus } from '../lib/apiError';
+
 interface DashboardEventDetailProps {
     eventId: number;
     onBack: () => void;
@@ -21,6 +25,10 @@ interface DashboardEventDetailProps {
 export default function DashboardEventDetail({ eventId, onBack, onEditClick, onOpenEvent }: DashboardEventDetailProps) {
     const [showGroupize, setShowGroupize] = useState(false);
     const [event, setEvent] = useState<Event | null>(null);
+    const [guestApplications, setGuestApplications] = useState<EventGuestApplication[]>([]);
+    const [guestError, setGuestError] = useState('');
+    const [busyGuest, setBusyGuest] = useState<string | null>(null);
+    const [participantKind, setParticipantKind] = useState<'all' | 'member' | 'guest'>('all');
     const [participants, setParticipants] = useState<EventParticipant[]>([]);
     const [showParticipantHistory, setShowParticipantHistory] = useState(false);
     const [loading, setLoading] = useState(true);
@@ -56,6 +64,40 @@ export default function DashboardEventDetail({ eventId, onBack, onEditClick, onO
     useEffect(() => {
         fetchDetailData();
     }, [fetchDetailData]);
+
+    useEffect(() => {
+        let current = true;
+        setGuestApplications([]);
+        setGuestError('');
+        setParticipantKind('all');
+        listEventGuestApplications(eventId)
+            .then(items => { if (current) setGuestApplications(items); })
+            .catch(error => {
+                if (current && ![403, 404].includes(getApiErrorStatus(error) ?? 0)) {
+                    setGuestError('비회원 명단을 불러오지 못했어요.');
+                }
+            });
+        return () => { current = false; };
+    }, [eventId]);
+
+    async function updateGuestStatus(guest: EventGuestApplication, next: 'JOINED' | 'REMOVED') {
+        if (busyGuest) return;
+        if (next === 'REMOVED' && !window.confirm(`${guest.name ?? guest.receiptCode} 님을 참가자 명단에서 제외할까요?`)) return;
+        setBusyGuest(guest.receiptCode);
+        setGuestError('');
+        try {
+            const updated = await updateEventGuestApplication(eventId, guest.receiptCode, next);
+            setGuestApplications(items => items.map(item => item.receiptCode === updated.receiptCode ? updated : item));
+            const latest = await getEventDashboard(eventId);
+            setEvent(latest);
+        } catch (error) {
+            setGuestError(getApiErrorStatus(error) === 409
+                ? '정원을 확인해 주세요. 승인할 수 있는 자리가 없습니다.'
+                : '비회원 신청 상태를 변경하지 못했어요. 명단을 다시 확인해 주세요.');
+        } finally {
+            setBusyGuest(null);
+        }
+    }
 
     const handleOpenRegistration = async () => {
         try {
@@ -146,7 +188,10 @@ export default function DashboardEventDetail({ eventId, onBack, onEditClick, onO
     const formatCompactDate = formatEventDateTime;
     const activeParticipants = participants.filter(part => ['JOINED', 'PENDING', 'CONSENT_PENDING'].includes(part.status));
     const historicalParticipants = participants.filter(part => !['JOINED', 'PENDING', 'CONSENT_PENDING'].includes(part.status));
-    const visibleParticipants = showParticipantHistory ? historicalParticipants : activeParticipants;
+    const activeGuests = guestApplications.filter(guest => guest.status === 'JOINED' || guest.status === 'PENDING');
+    const historicalGuests = guestApplications.filter(guest => guest.status !== 'JOINED' && guest.status !== 'PENDING');
+    const visibleParticipants = participantKind === 'guest' ? [] : showParticipantHistory ? historicalParticipants : activeParticipants;
+    const visibleGuests = participantKind === 'member' ? [] : showParticipantHistory ? historicalGuests : activeGuests;
 
     if (loading) {
         return (
@@ -266,23 +311,32 @@ export default function DashboardEventDetail({ eventId, onBack, onEditClick, onO
                             onChanged={() => { void getEventDashboard(eventId).then(setEvent); }} />}
                     </div>}
                     <div className="flex items-center justify-between">
-                            <h2 className="text-base font-bold text-zinc-900">참가자 목록 ({activeParticipants.length})</h2>
+                            <h2 className="text-base font-bold text-zinc-900">참가자 목록 ({activeParticipants.length + activeGuests.length})</h2>
                         </div>
                         <p className="text-xs text-zinc-500">
-                            참가 확정 {participants.filter(part => part.status === 'JOINED').length}명 · 승인 대기 {participants.filter(part => part.status === 'PENDING').length}명 · 동의 대기 {participants.filter(part => part.status === 'CONSENT_PENDING').length}명
+                            참가 확정 {participants.filter(part => part.status === 'JOINED').length + activeGuests.filter(guest => guest.status === 'JOINED').length}명 · 승인 대기 {participants.filter(part => part.status === 'PENDING').length + activeGuests.filter(guest => guest.status === 'PENDING').length}명 · 동의 대기 {participants.filter(part => part.status === 'CONSENT_PENDING').length}명
                         </p>
                         <div className="flex flex-wrap gap-2" aria-label="참가자 목록 필터">
                             <Button variant={showParticipantHistory ? 'outline' : 'primary'} aria-pressed={!showParticipantHistory} onClick={() => setShowParticipantHistory(false)}>
-                                진행 중 ({activeParticipants.length})
+                                진행 중 ({activeParticipants.length + activeGuests.length})
                             </Button>
                             <Button variant={showParticipantHistory ? 'primary' : 'outline'} aria-pressed={showParticipantHistory} onClick={() => setShowParticipantHistory(true)}>
-                                취소·내보냄 ({historicalParticipants.length})
+                                취소·내보냄 ({historicalParticipants.length + historicalGuests.length})
                             </Button>
                         </div>
 
-                        {visibleParticipants.length === 0 ? (
+                        {guestError && <p role="alert" className="text-sm text-rose-700">{guestError}</p>}
+                        {guestApplications.length > 0 && (
+                            <div className="flex flex-wrap gap-2" aria-label="회원 유형 필터">
+                                {([['all', '전체'], ['member', '회원'], ['guest', '비회원']] as const).map(([kind, label]) => (
+                                    <Button key={kind} type="button" variant={kind === participantKind ? 'primary' : 'outline'}
+                                        aria-pressed={kind === participantKind} onClick={() => setParticipantKind(kind)}>{label}</Button>
+                                ))}
+                            </div>
+                        )}
+                        {visibleParticipants.length === 0 && visibleGuests.length === 0 ? (
                             <div className="text-center py-10 text-zinc-400 text-sm">
-                                {showParticipantHistory ? '취소·내보냄 내역이 없습니다.' : '현재 참가 확정 또는 대기 중인 멤버가 없습니다.'}
+                                {showParticipantHistory ? '취소·내보냄 내역이 없습니다.' : '현재 참가 확정 또는 대기 중인 참가자가 없습니다.'}
                             </div>
                         ) : (
                             <div className="overflow-x-auto">
@@ -293,7 +347,7 @@ export default function DashboardEventDetail({ eventId, onBack, onEditClick, onO
                                             <th className="px-2 py-3">상태</th>
                                             <th className="px-2 py-3">신청 일시</th>
                                             <th className="px-2 py-3">입금 상태</th>
-                                            <th className="px-2 py-3">호스트 메모</th>
+                                            <th className="px-2 py-3">메모·응답</th>
                                             <th className="px-2 py-3 text-right">관리</th>
                                         </tr>
                                     </thead>
@@ -392,6 +446,10 @@ export default function DashboardEventDetail({ eventId, onBack, onEditClick, onO
                                                 </tr>
                                             );
                                         })}
+                                        {visibleGuests.map(guest => (
+                                            <EventGuestApplicationRow key={guest.receiptCode} guest={guest} pending={busyGuest !== null}
+                                                onStatusChange={next => void updateGuestStatus(guest, next)} />
+                                        ))}
                                     </tbody>
                                 </table>
                             </div>

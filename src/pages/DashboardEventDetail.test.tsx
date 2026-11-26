@@ -7,6 +7,13 @@ const api = vi.hoisted(() => ({ getEventDashboard: vi.fn(), listParticipants: vi
 vi.mock('../services/event', async importOriginal => ({
     ...await importOriginal<typeof import('../services/event')>(), ...api,
 }));
+const guestApi = vi.hoisted(() => ({
+    listEventGuestApplications: vi.fn(),
+    updateEventGuestApplication: vi.fn(),
+    getEventGuestVerificationSettings: vi.fn(),
+}));
+vi.mock('../services/eventGuestVerification', () => guestApi);
+
 import DashboardEventDetail from './DashboardEventDetail';
 
 beforeEach(() => {
@@ -17,6 +24,8 @@ beforeEach(() => {
         startsAt: '2026-11-06T09:00:00Z', capacity: 4, joinedCount: 0, joinPolicy: 'INSTANT',
     });
     api.listParticipants.mockResolvedValue([]);
+    guestApi.listEventGuestApplications.mockResolvedValue([]);
+    guestApi.getEventGuestVerificationSettings.mockResolvedValue({ available: false });
     api.getEventChatAccess.mockResolvedValue({ chatUrl: null, chatPasscode: null, chatInstructions: null });
 });
 afterEach(() => { vi.restoreAllMocks(); vi.clearAllMocks(); vi.unstubAllGlobals(); });
@@ -87,5 +96,32 @@ it('counts confirmed and pending registrations separately and preserves removed 
         expect(container.textContent).toContain('회원 5');
     } finally {
         await act(async () => root.unmount()); container.remove();
+    }
+});
+
+
+it('displays members and guests in one roster and updates a guest approval independently', async () => {
+    api.listParticipants.mockResolvedValue([{ id: 1, userId: 3, userName: '회원 참가자',
+        status: 'JOINED', joinedAt: '2026-11-03T12:00:00' }]);
+    const guest = { receiptCode: 'EG-01234567', name: '비회원 참가자', school: '외부 학교', crew: '외부 크루',
+        maskedPhone: '010-****-0110', status: 'PENDING', canApprove: true, appliedAt: '2026-11-03T12:30:00' };
+    guestApi.listEventGuestApplications.mockResolvedValue([guest]);
+    guestApi.updateEventGuestApplication.mockResolvedValue({ ...guest, status: 'JOINED', canApprove: false });
+    const container = document.createElement('div'); document.body.append(container);
+    const root = createRoot(container);
+    try {
+        await act(async () => root.render(<DashboardEventDetail eventId={10} onBack={vi.fn()} onEditClick={vi.fn()} />));
+        expect(container.textContent).toContain('참가자 목록 (2)');
+        expect(container.querySelectorAll('tbody tr')).toHaveLength(2);
+        expect(container.textContent).toContain('010-****-0110');
+        const guestFilter = Array.from(container.querySelectorAll('button')).find(button => button.textContent === '비회원')!;
+        await act(async () => guestFilter.click());
+        expect(container.querySelectorAll('tbody tr')).toHaveLength(1);
+        await act(async () => container.querySelector<HTMLButtonElement>('[aria-label="비회원 참가자 승인"]')!.click());
+        expect(guestApi.updateEventGuestApplication).toHaveBeenCalledWith(10, 'EG-01234567', 'JOINED');
+        expect(container.textContent).toContain('참가 확정 2명 · 승인 대기 0명');
+    } finally {
+        await act(async () => root.unmount());
+        container.remove();
     }
 });
