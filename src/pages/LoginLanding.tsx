@@ -294,15 +294,15 @@ export default function LoginLanding({
                         <p className="flex gap-2"><Check className="mt-1 h-4 w-4 shrink-0" />처음이라면 내 정보와 본인 확인</p>
                     </div>
                     <div className="space-y-3">
-                        <button type="button" onClick={handleKakaoLogin} disabled={isLoggingIn} className="relative block min-h-12 w-full overflow-hidden rounded-xl bg-[#FEE500] transition-opacity hover:opacity-90 disabled:cursor-wait disabled:opacity-70">
-                            <img src={kakaoLogin} alt="Kakao Login" className="mx-auto block h-auto w-full max-w-sm" />
+                        <button type="button" onClick={handleKakaoLogin} disabled={isLoggingIn} className="relative flex h-12 w-full items-center justify-center overflow-hidden rounded-xl bg-[#FEE500] transition-opacity hover:opacity-90 disabled:cursor-wait disabled:opacity-70">
+                            <img src={kakaoLogin} alt="Kakao Login" className="h-full w-auto max-w-full object-contain" />
                             {loggingInProvider === 'kakao' && <span role="status" className="absolute inset-0 flex items-center justify-center bg-[#FEE500] text-sm font-bold text-zinc-900">로그인 처리 중...</span>}
                         </button>
                         <button
                             type="button"
                             onClick={() => void handleNaverLogin()}
                             disabled={isLoggingIn}
-                            className="relative flex min-h-12 w-full items-center justify-center gap-3 overflow-hidden rounded-xl bg-[#03C75A] px-4 py-3 text-base font-bold text-white transition-opacity hover:opacity-90 disabled:cursor-wait disabled:opacity-70"
+                            className="relative flex h-12 w-full items-center justify-center gap-3 overflow-hidden rounded-xl bg-[#03C75A] px-4 text-base font-bold text-white transition-opacity hover:opacity-90 disabled:cursor-wait disabled:opacity-70"
                         >
                             <svg viewBox="0 0 20 20" aria-hidden="true" className="h-4 w-4 shrink-0 fill-current">
                                 <path d="M13.56 10.7L6.16 0H0v20h6.44V9.3L13.84 20H20V0h-6.44z" />
