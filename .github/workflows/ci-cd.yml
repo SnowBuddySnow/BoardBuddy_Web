@@ -13,7 +13,7 @@ jobs:
   verify:
     name: Verify & Build
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -49,6 +49,11 @@ jobs:
           jq --exit-status --arg revision "$GITHUB_SHA" '.revision == $revision' dist/build-info.json
           entry=$(jq --exit-status --raw-output '.entry' dist/build-info.json)
           test -f "dist${entry}"
+      - name: Smoke-test the proposed production revision on staging
+        if: github.event_name == 'pull_request' && github.base_ref == 'main' && github.head_ref == 'develop' && github.event.pull_request.head.repo.full_name == github.repository
+        env:
+          BOARDBUDDY_STAGING_REVISION: ${{ github.event.pull_request.head.sha }}
+        run: node scripts/verify-staging.mjs
 
   unit:
     name: Web Unit and Component Tests
@@ -159,19 +164,4 @@ jobs:
           echo "Triggered Vercel staging deployment job: $job_id"
       - name: Verify the exact revision and built app on staging
         if: steps.candidate.outputs.current == 'true'
-        run: node scripts/verify-staging.mjs
-
-  verify-promotion:
-    name: Verify Staging Revision for Production
-    if: github.event_name == 'pull_request' && github.base_ref == 'main' && github.head_ref == 'develop' && github.event.pull_request.head.repo.full_name == github.repository
-    runs-on: ubuntu-latest
-    timeout-minutes: 13
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-      - name: Smoke-test the proposed production revision on staging
-        env:
-          BOARDBUDDY_STAGING_REVISION: ${{ github.event.pull_request.head.sha }}
         run: node scripts/verify-staging.mjs
