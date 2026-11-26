@@ -199,7 +199,8 @@ export interface CreateEventPayload {
     kusbfAssociated?: boolean;
     visibilityType: VisibilityType;
     joinPolicy: JoinPolicy;
-    organizerGroupId: number;
+    organizerGroupId?: number;
+    hostCrewId?: number;
 }
 
 export const createEvent = async (payload: CreateEventPayload): Promise<Event> => {

@@ -171,9 +171,9 @@ export default function Parties({ onBack, onEventClick, onCreateClick, canCreate
                                                 </span>
                                                 <PlanningModeBadge mode={event.planningMode} />
                                             </div>
-                                            {event.organizerGroupName && (
+                                            {(event.organizerGroupName || event.hostCrewName) && (
                                                 <span className="max-w-24 truncate text-right text-xs text-zinc-400 font-medium">
-                                                    호스트 {event.organizerGroupName}
+                                                    호스트 {event.organizerGroupName || event.hostCrewName}
                                                 </span>
                                             )}
                                         </div>

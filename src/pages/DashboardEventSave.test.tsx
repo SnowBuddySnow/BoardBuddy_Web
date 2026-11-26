@@ -90,6 +90,33 @@ describe('rendered create/edit forms with real save orchestration and synthetic 
         expect(http.put).not.toHaveBeenCalled(); expect(success).toHaveBeenCalledOnce();
     });
 
+    it('creates a crew-hosted event without querying or submitting a host group', async () => {
+        await act(async () => root.render(<DashboardEventNew hostCrew={{ id: 42, name: 'Host Crew' }} onBack={back} onSuccess={success} />));
+        expect(container.textContent).toContain('Host Crew');
+        await fill(container.querySelector<HTMLInputElement>('input[type="text"][required]')!, event.title);
+        await fill(container.querySelectorAll<HTMLInputElement>('input[type="datetime-local"]')[1], '2026-10-25T18:00');
+        await submit();
+        expect(http.get).not.toHaveBeenCalledWith('/dashboard/organizer-groups');
+        expect(http.post).toHaveBeenCalledWith('/dashboard/events/configurations', expect.objectContaining({
+            event: expect.objectContaining({ hostCrewId: 42 }),
+        }));
+        expect(http.post.mock.calls[0][1].event).not.toHaveProperty('organizerGroupId');
+        expect(success).toHaveBeenCalledWith(1);
+    });
+
+    it('edits a crew-hosted event for a collaborating manager with no legacy group', async () => {
+        const get = http.get.getMockImplementation()!;
+        http.get.mockImplementation(path => path === '/dashboard/events/1'
+            ? Promise.resolve(result({ ...event, organizerGroupId: null, hostCrewId: 42, hostCrewName: 'Host Crew' }))
+            : get(path));
+        await act(async () => root.render(<DashboardEventEdit eventId={1} onBack={back} onSuccess={success} />));
+        expect(container.textContent).toContain('Host Crew');
+        await submit();
+        expect(http.get).not.toHaveBeenCalledWith('/dashboard/organizer-groups');
+        expect(http.put.mock.calls[0][1].event).not.toHaveProperty('organizerGroupId');
+        expect(success).toHaveBeenCalledOnce();
+    });
+
     it('creates once, blocks double submits, and navigates only after the atomic commit', async () => {
         const pending = deferred(); http.post.mockReturnValueOnce(pending.promise);
         await renderNew(); await submit(); await submit();

@@ -50,6 +50,7 @@ export default function DashboardEventEdit({ eventId, onBack, onSuccess }: Dashb
     const [kusbfAssociated, setKusbfAssociated] = useState(true);
     const [visibilityType, setVisibilityType] = useState<VisibilityType>('PUBLIC');
     const [joinPolicy, setJoinPolicy] = useState<JoinPolicy>('INSTANT');
+    const [hostCrewName, setHostCrewName] = useState('');
     const [organizerGroupId, setOrganizerGroupId] = useState<number | ''>('');
     const [status, setStatus] = useState<EventStatus>('DRAFT');
     const [consentConfiguration, setConsentConfiguration] = useState<ConsentConfigurationInput>({
@@ -64,15 +65,15 @@ export default function DashboardEventEdit({ eventId, onBack, onSuccess }: Dashb
         const loadInitData = async () => {
             try {
                 setLoading(true);
-                // 1. Load groups
-                const [groupsList, consentData, refundPolicyData, eventData] = await Promise.all([
-                    listOrganizerGroups(),
+                const [consentData, refundPolicyData, eventData] = await Promise.all([
                     getEventConsentConfiguration(eventId),
                     getDashboardEventRefundPolicy(eventId),
                     getEventDashboard(eventId),
                 ]);
+                const groupsList = eventData.organizerGroupId != null ? await listOrganizerGroups() : [];
                 if (cancelled) return;
                 setGroups(groupsList);
+                setHostCrewName(eventData.organizerGroupId == null ? eventData.hostCrewName ?? '' : '');
                 // Older APIs do not advertise this capability: fail closed for document editing.
                 setConfigurationLocked(consentData.configurationLocked !== false);
                 setConsentConfiguration({
@@ -108,7 +109,7 @@ export default function DashboardEventEdit({ eventId, onBack, onSuccess }: Dashb
                 setKusbfAssociated(eventData.kusbfAssociated ?? true);
                 setVisibilityType(eventData.visibilityType);
                 setJoinPolicy(eventData.joinPolicy);
-                setOrganizerGroupId(eventData.organizerGroupId);
+                setOrganizerGroupId(eventData.organizerGroupId ?? '');
                 setStatus(eventData.status);
             } catch (error) {
                 if (cancelled) return;
@@ -138,7 +139,7 @@ export default function DashboardEventEdit({ eventId, onBack, onSuccess }: Dashb
             && (crewMemberLimit < 1 || (capacityLimited && crewMemberLimit > capacity))) {
             return alert('크루별 참가 인원은 1명 이상, 전체 정원 이하여야 합니다.');
         }
-        if (!organizerGroupId) return alert('호스트 그룹을 선택해 주세요.');
+        if (!hostCrewName && !organizerGroupId) return alert('호스트 그룹을 선택해 주세요.');
 
         // Format dates correctly (LocalDateTime format like YYYY-MM-DDTHH:MM:SS)
         const formattedStartsAt = startsAt.includes(':') && startsAt.split(':').length === 2 ? `${startsAt}:00` : startsAt;
@@ -169,7 +170,7 @@ export default function DashboardEventEdit({ eventId, onBack, onSuccess }: Dashb
                 kusbfAssociated,
                 visibilityType,
                 joinPolicy,
-                organizerGroupId: Number(organizerGroupId),
+                ...(organizerGroupId ? { organizerGroupId } : {}),
                 status
             };
 
@@ -215,21 +216,26 @@ export default function DashboardEventEdit({ eventId, onBack, onSuccess }: Dashb
                     <form onSubmit={handleSubmit} className="bg-white border border-zinc-100 rounded-3xl p-6 shadow-sm space-y-6">
                         <fieldset disabled={submitLoading} className="min-w-0 space-y-6">
                         <PlanningModeSelector value={planningMode} onChange={setPlanningMode} />
-                        {/* Organizer Group Selection */}
-                        <div className="space-y-1.5">
-                            <label className="text-xs font-bold text-zinc-400 uppercase tracking-wider">호스트 그룹 *</label>
-                            <select
-                                value={organizerGroupId}
-                                onChange={e => setOrganizerGroupId(Number(e.target.value))}
-                                className="w-full min-w-0 px-4 py-2.5 bg-white border border-zinc-200 rounded-2xl text-base focus:outline-none focus:ring-2 focus:ring-[#162660]/20 text-zinc-800"
-                            >
-                                {groups.map(group => (
-                                    <option key={group.id} value={group.id}>
-                                        {group.name}
-                                    </option>
-                                ))}
-                            </select>
-                        </div>
+                        {hostCrewName ? (
+                            <div className="rounded-xl bg-zinc-50 px-4 py-3 text-sm text-zinc-700">
+                                주최 크루 <strong className="ml-2">{hostCrewName}</strong>
+                            </div>
+                        ) : (
+                            <div className="space-y-1.5">
+                                <label className="text-xs font-bold text-zinc-400 uppercase tracking-wider">호스트 그룹 *</label>
+                                <select
+                                    value={organizerGroupId}
+                                    onChange={e => setOrganizerGroupId(Number(e.target.value))}
+                                    className="w-full min-w-0 px-4 py-2.5 bg-white border border-zinc-200 rounded-2xl text-base focus:outline-none focus:ring-2 focus:ring-[#162660]/20 text-zinc-800"
+                                >
+                                    {groups.map(group => (
+                                        <option key={group.id} value={group.id}>
+                                            {group.name}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+                        )}
 
                         {/* Title */}
                         <div className="space-y-1.5">
@@ -425,10 +431,9 @@ export default function DashboardEventEdit({ eventId, onBack, onSuccess }: Dashb
                             </div>
                         </div>
 
-                        {/* Crew access is inherited from the organizer group. */}
                         {visibilityType === 'CREW_LIMITED' && (
                             <div className="bg-blue-50 border border-blue-100 rounded-2xl px-4 py-3 text-sm text-blue-800">
-                                선택한 호스트 그룹에 참여 중인 크루만 자동으로 참가할 수 있습니다.
+                                {hostCrewName ? '주최 크루와 초대를 수락한 공동 운영 크루의 멤버가 신청할 수 있습니다.' : '호스트 그룹에 참여 중인 크루의 멤버가 신청할 수 있습니다.'}
                             </div>
                         )}
 

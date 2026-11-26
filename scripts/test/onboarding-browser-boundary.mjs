@@ -124,6 +124,7 @@ export const installOnboardingBoundary = async (page, { origin = 'http://127.0.0
         }
         if (path === '/crews/17/invitations') return respond(state.invitations);
         if (path.startsWith('/crews/17/invitations/') && method === 'DELETE') { state.invitations.find(item => path.endsWith(item.id)).revokedAt = '2026-11-13T01:00:00'; return respond(null); }
+        if (path === '/dashboard/event-crew-invitations/incoming' && method === 'GET') return respond([]);
         if (path === '/dashboard/events') return respond([state.managedEvent]);
         if (path === '/dashboard/events/9101' && method === 'PATCH') { const body = request.postDataJSON(); state.writes.push({ path, body }); Object.assign(state.managedEvent, body); return respond(state.managedEvent); }
         if (path === '/dashboard/events/9101') return respond(state.managedEvent);
