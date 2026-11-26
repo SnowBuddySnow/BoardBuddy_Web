@@ -14,13 +14,14 @@ import { EventRefundPolicyEditor } from '../components/event/EventRefundPolicyEd
 import { joinPolicyLabel, visibilityTypeLabel } from '../constants/displayLabels';
 
 interface DashboardEventNewProps {
+    hostCrew?: { id: number; name: string; kusbfAssociated?: boolean };
     onBack: () => void;
     onSuccess: (eventId: number) => void;
 }
 
 const createAnonymousEventTitle = () => `이벤트#${String(Math.floor(Math.random() * 10_000)).padStart(4, '0')}`;
 
-export default function DashboardEventNew({ onBack, onSuccess }: DashboardEventNewProps) {
+export default function DashboardEventNew({ hostCrew, onBack, onSuccess }: DashboardEventNewProps) {
     const [groups, setGroups] = useState<OrganizerGroup[]>([]);
     const [groupsLoading, setGroupsLoading] = useState(true);
     const [submitLoading, setSubmitLoading] = useState(false);
@@ -55,7 +56,9 @@ export default function DashboardEventNew({ onBack, onSuccess }: DashboardEventN
     });
     const [refundPolicy, setRefundPolicy] = useState('');
 
+    const hasHostCrew = hostCrew != null;
     useEffect(() => {
+        if (hasHostCrew) return;
         const fetchGroups = async () => {
             try {
                 setGroupsLoading(true);
@@ -71,7 +74,7 @@ export default function DashboardEventNew({ onBack, onSuccess }: DashboardEventN
             }
         };
         fetchGroups();
-    }, []);
+    }, [hasHostCrew]);
 
     const handlePlanningModeChange = (mode: EventPlanningMode) => {
         setPlanningMode(mode);
@@ -109,7 +112,7 @@ export default function DashboardEventNew({ onBack, onSuccess }: DashboardEventN
             && (crewMemberLimit < 1 || (capacityLimited && crewMemberLimit > capacity))) {
             return alert('크루별 참가 인원은 1명 이상, 전체 정원 이하여야 합니다.');
         }
-        if (!organizerGroupId) return alert('호스트 그룹을 선택해 주세요.');
+        if (!hostCrew && !organizerGroupId) return alert('호스트 그룹을 선택해 주세요.');
 
         // Format dates correctly (backend requires LocalDateTime format like YYYY-MM-DDTHH:MM:SS)
         // input datetime-local returns YYYY-MM-DDTHH:MM. We need to add :00 seconds
@@ -138,10 +141,10 @@ export default function DashboardEventNew({ onBack, onSuccess }: DashboardEventN
                 crewMemberLimit: (visibilityType === 'PUBLIC' || visibilityType === 'CREW_LIMITED') && crewMemberLimitEnabled
                     ? crewMemberLimit
                     : null,
-                kusbfAssociated,
+                kusbfAssociated: hostCrew?.kusbfAssociated === false ? false : kusbfAssociated,
                 visibilityType,
                 joinPolicy,
-                organizerGroupId: Number(organizerGroupId)
+                ...(hostCrew ? { hostCrewId: hostCrew.id } : { organizerGroupId: Number(organizerGroupId) })
             };
 
             const configuration = { payload, consentConfiguration, refundPolicy };
@@ -196,12 +199,12 @@ export default function DashboardEventNew({ onBack, onSuccess }: DashboardEventN
                         </Button>
                     </div>
                 )}
-                {groupsLoading ? (
+                {!hostCrew && groupsLoading ? (
                     <div className="flex flex-col items-center justify-center py-20 text-zinc-500">
                         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#162660] mb-3"></div>
                         <p className="text-sm">권한을 조회하는 중...</p>
                     </div>
-                ) : groups.length === 0 ? (
+                ) : !hostCrew && groups.length === 0 ? (
                     <div className="bg-white rounded-3xl p-10 border border-zinc-100 text-center text-zinc-500 shadow-sm">
                         <HelpCircle className="w-12 h-12 stroke-[1.5] text-zinc-300 mx-auto mb-2" />
                         <h3 className="text-base font-bold text-zinc-900">호스트 권한이 없습니다</h3>
@@ -216,21 +219,26 @@ export default function DashboardEventNew({ onBack, onSuccess }: DashboardEventN
                     <form onSubmit={handleSubmit} className="bg-white border border-zinc-100 rounded-3xl p-6 shadow-sm space-y-6">
                         <fieldset disabled={submitLoading || needsReconciliation} className="min-w-0 space-y-6">
                         <PlanningModeSelector value={planningMode} onChange={handlePlanningModeChange} />
-                        {/* Organizer Group Selection */}
-                        <div className="space-y-1.5">
-                            <label className="text-xs font-bold text-zinc-400 uppercase tracking-wider">호스트 그룹 *</label>
-                            <select
-                                value={organizerGroupId}
-                                onChange={e => setOrganizerGroupId(Number(e.target.value))}
-                                className="w-full min-w-0 px-4 py-2.5 bg-white border border-zinc-200 rounded-2xl text-base focus:outline-none focus:ring-2 focus:ring-[#162660]/20 text-zinc-800"
-                            >
-                                {groups.map(group => (
-                                    <option key={group.id} value={group.id}>
-                                        {group.name}
-                                    </option>
-                                ))}
-                            </select>
-                        </div>
+                        {hostCrew ? (
+                            <div className="rounded-xl bg-zinc-50 px-4 py-3 text-sm text-zinc-700">
+                                주최 크루 <strong className="ml-2">{hostCrew.name}</strong>
+                            </div>
+                        ) : (
+                            <div className="space-y-1.5">
+                                <label className="text-xs font-bold text-zinc-400 uppercase tracking-wider">호스트 그룹 *</label>
+                                <select
+                                    value={organizerGroupId}
+                                    onChange={e => setOrganizerGroupId(Number(e.target.value))}
+                                    className="w-full min-w-0 px-4 py-2.5 bg-white border border-zinc-200 rounded-2xl text-base focus:outline-none focus:ring-2 focus:ring-[#162660]/20 text-zinc-800"
+                                >
+                                    {groups.map(group => (
+                                        <option key={group.id} value={group.id}>
+                                            {group.name}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+                        )}
 
                         {/* Title */}
                         <div className="space-y-1.5">
@@ -429,10 +437,9 @@ export default function DashboardEventNew({ onBack, onSuccess }: DashboardEventN
                             </div>
                         </div>
 
-                        {/* Crew access is inherited from the organizer group. */}
                         {visibilityType === 'CREW_LIMITED' && (
                             <div className="bg-blue-50 border border-blue-100 rounded-2xl px-4 py-3 text-sm text-blue-800">
-                                선택한 호스트 그룹에 참여 중인 크루만 자동으로 참가할 수 있습니다.
+                                {hostCrew ? '주최 크루와 초대를 수락한 공동 운영 크루의 멤버가 신청할 수 있습니다.' : '호스트 그룹에 참여 중인 크루의 멤버가 신청할 수 있습니다.'}
                             </div>
                         )}
 
