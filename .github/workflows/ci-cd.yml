@@ -13,6 +13,7 @@ jobs:
   verify:
     name: Verify & Build
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -34,9 +35,6 @@ jobs:
       - name: Run ESLint
         run: pnpm run lint
 
-      - name: Run Tests
-        run: pnpm run test
-
       - name: Verify HTTP Contract
         run: pnpm run check:contracts
 
@@ -45,6 +43,28 @@ jobs:
           VITE_KAKAO_JAVASCRIPT_KEY: ${{ secrets.VITE_KAKAO_JAVASCRIPT_KEY || 'dummy_ci_key' }}
           VITE_API_BASE_URL: /api
         run: pnpm run build
+
+  unit:
+    name: Web Unit and Component Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install pinned dependencies
+        run: |
+          corepack enable
+          corepack prepare pnpm@11.9.0 --activate
+          pnpm install --frozen-lockfile
+      - run: pnpm run test:coverage
+      - name: Upload unit test results and coverage
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-unit-results
+          path: output/test-results/
 
   browser-smoke:
     name: Synthetic Browser Journeys
@@ -65,7 +85,7 @@ jobs:
           corepack enable
           corepack prepare pnpm@11.9.0 --activate
           pnpm install --frozen-lockfile
-      - name: Exercise local browser journeys
+      - name: Exercise event registration on desktop and mobile
         run: pnpm run test:browser
       - name: Exercise responsive signup and crew onboarding
         run: pnpm run test:onboarding
@@ -84,7 +104,7 @@ jobs:
 
   deploy-staging:
     name: Trigger Vercel Staging Deploy
-    needs: [ verify, browser-smoke ]
+    needs: [ verify, unit, browser-smoke ]
     if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
     runs-on: ubuntu-latest
     environment: staging

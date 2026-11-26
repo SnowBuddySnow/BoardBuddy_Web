@@ -17,12 +17,13 @@ route. Optimistic locking remains enabled; separate editing sessions can receive
 
 ## Participant browser fixtures
 
-Run `pnpm test:browser` for the automated smoke journey. The runner starts its own local Vite
-server on port 5187, creates a fresh browser/context, installs the synthetic boundary and closes
-only its own processes. Local runs use installed Chrome; CI uses the matching pinned official
-Playwright image with browser/system dependencies already present, without runtime apt installation.
-Use `node scripts/test/run-event-browser-smoke.mjs --existing-server` only with the scenario Vite
-server described below. JSON and screenshot evidence goes to ignored `output/playwright/`.
+Install Chromium with `pnpm exec playwright install chromium`, then run `pnpm test:browser`.
+Playwright Test builds and serves the local scenario app on port 5187 and runs the journey in fresh
+desktop and mobile Chromium contexts. CI uses the matching pinned Playwright image. Find JUnit and
+HTML reports and failure traces under `output/playwright/event/`.
+
+The manual runner accepts `--existing-server` for the scenario Vite server described below.
+Run `pnpm test:coverage` to generate Vitest JUnit and coverage reports in `output/test-results/`.
 The CLI steps below remain available for manual inspection; automated execution uses the same
 fixtures in a persistent Playwright process so native dialog handlers survive across all steps.
 
