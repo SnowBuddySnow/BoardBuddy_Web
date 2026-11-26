@@ -97,4 +97,49 @@ describe('naverOAuth helpers', () => {
     expect(remaining.get('view')).toBe('login');
     expect(remaining.get('keep')).toBe('1');
   });
+
+  it('preserves a pending crew invitation at the exact callback deadline', () => {
+    const createdAt = 1000;
+    const pending = {
+      state: 'synthetic-state',
+      autoLogin: true,
+      createdAt,
+      invitationToken: 'synthetic-crew-invitation',
+      invitationEventId: 42,
+    };
+    savePendingNaverAuth(pending);
+
+    expect(consumePendingNaverAuth(createdAt + 10 * 60 * 1000)).toMatchObject(pending);
+    expect(consumePendingNaverAuth(createdAt + 10 * 60 * 1000)).toBeNull();
+  });
+
+  it('discards future-dated callback state before a later callback can reuse it', () => {
+    savePendingNaverAuth({
+      state: 'synthetic-state',
+      autoLogin: true,
+      createdAt: 1000,
+      invitationToken: null,
+    });
+
+    expect(consumePendingNaverAuth(999)).toBeNull();
+    expect(consumePendingNaverAuth(1000)).toBeNull();
+  });
+
+  it('removes provider error data while preserving the active invitation fragment', () => {
+    window.history.replaceState(
+      null,
+      '',
+      '/?view=login&error=access_denied&error_description=User+canceled&state=synthetic-state#crewInvite=synthetic-link',
+    );
+
+    expect(extractNaverCallbackFromUrl()).toEqual({
+      code: null,
+      state: 'synthetic-state',
+      error: 'access_denied',
+      errorDescription: 'User canceled',
+    });
+    expect(window.location.search).toBe('?view=login');
+    expect(window.location.hash).toBe('#crewInvite=synthetic-link');
+    expect(extractNaverCallbackFromUrl()).toBeNull();
+  });
 });

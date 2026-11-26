@@ -14,6 +14,7 @@ node_modules
 dist
 dist-ssr
 output/playwright/
+output/test-results/
 output/design/
 .playwright-cli/
 *.local
