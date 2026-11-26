@@ -20,11 +20,7 @@ permissions:
 jobs:
   compatibility:
     name: Firefox and WebKit Event Journeys
-    runs-on: ubuntu-latest
-    container:
-      image: mcr.microsoft.com/playwright:v1.65.0-noble
-    env:
-      PLAYWRIGHT_BROWSERS_PATH: /ms-playwright
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
@@ -38,6 +34,8 @@ jobs:
           corepack enable
           corepack prepare pnpm@11.9.0 --activate
           pnpm install --frozen-lockfile
+      - name: Install Firefox and WebKit with system dependencies
+        run: pnpm exec playwright install --with-deps firefox webkit
       - run: pnpm run test:browser:extended
       - name: Upload compatibility reports
         if: always()
