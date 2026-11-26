@@ -21,9 +21,12 @@ Install Chromium with `pnpm exec playwright install chromium`, then run `pnpm te
 Playwright Test builds and serves the local scenario app on port 5187 and runs the journey in fresh
 desktop and mobile Chromium contexts. CI uses the matching pinned Playwright image. Find JUnit and
 HTML reports and failure traces under `output/playwright/event/`.
+Install Firefox and WebKit with `pnpm exec playwright install firefox webkit` and run
+`pnpm test:browser:extended` to reproduce the scheduled compatibility check.
 
 The manual runner accepts `--existing-server` for the scenario Vite server described below.
 Run `pnpm test:coverage` to generate Vitest JUnit and coverage reports in `output/test-results/`.
+CI verifies the repository line and branch floors and the targeted floors in `vite.config.ts`.
 The CLI steps below remain available for manual inspection; automated execution uses the same
 fixtures in a persistent Playwright process so native dialog handlers survive across all steps.
 

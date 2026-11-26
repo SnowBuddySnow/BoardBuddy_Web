@@ -42,7 +42,13 @@ jobs:
         env:
           VITE_KAKAO_JAVASCRIPT_KEY: ${{ secrets.VITE_KAKAO_JAVASCRIPT_KEY || 'dummy_ci_key' }}
           VITE_API_BASE_URL: /api
+          VITE_BUILD_SHA: ${{ github.sha }}
         run: pnpm run build
+      - name: Verify release metadata
+        run: |
+          jq --exit-status --arg revision "$GITHUB_SHA" '.revision == $revision' dist/build-info.json
+          entry=$(jq --exit-status --raw-output '.entry' dist/build-info.json)
+          test -f "dist${entry}"
 
   unit:
     name: Web Unit and Component Tests
@@ -103,7 +109,7 @@ jobs:
           path: output/playwright/
 
   deploy-staging:
-    name: Trigger Vercel Staging Deploy
+    name: Deploy and Verify Vercel Staging
     needs: [ verify, unit, browser-smoke ]
     if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
     runs-on: ubuntu-latest
@@ -111,9 +117,25 @@ jobs:
     concurrency:
       group: deploy-staging-web
       cancel-in-progress: false
-    timeout-minutes: 5
+    timeout-minutes: 14
     steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Check the current develop revision
+        id: candidate
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          latest=$(gh api "repos/${GITHUB_REPOSITORY}/git/ref/heads/develop" --jq '.object.sha')
+          if [ "$latest" = "$GITHUB_SHA" ]; then
+            echo "current=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "Develop advanced to ${latest}. Its workflow owns staging deployment."
+          fi
       - name: Trigger Vercel Deploy Hook for develop
+        if: steps.candidate.outputs.current == 'true'
         env:
           VERCEL_STAGING_DEPLOY_HOOK_URL: ${{ secrets.VERCEL_STAGING_DEPLOY_HOOK_URL }}
         run: |
@@ -135,3 +157,21 @@ jobs:
             exit 1
           fi
           echo "Triggered Vercel staging deployment job: $job_id"
+      - name: Verify the exact revision and built app on staging
+        if: steps.candidate.outputs.current == 'true'
+        run: node scripts/verify-staging.mjs
+
+  verify-promotion:
+    name: Verify Staging Revision for Production
+    if: github.event_name == 'pull_request' && github.base_ref == 'main' && github.head_ref == 'develop' && github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 13
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Smoke-test the proposed production revision on staging
+        env:
+          BOARDBUDDY_STAGING_REVISION: ${{ github.event.pull_request.head.sha }}
+        run: node scripts/verify-staging.mjs

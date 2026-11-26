@@ -31,6 +31,11 @@ export default defineConfig({
             name: 'chromium-mobile',
             use: { browserName: 'chromium', viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true },
         },
+        { name: 'firefox-desktop', use: { browserName: 'firefox', viewport: { width: 1440, height: 900 } } },
+        {
+            name: 'webkit-mobile',
+            use: { browserName: 'webkit', viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true },
+        },
     ],
     webServer: {
         command: `node node_modules/vite/bin/vite.js build --outDir ${previewBuild} --emptyOutDir && node node_modules/vite/bin/vite.js preview --outDir ${previewBuild} --host 127.0.0.1 --port 5187 --strictPort`,
