@@ -1,5 +1,6 @@
 import { defineConfig, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
+import { configDefaults } from 'vitest/config'
 import packageMetadata from './package.json' with { type: 'json' }
 
 // https://vite.dev/config/
@@ -32,6 +33,17 @@ export default defineConfig(({ mode }) => {
     plugins: [react()],
     define: {
       __APP_VERSION__: JSON.stringify(buildVersion),
+    },
+    test: {
+      exclude: [...configDefaults.exclude, 'e2e/**'],
+      coverage: {
+        provider: 'v8',
+        include: ['src/**/*.{ts,tsx}'],
+        exclude: ['**/*.test.{ts,tsx}', '**/*.d.ts'],
+        reportsDirectory: 'output/test-results/coverage',
+        reporter: ['text-summary', 'html', 'lcov'],
+        reportOnFailure: true,
+      },
     },
     server: {
       proxy: {
