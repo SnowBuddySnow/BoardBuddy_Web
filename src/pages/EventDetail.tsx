@@ -546,10 +546,10 @@ export default function EventDetail({ eventId, onBack, isGuestApplication = fals
                     <div className="bg-white rounded-3xl p-5 border border-zinc-100 shadow-sm space-y-4">
                         <h3 className="text-sm font-bold text-zinc-900 border-b border-zinc-50 pb-2">모임 정보</h3>
 
-                        {event.organizerGroupName && (
+                        {(event.organizerGroupName || event.hostCrewName) && (
                             <div className="flex items-center justify-between text-sm">
                                 <span className="text-zinc-500 font-medium">호스트 그룹</span>
-                                <span className="font-bold text-zinc-800">{event.organizerGroupName}</span>
+                                <span className="font-bold text-zinc-800">{event.organizerGroupName || event.hostCrewName}</span>
                             </div>
                         )}
 

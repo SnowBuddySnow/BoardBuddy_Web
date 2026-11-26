@@ -116,7 +116,7 @@ export default function OperationsCenter({
               <Sparkles className="h-6 w-6 shrink-0 text-indigo-700" />
               <span>
                 <span className="block text-sm font-black text-indigo-950">이벤트 운영 시작 가이드</span>
-                <span className="mt-1 block text-xs text-indigo-800">호스트 그룹부터 모집·참가자 관리까지</span>
+                <span className="mt-1 block text-xs text-indigo-800">크루 초대부터 모집·참가자 관리까지</span>
               </span>
             </span>
             <ArrowRight className="h-5 w-5 shrink-0 text-indigo-700" />

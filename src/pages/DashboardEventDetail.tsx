@@ -1,4 +1,5 @@
 import { GroupizePanel } from '../components/event/GroupizePanel';
+import { EventCrewCollaborationPanel } from '../components/event/EventCrewCollaborationPanel';
 import { EventFamilyLinks } from '../components/event/EventFamilyLinks';
 import { useState, useEffect, useCallback } from 'react';
 import { formatEventDateTime } from '../lib/eventDateTime';
@@ -215,6 +216,10 @@ export default function DashboardEventDetail({ eventId, onBack, onEditClick, onO
             <main className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6 max-w-6xl w-full mx-auto grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6">
                 {/* Column 1 & 2: Small gathering details & participants */}
                 <div className="min-w-0 lg:col-span-2 space-y-6">
+                    {event.organizerGroupId == null && event.hostCrewId != null && event.parentEventId == null && (
+                        <EventCrewCollaborationPanel key={event.id} eventId={event.id} hostCrewId={event.hostCrewId}
+                            hostCrewName={event.hostCrewName ?? ''} cancelled={event.status === 'CANCELLED'} />
+                    )}
                     {/* Basic Info panel */}
                     <div className="bg-white rounded-3xl p-6 border border-zinc-100 shadow-sm space-y-4">
                         <h2 className="text-base font-bold text-zinc-900">모임 요약</h2>

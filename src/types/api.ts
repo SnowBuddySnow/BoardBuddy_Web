@@ -321,8 +321,10 @@ export interface Event {
     visibilityType: VisibilityType;
     joinPolicy: JoinPolicy;
     createdByUserId?: number;
-    organizerGroupId: number;
-    organizerGroupName?: string;
+    organizerGroupId: number | null;
+    organizerGroupName?: string | null;
+    hostCrewId?: number | null;
+    hostCrewName?: string | null;
     kusbfAssociated?: boolean;
     joinedCount?: number;
     currentUserStatus?: ParticipantStatus | null;

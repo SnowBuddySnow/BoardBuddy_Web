@@ -720,6 +720,7 @@ function App() {
       case 'dashboard_event_new':
         return (
           <DashboardEventNew
+            hostCrew={crewDetail?.crew_id ? { id: crewDetail.crew_id, name: crewDetail.name, kusbfAssociated: crewDetail.kusbfAssociated } : undefined}
             onBack={() => setCurrentView('dashboard_parties')}
             onSuccess={(id) => openEventDetail(id, 'dashboard_event_detail')}
           />
