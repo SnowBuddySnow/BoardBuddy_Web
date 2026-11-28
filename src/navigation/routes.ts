@@ -133,8 +133,6 @@ export const viewsWithoutBottomNav: View[] = [
   'user_info',
   'profile_type_confirmation',
   'student_verification',
-  'my_page',
-  'account_info',
   'crew_create',
   'reservation',
   'guest_reservation',

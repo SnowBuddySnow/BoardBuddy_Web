@@ -38,21 +38,56 @@ a:hover {
 
 @theme {
   --color-light-blue: #d4e7fa;
+  --color-brand-navy: #162660;
+  --color-brand-navy-deep: #0f1b48;
+  --color-brand-blue: #1a7aff;
+  --color-brand-sun: #fcca59;
+  --color-brand-cream: #faf8f3;
+
+  /* Tokens used by the Bklit stat component (shadcn-style). The app is light-only. */
+  --color-foreground: #18181b;
+  --color-muted: #f4f4f5;
+  --color-border: #e4e4e7;
+  --color-chart-label: #71717a;
+
+  --ease-soft: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+
+/* Hero intro mask while animejs loads (see useHeroIntro); lifted on load, failure or timeout. */
+[data-hero-intro="pending"] :is([data-hero-item], [data-hero-card]) {
+  opacity: 0;
+}
+
+/* Shared loading state (PageLoader + the boot loader in index.html use the same look). */
+@keyframes bb-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+@keyframes bb-fade-in { from { opacity: 0; } to { opacity: 1; } }
+.bb-loader { animation: bb-fade-in 0.3s ease-out 0.2s both; }
+.bb-loader-mascot { animation: bb-float 1.8s ease-in-out infinite; }
+
+/* Respect reduced motion for CSS-only transitions too; JS animations check the same preference. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
 }
 
 @media (min-width: 1024px) {
-  [data-desktop-page] > :is(div, main) > header {
+  :is([data-desktop-page], [data-desktop-page] > [data-page-transition]) > :is(div, main) > header {
     min-height: 72px;
     padding: 1.125rem 2rem;
     border-bottom: 1px solid #e4e4e7;
   }
 
-  [data-desktop-page] > :is(div, main) > header h1 {
+  :is([data-desktop-page], [data-desktop-page] > [data-page-transition]) > :is(div, main) > header h1 {
     font-size: 1.25rem;
   }
 
-  [data-desktop-page] > :is(div, main) > main,
-  [data-desktop-page] > main > section {
+  :is([data-desktop-page], [data-desktop-page] > [data-page-transition]) > :is(div, main) > main,
+  :is([data-desktop-page], [data-desktop-page] > [data-page-transition]) > main > section {
     padding-right: 2rem;
     padding-left: 2rem;
     padding-bottom: 2rem;
@@ -79,3 +114,8 @@ a:hover {
   .participant-table td::before { content: attr(data-label); font-size: 11px; font-weight: 600; color: #71717a; }
   .participant-table td > * { min-width: 0; max-width: 100%; }
 }
+
+/* Skeleton: invisible for 400ms so quick loads never flash, then a soft pulse. */
+@keyframes bb-skeleton-in { to { opacity: 1; } }
+@keyframes bb-skeleton-pulse { 50% { opacity: .55; } }
+.bb-skeleton { opacity: 0; animation: bb-skeleton-in .2s ease-out .4s forwards, bb-skeleton-pulse 1.4s ease-in-out .6s infinite; }

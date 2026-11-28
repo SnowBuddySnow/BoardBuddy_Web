@@ -234,6 +234,7 @@ export interface CrewCalendarResponse {
         status: string;
         reservation_id: number;
         waiting_order: number | null;
+        teaching?: boolean;
     }[] | null;
 }
 

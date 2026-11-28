@@ -1,3 +1,5 @@
+import { overlayMotion, dialogMotion } from '../lib/motion';
+import { m } from 'motion/react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ArrowRight,
@@ -293,8 +295,8 @@ export default function CaptainOnboarding({ open, isDesktop, initialStep = 0, on
   const actionUnavailable = Boolean(step.action?.desktopOnly && !isDesktop);
 
   return (
-    <div className="fixed inset-0 z-[10000] flex items-end justify-center bg-zinc-950/55 p-0 backdrop-blur-sm sm:items-center sm:p-6" role="presentation">
-      <section
+    <m.div {...overlayMotion} className="fixed inset-0 z-[10000] flex items-end justify-center bg-zinc-950/55 p-0 backdrop-blur-sm sm:items-center sm:p-6" role="presentation">
+      <m.section {...dialogMotion}
         role="dialog"
         aria-modal="true"
         aria-labelledby="captain-onboarding-title"
@@ -423,7 +425,7 @@ export default function CaptainOnboarding({ open, isDesktop, initialStep = 0, on
             )}
           </div>
         </footer>
-      </section>
-    </div>
+      </m.section>
+    </m.div>
   );
 }

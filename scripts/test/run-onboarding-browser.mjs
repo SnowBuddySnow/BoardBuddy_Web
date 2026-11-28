@@ -29,7 +29,7 @@ try {
             const page = await context.newPage(); const state = await installOnboardingBoundary(page); state.newUser = false;
             await page.goto(`${origin}/?view=login`);
             const before = await page.evaluate(() => history.length);
-            await page.getByRole('button', { name: 'Kakao Login', exact: true }).click();
+            await page.getByRole('button', { name: '카카오 로그인', exact: true }).click();
             await page.waitForURL('**/?view=home');
             assert(await page.evaluate(() => history.length) === before, `${name}: successful login retained the auth entry`);
             const continuation = page.getByRole('button', { name: '가입·크루 진행 상태 이어보기', exact: true });
@@ -38,7 +38,7 @@ try {
             await continuation.click();
             await page.waitForURL('**/?view=onboarding');
             await page.goBack(); await page.waitForURL('**/?view=home');
-            assert(await page.getByRole('button', { name: 'Kakao Login', exact: true }).count() === 0, `${name}: back restored login`);
+            assert(await page.getByRole('button', { name: '카카오 로그인', exact: true }).count() === 0, `${name}: back restored login`);
             await page.goForward(); await page.waitForURL('**/?view=onboarding');
             // Simulate a login URL left in a pre-fix history entry, then reload it.
             await page.evaluate(() => history.replaceState(null, '', '/?view=login'));
@@ -109,7 +109,7 @@ try {
         const footer = page.locator('footer'); await footer.scrollIntoViewIfNeeded();
         const box = await footer.boundingBox();
         assert(box && box.y >= 0 && box.y + box.height <= viewport.height + 1, 'Entry footer is clipped instead of scrollable');
-        await page.getByRole('button', { name: 'Kakao Login', exact: true }).scrollIntoViewIfNeeded();
+        await page.getByRole('button', { name: '카카오 로그인', exact: true }).scrollIntoViewIfNeeded();
         if ([390, 1440].includes(viewport.width)) await page.screenshot({ path: `${root}/output/playwright/entry-${viewport.width}.png` });
         assert(!state.errors.length && !state.unknown.length, 'Entry screen fixture failed');
         completed.push(`entry-scroll-and-layout-${viewport.width}x${viewport.height}`); await context.close();
@@ -119,7 +119,7 @@ try {
         const page = await context.newPage(); const state = await installOnboardingBoundary(page);
         state.signupPrefill = { gender:'FEMALE', name: '가상 실명', phoneNumber: '+82 10-0000-0000' };
         await page.goto(`${origin}/?view=login`);
-        await page.getByRole('button', { name: 'Kakao Login', exact: true }).click();
+        await page.getByRole('button', { name: '카카오 로그인', exact: true }).click();
         const name = page.getByRole('textbox', { name: '실명 *', exact: true });
         await name.waitFor();
         assert(await name.inputValue() === '가상 실명', 'Provider account name was not carried through login');
@@ -264,7 +264,7 @@ try {
         const page = await context.newPage(); const state = await installOnboardingBoundary(page); state.newUser = false;
         await page.goto(`${origin}/?view=crew_invite#crewInvite=${state.token}`);
         await page.getByRole('button', { name: '로그인하고 계속하기', exact: true }).click();
-        await page.getByRole('button', { name: 'Kakao Login', exact: true }).click();
+        await page.getByRole('button', { name: '카카오 로그인', exact: true }).click();
         await page.getByRole('button', { name: '이 크루에 가입 신청', exact: true }).click();
         await page.getByRole('heading', { name: '가입 신청을 보냈어요.' }).waitFor();
         assert(!state.traffic.some(item => item.path === '/accounts/phone-verifications'), 'Existing member was sent through signup again');

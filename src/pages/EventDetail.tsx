@@ -1,3 +1,5 @@
+import { overlayMotion, dialogMotion } from '../lib/motion';
+import { m, AnimatePresence } from 'motion/react';
 import { EventFamilyLinks } from '../components/event/EventFamilyLinks';
 import { GuestInviteShareCard } from '../components/guest/GuestInviteShareCard';
 import { useState, useEffect, useRef, useCallback } from 'react';
@@ -914,10 +916,10 @@ export default function EventDetail({ eventId, onBack, isGuestApplication = fals
             </div>
 
             {/* Phone Sharing Consent Modal */}
-            {showPhoneConsentModal && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <AnimatePresence>{showPhoneConsentModal && (
+                <m.div {...overlayMotion} className="fixed inset-0 z-50 flex items-center justify-center p-4">
                     <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setShowPhoneConsentModal(false)} />
-                    <div ref={phoneConsentDialogRef} role="dialog" aria-modal="true" aria-labelledby="phone-sharing-consent-title" aria-describedby="phone-sharing-consent-description" tabIndex={-1} className="bg-white dark:bg-zinc-900 rounded-2xl w-full max-w-sm max-h-[calc(100dvh-2rem)] overflow-y-auto p-6 shadow-xl relative z-10 animate-in fade-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
+                    <m.div {...dialogMotion} ref={phoneConsentDialogRef} role="dialog" aria-modal="true" aria-labelledby="phone-sharing-consent-title" aria-describedby="phone-sharing-consent-description" tabIndex={-1} className="bg-white dark:bg-zinc-900 rounded-2xl w-full max-w-sm max-h-[calc(100dvh-2rem)] overflow-y-auto p-6 shadow-xl relative z-10" onClick={e => e.stopPropagation()}>
                         <h3 id="phone-sharing-consent-title" className="text-lg font-bold text-zinc-900 dark:text-zinc-100 mb-3 text-center">
                             전화번호 제공 동의
                         </h3>
@@ -951,9 +953,9 @@ export default function EventDetail({ eventId, onBack, isGuestApplication = fals
                                 취소
                             </button>
                         </div>
-                    </div>
-                </div>
-            )}
+                    </m.div>
+                </m.div>
+            )}</AnimatePresence>
         </div>
     );
 }

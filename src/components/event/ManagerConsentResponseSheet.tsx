@@ -1,3 +1,5 @@
+import { overlayMotion, dialogMotion } from '../../lib/motion';
+import { m } from 'motion/react';
 import { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import {
@@ -337,10 +339,10 @@ export function ManagerConsentResponseSheet({ eventId }: ManagerConsentResponseS
             )}
 
             {selectedParticipant && createPortal(
-                <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-zinc-950/50 p-4 backdrop-blur-sm" onMouseDown={event => {
+                <m.div {...overlayMotion} className="fixed inset-0 z-[10000] flex items-center justify-center bg-zinc-950/50 p-4 backdrop-blur-sm" onMouseDown={event => {
                     if (event.currentTarget === event.target) setSelectedParticipant(null);
                 }}>
-                    <section role="dialog" aria-modal="true" aria-labelledby="participant-response-title" className="max-h-[calc(100dvh-2rem)] w-full max-w-xl overflow-hidden rounded-3xl bg-white shadow-2xl">
+                    <m.section {...dialogMotion} role="dialog" aria-modal="true" aria-labelledby="participant-response-title" className="max-h-[calc(100dvh-2rem)] w-full max-w-xl overflow-hidden rounded-3xl bg-white shadow-2xl">
                         <header className="flex items-start justify-between border-b border-zinc-100 p-5">
                             <div>
                                 <h3 id="participant-response-title" className="font-black text-zinc-900">{selectedParticipant.displayName}</h3>
@@ -367,16 +369,16 @@ export function ManagerConsentResponseSheet({ eventId }: ManagerConsentResponseS
                                 );
                             })}
                         </div>
-                    </section>
-                </div>,
+                    </m.section>
+                </m.div>,
                 document.body,
             )}
 
             {privacyAction && createPortal(
-                <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-zinc-950/55 p-4 backdrop-blur-sm" onMouseDown={event => {
+                <m.div {...overlayMotion} className="fixed inset-0 z-[10000] flex items-center justify-center bg-zinc-950/55 p-4 backdrop-blur-sm" onMouseDown={event => {
                     if (event.currentTarget === event.target && !actionBusy) setPrivacyAction(null);
                 }}>
-                    <section role="dialog" aria-modal="true" aria-labelledby="privacy-action-title" className="max-h-[calc(100dvh-2rem)] w-full max-w-lg overflow-y-auto rounded-3xl bg-white p-5 shadow-2xl sm:p-6">
+                    <m.section {...dialogMotion} role="dialog" aria-modal="true" aria-labelledby="privacy-action-title" className="max-h-[calc(100dvh-2rem)] w-full max-w-lg overflow-y-auto rounded-3xl bg-white p-5 shadow-2xl sm:p-6">
                         <div className="flex items-start justify-between gap-3">
                             <div className="flex items-start gap-3">
                                 <span className="rounded-xl bg-amber-100 p-2 text-amber-700"><ShieldAlert className="h-5 w-5" /></span>
@@ -495,8 +497,8 @@ export function ManagerConsentResponseSheet({ eventId }: ManagerConsentResponseS
                                     ? '사유를 기록하고 개인정보 보기'
                                     : '주의사항을 확인하고 XLSX 내보내기'}
                         </button>
-                    </section>
-                </div>,
+                    </m.section>
+                </m.div>,
                 document.body,
             )}
         </section>

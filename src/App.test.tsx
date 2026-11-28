@@ -39,7 +39,7 @@ describe('real App management navigation with synthetic HTTP', () => {
         http.get.mockImplementation(async (path: string) => {
             let data: unknown;
             if (path === '/users/me') data = { userId: 7, userType: 'REGULAR', name: 'Synthetic host', role: crewRole, crew: hasCrew ? { crewId: 1, crewName:'Synthetic crew' } : null };
-            else if (path === '/crews/1/season-stays/pass') data = {registered:true,name:'5박권',startsOn:'2026-10-01',endsOn:'2027-05-31',totalNights:5,usedNights:1,reservedNights:1,remainingNights:3};
+            else if (path === '/crews/1/season-stays/pass') data = {registered:true,name:'5박권',startsOn:'2026-10-01',endsOn:'2027-03-31',totalNights:5,usedNights:1,reservedNights:1,remainingNights:3};
             else if (path === '/crews/1') data = { crewId: 1, crew_id: 1, crewName: 'Synthetic crew', name: 'Synthetic crew', member_count: 2, seasonHouseActive: crewOpen };
             else if (path === '/schools' || path === '/crews/1/invitations' || path === '/crews/discover') data = [];
             else if (path.startsWith('/crews/1/calendar')) data = { calendar: [], my_reservations: [] };
@@ -128,12 +128,12 @@ describe('real App management navigation with synthetic HTTP', () => {
         hasCrew = true; crewRole = role; permissions = ['CREW_MEMBERS_MANAGE'];
         localStorage.setItem('boardbuddy_captain_onboarding_v1:7', 'completed');
         await render();
-        expect(container.querySelector('h2')?.textContent).toBe('Synthetic crew와 함께하는 오늘');
+        expect(Array.from(container.querySelectorAll('h2')).some(node => node.textContent === 'Synthetic crew와 함께하는 오늘')).toBe(true);
         expect(Array.from(container.querySelectorAll('span')).some(node => node.textContent?.trim() === 'Synthetic crew')).toBe(false);
         await click('크루 설정');
         expect(container.querySelector('h1')?.textContent).toBe('크루 설정');
         await act(async () => (container.querySelector('[aria-label="뒤로 가기"]') as HTMLButtonElement).click()); await settle();
-        expect(container.querySelector('h2')?.textContent).toBe('Synthetic crew와 함께하는 오늘');
+        expect(Array.from(container.querySelectorAll('h2')).some(node => node.textContent === 'Synthetic crew와 함께하는 오늘')).toBe(true);
         await click('내 크루');
         expect(container.querySelector('h1')?.textContent).toBe('내 크루');
         await click('크루 설정');
@@ -225,7 +225,7 @@ describe('real App management navigation with synthetic HTTP', () => {
     it('supports calendar-only access in explicit off-season mode', async () => {
         hasCrew = true; permissions = [];
         await render(); await click('시즌방');
-        expect(container.querySelector('h1')?.textContent).toContain('시즌방 캘린더');
+        expect(container.querySelector('h1')?.textContent).toContain('크루 달력');
         expect(container.textContent).toContain('현재는 이용 현황만 조회');
         expect(http.get.mock.calls.some(([path]) => path.startsWith('/crews/1/calendar'))).toBe(true);
         expect(http.get.mock.calls.some(([path]) => /reservations|usage-statistics/.test(path))).toBe(false);
@@ -246,7 +246,7 @@ describe('real App management navigation with synthetic HTTP', () => {
             applicationStartsAt: '2026-10-25T18:00:00', status: 'OPEN', joinedCount: 0, capacity: 2,
             joinPolicy: 'INSTANT', visibilityType: 'PUBLIC', planningMode: 'MANAGER_PLANNED', activityType: 'OTHER' }];
         await render();
-        expect(container.textContent?.replace(/\s/g, '')).toContain(`참가가능${count}개`);
+        expect(container.textContent?.replace(/\s/g, '')).toContain(`신청가능${count}개`);
         expect(container.textContent?.includes('Synthetic Korean opening')).toBe(count === 1);
         const eventTab = Array.from(container.querySelectorAll('nav[aria-label="하단 메뉴"] button'))
             .find(button => button.textContent?.endsWith('이벤트'));

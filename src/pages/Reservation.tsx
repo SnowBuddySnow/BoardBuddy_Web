@@ -1,12 +1,19 @@
+import '../components/reservation/crew-calendar.css';
+import { overlayMotion, dialogMotion } from '../lib/motion';
+import { m, AnimatePresence } from 'motion/react';
 import StayPolicyConsent from '../components/reservation/StayPolicyConsent';
+import ReservationWindowNotice from '../components/ReservationWindowNotice';
 import SeasonPassCard from '../components/reservation/SeasonPassCard';
 import { getReservationSeason } from '../lib/reservationSeason';
-import { ReservationLayout, ReservationSummary } from '../components/reservation/ReservationLayout';
+import { ReservationLayout } from '../components/reservation/ReservationLayout';
 import { useRef, useState, useEffect, useCallback } from 'react';
 import { Button } from '../components/Button';
 import { Calendar } from '../components/Calendar';
-import { createReservation, cancelReservation, getCrewInfo } from '../services/crew';
-import { getMyReservations, getUserInfo } from '../services/user';
+import { createReservation, cancelReservation, getCrewInfo, getMyCrewCalendar } from '../services/crew';
+import { getUserInfo } from '../services/user';
+import { reservationState } from '../lib/personalCalendar';
+import ConfirmDialog from '../components/ConfirmDialog';
+import { useFeedback } from '../components/feedback/feedbackContext';
 import { registerGuest, GuestDetail } from '../services/guest';
 import { CrewDetail, MyReservation } from '../types/api';
 
@@ -72,19 +79,23 @@ export default function Reservation({ onBack, isGuest = false, guestCrewId }: Re
     // Crew Details for Reservation Settings
     // Fetch Reservations Helper
     // Fetch Reservations Helper
-    const fetchReservations = async () => {
+    // Same source as 나의 달력 (per crew, per month), so both screens show the same bookings,
+    // waiting ones included.
+    const monthKey = `${currentYear}-${String(currentMonthIndex + 1).padStart(2, '0')}`;
+    const fetchReservations = useCallback(async () => {
+        if (isGuest || !crewId) {
+            setMyReservations([]);
+            return;
+        }
         try {
-            // In Guest Mode, do NOT fetch user reservations
-            if (isGuest) {
-                setMyReservations([]);
-                return;
-            }
-            const data = await getMyReservations();
-            setMyReservations(data);
+            const data = await getMyCrewCalendar(crewId, `${monthKey}-01`);
+            setMyReservations(data.my_reservations ?? []);
         } catch (error) {
             console.error("Failed to fetch my reservations:", error);
         }
-    };
+    }, [crewId, isGuest, monthKey]);
+
+    useEffect(() => { void fetchReservations(); }, [fetchReservations]);
 
     // Crew Details for Reservation Settings
     const [crew, setCrew] = useState<CrewDetail | null>(null);
@@ -110,10 +121,6 @@ export default function Reservation({ onBack, isGuest = false, guestCrewId }: Re
                 setCrew(crewData);
             }
 
-            if (!isGuest) {
-                const reservations = await getMyReservations();
-                setMyReservations(reservations);
-            }
         } catch (error) {
             console.error("Failed to load data:", error);
         }
@@ -124,29 +131,24 @@ export default function Reservation({ onBack, isGuest = false, guestCrewId }: Re
     }, [fetchAllData]);
 
     // Derived state: reserved days for the current month view
-    const reservedDays = myReservations
-        .filter(r => {
-            const d = new Date(r.date);
-            return d.getFullYear() === currentYear && d.getMonth() === currentMonthIndex && (r.status === 'confirmed' || r.status === 'created' || r.status === 'pending');
-        })
-        .map(r => new Date(r.date).getDate());
+    const monthReservations = myReservations.filter(r => r.date.slice(0, 7) === monthKey && reservationState(r.status));
+    const reservedDays = monthReservations.map(r => Number(r.date.slice(8, 10)));
+    const waitingDays = monthReservations.filter(r => reservationState(r.status) === 'waiting').map(r => Number(r.date.slice(8, 10)));
 
     const [withdrawDay, setWithdrawDay] = useState<number | null>(null);
+    const [withdrawing, setWithdrawing] = useState(false);
+    const [consentSheetOpen, setConsentSheetOpen] = useState(false);
+    const { showResult, toast } = useFeedback();
+    // Keeps the date in the dialog text while it animates out after closing.
+    const shownWithdrawDay = useRef<number | null>(null);
+    if (withdrawDay !== null) shownWithdrawDay.current = withdrawDay;
 
     // Reservation Rules Calculation
-    const isDayAvailable = (day: number) => {
-        if (!crew) return false;
-
-        // 1. Construct Target Date
+    /** When booking for `day` opens, from the crew's weekly opening rule (null without crew info). */
+    const openDateFor = (day: number) => {
+        if (!crew) return null;
         const targetDate = new Date(currentYear, currentMonthIndex, day);
         targetDate.setHours(0, 0, 0, 0);
-
-        const today = new Date();
-        // today.setHours(0, 0, 0, 0); // Keep time for precision comparison if needed, or clear for date-only
-
-        if (targetDate < new Date(today.getFullYear(), today.getMonth(), today.getDate())) {
-            return false; // Past dates unavailable
-        }
 
         // 2. Identify Batch Start (Previous or Same 'reservation_day')
         // JS getDay(): 0=Sun, 1=Mon, ..., 6=Sat
@@ -177,14 +179,47 @@ export default function Reservation({ onBack, isGuest = false, guestCrewId }: Re
         const [openHour, openMinute] = (crew.reservation_time || crew.reservationOpenTime || "00:00").split(':').map(Number);
         openDate.setHours(openHour, openMinute, 0, 0);
 
-        // 4. Compare with Now
-        // If Now >= OpenDate, it is available.
+        return openDate;
+    };
+
+    const isDayAvailable = (day: number) => {
+        const openDate = openDateFor(day);
+        if (!openDate) return false;
+        const today = new Date();
+        if (new Date(currentYear, currentMonthIndex, day) < new Date(today.getFullYear(), today.getMonth(), today.getDate())) {
+            return false; // Past dates unavailable
+        }
         return new Date() >= openDate;
     };
 
+    // The earliest not-yet-open date in view and when it opens, for the countdown banner.
+    const [, setOpenTick] = useState(0);
+    const nextOpening = (() => {
+        if (!crew) return null;
+        const today = new Date(); today.setHours(0, 0, 0, 0);
+        for (let day = 1; day <= daysInMonth; day++) {
+            if (new Date(currentYear, currentMonthIndex, day) < today || isDayAvailable(day)) continue;
+            const openDate = openDateFor(day);
+            if (!openDate || openDate <= new Date()) continue;
+            const pad = (n: number) => String(n).padStart(2, '0');
+            return {
+                day,
+                stayDate: `${monthKey}-${pad(day)}`,
+                opensAt: `${openDate.getFullYear()}-${pad(openDate.getMonth() + 1)}-${pad(openDate.getDate())}T${pad(openDate.getHours())}:${pad(openDate.getMinutes())}:00`,
+            };
+        }
+        return null;
+    })();
+
+    const isPastDay = (day: number) => {
+        const now = new Date();
+        return new Date(currentYear, currentMonthIndex, day) < new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    };
+
     const toggleDay = (day: number) => {
-        // If it's an existing reservation, trigger withdrawal
+        // An upcoming booking of mine opens the cancel confirmation; past stays stay read-only.
         if (reservedDays.includes(day)) {
+            if (isPastDay(day)) return;
             setWithdrawDay(day);
             return;
         }
@@ -200,24 +235,26 @@ export default function Reservation({ onBack, isGuest = false, guestCrewId }: Re
     };
 
     const confirmWithdraw = async () => {
-        if (withdrawDay !== null && crewId) {
+        if (withdrawDay !== null && crewId && !withdrawing) {
+            setWithdrawing(true);
             try {
-                const dateStr = `${currentYear}-${String(currentMonthIndex + 1).padStart(2, '0')}-${String(withdrawDay).padStart(2, '0')}`;
-                const reservation = myReservations.find(r => r.date === dateStr);
+                const dateStr = `${monthKey}-${String(withdrawDay).padStart(2, '0')}`;
+                const reservation = myReservations.find(r => r.date.slice(0, 10) === dateStr);
                 if (!reservation) {
                     alert("예약 정보를 찾을 수 없습니다.");
                     return;
                 }
                 await cancelReservation(crewId, reservation.reservation_id);
                 setPassRevision(value => value + 1);
-                alert("예약이 취소되었습니다.");
+                toast({ message: `${currentMonthIndex + 1}/${withdrawDay} 예약을 취소했어요.` });
 
                 // Refresh list
                 await fetchReservations();
             } catch (error) {
                 console.error("Cancellation failed:", error);
-                alert("예약 취소에 실패했습니다.");
+                toast({ message: '예약 취소에 실패했어요. 다시 시도해 주세요.', tone: 'error' });
             } finally {
+                setWithdrawing(false);
                 setWithdrawDay(null);
             }
         }
@@ -290,10 +327,16 @@ export default function Reservation({ onBack, isGuest = false, guestCrewId }: Re
             const failed = result.results?.filter(item => !item.success) ?? [];
             if (!result.results?.length || failed.length) {
                 const reason = failed.find(item => item.message)?.message;
-                alert(reason ?? `예약하지 못한 날짜가 있습니다. 아직 오픈되지 않은 날짜는 크루 달력에서 오픈 시각을 확인해 주세요. ${failed.map(item => item.date).join(', ')}`);
+                showResult({ tone: 'error', title: '예약하지 못한 날짜가 있어요', body: reason ?? `아직 오픈되지 않은 날짜는 크루 달력에서 오픈 시각을 확인해 주세요. (${failed.map(item => item.date.slice(5).replace('-', '/')).join(', ')})` });
                 return;
             }
-            alert("예약 신청이 완료되었습니다."); // Simple feedback
+            const waiting = result.results.filter(item => item.status === 'WAITING').length;
+            const confirmed = result.results.length - waiting;
+            showResult({
+                tone: waiting && !confirmed ? 'waiting' : 'success',
+                title: `${result.results.length}일 예약 신청을 마쳤어요`,
+                body: [confirmed ? `확정 ${confirmed}일` : '', waiting ? `대기 ${waiting}일 (자리가 나면 자동 확정 후 알림)` : ''].filter(Boolean).join(' · '),
+            });
             setPassRevision(value => value + 1);
             setPolicyDates(''); setSelectedDays([]); // Clear selection
             // Refresh list so the new reservation appears as "reserved" immediately
@@ -301,7 +344,7 @@ export default function Reservation({ onBack, isGuest = false, guestCrewId }: Re
             // Optional: onBack(); 
         } catch (error) {
             console.error("Reservation creation failed:", error);
-            alert("예약 신청에 실패했습니다.");
+            showResult({ tone: 'error', title: '예약 신청에 실패했어요', body: '연결 상태를 확인한 뒤 다시 시도해 주세요.' });
         } finally { stayLock.current = false; setSubmittingStay(false); }
     };
 
@@ -314,16 +357,31 @@ export default function Reservation({ onBack, isGuest = false, guestCrewId }: Re
     };
 
     return (
-        <ReservationLayout title="예약하기" onBack={onBack} action={isGuest && guestDetail ? <span className="reservation-chip px-3 py-2">{guestDetail.name} · 게스트</span> : undefined}>
+        <ReservationLayout className="crew-calendar-screen reservation-picker" title="예약하기" onBack={onBack} action={isGuest && guestDetail ? <span className="reservation-chip px-3 py-2">{guestDetail.name} · 게스트</span> : undefined}>
 
             {/* Content */}
             <main className="reservation-content">
 
-                <ReservationSummary title={crew?.name || '시즌방 예약'} description={isGuest ? '게스트로 이용할 날짜를 선택해주세요.' : '이용할 날짜를 선택해주세요.'} value={selectedDays.length > 0 ? `${selectedDays.length}일` : undefined} />
+                <div className="mb-3 flex items-center justify-between gap-3">
+                    <p className="text-xs leading-5 text-slate-500">{isGuest ? '게스트로 이용할 날짜를 선택하세요.' : '예약 가능한 날짜를 여러 개 선택할 수 있어요.'}</p>
+                    {crew?.name && <span className="shrink-0 text-xs font-bold text-brand-navy">{crew.name}</span>}
+                </div>
                 {!isGuest && crewId && <SeasonPassCard crewId={crewId} refreshKey={passRevision} compact />}
+                {nextOpening && (
+                    <div className="mb-3">
+                        <p className="mb-1 px-1 text-[11px] font-black text-brand-navy">{currentMonthIndex + 1}월 {nextOpening.day}일부터 다음 예약 오픈</p>
+                        <ReservationWindowNotice key={nextOpening.opensAt} value={{ bookable: false, opensAt: nextOpening.opensAt }} stayDate={nextOpening.stayDate} crewName={crew?.name} onOpened={() => setOpenTick(value => value + 1)} />
+                    </div>
+                )}
                 <div className="reservation-workspace">
                     <Calendar
-                        className="mb-5"
+                        variant="crew-classic"
+                        className="mb-3"
+                        footer={<div className="crew-calendar-legend" aria-label="날짜 표시 안내">
+                            <span><i aria-hidden="true" className="reservation-legend-swatch is-selected" />선택</span>
+                            <span><i aria-hidden="true" className="reservation-legend-swatch is-reserved" />내 예약</span>
+                            <span><i aria-hidden="true" className="reservation-legend-swatch is-unavailable" />예약 불가</span>
+                        </div>}
                         month={currentMonthName}
                         year={currentYear}
                         startDayOfWeek={firstDayOfMonth}
@@ -348,8 +406,9 @@ export default function Reservation({ onBack, isGuest = false, guestCrewId }: Re
                                 return (
                                     <button
                                         onClick={() => toggleDay(day)}
-                                        aria-label={`${currentYear}년 ${currentMonthName} ${day}일 예약 취소`}
-                                        className="reservation-day is-reserved"
+                                        disabled={isPastDay(day)}
+                                        aria-label={`${currentYear}년 ${currentMonthName} ${day}일 내 예약${waitingDays.includes(day) ? '(대기)' : ''}${isPastDay(day) ? ' · 지난 날짜' : ' · 취소하려면 누르세요'}`}
+                                        className={`reservation-day is-reserved${waitingDays.includes(day) ? ' is-waiting' : ''}`}
                                     >
                                         {day}
                                         <div className="absolute -top-1 -right-1 bg-white rounded-full p-0.5 shadow-sm">
@@ -376,9 +435,18 @@ export default function Reservation({ onBack, isGuest = false, guestCrewId }: Re
                     />
 
                     <aside className="reservation-detail-column">
-                        <div className="reservation-selection" role="status">
-                            {selectedDays.length ? <><strong>선택한 날짜</strong><br />{[...selectedDays].sort((a, b) => a - b).map(day => `${currentMonthIndex + 1}월 ${day}일`).join(', ')}</> : '예약할 날짜를 선택하면 여기에 표시됩니다.'}
-                        </div>
+                        <section className="reservation-panel mb-3" role="status" aria-label="선택한 날짜">
+                            <div className="flex items-center justify-between gap-2">
+                                <h2 className="text-sm font-bold text-zinc-900">선택한 날짜</h2>
+                                {selectedDays.length > 0 && <span className="text-xs font-bold text-brand-navy">{selectedDays.length}일</span>}
+                            </div>
+                            {selectedDays.length ? (
+                                <ul className="mt-2 flex flex-wrap gap-1.5">
+                                    {[...selectedDays].sort((a, b) => a - b).map(day => <li key={day} className="rounded-full bg-brand-navy/5 px-2.5 py-1 text-xs font-bold text-brand-navy">{currentMonthIndex + 1}월 {day}일</li>)}
+                                </ul>
+                            ) : <p className="mt-1.5 text-xs text-slate-500">달력에서 예약할 날짜를 골라 주세요.</p>}
+                        </section>
+                        <div className="hidden lg:block">
                         <StayPolicyConsent dates={selectedDays.map(day => `${currentYear}-${String(currentMonthIndex+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`)} checked={policyDates === selectionKey} onChange={checked => setPolicyDates(checked ? selectionKey : '')} disabled={submittingStay} />
                         <div className="w-full flex justify-center">
                             <Button
@@ -389,46 +457,63 @@ export default function Reservation({ onBack, isGuest = false, guestCrewId }: Re
                                 {selectedDays.length ? `${selectedDays.length}일 예약 신청` : '날짜를 선택해주세요'}
                             </Button>
                         </div>
+                        </div>
 
                     </aside>
                 </div>
-            </main>
 
-            {/* Withdrawal Modal */}
-            {withdrawDay !== null && (
-                <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-6">
-                    <div role="dialog" aria-modal="true" aria-label="예약 취소" className="reservation-modal w-full max-w-sm">
-                        <h3 className="text-xl font-bold mb-2">예약 취소</h3>
-                        <p className="text-zinc-600 dark:text-zinc-400 mb-6">
-                            <span className="font-bold text-zinc-900 dark:text-zinc-100">{currentMonthIndex + 1}월 {withdrawDay}일</span> 예약을 취소하시겠습니까?
-                        </p>
-                        <div className="flex gap-3">
-                            <Button
-                                variant="secondary"
-                                onClick={() => setWithdrawDay(null)}
-                                className="flex-1 bg-zinc-200 hover:bg-zinc-300 text-zinc-700 border-transparent"
-                            >
-                                돌아가기
-                            </Button>
-                            <Button
-                                variant="primary"
-                                onClick={confirmWithdraw}
-                                className="flex-1 bg-red-500 hover:bg-red-600 border-red-500 hover:border-red-600 text-white"
-                            >
-                                취소하기
-                            </Button>
+                {/* Mobile: the decision stays under the thumb while the calendar scrolls. */}
+                <div className="sticky bottom-0 z-20 -mx-4 mt-3 border-t border-zinc-200 bg-white/95 px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 backdrop-blur lg:hidden">
+                    <div className="flex items-center gap-3">
+                        <div className="min-w-0 flex-1">
+                            <p className="text-sm font-black text-zinc-900">{selectedDays.length ? `${selectedDays.length}일 선택` : '날짜를 선택해 주세요'}</p>
+                            <p className="truncate text-xs text-zinc-500">{selectedDays.length ? [...selectedDays].sort((a, b) => a - b).map(day => `${currentMonthIndex + 1}/${day}`).join(', ') : '예약 가능한 날짜를 눌러 고를 수 있어요'}</p>
                         </div>
+                        <Button
+                            disabled={submittingStay || selectedDays.length === 0 || (isGuest && (!guestName || !guestPhone))}
+                            onClick={() => { if (policyDates === selectionKey) void handleSubmit(); else setConsentSheetOpen(true); }}
+                            className="reservation-primary h-12 shrink-0 px-5 text-sm"
+                        >
+                            {selectedDays.length ? `${selectedDays.length}일 예약 신청` : '예약 신청'}
+                        </Button>
                     </div>
                 </div>
-            )}
+            </main>
+
+            {/* Mobile consent step, opened from the sticky bar. */}
+            <AnimatePresence>{consentSheetOpen && (
+                <m.div {...overlayMotion} className="fixed inset-0 z-[2000] flex items-end justify-center bg-zinc-950/45 p-3 lg:hidden"
+                    onClick={event => { if (event.target === event.currentTarget) setConsentSheetOpen(false); }}>
+                    <m.div {...dialogMotion} role="dialog" aria-modal="true" aria-label="숙박일 기준 확인" className="w-full max-w-md rounded-3xl bg-white p-4 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-2xl">
+                        <StayPolicyConsent dates={selectedDays.map(day => `${monthKey}-${String(day).padStart(2,'0')}`)} checked={policyDates === selectionKey} onChange={checked => setPolicyDates(checked ? selectionKey : '')} disabled={submittingStay} />
+                        <div className="mt-3 flex gap-2">
+                            <button type="button" onClick={() => setConsentSheetOpen(false)} className="min-h-12 flex-1 rounded-xl border border-zinc-200 text-sm font-bold text-zinc-700">닫기</button>
+                            <button type="button" disabled={submittingStay || policyDates !== selectionKey} onClick={() => { setConsentSheetOpen(false); void handleSubmit(); }}
+                                className="min-h-12 flex-[2] rounded-xl bg-brand-navy text-sm font-bold text-white disabled:opacity-50">동의하고 {selectedDays.length}일 예약 신청</button>
+                        </div>
+                    </m.div>
+                </m.div>
+            )}</AnimatePresence>
+
+            {/* Withdrawal confirmation */}
+            <ConfirmDialog
+                open={withdrawDay !== null}
+                title="예약을 취소할까요?"
+                confirmLabel="취소하기"
+                busy={withdrawing}
+                onConfirm={() => void confirmWithdraw()}
+                onCancel={() => setWithdrawDay(null)}
+            >
+                <strong className="text-zinc-900">{currentMonthIndex + 1}월 {shownWithdrawDay.current}일</strong> 예약을 취소하면 되돌릴 수 없어요. 다시 이용하려면 새로 예약해야 해요.
+            </ConfirmDialog>
 
             {/* Guest Info Modal */}
-            {isGuestModalOpen && (
-                <div
-                    className="absolute inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-[2px] p-4 sm:p-6 animate-in fade-in duration-200"
+            <AnimatePresence>{isGuestModalOpen && (
+                <m.div {...overlayMotion}
+                    className="absolute inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-[2px] p-4 sm:p-6"
                     onClick={onBack}
                 >
-                    <div
+                    <m.div {...dialogMotion}
                         role="dialog" aria-modal="true" aria-label="게스트 정보" className="reservation-modal w-full max-w-sm min-w-0 flex flex-col items-center"
                         onClick={(e) => e.stopPropagation()}
                     >
@@ -478,15 +563,15 @@ export default function Reservation({ onBack, isGuest = false, guestCrewId }: Re
                         >
                             예약하기
                         </Button>
-                    </div>
-                </div>
-            )}
+                    </m.div>
+                </m.div>
+            )}</AnimatePresence>
 
             {/* Phone Sharing Consent Modal */}
-            {showPhoneConsentModal && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <AnimatePresence>{showPhoneConsentModal && (
+                <m.div {...overlayMotion} className="fixed inset-0 z-50 flex items-center justify-center p-4">
                     <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setShowPhoneConsentModal(false)} />
-                    <div role="dialog" aria-modal="true" aria-label="전화번호 제공 동의" className="reservation-modal w-full max-w-sm relative z-10">
+                    <m.div {...dialogMotion} role="dialog" aria-modal="true" aria-label="전화번호 제공 동의" className="reservation-modal w-full max-w-sm relative z-10">
                         <h3 className="text-lg font-bold text-zinc-900 dark:text-zinc-100 mb-3 text-center">
                             전화번호 제공 동의
                         </h3>
@@ -518,9 +603,9 @@ export default function Reservation({ onBack, isGuest = false, guestCrewId }: Re
                                 취소
                             </button>
                         </div>
-                    </div>
-                </div>
-            )}
+                    </m.div>
+                </m.div>
+            )}</AnimatePresence>
         </ReservationLayout>
     );
 }

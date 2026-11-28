@@ -1,3 +1,5 @@
+import { overlayMotion, dialogMotion } from '../lib/motion';
+import { m } from 'motion/react';
 import { useEffect, useRef, useState } from 'react';
 import {
   ArrowRight, Check, CheckCircle2, ChevronLeft, ChevronRight, ClipboardCheck,
@@ -165,8 +167,8 @@ export default function EventManagerOnboarding({ open, canCreateEvents, initialS
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-[10000] flex items-end justify-center bg-zinc-950/55 backdrop-blur-sm sm:items-center sm:p-6">
-      <section ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="event-manager-onboarding-title" className="flex h-[96dvh] w-full max-w-6xl flex-col overflow-hidden rounded-t-[2rem] bg-[#FAF8F3] shadow-2xl sm:h-[min(48rem,92dvh)] sm:rounded-[2rem]">
+    <m.div {...overlayMotion} className="fixed inset-0 z-[10000] flex items-end justify-center bg-zinc-950/55 backdrop-blur-sm sm:items-center sm:p-6">
+      <m.section {...dialogMotion} ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="event-manager-onboarding-title" className="flex h-[96dvh] w-full max-w-6xl flex-col overflow-hidden rounded-t-[2rem] bg-[#FAF8F3] shadow-2xl sm:h-[min(48rem,92dvh)] sm:rounded-[2rem]">
         <header className="shrink-0 border-b border-zinc-200 bg-white px-5 py-5 sm:px-7">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
@@ -216,7 +218,7 @@ export default function EventManagerOnboarding({ open, canCreateEvents, initialS
               : <button type="button" onClick={onComplete} className="flex h-11 items-center gap-2 rounded-xl bg-[#162660] px-5 text-sm font-black text-white hover:bg-[#0f1b48]"><ListChecks className="h-4 w-4" />가이드 완료</button>}
           </div>
         </footer>
-      </section>
-    </div>
+      </m.section>
+    </m.div>
   );
 }

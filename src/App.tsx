@@ -850,7 +850,6 @@ function App() {
             onMakeReservationClick={() => setCurrentView('reservation')}
             onGuestReservationClick={() => setCurrentView('guest_access')}
             onCalendarClick={() => setCurrentView('my_reservations')}
-            onSeasonCalendarClick={() => setCurrentView('season_calendar')}
             onTeamClick={() => setCurrentView('crew_detail')}
             onCrewSettingsClick={() => openCrewSettings('home')}
             onSearchClick={() => openCrewSearch('home')}

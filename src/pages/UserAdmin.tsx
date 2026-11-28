@@ -1,3 +1,5 @@
+import { overlayMotion, dialogMotion } from '../lib/motion';
+import { m, AnimatePresence } from 'motion/react';
 import {
     ChevronLeftIcon,
     LoaderCircle,
@@ -493,15 +495,15 @@ export default function UserAdmin({ onBack }: UserAdminProps) {
                 />
             )}
 
-            {pendingConfirmation && (
-                <div
+            <AnimatePresence>{pendingConfirmation && (
+                <m.div {...overlayMotion}
                     className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-4"
                     role="presentation"
                     onMouseDown={event => {
                         if (event.currentTarget === event.target) setPendingConfirmation(null);
                     }}
                 >
-                    <section
+                    <m.section {...dialogMotion}
                         role="dialog"
                         aria-modal="true"
                         aria-labelledby="permission-confirmation-title"
@@ -529,9 +531,9 @@ export default function UserAdmin({ onBack }: UserAdminProps) {
                                 {pendingConfirmation.confirmLabel}
                             </button>
                         </div>
-                    </section>
-                </div>
-            )}
+                    </m.section>
+                </m.div>
+            )}</AnimatePresence>
         </div>
     );
 }

@@ -1,3 +1,5 @@
+import { overlayMotion, dialogMotion } from '../../lib/motion';
+import { m } from 'motion/react';
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Clock3, Eye, Info, ShieldCheck, X } from 'lucide-react';
@@ -54,13 +56,13 @@ export function EventConsentPreview({ items, consentWindowMinutes, open, onClose
     )).length;
 
     return createPortal(
-        <div
+        <m.div {...overlayMotion}
             className="fixed inset-0 z-[10000] flex items-center justify-center bg-zinc-950/55 p-3 backdrop-blur-sm sm:p-6"
             onMouseDown={(event) => {
                 if (event.currentTarget === event.target) onClose();
             }}
         >
-            <section
+            <m.section {...dialogMotion}
                 ref={dialogRef}
                 role="dialog"
                 aria-modal="true"
@@ -178,8 +180,8 @@ export function EventConsentPreview({ items, consentWindowMinutes, open, onClose
                         </div>
                     </div>
                 </div>
-            </section>
-        </div>,
+            </m.section>
+        </m.div>,
         document.body,
     );
 }

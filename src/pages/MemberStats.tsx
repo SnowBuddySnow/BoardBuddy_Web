@@ -1,9 +1,10 @@
 import { ReservationLayout, ReservationSummary } from '../components/reservation/ReservationLayout';
 // Member Statistics Page
 import { UserIcon, DownloadIcon } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { getCrewUsageStatistics } from "../services/crew";
 import { CrewUsageStatistic } from "../types/api";
+import KpiStat from "../components/KpiStat";
 
 interface MemberStatsProps {
     crewId: number;
@@ -34,6 +35,8 @@ export default function MemberStats({ crewId, onBack }: MemberStatsProps) {
         fetchData();
     }, [fetchData]);
 
+    const totalNights = useMemo(() => stats.reduce((total, item) => total + item.usage_count, 0), [stats]);
+
     const handleDownloadExcel = () => {
         const header = "#,name,usagecount";
         const rows = stats.map((stat, index) => `${index + 1},${stat.name},${stat.usage_count}`);
@@ -56,7 +59,7 @@ export default function MemberStats({ crewId, onBack }: MemberStatsProps) {
         <ReservationLayout title="시즌방 이용 기록" onBack={onBack}>
 
             <main className="reservation-content">
-                <ReservationSummary title="시즌방 이용 기록" description={`${stats.length}명의 이용 내역`} value={`${stats.reduce((total, item) => total + item.usage_count, 0)}박`} />
+                <ReservationSummary title="시즌방 이용 기록" description={`${stats.length}명의 이용 내역`} value={<KpiStat value={totalNights} suffix="박" label="누적 이용" valueClassName="text-2xl font-black text-brand-navy" labelClassName="text-[11px] font-semibold text-zinc-500" className="items-end text-right" />} />
                 {/* Sort and Control Header */}
                 <div className="mb-4 flex justify-end">
                     <div className="relative">

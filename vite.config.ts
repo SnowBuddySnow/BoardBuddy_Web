@@ -1,6 +1,7 @@
 import { defineConfig, loadEnv, type Plugin } from 'vite'
 import react from '@vitejs/plugin-react'
 import { configDefaults } from 'vitest/config'
+import { fileURLToPath, URL } from 'node:url'
 import packageMetadata from './package.json' with { type: 'json' }
 
 function publishBuildInfo(revision: string | undefined): Plugin {
@@ -48,6 +49,23 @@ export default defineConfig(({ mode }) => {
     // Keep independently configured browser fixtures from invalidating one another.
     cacheDir: env.BOARDBUDDY_VITE_CACHE_DIR || 'node_modules/.vite',
     plugins: [react(), publishBuildInfo(buildSha)],
+    resolve: {
+      alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) },
+    },
+    build: {
+      rollupOptions: {
+        output: {
+          // React rarely changes between deploys: keep it in its own long-cached chunk so the
+          // app entry stays under the per-chunk budget. Motion's feature bundle stays lazy
+          // (see src/lib/motionFeatures.ts), so it is intentionally not listed here.
+          manualChunks(id) {
+            if (/[\\/]node_modules[\\/](?:\.pnpm[\\/][^\\/]+[\\/]node_modules[\\/])?(react|react-dom|scheduler)[\\/]/.test(id)) {
+              return 'vendor-react'
+            }
+          },
+        },
+      },
+    },
     define: {
       __APP_VERSION__: JSON.stringify(buildVersion),
     },

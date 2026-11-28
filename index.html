@@ -7,10 +7,18 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <meta name="referrer" content="no-referrer" />
   <title>Board Buddy</title>
+  <style>
+    /* Boot loader: visible until React's first render replaces #root's content. */
+    #boot-loader { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; background: #faf8f3; color: #162660; font: 700 14px/1.5 system-ui, -apple-system, "Apple SD Gothic Neo", sans-serif; animation: boot-fade 0.3s ease-out 0.15s both; }
+    #boot-loader img { width: 132px; height: auto; animation: boot-float 1.8s ease-in-out infinite; }
+    @keyframes boot-fade { from { opacity: 0; } to { opacity: 1; } }
+    @keyframes boot-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+    @media (prefers-reduced-motion: reduce) { #boot-loader, #boot-loader img { animation: none; } }
+  </style>
 </head>
 
 <body>
-  <div id="root"></div>
+  <div id="root"><div id="boot-loader" role="status" aria-live="polite"><img src="/src/assets/buddy-soft.png" alt="" /><p>보드버디를 준비하고 있어요</p></div></div>
   <script type="module" src="/src/main.tsx"></script>
   <script src="https://developers.kakao.com/sdk/js/kakao.min.js"></script>
 </body>

@@ -1,3 +1,5 @@
+import { overlayMotion, dialogMotion } from '../lib/motion';
+import { m, AnimatePresence } from 'motion/react';
 import axios from 'axios';
 import {
     CheckCircle2,
@@ -403,9 +405,9 @@ export default function CrewAdmin({ onBack, mode = 'create', onSearch, onRequest
                     </div>
                 </main>
 
-                {reviewTarget && (
-                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-950/45 p-4 backdrop-blur-sm">
-                        <div className="w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl">
+                <AnimatePresence>{reviewTarget && (
+                    <m.div {...overlayMotion} className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-950/45 p-4 backdrop-blur-sm">
+                        <m.div {...dialogMotion} className="w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl">
                             <div className={`flex h-12 w-12 items-center justify-center rounded-2xl ${reviewDecision === 'APPROVE' ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'}`}>
                                 {reviewDecision === 'APPROVE' ? <CheckCircle2 className="h-6 w-6" /> : <CircleX className="h-6 w-6" />}
                             </div>
@@ -436,9 +438,9 @@ export default function CrewAdmin({ onBack, mode = 'create', onSearch, onRequest
                                     {actingCrewId === reviewTarget.id ? <LoaderCircle className="h-4 w-4 animate-spin" /> : reviewDecision === 'APPROVE' ? '승인 확정' : '반려 확정'}
                                 </button>
                             </div>
-                        </div>
-                    </div>
-                )}
+                        </m.div>
+                    </m.div>
+                )}</AnimatePresence>
             </div>
         );
     }

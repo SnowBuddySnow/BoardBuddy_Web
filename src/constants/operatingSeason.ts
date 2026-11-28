@@ -30,7 +30,8 @@ export const getOperatingMode = (date = new Date()): OperatingMode => {
   if (configuredMode) return configuredMode;
 
   const month = date.getMonth() + 1;
-  return month >= 10 || month <= 5 ? 'BOTH' : 'OFF_SEASON';
+  // Season-house features follow the October–March reservation season.
+  return month >= 10 || month <= 3 ? 'BOTH' : 'OFF_SEASON';
 };
 
 export const getOperatingFeatures = (mode: OperatingMode) => ({

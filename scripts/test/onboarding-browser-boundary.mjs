@@ -17,7 +17,7 @@ export const installOnboardingBoundary = async (page, { origin = 'http://127.0.0
         const usedNights=committed.filter(item=>item.stayCompleted).length,reservedNights=committed.length-usedNights;
         return {...pass,usedNights,reservedNights,remainingNights:pass.totalNights==null?null:Math.max(0,pass.totalNights-usedNights-reservedNights)};
     };
-    const savePass = (id, body) => { const existing = state.seasonPasses[id]; return { ...body, registered: true, startsOn: body.startsOn ?? existing?.startsOn ?? '2026-10-01', endsOn: body.endsOn ?? existing?.endsOn ?? '2027-05-31' }; };
+    const savePass = (id, body) => { const existing = state.seasonPasses[id]; return { ...body, registered: true, startsOn: body.startsOn ?? existing?.startsOn ?? '2026-10-01', endsOn: body.endsOn ?? existing?.endsOn ?? '2027-03-31' }; };
     page.on('pageerror', error => state.errors.push(error.message));
     await page.context().addInitScript(() => {
         window.Kakao = { isInitialized: () => true, init() {}, Auth: { login: ({ success }) => { queueMicrotask(() => success({ access_token: 'synthetic-provider-only' })); } } };
