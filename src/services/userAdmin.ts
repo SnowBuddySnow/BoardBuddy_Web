@@ -10,7 +10,6 @@ export interface AdminCrewMembership {
     crewName: string;
     role: CrewRole;
     crewManager: boolean;
-    eventManager: boolean;
 }
 
 export type CrewApplicationStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'CANCELED';
@@ -94,18 +93,6 @@ export const updateAdminCrewManager = async (
     const response = await apiClient.patch<ApiResponse<AdminUser>>(
         `/admin/users/${accountId}/crews/${crewId}/crew-manager`,
         { crewManager },
-    );
-    return response.data.data;
-};
-
-export const updateAdminEventManager = async (
-    accountId: number,
-    crewId: number,
-    eventManager: boolean,
-): Promise<AdminUser> => {
-    const response = await apiClient.patch<ApiResponse<AdminUser>>(
-        `/admin/users/${accountId}/crews/${crewId}/event-manager`,
-        { eventManager },
     );
     return response.data.data;
 };

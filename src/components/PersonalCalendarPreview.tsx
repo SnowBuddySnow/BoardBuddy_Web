@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Skeleton } from "./Skeleton";
 import { getMyCrewCalendar } from "../services/crew";
 import {
   localDateKey,
@@ -66,12 +67,14 @@ export default function PersonalCalendarPreview({
           전체 보기 →
         </button>
       </div>
-      {loading || failed ? (
+      {failed ? (
         <p role="status" className="text-xs text-slate-500">
-          {failed
-            ? "현황을 불러오지 못했습니다. 전체 보기에서 다시 확인해 주세요."
-            : "일정을 확인하고 있어요."}
+          현황을 불러오지 못했습니다. 전체 보기에서 다시 확인해 주세요.
         </p>
+      ) : loading ? (
+        <div role="status" aria-label="일정을 확인하고 있어요" className="grid grid-cols-7 gap-1 rounded-2xl bg-white p-2">
+          {Array.from({ length: 14 }, (_, index) => <Skeleton key={index} className="h-11 rounded-lg" />)}
+        </div>
       ) : (
         <>
           <div className="grid grid-cols-7 gap-1 rounded-2xl bg-white p-2">

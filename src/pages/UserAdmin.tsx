@@ -1,3 +1,5 @@
+import { overlayMotion, dialogMotion } from '../lib/motion';
+import { m, AnimatePresence } from 'motion/react';
 import {
     ChevronLeftIcon,
     LoaderCircle,
@@ -18,7 +20,6 @@ import {
     type AdminCrewApplication,
     updateAdminCrewManager,
     updateAdminCrewRole,
-    updateAdminEventManager,
     updatePlatformAdmin,
     type AccountStatus,
     type AdminCrewMembership,
@@ -165,24 +166,6 @@ export default function UserAdmin({ onBack }: UserAdminProps) {
         }
     };
 
-    const handleEventManagerChange = async (
-        user: AdminUser,
-        crewId: number,
-        currentValue: boolean,
-    ) => {
-        const nextValue = !currentValue;
-        setChangingKey(`event-${user.accountId}-${crewId}`);
-        setError('');
-        try {
-            const updated = await updateAdminEventManager(user.accountId, crewId, nextValue);
-            setUsers(current => current.map(item => item.accountId === updated.accountId ? updated : item));
-        } catch (updateError) {
-            setError(getApiErrorMessage(updateError) || '이벤트 그룹 매니저 권한을 변경하지 못했습니다.');
-        } finally {
-            setChangingKey(null);
-        }
-    };
-
     const handleApproveApplication = async (user: AdminUser, application: AdminCrewApplication) => {
         if (changingKey !== null || approvalInFlight.current) return;
         approvalInFlight.current = true;
@@ -240,20 +223,6 @@ export default function UserAdmin({ onBack }: UserAdminProps) {
         });
     };
 
-    const handleEventManagerClick = (user: AdminUser, membership: AdminCrewMembership) => {
-        const nextValue = !membership.eventManager;
-        setPendingConfirmation({
-            title: '이벤트 매니저 권한 변경',
-            message: `${user.name || user.userCode} 사용자의 ${membership.crewName} 이벤트 그룹 매니저 권한을 ${nextValue ? '부여' : '해제'}합니다.`,
-            confirmLabel: nextValue ? '권한 부여' : '권한 해제',
-            onConfirm: () => void handleEventManagerChange(
-                user,
-                membership.crewId,
-                membership.eventManager,
-            ),
-        });
-    };
-
     const handlePlatformAccessClick = (user: AdminUser) => {
         const nextValue = !user.platformAdmin;
         setPendingConfirmation({
@@ -302,7 +271,7 @@ export default function UserAdmin({ onBack }: UserAdminProps) {
                     <section className="rounded-2xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-900">
                         <p className="font-black">권한 범위를 분리해서 관리합니다</p>
                         <p className="mt-1 leading-6 text-blue-800">
-                            크루장 지정, 크루 매니저, 이벤트 그룹 매니저, 플랫폼 관리자는 서로 독립적입니다. 진하게 표시된 항목만 현재 부여된 권한입니다.
+                            크루 매니저는 크루와 이벤트 운영을 맡습니다. 크루장은 매니저 권한을 기본으로 가집니다.
                         </p>
                         <p className="mt-2 leading-6 text-blue-800">
                             활성 일반회원은 실명·학교·학번을 등록해 학생으로 변경할 수 있습니다. 학생 유형과 학교 이메일 인증은 별개이며, 회원 유형만으로 관리 권한이 부여되지는 않습니다.
@@ -395,7 +364,7 @@ export default function UserAdmin({ onBack }: UserAdminProps) {
                                                                     return (
                                                                         <div key={membership.crewId} className="space-y-2 rounded-xl border border-zinc-100 bg-zinc-50 p-2.5">
                                                                             <span className="block truncate text-xs font-black text-zinc-700">{membership.crewName}</span>
-                                                                            <div className="grid grid-cols-3 gap-1.5">
+                                                                            <div className="grid grid-cols-2 gap-1.5">
                                                                                 <button
                                                                                     type="button"
                                                                                     aria-pressed={isCaptain}
@@ -408,20 +377,11 @@ export default function UserAdmin({ onBack }: UserAdminProps) {
                                                                                 <button
                                                                                     type="button"
                                                                                     aria-pressed={membership.crewManager}
-                                                                                    disabled={busy}
+                                                                                    disabled={busy || isCaptain}
                                                                                     onClick={() => handleCrewManagerClick(user, membership)}
                                                                                     className={`rounded-lg border px-2 py-2 text-[11px] font-black transition disabled:opacity-50 ${membership.crewManager ? 'border-zinc-800 bg-zinc-800 text-white' : 'border-zinc-200 bg-white text-zinc-600 hover:bg-zinc-100'}`}
                                                                                 >
                                                                                     크루 매니저
-                                                                                </button>
-                                                                                <button
-                                                                                    type="button"
-                                                                                    aria-pressed={membership.eventManager}
-                                                                                    disabled={busy}
-                                                                                    onClick={() => handleEventManagerClick(user, membership)}
-                                                                                    className={`rounded-lg border px-2 py-2 text-[11px] font-black transition disabled:opacity-50 ${membership.eventManager ? 'border-[#162660] bg-[#162660] text-white' : 'border-zinc-200 bg-white text-zinc-600 hover:bg-zinc-100'}`}
-                                                                                >
-                                                                                    이벤트 매니저
                                                                                 </button>
                                                                             </div>
                                                                         </div>
@@ -477,7 +437,7 @@ export default function UserAdmin({ onBack }: UserAdminProps) {
                                                     return (
                                                         <div key={membership.crewId} className="space-y-2">
                                                             <span className="block truncate text-xs font-black text-zinc-700">{membership.crewName}</span>
-                                                            <div className="grid grid-cols-3 gap-1.5">
+                                                            <div className="grid grid-cols-2 gap-1.5">
                                                                 <button
                                                                     type="button"
                                                                     aria-pressed={isCaptain}
@@ -490,20 +450,11 @@ export default function UserAdmin({ onBack }: UserAdminProps) {
                                                                 <button
                                                                     type="button"
                                                                     aria-pressed={membership.crewManager}
-                                                                    disabled={busy}
+                                                                    disabled={busy || isCaptain}
                                                                     onClick={() => handleCrewManagerClick(user, membership)}
                                                                     className={`rounded-lg border px-2 py-2 text-[10px] font-black disabled:opacity-50 ${membership.crewManager ? 'border-zinc-800 bg-zinc-800 text-white' : 'border-zinc-200 bg-white text-zinc-600'}`}
                                                                 >
                                                                     크루 매니저
-                                                                </button>
-                                                                <button
-                                                                    type="button"
-                                                                    aria-pressed={membership.eventManager}
-                                                                    disabled={busy}
-                                                                    onClick={() => handleEventManagerClick(user, membership)}
-                                                                    className={`rounded-lg border px-2 py-2 text-[10px] font-black disabled:opacity-50 ${membership.eventManager ? 'border-[#162660] bg-[#162660] text-white' : 'border-zinc-200 bg-white text-zinc-600'}`}
-                                                                >
-                                                                    이벤트 매니저
                                                                 </button>
                                                             </div>
                                                         </div>
@@ -544,15 +495,15 @@ export default function UserAdmin({ onBack }: UserAdminProps) {
                 />
             )}
 
-            {pendingConfirmation && (
-                <div
+            <AnimatePresence>{pendingConfirmation && (
+                <m.div {...overlayMotion}
                     className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-4"
                     role="presentation"
                     onMouseDown={event => {
                         if (event.currentTarget === event.target) setPendingConfirmation(null);
                     }}
                 >
-                    <section
+                    <m.section {...dialogMotion}
                         role="dialog"
                         aria-modal="true"
                         aria-labelledby="permission-confirmation-title"
@@ -580,9 +531,9 @@ export default function UserAdmin({ onBack }: UserAdminProps) {
                                 {pendingConfirmation.confirmLabel}
                             </button>
                         </div>
-                    </section>
-                </div>
-            )}
+                    </m.section>
+                </m.div>
+            )}</AnimatePresence>
         </div>
     );
 }

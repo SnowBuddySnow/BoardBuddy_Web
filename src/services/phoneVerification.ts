@@ -15,6 +15,7 @@ export interface PhoneVerificationResult {
     userType: UserType;
     accessToken: string;
     refreshToken: string;
+    linkedProviders?: Array<'KAKAO' | 'NAVER'>;
 }
 
 const authConfig = () => {

@@ -1,4 +1,7 @@
+import { overlayMotion, dialogMotion } from '../lib/motion';
+import { m, AnimatePresence } from 'motion/react';
 import { EventFamilyLinks } from '../components/event/EventFamilyLinks';
+import { GuestInviteShareCard } from '../components/guest/GuestInviteShareCard';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Button } from '../components/Button';
 import {
@@ -545,10 +548,30 @@ export default function EventDetail({ eventId, onBack, isGuestApplication = fals
                     <div className="bg-white rounded-3xl p-5 border border-zinc-100 shadow-sm space-y-4">
                         <h3 className="text-sm font-bold text-zinc-900 border-b border-zinc-50 pb-2">모임 정보</h3>
 
-                        {event.organizerGroupName && (
+                        {(event.organizerGroupName || event.hostCrewName) && (
+                            <div className="flex items-center justify-between gap-3 text-sm">
+                                <span className="text-zinc-500 font-medium">
+                                    {event.organizerGroupName
+                                        ? '호스트 그룹'
+                                        : event.coHostCrewName
+                                            ? '공동 운영 크루'
+                                            : '주최 크루'}
+                                </span>
+                                <span className="text-right font-bold text-zinc-800">
+                                    {event.organizerGroupName
+                                        || (event.coHostCrewName
+                                            ? `${event.hostCrewName} × ${event.coHostCrewName}`
+                                            : event.hostCrewName)}
+                                </span>
+                            </div>
+                        )}
+
+                        {event.allowNonMemberApplications && (
                             <div className="flex items-center justify-between text-sm">
-                                <span className="text-zinc-500 font-medium">호스트 그룹</span>
-                                <span className="font-bold text-zinc-800">{event.organizerGroupName}</span>
+                                <span className="text-zinc-500 font-medium">외부 참가</span>
+                                <span className="rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-bold text-amber-800">
+                                    비회원(외부 크루) 신청 허용
+                                </span>
                             </div>
                         )}
 
@@ -573,6 +596,17 @@ export default function EventDetail({ eventId, onBack, isGuestApplication = fals
                             </div>
                         )}
                     </div>
+
+                    {event.id > 0 && (
+                        <GuestInviteShareCard
+                            compact
+                            destination={{ type: 'EVENT', id: event.id }}
+                            title="이벤트 게스트 초대 링크"
+                            description="링크를 보내거나 QR을 보여주면 이벤트 게스트 신청 화면으로 바로 연결돼요."
+                            shareTitle={`${event.title} 게스트 초대`}
+                            shareText={`${event.title} 이벤트 게스트 초대 링크입니다.`}
+                        />
+                    )}
 
                     {event.paymentRequired && (
                         <div className="rounded-3xl border border-blue-100 bg-blue-50/70 p-5 shadow-sm">
@@ -882,10 +916,10 @@ export default function EventDetail({ eventId, onBack, isGuestApplication = fals
             </div>
 
             {/* Phone Sharing Consent Modal */}
-            {showPhoneConsentModal && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <AnimatePresence>{showPhoneConsentModal && (
+                <m.div {...overlayMotion} className="fixed inset-0 z-50 flex items-center justify-center p-4">
                     <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setShowPhoneConsentModal(false)} />
-                    <div ref={phoneConsentDialogRef} role="dialog" aria-modal="true" aria-labelledby="phone-sharing-consent-title" aria-describedby="phone-sharing-consent-description" tabIndex={-1} className="bg-white dark:bg-zinc-900 rounded-2xl w-full max-w-sm max-h-[calc(100dvh-2rem)] overflow-y-auto p-6 shadow-xl relative z-10 animate-in fade-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
+                    <m.div {...dialogMotion} ref={phoneConsentDialogRef} role="dialog" aria-modal="true" aria-labelledby="phone-sharing-consent-title" aria-describedby="phone-sharing-consent-description" tabIndex={-1} className="bg-white dark:bg-zinc-900 rounded-2xl w-full max-w-sm max-h-[calc(100dvh-2rem)] overflow-y-auto p-6 shadow-xl relative z-10" onClick={e => e.stopPropagation()}>
                         <h3 id="phone-sharing-consent-title" className="text-lg font-bold text-zinc-900 dark:text-zinc-100 mb-3 text-center">
                             전화번호 제공 동의
                         </h3>
@@ -919,9 +953,9 @@ export default function EventDetail({ eventId, onBack, isGuestApplication = fals
                                 취소
                             </button>
                         </div>
-                    </div>
-                </div>
-            )}
+                    </m.div>
+                </m.div>
+            )}</AnimatePresence>
         </div>
     );
 }

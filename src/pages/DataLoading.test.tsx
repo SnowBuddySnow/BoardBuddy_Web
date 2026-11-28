@@ -112,7 +112,7 @@ describe('page fetch dependencies and reservation cache refresh (synthetic HTTP 
         http.post.mockResolvedValue(result({ results: [{ date: '2026-02-19', success: false, message: '접수 전입니다.' }] }));
         await act(async () => root.render(<ReservationStats onBack={vi.fn()} />));
         await agree(); await click('예약하기');
-        expect(alert).toHaveBeenCalledWith('접수 전입니다.');
+        expect(alert).toHaveBeenCalledWith(expect.stringContaining('접수 전입니다.'));
         expect(countGets('/reservations/days/')).toBe(1);
     });
 

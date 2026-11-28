@@ -3,6 +3,9 @@ import SeasonPassCard from '../components/reservation/SeasonPassCard';
 import { useEffect, useRef, useState } from 'react';
 import ReservationWindowNotice, {type ReservationAvailability} from '../components/ReservationWindowNotice';
 import BuddyNote from '../components/BuddyNote';
+import ConfirmDialog from '../components/ConfirmDialog';
+import WaitlistProgress from '../components/reservation/WaitlistProgress';
+import { useFeedback } from '../components/feedback/feedbackContext';
 import { Calendar } from '../components/Calendar';
 import { ReservationLayout } from '../components/reservation/ReservationLayout';
 import '../components/reservation/crew-calendar.css';
@@ -21,6 +24,8 @@ export default function MyReservations({ onBack, onCrewClick }: { onBack: () => 
     const [policyDate, setPolicyDate] = useState('');
     const [loading, setLoading] = useState(true);
     const [busy, setBusy] = useState(false);
+    const [confirmCancel, setConfirmCancel] = useState(false);
+    const { showResult, toast } = useFeedback();
     const lock = useRef(false);
     const revision = useRef(0);
     const loadedMonth = useRef('');
@@ -60,9 +65,14 @@ export default function MyReservations({ onBack, onCrewClick }: { onBack: () => 
                 const result = await createReservation(crewId, [selected], undefined, 1);
                 const booking = result.results?.find(item => item.date === selected);
                 if (!booking?.success) throw Error(booking?.message || '신청하지 못했습니다.');
+                const label = selected.slice(5).replace('-', '/');
+                showResult(booking.status === 'WAITING'
+                    ? { tone: 'waiting', title: `${label} 대기 ${booking.waitlistPosition ?? '-'}번으로 신청했어요`, body: '자리가 나면 자동으로 확정되고 알림으로 알려드려요.' }
+                    : { tone: 'success', title: `${label} 예약이 확정됐어요`, body: '즐거운 시즌방 되세요!' });
             } else if (reservation && action === 'cancel') {
                 const result = await cancelReservation(crewId, reservation.reservation_id);
                 if (!result.success) throw Error(result.message || '취소하지 못했습니다.');
+                toast({ message: `${selected.slice(5).replace('-', '/')} ${state === 'waiting' ? '예약 대기' : '예약'}를 취소했어요.` });
             } else if (reservation && (reservation.teaching || (teachingEnabled && state === 'confirmed'))) {
                 await (reservation.teaching ? withdrawFromTeaching : applyForTeaching)(crewId, reservation.reservation_id);
             }
@@ -92,12 +102,23 @@ export default function MyReservations({ onBack, onCrewClick }: { onBack: () => 
                     <h2 className="font-bold text-[#162660]">{selected.replace(/-/g,'.')}</h2>
                     {!loading && !reservation && !error && <BuddyNote>버디와 다음 시즌방 일정을 준비해 보세요.</BuddyNote>}
                     <p role="status" className="my-3 text-sm text-slate-600">{error ? '예약 현황을 확인할 수 없습니다.' : loading ? '현황을 확인하고 있어요.' : state==='confirmed' ? '예약이 확정되었습니다.' : state==='waiting' ? `예약 대기 ${reservation?.waiting_order ?? '-'}번입니다.` : '예약 내역이 없습니다.'}</p>
-                    {(reservation?.teaching || (state==='confirmed' && teachingEnabled)) && <label className="mb-3 flex items-center justify-between text-sm">강습 신청<input type="checkbox" role="switch" aria-label="강습 신청" checked={reservation?.teaching === true} disabled={busy || loading} onChange={() => void mutate('teaching')} /></label>}
-                    <ReservationWindowNotice value={reservation ? {bookable:true} : availability} />
+                    {state === 'waiting' && <div className="mb-3"><WaitlistProgress position={reservation?.waiting_order} /></div>}
+                    {(reservation?.teaching || (state==='confirmed' && teachingEnabled)) && <label className="mb-3 flex min-h-12 items-center justify-between rounded-xl bg-brand-cream px-3 text-sm font-bold text-zinc-800">강습 신청<input type="checkbox" role="switch" aria-label="강습 신청" checked={reservation?.teaching === true} disabled={busy || loading} onChange={() => void mutate('teaching')} /></label>}
+                    <ReservationWindowNotice key={selected} value={reservation ? {bookable:true} : availability} stayDate={selected} onOpened={() => setRefresh(value => value + 1)} />
                     {!reservation && <StayPolicyConsent dates={[selected]} checked={policyDate === selected} onChange={checked => setPolicyDate(checked ? selected : '')} disabled={busy} />}
-                    <button disabled={busy || loading || !!error || (!reservation && (availability?.bookable !== true || policyDate !== selected))} onClick={() => void mutate(reservation ? 'cancel' : 'reserve')} className="reservation-primary w-full px-4 py-3">{busy ? '처리 중…' : reservation ? state==='waiting' ? '대기 취소' : '예약 취소' : '예약하기'}</button>
+                    <button disabled={busy || loading || !!error || (!reservation && (availability?.bookable !== true || policyDate !== selected))} onClick={() => reservation ? setConfirmCancel(true) : void mutate('reserve')} className="reservation-primary w-full px-4 py-3">{busy ? '처리 중…' : reservation ? state==='waiting' ? '대기 취소' : '예약 취소' : '예약하기'}</button>
                 </section></aside>
             </div>
         </main>
+        <ConfirmDialog
+            open={confirmCancel}
+            title={state === 'waiting' ? '예약 대기를 취소할까요?' : '예약을 취소할까요?'}
+            confirmLabel="취소하기"
+            busy={busy}
+            onConfirm={() => { void mutate('cancel').finally(() => setConfirmCancel(false)); }}
+            onCancel={() => setConfirmCancel(false)}
+        >
+            <strong className="text-zinc-900">{selected.replace(/-/g, '.')}</strong> {state === 'waiting' ? '대기를 취소하면 순번이 사라져요.' : '예약을 취소하면 되돌릴 수 없어요.'}
+        </ConfirmDialog>
     </ReservationLayout>;
 }

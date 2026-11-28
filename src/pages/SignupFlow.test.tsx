@@ -11,7 +11,7 @@ vi.mock('../services/schoolEmailVerification',()=>({requestSignupSchoolEmail:moc
 vi.mock('../services/phoneVerification', () => ({ requestPhoneVerification: mocks.requestPhoneVerification, confirmPhoneVerification: mocks.confirmPhoneVerification }));
 import UserInfoInput from './UserInfoInput';
 import { setSignupPrefill } from '../lib/signupPrefill';
-import { saveAccountId, saveTempAccessToken } from '../lib/session';
+import { getAccessToken, getAccountId, getRefreshToken, getSignupToken, saveAccountId, saveTempAccessToken } from '../lib/session';
 const schools = [
     { id: 1, schoolCode: 'MAIN', name: '한국대학교', aliases: ['한국대'], emailDomains: [] },
     { id: 2, schoolCode: 'CAMPUS', name: '한국대학교', aliases: ['제2캠퍼스'], emailDomains: [] },
@@ -19,6 +19,7 @@ const schools = [
 describe('signup school, phone and consent flow', () => {
     let root: Root; let container: HTMLDivElement;
     const success = vi.fn();
+    const linkedExisting = vi.fn();
     beforeEach(() => {
         setSignupPrefill('99101'); vi.resetAllMocks(); vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
         localStorage.clear(); localStorage.setItem('tempAccessToken', 'synthetic-only'); localStorage.setItem('accountId', '99101');
@@ -34,7 +35,7 @@ describe('signup school, phone and consent flow', () => {
         container = document.createElement('div'); document.body.append(container); root = createRoot(container);
     });
     afterEach(async () => { await act(async () => root.unmount()); container.remove(); vi.unstubAllGlobals(); });
-    const render = async () => { await act(async () => root.render(<UserInfoInput onBack={vi.fn()} onSuccess={success} />)); };
+    const render = async () => { await act(async () => root.render(<UserInfoInput onBack={vi.fn()} onSuccess={success} onLinkedExistingAccount={linkedExisting} />)); };
     const button = (text: string, base: ParentNode = container) => Array.from(base.querySelectorAll('button')).find(el => el.textContent === text)!;
     const click = async (el: HTMLElement) => { expect(el).toBeTruthy(); await act(async () => { el.focus(); el.click(); }); };
     const fill = async (selector: string, text: string) => {
@@ -214,5 +215,77 @@ describe('signup school, phone and consent flow', () => {
         await act(async () => finish({ verifiedPhoneNumber: '+821000000000' }));
         expect(container.querySelector<HTMLInputElement>('input[type="tel"]')!.value).toBe('010-1111-2222');
         expect(container.textContent).not.toContain('본인 확인 완료');
+    });
+    it('merges into an existing active account on phone verification and routes via onLinkedExistingAccount', async () => {
+        mocks.confirmPhoneVerification.mockResolvedValue({
+            resolution: 'LINKED_EXISTING_ACCOUNT',
+            accountId: 44401,
+            status: 'ACTIVE',
+            userType: 'KUSBF',
+            accessToken: 'merged-active-access',
+            refreshToken: 'merged-active-refresh',
+            linkedProviders: ['KAKAO', 'NAVER'],
+        });
+        await render();
+        await fill('input[type="tel"]', '01077778888');
+        await click(button('인증'));
+        await fill('#signup-phone-code', '123456');
+        await click(button('인증번호 확인'));
+
+        expect(getAccountId()).toBe('44401');
+        expect(getAccessToken()).toBe('merged-active-access');
+        expect(getRefreshToken()).toBe('merged-active-refresh');
+        expect(container.textContent).toContain('기존 계정과 연결되었습니다');
+        expect(container.textContent).toContain('카카오 · 네이버');
+        expect(success).not.toHaveBeenCalled();
+
+        await click(button('기존 계정으로 계속하기'));
+        expect(linkedExisting).toHaveBeenCalledWith('KUSBF');
+        expect(success).not.toHaveBeenCalled();
+    });
+    it('continues profile setup when phone verification merges into an existing pending account', async () => {
+        mocks.confirmPhoneVerification.mockResolvedValue({
+            resolution: 'LINKED_EXISTING_ACCOUNT',
+            accountId: 55502,
+            status: 'PENDING_PROFILE',
+            userType: 'GENERAL',
+            accessToken: 'merged-pending-temp',
+            refreshToken: 'merged-pending-refresh',
+            linkedProviders: ['KAKAO', 'NAVER'],
+        });
+        await render();
+        await fill('input[type="tel"]', '01077778888');
+        await click(button('인증'));
+        await fill('#signup-phone-code', '123456');
+        await click(button('인증번호 확인'));
+
+        expect(getAccountId()).toBe('55502');
+        expect(getSignupToken()).toBe('merged-pending-temp');
+        expect(getAccessToken()).toBeNull();
+        expect(container.textContent).toContain('이전에 시작한 가입 정보와 연결되었습니다');
+        expect(linkedExisting).not.toHaveBeenCalled();
+    });
+    it('allows linking into an existing active account via phone verification even when new signups are paused', async () => {
+        mocks.getSignupPolicy.mockResolvedValue({ regularEnabled: false, studentEnabled: false, version: 3 });
+        mocks.confirmPhoneVerification.mockResolvedValue({
+            resolution: 'LINKED_EXISTING_ACCOUNT',
+            accountId: 77703,
+            status: 'ACTIVE',
+            userType: 'REGULAR',
+            accessToken: 'paused-merged-access',
+            refreshToken: 'paused-merged-refresh',
+            linkedProviders: ['KAKAO', 'NAVER'],
+        });
+        await render();
+        expect(container.textContent).toContain('현재 신규 회원가입을 일시 중단했습니다');
+        await click(button('이미 가입한 계정 연결하기'));
+        await fill('#paused-link-phone', '01099990000');
+        await click(button('인증'));
+        await fill('#paused-link-phone-code', '123456');
+        await click(button('인증번호 확인'));
+
+        expect(container.textContent).toContain('기존 계정과 연결되었습니다');
+        await click(button('기존 계정으로 계속하기'));
+        expect(linkedExisting).toHaveBeenCalledWith('REGULAR');
     });
 });

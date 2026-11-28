@@ -48,10 +48,14 @@ try {
                 assert(await nav.getByRole('button', { name: /내 정보|알림|예약/ }).count() === 0, 'Secondary actions remain below');
             }
             await page.locator('header[aria-label="계정 메뉴"]').getByRole('button', { name: '내 정보', exact: true }).waitFor();
-            const calendar = page.getByRole('button', { name: /날짜별 이용 현황 조회/ }); await calendar.scrollIntoViewIfNeeded();
-            if (width < 1024) { const button = await calendar.boundingBox(); const nav = await page.getByRole('navigation', { name: '하단 메뉴', exact: true }).boundingBox(); assert(button && nav && button.y + button.height <= nav.y, 'Bottom menu overlaps home action'); }
+            // The crew calendar lives in the bottom menu / sidebar; Home's last full-width action must clear the menu.
+            const homeAction = page.getByRole('button', { name: /내 참여 일정/ }).first(); await homeAction.scrollIntoViewIfNeeded();
+            if (width < 1024) { const button = await homeAction.boundingBox(); const nav = await page.getByRole('navigation', { name: '하단 메뉴', exact: true }).boundingBox(); assert(button && nav && button.y + button.height <= nav.y, 'Bottom menu overlaps home action'); }
             await page.screenshot({ path: `${root}/output/playwright/member-home-${width}.png` });
-            await calendar.click(); await page.getByRole('heading', { name: '시즌방 캘린더', exact: true }).waitFor();
+            await (width < 1024
+                ? page.getByRole('navigation', { name: '하단 메뉴', exact: true }).getByRole('button', { name: '시즌방', exact: true })
+                : page.getByRole('navigation', { name: '주요 메뉴', exact: true }).getByRole('button', { name: '크루 달력', exact: true })).click();
+            await page.getByRole('heading', { name: '크루 달력', exact: true }).waitFor();
             const day = page.getByRole('button', { name: '2026년 11월 15일', exact: true }); await day.waitFor();
             await day.locator('.reservation-dot-high').waitFor();
             assert(await day.locator('.reservation-dot-high').evaluate(element => getComputedStyle(element).backgroundColor) === 'rgb(189, 130, 126)', 'Classic muted occupancy color was overridden');
@@ -78,6 +82,7 @@ try {
                 await page.locator('.reservation-content').getByRole('button', { name: '예약하기', exact: true }).click();
                 await page.getByText('예약 요청을 처리하고 있어요', { exact: true }).waitFor();
             } finally { releaseBooking(); state.bookingGate = null; }
+            { const sheet = page.locator('[aria-labelledby="feedback-result-title"]'); await sheet.waitFor(); await sheet.getByRole('button').first().click(); await sheet.waitFor({ state: 'detached' }); }
             try { await page.getByRole('button', { name: '예약 취소하기', exact: true }).waitFor(); } catch (error) { await page.screenshot({ path: `${root}/output/playwright/season-apply-failure.png` }); console.error(JSON.stringify({ bookings: state.bookings, traffic: state.traffic.slice(-12), unknown: state.unknown, text: await page.locator('body').innerText() })); throw error; }
             assert(state.bookings.length === 1, 'Application did not persist in fixture');
             await page.getByRole('switch', { name: '내 일정 표시', exact: true }).click();
@@ -85,7 +90,14 @@ try {
             await ownDay.locator('.reservation-confirmed').waitFor();
             const ownBox = await ownDay.boundingBox(); const markerBox = await ownDay.locator('.reservation-confirmed').boundingBox();
             assert(ownBox && markerBox && markerBox.y >= ownBox.y && markerBox.y + markerBox.height <= ownBox.y + ownBox.height, 'Personal reservation marker overflowed its date cell');
+            // Cancelling asks first; backing out keeps the booking.
             await page.getByRole('button', { name: '예약 취소하기', exact: true }).click();
+            const confirmCancel = page.getByRole('alertdialog', { name: '예약을 취소할까요?' });
+            await confirmCancel.getByRole('button', { name: '돌아가기', exact: true }).click();
+            await confirmCancel.waitFor({ state: 'detached' });
+            assert(state.bookings.length === 1, 'Backing out of the cancel dialog still cancelled');
+            await page.getByRole('button', { name: '예약 취소하기', exact: true }).click();
+            await confirmCancel.getByRole('button', { name: '취소하기', exact: true }).click();
             await page.locator('.reservation-content').getByRole('button', { name: '예약하기', exact: true }).waitFor();
             assert(state.bookings.length === 0, 'Cancellation did not refresh');
             state.role = 'CREW_CAPTAIN';
@@ -134,7 +146,7 @@ try {
             const weatherBox = await page.getByRole('region',{name:'휘닉스파크 날씨'}).boundingBox();
             const crewBox = await page.getByRole('heading',{name:'가상 크루와 함께하는 오늘',exact:true}).boundingBox();
             const personalBox = await page.getByRole('region',{name:'나의 2주 달력'}).boundingBox();
-            assert(weatherBox && crewBox && personalBox && weatherBox.y < crewBox.y && crewBox.y < personalBox.y,'Home sections are out of order');
+            assert(weatherBox && crewBox && personalBox && weatherBox.y < personalBox.y && personalBox.y < crewBox.y,'Home sections are out of order');
             assert(await page.getByText('가상 크루',{exact:true}).count()===0,'Home repeats the crew name above its main card');
             assert(await page.getByRole('button',{name:'크루 설정',exact:true}).count()===0,'Member home exposes crew settings');
             assert((await page.getByRole('button',{name:'2026-11-15 예약 확정',exact:true}).innerText()).trim()==='15','Calendar repeated the status below the date');

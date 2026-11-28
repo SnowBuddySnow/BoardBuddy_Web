@@ -1,4 +1,6 @@
-import { ArrowRight, CalendarDays, Sparkles, ShieldCheck, UsersRound, Settings } from 'lucide-react';
+import { ArrowRight, CalendarDays, Sparkles, ShieldCheck, UsersRound, Settings, TableProperties } from 'lucide-react';
+import { m } from 'motion/react';
+import { hoverLift, listContainerVariants, listItemVariants, springSnappy, tapPress } from '../lib/motion';
 import type { OperationPermission } from '../services/operations';
 import { hasEventManagementAccess } from '../lib/eventManagerOnboarding';
 import { getOperatingFeatures, OperatingMode, operatingModeCopy } from '../constants/operatingSeason';
@@ -8,6 +10,7 @@ interface OperationsCenterProps {
   operatingMode: OperatingMode;
   seasonAvailable: boolean;
   onReservationsClick: () => void;
+  onSeasonMatrixClick?: () => void;
   onPartiesClick: () => void;
   onGroupsClick: () => void;
   onCrewClick: () => void;
@@ -23,6 +26,7 @@ export default function OperationsCenter({
   operatingMode,
   seasonAvailable,
   onReservationsClick,
+  onSeasonMatrixClick,
   onPartiesClick,
   onGroupsClick,
   onCrewClick,
@@ -33,9 +37,17 @@ export default function OperationsCenter({
   const canManageReservations = hasAny(permissions, ['RESERVATIONS_MANAGE']);
   const canManageParties = hasAny(permissions, ['PARTIES_CREATE', 'PARTIES_MANAGE']);
   const canManageGroups = hasAny(permissions, ['EVENT_GROUPS_CREATE', 'EVENT_GROUPS_MANAGE', 'EVENT_GROUPS_VIEW']);
-  const canManageCrew = hasAny(permissions, ['CREW_MEMBERS_MANAGE', 'CREW_EVENT_MANAGERS_ASSIGN']);
+  const canManageCrew = hasAny(permissions, ['CREW_MEMBERS_MANAGE', 'CREW_MANAGERS_ASSIGN']);
 
   const modules = [
+    features.season && seasonAvailable && canManageReservations && onSeasonMatrixClick && {
+      id: 'season-matrix',
+      title: '시즌방 이용 매트릭스',
+      description: '가나다순 일별 이용표·이용권·입금·비공개 메모를 한눈에 관리합니다.',
+      icon: TableProperties,
+      onClick: onSeasonMatrixClick,
+      priority: operatingMode === 'SEASON',
+    },
     features.season && seasonAvailable && canManageReservations && {
       id: 'reservations',
       title: '예약 관리',
@@ -89,13 +101,13 @@ export default function OperationsCenter({
 
   return (
     <div className="flex h-full flex-1 flex-col overflow-hidden bg-[#FAF8F3] text-zinc-900">
-      <header className="border-b border-zinc-200 bg-white px-6 py-5">
-        <p className="text-xs font-bold text-zinc-500">{operatingModeCopy[operatingMode].label}</p>
-        <h1 className="mt-1 text-2xl font-black">운영 센터</h1>
-        <p className="mt-1 text-sm text-zinc-500">{operatingModeCopy[operatingMode].description}</p>
+      <header className="border-b border-zinc-200 bg-white px-4 py-4 sm:px-6">
+        <p className="inline-flex rounded-full bg-brand-navy/5 px-2 py-0.5 text-[11px] font-bold text-brand-navy">{operatingModeCopy[operatingMode].label}</p>
+        <h1 className="mt-1.5 text-xl font-black sm:text-2xl">운영 센터</h1>
+        <p className="mt-0.5 text-sm text-zinc-500">{operatingModeCopy[operatingMode].description}</p>
       </header>
 
-      <main className="flex-1 overflow-y-auto p-6">
+      <main className="flex-1 overflow-y-auto p-4 sm:p-6">
         {features.offSeason && hasEventManagementAccess(permissions) && onEventManagerOnboardingClick && (
           <button
             type="button"
@@ -105,33 +117,39 @@ export default function OperationsCenter({
             <span className="flex items-center gap-3">
               <Sparkles className="h-6 w-6 shrink-0 text-indigo-700" />
               <span>
-                <span className="block text-sm font-black text-indigo-950">이벤트 그룹 매니저 시작 가이드</span>
-                <span className="mt-1 block text-xs text-indigo-800">호스트 그룹부터 모집·참가자 관리까지</span>
+                <span className="block text-sm font-black text-indigo-950">이벤트 운영 시작 가이드</span>
+                <span className="mt-1 block text-xs text-indigo-800">크루 초대부터 모집·참가자 관리까지</span>
               </span>
             </span>
             <ArrowRight className="h-5 w-5 shrink-0 text-indigo-700" />
           </button>
         )}
-        <div className="grid gap-3 sm:grid-cols-2">
+        <m.div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3" variants={listContainerVariants} initial="hidden" animate="visible">
           {modules.map(({ id, title, description, icon: Icon, onClick, priority }) => (
-            <button
+            <m.button
               key={id}
               type="button"
               onClick={onClick}
-              className={`flex min-h-36 flex-col items-start justify-between rounded-lg border p-5 text-left transition-colors cursor-pointer ${
+              variants={listItemVariants}
+              whileHover={hoverLift}
+              whileTap={tapPress}
+              transition={springSnappy}
+              className={`flex min-h-32 flex-col items-start justify-between gap-6 rounded-2xl border p-4 text-left transition-colors cursor-pointer hover:shadow-[0_8px_24px_-12px_rgba(22,38,96,0.25)] sm:p-5 ${
                 priority
-                  ? 'border-[#162660] bg-[#162660] text-white hover:bg-[#0f1b48]'
-                  : 'border-zinc-200 bg-white text-zinc-900 hover:border-zinc-400'
+                  ? 'border-brand-navy bg-brand-navy text-white hover:bg-brand-navy-deep'
+                  : 'border-zinc-200 bg-white text-zinc-900 hover:border-brand-navy/30'
               }`}
             >
-              <Icon className={`h-5 w-5 ${priority ? 'text-blue-200' : 'text-[#162660]'}`} />
+              <span className={`flex h-9 w-9 items-center justify-center rounded-xl ${priority ? 'bg-white/10' : 'bg-brand-navy/5'}`}>
+                <Icon className={`h-5 w-5 ${priority ? 'text-blue-200' : 'text-brand-navy'}`} />
+              </span>
               <div>
                 <h2 className="text-base font-black">{title}</h2>
                 <p className={`mt-1 text-sm ${priority ? 'text-blue-100' : 'text-zinc-500'}`}>{description}</p>
               </div>
-            </button>
+            </m.button>
           ))}
-        </div>
+        </m.div>
       </main>
     </div>
   );

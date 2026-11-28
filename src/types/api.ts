@@ -32,6 +32,7 @@ export interface CrewDetail {
     isCapacityLimited: boolean;
     kusbfAssociated?: boolean;
     seasonHouseActive?: boolean;
+    seasonHouseGuestEnabled?: boolean;
     teachingEnabled?: boolean;
     reservationWindowDays?: number | null;
     reservationAlwaysOpen?: boolean;
@@ -39,6 +40,7 @@ export interface CrewDetail {
     schoolVerificationEnforcementEnabled?: boolean;
     configuredSchoolVerificationRequired?: boolean;
     verifiedSchoolAutoJoinEnabled?: boolean;
+    inviteLinkAutoJoinEnabled?: boolean;
 }
 
 export interface CrewSimple {
@@ -62,6 +64,7 @@ export interface UserDetail {
     profileImageUrl: string;
     socialId: string;
     socialProvider: string;
+    socialProviders?: string[];
     isRegistered: boolean;
     createdAt: string;
     updatedAt: string;
@@ -149,6 +152,8 @@ export interface ReservationDaysPrepareRequest {
 // --- End New Reservation DTOs ---
 
 export interface CrewInfoUpdateRequest {
+    inviteLinkAutoJoinEnabled?: boolean;
+    seasonHouseGuestEnabled?: boolean;
     teachingEnabled?: boolean;
     reservationWindowDays?: number | null;
     reservationAlwaysOpen?: boolean;
@@ -229,6 +234,7 @@ export interface CrewCalendarResponse {
         status: string;
         reservation_id: number;
         waiting_order: number | null;
+        teaching?: boolean;
     }[] | null;
 }
 
@@ -291,6 +297,7 @@ export type ConsentResponseType =
 
 export interface Event {
     id: number;
+    eventCode?: string | null;
     title: string;
     description: string;
     activityType: string;
@@ -316,8 +323,13 @@ export interface Event {
     visibilityType: VisibilityType;
     joinPolicy: JoinPolicy;
     createdByUserId?: number;
-    organizerGroupId: number;
-    organizerGroupName?: string;
+    organizerGroupId: number | null;
+    organizerGroupName?: string | null;
+    hostCrewId?: number | null;
+    hostCrewName?: string | null;
+    coHostCrewId?: number | null;
+    coHostCrewName?: string | null;
+    allowNonMemberApplications?: boolean;
     kusbfAssociated?: boolean;
     joinedCount?: number;
     currentUserStatus?: ParticipantStatus | null;
@@ -340,6 +352,9 @@ export interface EventParticipant {
     consentDueAt?: string | null;
     consentCompletedAt?: string | null;
     cancellationReason?: string | null;
+    declaredSchoolName?: string | null;
+    declaredCrewName?: string | null;
+    convertedFromNonMember?: boolean;
 }
 
 export interface EventChatAccess {

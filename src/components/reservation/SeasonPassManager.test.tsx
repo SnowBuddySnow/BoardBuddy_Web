@@ -26,7 +26,7 @@ const pass = {
   reservedNights: 1,
   remainingNights: 3,
   startsOn: "2026-10-01",
-  endsOn: "2027-05-31",
+  endsOn: "2027-03-31",
 };
 beforeEach(() => {
   vi.resetAllMocks();

@@ -1,10 +1,14 @@
 import { StrictMode } from 'react'
+import { LazyMotion, MotionConfig } from 'motion/react'
 import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.tsx'
+import { FeedbackProvider } from './components/feedback/Feedback'
 import { initializeObservability, Sentry } from './lib/observability'
 import { captureCrewInvitation } from './lib/onboardingIntent'
 import { initializePhoneConsentPreference } from './lib/session'
+
+const loadMotionFeatures = () => import('./lib/motionFeatures').then(module => module.default)
 
 captureCrewInvitation()
 initializePhoneConsentPreference()
@@ -17,6 +21,13 @@ const application = observabilityEnabled ? (
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    {application}
+    {/* "user" follows prefers-reduced-motion: transforms are skipped, opacity still fades. */}
+    <MotionConfig reducedMotion="user">
+      <LazyMotion features={loadMotionFeatures}>
+        <FeedbackProvider>
+          {application}
+        </FeedbackProvider>
+      </LazyMotion>
+    </MotionConfig>
   </StrictMode>,
 )

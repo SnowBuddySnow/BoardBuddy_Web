@@ -1,11 +1,13 @@
 import { Button } from '../components/Button';
-import { ChevronLeftIcon, ChevronRightIcon, Crown, GraduationCap, UsersRound, SettingsIcon, Ticket } from 'lucide-react';
+import { ChevronLeftIcon, ChevronRightIcon, Crown, GraduationCap, UsersRound, SettingsIcon, Sparkles, Ticket } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { getCrewInfo } from '../services/crew';
 import { getUserInfo } from '../services/user';
 import { CrewDetail as CrewDetailType } from '../types/api';
 import { isCrewManagerRole } from '../constants/crewRole';
 import MemberStats from './MemberStats';
+import { GuestInviteShareCard } from '../components/guest/GuestInviteShareCard';
+import ManagerFeatureOnboarding from '../components/ManagerFeatureOnboarding';
 
 
 interface CrewDetailProps {
@@ -14,14 +16,16 @@ interface CrewDetailProps {
     onMemberClick: () => void;
     onSettingsClick: () => void;
     onPassesClick?: () => void;
+    onSeasonMatrixClick?: () => void;
     seasonAvailable: boolean;
 }
 
-export default function CrewDetail({ onBack, onCalendarClick, onMemberClick, onSettingsClick, onPassesClick, seasonAvailable }: CrewDetailProps) {
+export default function CrewDetail({ onBack, onCalendarClick, onMemberClick, onSettingsClick, onPassesClick, onSeasonMatrixClick, seasonAvailable }: CrewDetailProps) {
     const [crewInfo, setCrewInfo] = useState<CrewDetailType | null>(null);
     const [loading, setLoading] = useState(true);
     const [isManager, setIsManager] = useState(false);
     const [showStats, setShowStats] = useState(false);
+    const [showFeatureOnboarding, setShowFeatureOnboarding] = useState(false);
 
     useEffect(() => {
         const fetchData = async () => {
@@ -124,6 +128,33 @@ export default function CrewDetail({ onBack, onCalendarClick, onMemberClick, onS
                         </div>
                     </section>
 
+                    {/* Manager Feature Onboarding Demo Button */}
+                    {isManager && (
+                        <button
+                            type="button"
+                            onClick={() => setShowFeatureOnboarding(true)}
+                            className="mt-4 flex w-full items-center justify-between gap-3 rounded-2xl border border-[#162660]/20 bg-[#162660] px-5 py-4 text-left text-white shadow-sm transition-colors hover:bg-[#0f1b48] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#162660]"
+                        >
+                            <span className="flex min-w-0 items-start gap-3">
+                                <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/15">
+                                    <Sparkles className="h-5 w-5 text-amber-200" />
+                                </span>
+                                <span className="min-w-0">
+                                    <span className="flex flex-wrap items-center gap-2">
+                                        <span className="text-sm font-black">운영진 기능 온보딩 체험하기</span>
+                                        <span className="rounded-full bg-amber-300/20 px-2 py-0.5 text-[10px] font-black text-amber-200">
+                                            체험
+                                        </span>
+                                    </span>
+                                    <span className="mt-1 block text-xs leading-5 text-blue-100">
+                                        시즌방 이용 매트릭스 · 자동 오픈 · 취소 잠금 · 이중 정산 · 게스트 · 비공개 메모
+                                    </span>
+                                </span>
+                            </span>
+                            <ChevronRightIcon className="h-5 w-5 shrink-0 text-blue-200" />
+                        </button>
+                    )}
+
                     {/* Manager Settings Button */}
                     {isManager && onPassesClick && <button type="button" onClick={onPassesClick} className="mt-4 flex min-h-14 w-full items-center justify-between gap-3 rounded-2xl border border-zinc-200 bg-white px-5 py-3 text-left text-sm font-bold text-[#162660]"><span className="flex items-center gap-3"><Ticket className="h-5 w-5" />이용권 관리</span><ChevronRightIcon className="h-4 w-4 text-zinc-400" /></button>}
                     {isManager && (
@@ -144,7 +175,7 @@ export default function CrewDetail({ onBack, onCalendarClick, onMemberClick, onS
                                 onClick={onCalendarClick}
                                 className="mt-4 w-full bg-white border border-zinc-200 dark:border-zinc-800 dark:bg-zinc-900 rounded-2xl p-5 flex items-center justify-between hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors mb-4"
                             >
-                                <span className="font-bold text-zinc-600 dark:text-zinc-300">시즌방 캘린더</span>
+                                <span className="font-bold text-zinc-600 dark:text-zinc-300">크루 달력</span>
                                 <div className="flex items-center gap-1 text-zinc-500 dark:text-zinc-400">
                                     <span className="text-sm font-medium">확인하기</span>
                                     <ChevronRightIcon className="w-5 h-5" />
@@ -161,11 +192,31 @@ export default function CrewDetail({ onBack, onCalendarClick, onMemberClick, onS
                                     <ChevronRightIcon className="w-5 h-5" />
                                 </div>
                             </button>}
+
+                            {seasonAvailable && crewInfo.seasonHouseGuestEnabled !== false && (
+                                <GuestInviteShareCard
+                                    className="mt-4"
+                                    destination={{ type: 'SEASON', id: crewInfo.crew_id }}
+                                    title="시즌방 게스트 초대 링크"
+                                    description="링크를 보내거나 QR을 보여주면 게스트 예약 화면으로 바로 연결돼요."
+                                    shareTitle={`${crewInfo.name} 시즌방 게스트 초대`}
+                                    shareText={`${crewInfo.name} 시즌방 게스트 초대 링크입니다.`}
+                                />
+                            )}
                         </>
                     )}
 
                 </div>
             </main>
+
+            {isManager && (
+                <ManagerFeatureOnboarding
+                    open={showFeatureOnboarding}
+                    crewName={crewInfo.name}
+                    onClose={() => setShowFeatureOnboarding(false)}
+                    onOpenMatrix={onSeasonMatrixClick}
+                />
+            )}
         </div >
     );
 }

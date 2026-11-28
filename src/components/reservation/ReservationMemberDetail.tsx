@@ -1,3 +1,5 @@
+import { overlayMotion, dialogMotion } from '../../lib/motion';
+import { m } from 'motion/react';
 import { useEffect, useRef, useState } from "react";
 import { updateReservationManagement } from "../../services/crew";
 import type {
@@ -64,13 +66,13 @@ export default function ReservationMemberDetail({
     }
   };
   return (
-    <div
+    <m.div {...overlayMotion}
       className="absolute inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
       onClick={() => {
         if (!busy) onClose();
       }}
     >
-      <div
+      <m.div {...dialogMotion}
         ref={dialog}
         role="dialog"
         aria-modal="true"
@@ -212,7 +214,7 @@ export default function ReservationMemberDetail({
         >
           닫기
         </button>
-      </div>
-    </div>
+      </m.div>
+    </m.div>
   );
 }

@@ -26,10 +26,19 @@ import type { CrewDetail as CrewDetailData } from './types/api';
 import { isCrewCaptainRole } from './constants/crewRole';
 import { isEventRegistrationAvailable } from './lib/eventDateTime';
 import { captureCrewInvitation, CREW_INVITATION_CHANGED, getCrewInvitationIntent } from './lib/onboardingIntent';
+import { readGuestInvitationEntryFromUrl } from './lib/guestInvitation';
+import {
+  clearNonMemberConversionIntent,
+  getNonMemberConversionToken,
+  hasPendingNonMemberPostSignup,
+  saveNonMemberConversionIntent,
+} from './lib/nonMemberConversion';
+import { linkNonMemberConversion } from './services/nonMemberEvent';
 
 // Keep login/home immediate; fetch heavier screens only when their existing route is entered.
 const Reservation = lazy(() => import('./pages/Reservation'));
 const ReservationStats = lazy(() => import('./pages/ReservationStats'));
+const SeasonHouseMatrix = lazy(() => import('./pages/SeasonHouseMatrix'));
 const MyReservations = lazy(() => import('./pages/MyReservations'));
 const CrewDetail = lazy(() => import('./pages/CrewDetail'));
 const UserInfoInput = lazy(() => import('./pages/UserInfoInput'));
@@ -61,6 +70,8 @@ const CrewPermissions = lazy(() => import('./pages/CrewPermissions'));
 const RoleGuide = lazy(() => import('./pages/RoleGuide'));
 const GuestAccess = lazy(() => import('./pages/GuestAccess'));
 const OrganizerInviteAccept = lazy(() => import('./pages/OrganizerInviteAccept'));
+const PublicEventApply = lazy(() => import('./pages/PublicEventApply'));
+const NonMemberLookup = lazy(() => import('./pages/NonMemberLookup'));
 
 function FeatureUnavailable({ title, description, onBack }: { title: string; description: string; onBack: () => void }) {
   return (
@@ -92,18 +103,31 @@ function App() {
     return readNavigation().eventId;
   });
   const [guestCrewId, setGuestCrewId] = useState<number | null>(null);
+  const [pendingGuestCode, setPendingGuestCode] = useState<string | null>(() => readGuestInvitationEntryFromUrl());
   const [isGuestEventApplication, setIsGuestEventApplication] = useState(false);
   const [selectedGroupId, setSelectedGroupId] = useState<number | null>(() => readNavigation().groupId);
   const [organizerInviteToken, setOrganizerInviteToken] = useState(
     () => new URLSearchParams(window.location.search).get('organizerInvite') || '',
   );
+  const [publicEventCode, setPublicEventCode] = useState(() => readNavigation().publicEventCode || '');
+  const [lookupReceiptCode, setLookupReceiptCode] = useState(() => readNavigation().receiptCode || '');
   useBrowserNavigation({
-    view: currentView, eventId: selectedEventId, groupId: selectedGroupId, organizerInviteToken,
+    view: currentView,
+    eventId: selectedEventId,
+    groupId: selectedGroupId,
+    organizerInviteToken,
+    publicEventCode,
+    receiptCode: lookupReceiptCode,
   }, route => {
     setCurrentView(route.view);
     setSelectedEventId(route.eventId);
     setSelectedGroupId(route.groupId);
     setOrganizerInviteToken(route.organizerInviteToken);
+    setPublicEventCode(route.publicEventCode || '');
+    setLookupReceiptCode(route.receiptCode || '');
+    if (route.view === 'guest_access') {
+      setPendingGuestCode(readGuestInvitationEntryFromUrl());
+    }
   });
   const [notificationRefreshKey, setNotificationRefreshKey] = useState(0);
   const [notificationReturnView, setNotificationReturnView] = useState<View>('home');
@@ -114,6 +138,7 @@ function App() {
   const [managementRefreshKey, setManagementRefreshKey] = useState(0);
   const [availableEventCount, setAvailableEventCount] = useState(0);
   const [crewDetail, setCrewDetail] = useState<CrewDetailData | null>(null);
+  const [crewAccessResolved, setCrewAccessResolved] = useState(false);
   const [isCaptain, setIsCaptain] = useState(false);
   const [crewAccessRevision, setCrewAccessRevision] = useState(0);
   const [crewSettingsReturnView, setCrewSettingsReturnView] = useState<View>('crew_detail');
@@ -139,7 +164,7 @@ function App() {
   const [eventManagerGuideReturnVisible, setEventManagerGuideReturnVisible] = useState(false);
   const isDesktop = useDesktopViewport();
   const usedDesktopLanding = useRef(false);
-  const shouldLoadPermissions = !['login', 'user_info', 'profile_type_confirmation', 'student_verification', 'crew_invite'].includes(currentView);
+  const shouldLoadPermissions = !['login', 'user_info', 'profile_type_confirmation', 'student_verification', 'crew_invite', 'public_event', 'non_member_lookup'].includes(currentView);
   const operatingMode = getOperatingMode();
   const operatingFeatures = getOperatingFeatures(operatingMode);
   const seasonHouseAvailable = operatingFeatures.season
@@ -160,9 +185,13 @@ function App() {
   }, []);
 
   useEffect(() => {
-    if (!shouldLoadPermissions) return;
+    if (!shouldLoadPermissions) {
+      setCrewAccessResolved(true);
+      return;
+    }
 
     let cancelled = false;
+    setCrewAccessResolved(false);
     const loadCrewAccess = async () => {
       try {
         const user = await getUserInfo();
@@ -191,6 +220,8 @@ function App() {
           setIsCaptain(false);
           setOnboardingUserId(null);
         }
+      } finally {
+        if (!cancelled) setCrewAccessResolved(true);
       }
     };
 
@@ -440,6 +471,16 @@ function App() {
       );
     }
 
+    if (currentView === 'guest_reservation' && crewDetail?.seasonHouseGuestEnabled === false) {
+      return (
+        <FeatureUnavailable
+          title="시즌방 게스트 예약을 이용할 수 없습니다"
+          description="이 크루는 현재 시즌방 게스트 예약을 사용하지 않습니다."
+          onBack={() => setCurrentView('guest_access')}
+        />
+      );
+    }
+
     if (offSeasonViews.includes(currentView) && !operatingFeatures.offSeason) {
       return (
         <FeatureUnavailable
@@ -476,10 +517,63 @@ function App() {
       case 'login':
         return (
           <LoginLanding
-            onLogin={() => setCurrentView(getCrewInvitationIntent() ? 'crew_invite' : organizerInviteToken ? 'organizer_invite' : 'home')}
+            organizerInviteToken={organizerInviteToken}
+            onLogin={async (restoredOrganizerInviteToken) => {
+              const effectiveOrganizerInvite = restoredOrganizerInviteToken || organizerInviteToken;
+              if (restoredOrganizerInviteToken && !organizerInviteToken) {
+                setOrganizerInviteToken(restoredOrganizerInviteToken);
+              }
+              const pendingConversionToken = getNonMemberConversionToken();
+              let linkedFromNonMember = false;
+              if (pendingConversionToken) {
+                try {
+                  await linkNonMemberConversion(pendingConversionToken);
+                  linkedFromNonMember = true;
+                } catch {
+                  // Ignore expired or already-used conversion tokens on ordinary logins.
+                } finally {
+                  clearNonMemberConversionIntent();
+                }
+              }
+              setCurrentView(
+                getCrewInvitationIntent()
+                  ? 'crew_invite'
+                  : effectiveOrganizerInvite
+                    ? 'organizer_invite'
+                    : linkedFromNonMember
+                      ? 'my_parties'
+                      : 'home'
+              );
+            }}
             onSignupNeeded={() => setCurrentView('user_info')}
             onProfileTypeNeeded={() => setCurrentView('profile_type_confirmation')}
             onDebugUserInfo={() => setCurrentView('user_info')}
+          />
+        );
+      case 'public_event':
+        return (
+          <PublicEventApply
+            eventCode={publicEventCode}
+            onLoginClick={() => setCurrentView('login')}
+            onLookupClick={(receipt) => {
+              setLookupReceiptCode(receipt || '');
+              setCurrentView('non_member_lookup');
+            }}
+            onConvertToStudent={(conversionToken, crewName) => {
+              saveNonMemberConversionIntent(conversionToken, crewName);
+              setCurrentView('login');
+            }}
+          />
+        );
+      case 'non_member_lookup':
+        return (
+          <NonMemberLookup
+            initialReceiptCode={lookupReceiptCode}
+            onBack={() => setCurrentView(publicEventCode ? 'public_event' : getAccessToken() ? 'home' : 'login')}
+            onConvertToStudent={(conversionToken, crewName) => {
+              saveNonMemberConversionIntent(conversionToken, crewName);
+              setCurrentView('login');
+            }}
           />
         );
       case 'reservation':
@@ -494,6 +588,10 @@ function App() {
           seasonAvailable={operatingFeatures.season}
           offSeasonAvailable={operatingFeatures.offSeason}
           seasonBookingCrewId={hasCrew && !hasPendingCrewApplication ? crewDetail?.crew_id ?? null : null}
+          seasonGuestEnabled={crewDetail?.seasonHouseGuestEnabled !== false}
+          initialCode={pendingGuestCode}
+          accessResolved={crewAccessResolved}
+          onInitialCodeConsumed={() => setPendingGuestCode(null)}
         />;
       case 'season_calendar':
         return <SeasonCalendar onBack={() => setCurrentView('home')} onMyCalendarClick={() => setCurrentView('my_reservations')} onReservationClick={() => setCurrentView('reservation')} />;
@@ -503,6 +601,13 @@ function App() {
             onBack={() => setCurrentView('home')}
             onMyCalendarClick={() => setCurrentView('my_reservations')}
             onReservationClick={() => setCurrentView('reservation')}
+          />
+        );
+      case 'season_house_matrix':
+        return (
+          <SeasonHouseMatrix
+            crewId={crewDetail?.crew_id ?? 0}
+            onBack={() => setCurrentView('operations_center')}
           />
         );
       case 'my_reservations':
@@ -515,6 +620,7 @@ function App() {
             onMemberClick={() => setCurrentView('crew_member')}
             onSettingsClick={() => openCrewSettings('crew_detail')}
             onPassesClick={() => openCrewManagement('passes','crew_detail')}
+            onSeasonMatrixClick={crewDetail?.crew_id ? () => setCurrentView('season_house_matrix') : undefined}
             seasonAvailable={seasonHouseAvailable}
           />
         );
@@ -522,6 +628,7 @@ function App() {
         return (
           <CrewSettings
             onBack={() => setCurrentView(crewSettingsReturnView)}
+            onSaved={() => setCrewAccessRevision(revision => revision + 1)}
             onCaptainGuideClick={isCaptain ? openCaptainOnboarding : undefined}
           />
         );
@@ -538,9 +645,35 @@ function App() {
         return (
           <UserInfoInput
             onBack={() => setCurrentView('login')}
-            onSuccess={(requiresStudentVerification) => setCurrentView(
-              requiresStudentVerification ? 'student_verification' : getCrewInvitationIntent() ? 'crew_invite' : organizerInviteToken ? 'organizer_invite' : 'onboarding'
+            onLinkedExistingAccount={(userType) => setCurrentView(
+              userType === 'GENERAL'
+                ? 'profile_type_confirmation'
+                : getCrewInvitationIntent()
+                  ? 'crew_invite'
+                  : organizerInviteToken
+                    ? 'organizer_invite'
+                    : 'home'
             )}
+            onSuccess={(requiresStudentVerification) => {
+              if (requiresStudentVerification) {
+                setCurrentView('student_verification');
+                return;
+              }
+              if (getCrewInvitationIntent()) {
+                setCurrentView('crew_invite');
+                return;
+              }
+              if (organizerInviteToken) {
+                setCurrentView('organizer_invite');
+                return;
+              }
+              if (hasPendingNonMemberPostSignup()) {
+                setCrewSearchReturnView('my_parties');
+                setCurrentView('search_crew');
+                return;
+              }
+              setCurrentView('onboarding');
+            }}
           />
         );
       case 'profile_type_confirmation':
@@ -620,7 +753,7 @@ function App() {
           <CrewPermissions
             onBack={() => setCurrentView(crewManagementReturnView)}
             initialSection={crewManagementSection}
-            canAssignRoles={operationPermissions.includes('CREW_EVENT_MANAGERS_ASSIGN')}
+            canAssignRoles={operationPermissions.includes('CREW_MANAGERS_ASSIGN')}
             onPermissionsChanged={() => setManagementRefreshKey(key => key + 1)}
           />
         );
@@ -646,6 +779,7 @@ function App() {
             operatingMode={operatingMode}
             seasonAvailable={seasonHouseAvailable}
             onReservationsClick={() => setCurrentView('stats')}
+            onSeasonMatrixClick={crewDetail?.crew_id ? () => setCurrentView('season_house_matrix') : undefined}
             onPartiesClick={() => setCurrentView('dashboard_parties')}
             onGroupsClick={() => setCurrentView('dashboard_groups')}
             onCrewClick={() => openCrewManagement('permissions','operations_center')}
@@ -667,6 +801,7 @@ function App() {
       case 'dashboard_event_new':
         return (
           <DashboardEventNew
+            hostCrew={crewDetail?.crew_id ? { id: crewDetail.crew_id, name: crewDetail.name, kusbfAssociated: crewDetail.kusbfAssociated } : undefined}
             onBack={() => setCurrentView('dashboard_parties')}
             onSuccess={(id) => openEventDetail(id, 'dashboard_event_detail')}
           />
@@ -715,7 +850,6 @@ function App() {
             onMakeReservationClick={() => setCurrentView('reservation')}
             onGuestReservationClick={() => setCurrentView('guest_access')}
             onCalendarClick={() => setCurrentView('my_reservations')}
-            onSeasonCalendarClick={() => setCurrentView('season_calendar')}
             onTeamClick={() => setCurrentView('crew_detail')}
             onCrewSettingsClick={() => openCrewSettings('home')}
             onSearchClick={() => openCrewSearch('home')}
@@ -738,7 +872,7 @@ function App() {
   const usesDesktopShell = isDesktop
     && !isDashboardView
     && !isPublicGuestFlow
-    && !['login', 'user_info', 'profile_type_confirmation', 'student_verification', 'organizer_invite', 'crew_invite', 'onboarding'].includes(currentView);
+    && !['login', 'user_info', 'profile_type_confirmation', 'student_verification', 'organizer_invite', 'crew_invite', 'onboarding', 'public_event', 'non_member_lookup'].includes(currentView);
 
   const currentContent = renderCurrentView();
 

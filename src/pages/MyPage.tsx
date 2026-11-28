@@ -13,6 +13,7 @@ import { ReservationLayout } from "../components/reservation/ReservationLayout";
 import PersonalCalendarPreview from "../components/PersonalCalendarPreview";
 import SeasonPassCard from "../components/reservation/SeasonPassCard";
 import BuddyMascot from "../components/BuddyMascot";
+import { SkeletonCard } from "../components/Skeleton";
 import { getUserInfo } from "../services/user";
 import type { UserDetail } from "../types/api";
 import { signOut } from "../services/auth";
@@ -101,13 +102,14 @@ export default function MyPage({
     <ReservationLayout
       title="내 정보"
       onBack={onBack}
-      className="!bg-[#FAF8F3]"
+      className="is-page !bg-[#FAF8F3]"
     >
       <main className="reservation-content space-y-4 !bg-[#FAF8F3]">
         {loading ? (
-          <p role="status" className="py-10 text-center text-sm text-slate-500">
-            내 정보를 불러오고 있어요.
-          </p>
+          <div className="space-y-4">
+            <SkeletonCard label="내 정보를 불러오고 있어요" lines={1} />
+            <SkeletonCard label="이용권을 확인하고 있어요" lines={2} />
+          </div>
         ) : error || !userInfo ? (
           <section className="rounded-2xl border border-slate-200 bg-white p-4">
             <p role="alert" className="text-sm text-slate-600">

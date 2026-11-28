@@ -3,6 +3,7 @@ import { parseEventDateTime } from '../lib/eventDateTime';
 import { Button } from '../components/Button';
 import { EventSaveError, saveEventConfiguration } from '../services/eventSave';
 import { listOrganizerGroups } from '../services/organizerGroup';
+import { discoverCrews, type DiscoverableCrew } from '../services/crew';
 import { ConsentConfigurationInput, JoinPolicy, OrganizerGroup, EventPlanningMode, VisibilityType } from '../types/api';
 import { PlanningModeSelector } from '../components/event/PlanningModeSelector';
 import { EventActivityType } from '../constants/eventActivity';
@@ -14,13 +15,14 @@ import { EventRefundPolicyEditor } from '../components/event/EventRefundPolicyEd
 import { joinPolicyLabel, visibilityTypeLabel } from '../constants/displayLabels';
 
 interface DashboardEventNewProps {
+    hostCrew?: { id: number; name: string; kusbfAssociated?: boolean };
     onBack: () => void;
     onSuccess: (eventId: number) => void;
 }
 
 const createAnonymousEventTitle = () => `이벤트#${String(Math.floor(Math.random() * 10_000)).padStart(4, '0')}`;
 
-export default function DashboardEventNew({ onBack, onSuccess }: DashboardEventNewProps) {
+export default function DashboardEventNew({ hostCrew, onBack, onSuccess }: DashboardEventNewProps) {
     const [groups, setGroups] = useState<OrganizerGroup[]>([]);
     const [groupsLoading, setGroupsLoading] = useState(true);
     const [submitLoading, setSubmitLoading] = useState(false);
@@ -48,6 +50,12 @@ export default function DashboardEventNew({ onBack, onSuccess }: DashboardEventN
     const [kusbfAssociated, setKusbfAssociated] = useState(true);
     const [visibilityType, setVisibilityType] = useState<VisibilityType>('PUBLIC');
     const [joinPolicy, setJoinPolicy] = useState<JoinPolicy>('INSTANT');
+    const [allowNonMemberApplications, setAllowNonMemberApplications] = useState(false);
+    const [coHostQuery, setCoHostQuery] = useState('');
+    const [coHostResults, setCoHostResults] = useState<DiscoverableCrew[]>([]);
+    const [coHostSearched, setCoHostSearched] = useState(false);
+    const [coHostSearching, setCoHostSearching] = useState(false);
+    const [selectedCoHostCrew, setSelectedCoHostCrew] = useState<DiscoverableCrew | null>(null);
     const [organizerGroupId, setOrganizerGroupId] = useState<number | ''>('');
     const [consentConfiguration, setConsentConfiguration] = useState<ConsentConfigurationInput>({
         consentWindowMinutes: null,
@@ -55,7 +63,9 @@ export default function DashboardEventNew({ onBack, onSuccess }: DashboardEventN
     });
     const [refundPolicy, setRefundPolicy] = useState('');
 
+    const hasHostCrew = hostCrew != null;
     useEffect(() => {
+        if (hasHostCrew) return;
         const fetchGroups = async () => {
             try {
                 setGroupsLoading(true);
@@ -71,7 +81,7 @@ export default function DashboardEventNew({ onBack, onSuccess }: DashboardEventN
             }
         };
         fetchGroups();
-    }, []);
+    }, [hasHostCrew]);
 
     const handlePlanningModeChange = (mode: EventPlanningMode) => {
         setPlanningMode(mode);
@@ -94,6 +104,23 @@ export default function DashboardEventNew({ onBack, onSuccess }: DashboardEventN
         }
     };
 
+    const handleSearchCoHostCrew = async () => {
+        const term = coHostQuery.trim();
+        if (!term || coHostSearching) return;
+        setCoHostSearching(true);
+        setCoHostSearched(false);
+        try {
+            const list = await discoverCrews(term);
+            setCoHostResults(list.filter(crew => crew.crewId !== hostCrew?.id));
+            setCoHostSearched(true);
+        } catch {
+            setCoHostResults([]);
+            setCoHostSearched(true);
+        } finally {
+            setCoHostSearching(false);
+        }
+    };
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (submitting.current || needsReconciliation) return;
@@ -109,7 +136,7 @@ export default function DashboardEventNew({ onBack, onSuccess }: DashboardEventN
             && (crewMemberLimit < 1 || (capacityLimited && crewMemberLimit > capacity))) {
             return alert('크루별 참가 인원은 1명 이상, 전체 정원 이하여야 합니다.');
         }
-        if (!organizerGroupId) return alert('호스트 그룹을 선택해 주세요.');
+        if (!hostCrew && !organizerGroupId) return alert('호스트 그룹을 선택해 주세요.');
 
         // Format dates correctly (backend requires LocalDateTime format like YYYY-MM-DDTHH:MM:SS)
         // input datetime-local returns YYYY-MM-DDTHH:MM. We need to add :00 seconds
@@ -138,10 +165,16 @@ export default function DashboardEventNew({ onBack, onSuccess }: DashboardEventN
                 crewMemberLimit: (visibilityType === 'PUBLIC' || visibilityType === 'CREW_LIMITED') && crewMemberLimitEnabled
                     ? crewMemberLimit
                     : null,
-                kusbfAssociated,
+                kusbfAssociated: hostCrew?.kusbfAssociated === false ? false : kusbfAssociated,
                 visibilityType,
                 joinPolicy,
-                organizerGroupId: Number(organizerGroupId)
+                allowNonMemberApplications,
+                ...(hostCrew
+                    ? {
+                        hostCrewId: hostCrew.id,
+                        ...(selectedCoHostCrew ? { invitedCrewId: selectedCoHostCrew.crewId } : {}),
+                    }
+                    : { organizerGroupId: Number(organizerGroupId) })
             };
 
             const configuration = { payload, consentConfiguration, refundPolicy };
@@ -196,12 +229,12 @@ export default function DashboardEventNew({ onBack, onSuccess }: DashboardEventN
                         </Button>
                     </div>
                 )}
-                {groupsLoading ? (
+                {!hostCrew && groupsLoading ? (
                     <div className="flex flex-col items-center justify-center py-20 text-zinc-500">
                         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#162660] mb-3"></div>
                         <p className="text-sm">권한을 조회하는 중...</p>
                     </div>
-                ) : groups.length === 0 ? (
+                ) : !hostCrew && groups.length === 0 ? (
                     <div className="bg-white rounded-3xl p-10 border border-zinc-100 text-center text-zinc-500 shadow-sm">
                         <HelpCircle className="w-12 h-12 stroke-[1.5] text-zinc-300 mx-auto mb-2" />
                         <h3 className="text-base font-bold text-zinc-900">호스트 권한이 없습니다</h3>
@@ -216,21 +249,111 @@ export default function DashboardEventNew({ onBack, onSuccess }: DashboardEventN
                     <form onSubmit={handleSubmit} className="bg-white border border-zinc-100 rounded-3xl p-6 shadow-sm space-y-6">
                         <fieldset disabled={submitLoading || needsReconciliation} className="min-w-0 space-y-6">
                         <PlanningModeSelector value={planningMode} onChange={handlePlanningModeChange} />
-                        {/* Organizer Group Selection */}
-                        <div className="space-y-1.5">
-                            <label className="text-xs font-bold text-zinc-400 uppercase tracking-wider">호스트 그룹 *</label>
-                            <select
-                                value={organizerGroupId}
-                                onChange={e => setOrganizerGroupId(Number(e.target.value))}
-                                className="w-full min-w-0 px-4 py-2.5 bg-white border border-zinc-200 rounded-2xl text-base focus:outline-none focus:ring-2 focus:ring-[#162660]/20 text-zinc-800"
-                            >
-                                {groups.map(group => (
-                                    <option key={group.id} value={group.id}>
-                                        {group.name}
-                                    </option>
-                                ))}
-                            </select>
-                        </div>
+                        {hostCrew ? (
+                            <div className="space-y-3 rounded-2xl border border-zinc-200 bg-zinc-50/70 p-4">
+                                <div className="flex flex-wrap items-center justify-between gap-2 text-sm text-zinc-700">
+                                    <span>주최 크루 <strong className="ml-2 text-[#162660]">{hostCrew.name}</strong></span>
+                                    <span className="text-xs text-zinc-500">초대된 공동 운영 크루의 모든 매니저도 동일하게 관리합니다.</span>
+                                </div>
+                                <div className="space-y-2 border-t border-zinc-200/70 pt-3">
+                                    <label htmlFor="new-event-cohost-search" className="block text-xs font-bold text-zinc-500">
+                                        공동 운영 크루 초대 (선택)
+                                    </label>
+                                    {selectedCoHostCrew ? (
+                                        <div className="flex items-center justify-between gap-2 rounded-xl border border-[#162660]/20 bg-white px-3 py-2 text-sm">
+                                            <span className="font-bold text-[#162660]">
+                                                {selectedCoHostCrew.crewName}
+                                                {selectedCoHostCrew.schoolName && (
+                                                    <span className="ml-2 text-xs font-normal text-zinc-500">{selectedCoHostCrew.schoolName}</span>
+                                                )}
+                                            </span>
+                                            <Button
+                                                type="button"
+                                                size="small"
+                                                variant="outline"
+                                                onClick={() => setSelectedCoHostCrew(null)}
+                                            >
+                                                선택 해제
+                                            </Button>
+                                        </div>
+                                    ) : (
+                                        <>
+                                            <div className="flex gap-2">
+                                                <input
+                                                    id="new-event-cohost-search"
+                                                    type="text"
+                                                    value={coHostQuery}
+                                                    onChange={e => {
+                                                        setCoHostQuery(e.target.value);
+                                                        setCoHostResults([]);
+                                                        setCoHostSearched(false);
+                                                    }}
+                                                    onKeyDown={e => {
+                                                        if (e.key === 'Enter') {
+                                                            e.preventDefault();
+                                                            void handleSearchCoHostCrew();
+                                                        }
+                                                    }}
+                                                    placeholder="함께 운영할 크루 이름으로 검색"
+                                                    className="min-w-0 flex-1 rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900"
+                                                />
+                                                <Button
+                                                    type="button"
+                                                    variant="outline"
+                                                    disabled={!coHostQuery.trim() || coHostSearching}
+                                                    onClick={() => void handleSearchCoHostCrew()}
+                                                >
+                                                    {coHostSearching ? '검색 중' : '검색'}
+                                                </Button>
+                                            </div>
+                                            {coHostSearched && coHostResults.length === 0 && (
+                                                <p className="text-xs text-zinc-500">검색된 크루가 없습니다.</p>
+                                            )}
+                                            {coHostResults.length > 0 && (
+                                                <ul className="divide-y divide-zinc-100 rounded-xl border border-zinc-200 bg-white">
+                                                    {coHostResults.map(crew => (
+                                                        <li key={crew.crewId} className="flex items-center justify-between gap-2 px-3 py-2 text-sm">
+                                                            <span>
+                                                                <strong className="text-zinc-900">{crew.crewName}</strong>
+                                                                {crew.schoolName && <span className="ml-2 text-xs text-zinc-500">{crew.schoolName}</span>}
+                                                            </span>
+                                                            <Button
+                                                                type="button"
+                                                                size="small"
+                                                                variant="outline"
+                                                                onClick={() => {
+                                                                    setSelectedCoHostCrew(crew);
+                                                                    setCoHostResults([]);
+                                                                    setCoHostQuery('');
+                                                                    setCoHostSearched(false);
+                                                                }}
+                                                            >
+                                                                선택
+                                                            </Button>
+                                                        </li>
+                                                    ))}
+                                                </ul>
+                                            )}
+                                        </>
+                                    )}
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="space-y-1.5">
+                                <label className="text-xs font-bold text-zinc-400 uppercase tracking-wider">호스트 그룹 *</label>
+                                <select
+                                    value={organizerGroupId}
+                                    onChange={e => setOrganizerGroupId(Number(e.target.value))}
+                                    className="w-full min-w-0 px-4 py-2.5 bg-white border border-zinc-200 rounded-2xl text-base focus:outline-none focus:ring-2 focus:ring-[#162660]/20 text-zinc-800"
+                                >
+                                    {groups.map(group => (
+                                        <option key={group.id} value={group.id}>
+                                            {group.name}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+                        )}
 
                         {/* Title */}
                         <div className="space-y-1.5">
@@ -429,12 +552,28 @@ export default function DashboardEventNew({ onBack, onSuccess }: DashboardEventN
                             </div>
                         </div>
 
-                        {/* Crew access is inherited from the organizer group. */}
                         {visibilityType === 'CREW_LIMITED' && (
                             <div className="bg-blue-50 border border-blue-100 rounded-2xl px-4 py-3 text-sm text-blue-800">
-                                선택한 호스트 그룹에 참여 중인 크루만 자동으로 참가할 수 있습니다.
+                                {hostCrew ? '주최 크루와 초대를 수락한 공동 운영 크루의 멤버가 신청할 수 있습니다.' : '호스트 그룹에 참여 중인 크루의 멤버가 신청할 수 있습니다.'}
                             </div>
                         )}
+
+                        <div className="rounded-2xl border border-zinc-200 bg-[#FAF8F3]/60 p-4">
+                            <label className="flex cursor-pointer items-center justify-between gap-4">
+                                <span>
+                                    <span className="block text-sm font-bold text-[#162660]">비회원(외부 크루) 참가 신청 허용</span>
+                                    <span className="mt-1 block text-xs leading-5 text-zinc-600">
+                                        보드버디에 아직 등록되지 않은 외부 대학·동아리 참가자도 SMS 본인인증 후 소속 학교·크루·실명을 입력해 신청할 수 있어요.
+                                    </span>
+                                </span>
+                                <input
+                                    type="checkbox"
+                                    checked={allowNonMemberApplications}
+                                    onChange={e => setAllowNonMemberApplications(e.target.checked)}
+                                    className="h-5 w-5 shrink-0 accent-[#162660]"
+                                />
+                            </label>
+                        </div>
 
                         <EventConsentEditor value={consentConfiguration} onChange={setConsentConfiguration} />
 

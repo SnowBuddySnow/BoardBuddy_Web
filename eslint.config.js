@@ -25,4 +25,12 @@ export default tseslint.config(
       ],
     },
   },
+  {
+    // Vendored Bklit UI registry code (installed via `shadcn add @bklit/...`); keep it
+    // byte-identical to upstream so future `shadcn add` updates diff cleanly.
+    files: ['src/components/charts/**/*.{ts,tsx}'],
+    rules: {
+      'react-refresh/only-export-components': 'off',
+    },
+  },
 )

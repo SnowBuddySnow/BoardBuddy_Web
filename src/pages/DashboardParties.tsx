@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { formatEventDateTime } from '../lib/eventDateTime';
 import { Button } from '../components/Button';
+import { IncomingEventCrewInvitations } from '../components/event/IncomingEventCrewInvitations';
 import { listDashboardParties, updateEvent, deleteEvent } from '../services/event';
 import { Event } from '../types/api';
 import { Plus, Edit2, Play, Power, Trash2, Users, ShieldAlert } from 'lucide-react';
@@ -125,12 +126,14 @@ export default function DashboardParties({
                         >
                             이벤트 관리
                         </button>
-                        <button
-                            onClick={onGroupsClick}
-                            className="px-4 py-1.5 rounded-full text-zinc-500 hover:text-zinc-800 bg-transparent border-none cursor-pointer font-bold"
-                        >
-                            그룹 관리
-                        </button>
+                        {parties.some(event => event.organizerGroupId != null) && (
+                            <button
+                                onClick={onGroupsClick}
+                                className="px-4 py-1.5 rounded-full text-zinc-500 hover:text-zinc-800 bg-transparent border-none cursor-pointer font-bold"
+                            >
+                                그룹 관리
+                            </button>
+                        )}
                     </div>
                 </div>
                 <div className="flex flex-wrap items-center gap-3">
@@ -155,6 +158,7 @@ export default function DashboardParties({
 
             {/* Main Content Area */}
             <main className="flex-1 overflow-y-auto p-6 max-w-7xl w-full mx-auto">
+                <IncomingEventCrewInvitations onAccept={onViewDetailClick} />
                 {loading ? (
                     <div className="flex flex-col items-center justify-center py-40 text-zinc-500">
                         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#162660] mb-3"></div>
@@ -165,7 +169,7 @@ export default function DashboardParties({
                         <ShieldAlert className="w-16 h-16 stroke-[1.2] mb-3 text-zinc-300" />
                         <h2 className="text-xl font-bold text-zinc-900 mb-1">관리 중인 이벤트가 없습니다</h2>
                         <p className="text-sm max-w-md mt-1 mb-6">
-                            호스트 그룹에서 등록한 이벤트가 아직 없습니다. 새로운 이벤트를 직접 개설해보세요.
+                            관리 중인 이벤트가 목록에 표시됩니다.
                         </p>
                         <Button
                             variant="primary"
@@ -183,7 +187,7 @@ export default function DashboardParties({
                             <table className="participant-table w-full text-left border-collapse">
                                 <thead>
                                     <tr className="bg-zinc-50 border-b border-zinc-100 text-xs text-zinc-400 font-bold uppercase tracking-wider">
-                                        <th className="px-6 py-4">이벤트 / 그룹</th>
+                                        <th className="px-6 py-4">이벤트 / 주최</th>
                                         <th className="px-6 py-4">상태</th>
                                         <th className="px-6 py-4">시작 일시</th>
                                         <th className="px-6 py-4">공개 / 신청 정책</th>
@@ -199,14 +203,29 @@ export default function DashboardParties({
 
                                         return (
                                             <tr key={event.id} className="hover:bg-zinc-50/50 transition-colors">
-                                                <td data-label="이벤트 / 그룹" className="px-6 py-4.5">
+                                                <td data-label="이벤트 / 주최" className="px-6 py-4.5">
                                                     <div className="font-bold text-zinc-900 hover:text-[#162660] cursor-pointer" onClick={() => onViewDetailClick(event.id)}>
                                                         {event.title}
                                                     </div>
-                                                    <div className="text-xs text-zinc-400 font-medium mt-1">
-                                                        그룹: {event.organizerGroupName || `ID ${event.organizerGroupId}`}
+                                                    <div className="text-xs text-zinc-500 font-medium mt-1">
+                                                        {event.organizerGroupName
+                                                            || (event.coHostCrewName
+                                                                ? `${event.hostCrewName} × ${event.coHostCrewName}`
+                                                                : event.hostCrewName)}
                                                     </div>
-                                                    <div className="mt-2"><PlanningModeBadge mode={event.planningMode} /></div>
+                                                    <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                                                        <PlanningModeBadge mode={event.planningMode} />
+                                                        {event.coHostCrewName && (
+                                                            <span className="inline-flex items-center rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-bold text-[#162660]">
+                                                                공동 운영
+                                                            </span>
+                                                        )}
+                                                        {event.allowNonMemberApplications && (
+                                                            <span className="inline-flex items-center rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-bold text-amber-800">
+                                                                비회원 허용
+                                                            </span>
+                                                        )}
+                                                    </div>
                                                 </td>
                                                 <td data-label="상태" className="px-6 py-4.5">
                                                     <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs border ${getStatusStyle(event.status)}`}>

@@ -1,7 +1,19 @@
 import { ReservationLayout, ReservationSummary } from '../components/reservation/ReservationLayout';
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Keyboard, ScanLine } from 'lucide-react';
 import { SEASON_HOUSE_RESERVATIONS_ENABLED } from '../constants/operatingSeason';
+import { createVideoQrDecoder, isVideoFrameReady, type VideoQrDecoder } from '../lib/qrCodeScanner';
+import {
+    clearGuestInvitationFromUrl,
+    extractGuestInvitationToken,
+    formatGuestCode,
+    formatGuestTokenCode,
+    parseGuestCode,
+    type GuestDestination,
+} from '../lib/guestInvitation';
+import { redeemGuestInvitation } from '../services/guestInvitation';
+import { getApiErrorMessage, getApiErrorStatus } from '../lib/apiError';
+import { GuestInviteShareCard } from '../components/guest/GuestInviteShareCard';
 
 interface GuestAccessProps {
     onBack: () => void;
@@ -10,57 +22,62 @@ interface GuestAccessProps {
     seasonAvailable: boolean;
     offSeasonAvailable: boolean;
     seasonBookingCrewId: number | null;
+    seasonGuestEnabled?: boolean;
+    initialCode?: string | null;
+    accessResolved?: boolean;
+    onInitialCodeConsumed?: () => void;
 }
 
-type GuestDestination = { type: 'SEASON'; id: number } | { type: 'EVENT'; id: number };
-
-const parseGuestCode = (rawCode: string): GuestDestination | null => {
-    const code = rawCode.trim();
-    const match = code.match(/^(?:BB:)?(SEASON|EVENT)[:\-/](\d+)$/i);
-    if (match) {
-        const id = Number(match[2]);
-        return Number.isSafeInteger(id) && id > 0 ? { type: match[1].toUpperCase() as 'SEASON' | 'EVENT', id } : null;
-    }
-
-    try {
-        const url = new URL(code);
-        const type = url.searchParams.get('type')?.toUpperCase();
-        const id = Number(url.searchParams.get('id'));
-        if ((type === 'SEASON' || type === 'EVENT') && Number.isSafeInteger(id) && id > 0) return { type, id };
-    } catch {
-        // The code may be a short code rather than a URL.
-    }
-    return null;
-};
-
-export default function GuestAccess({ onBack, onSeasonHouseAccess, onEventAccess, seasonAvailable, offSeasonAvailable, seasonBookingCrewId }: GuestAccessProps) {
+export default function GuestAccess({
+    onBack,
+    onSeasonHouseAccess,
+    onEventAccess,
+    seasonAvailable,
+    offSeasonAvailable,
+    seasonBookingCrewId,
+    seasonGuestEnabled = true,
+    initialCode = null,
+    accessResolved = true,
+    onInitialCodeConsumed,
+}: GuestAccessProps) {
     const [code, setCode] = useState('');
     const [error, setError] = useState('');
     const [scanning, setScanning] = useState(false);
+    const [startingScanner, setStartingScanner] = useState(false);
+    const [redeeming, setRedeeming] = useState(false);
     const videoRef = useRef<HTMLVideoElement>(null);
     const streamRef = useRef<MediaStream | null>(null);
     const scanTimerRef = useRef<number | null>(null);
+    const scannerSessionRef = useRef(0);
+    const consumedInitialCodeRef = useRef<string | null>(null);
+    const redeemingRef = useRef(false);
 
-    const stopScanner = () => {
-        if (scanTimerRef.current) window.clearTimeout(scanTimerRef.current);
-        scanTimerRef.current = null;
+    const stopScanner = useCallback(() => {
+        scannerSessionRef.current += 1;
+        if (scanTimerRef.current !== null) {
+            window.clearTimeout(scanTimerRef.current);
+            scanTimerRef.current = null;
+        }
         streamRef.current?.getTracks().forEach(track => track.stop());
         streamRef.current = null;
+        if (videoRef.current) {
+            videoRef.current.srcObject = null;
+        }
+        setStartingScanner(false);
         setScanning(false);
-    };
-
-    useEffect(() => () => {
-        if (scanTimerRef.current) window.clearTimeout(scanTimerRef.current);
-        if (streamRef.current) streamRef.current.getTracks().forEach(track => track.stop());
     }, []);
 
-    const openDestination = (rawCode: string) => {
-        const destination = parseGuestCode(rawCode);
-        if (!destination) {
-            setError('초대 코드를 확인해 주세요. 예: BB:SEASON:12 또는 BB:EVENT:34');
-            return;
+    useEffect(() => () => {
+        scannerSessionRef.current += 1;
+        if (scanTimerRef.current !== null) {
+            window.clearTimeout(scanTimerRef.current);
+            scanTimerRef.current = null;
         }
-        stopScanner();
+        streamRef.current?.getTracks().forEach(track => track.stop());
+        streamRef.current = null;
+    }, []);
+
+    const openParsedDestination = (destination: GuestDestination) => {
         if (destination.type === 'SEASON') {
             if (!SEASON_HOUSE_RESERVATIONS_ENABLED || !seasonAvailable) {
                 setError('현재는 오프시즌 운영 중이라 시즌방 게스트 예약을 이용할 수 없습니다.');
@@ -68,6 +85,10 @@ export default function GuestAccess({ onBack, onSeasonHouseAccess, onEventAccess
             }
             if (seasonBookingCrewId !== destination.id) {
                 setError('시즌방 게스트 예약은 해당 크루의 부원이 대신 접수할 수 있어요. 크루 운영진이나 초대한 부원에게 요청해 주세요.');
+                return;
+            }
+            if (!seasonGuestEnabled) {
+                setError('이 크루는 현재 시즌방 게스트 예약을 사용하지 않습니다.');
                 return;
             }
             onSeasonHouseAccess(destination.id);
@@ -80,34 +101,159 @@ export default function GuestAccess({ onBack, onSeasonHouseAccess, onEventAccess
         }
     };
 
-    const startScanner = async () => {
+    const openDestination = async (rawCode: string) => {
         setError('');
-        const Detector = (window as unknown as { BarcodeDetector?: new (options: { formats: string[] }) => { detect: (source: HTMLVideoElement) => Promise<Array<{ rawValue?: string }>> } }).BarcodeDetector;
-        if (!Detector || !navigator.mediaDevices?.getUserMedia) {
+        const token = extractGuestInvitationToken(rawCode);
+        if (token) {
+            if (redeemingRef.current) return;
+            stopScanner();
+            redeemingRef.current = true;
+            setRedeeming(true);
+            try {
+                const redeemed = await redeemGuestInvitation(token);
+                const id = redeemed.targetType === 'SEASON' ? redeemed.crewId : redeemed.eventId;
+                if (!id) {
+                    setError('초대 링크 정보를 확인하지 못했습니다.');
+                    return;
+                }
+                openParsedDestination({ type: redeemed.targetType, id });
+            } catch (requestError) {
+                if (getApiErrorStatus(requestError) === 401) {
+                    setError('로그인한 뒤 게스트 초대 링크를 다시 열어 주세요.');
+                } else {
+                    setError(getApiErrorMessage(requestError) || '게스트 초대 링크가 유효하지 않거나 이미 사용되었습니다.');
+                }
+            } finally {
+                redeemingRef.current = false;
+                setRedeeming(false);
+            }
+            return;
+        }
+
+        const destination = parseGuestCode(rawCode);
+        if (!destination) {
+            setError('초대 코드를 확인해 주세요. 예: BB:SEASON:12 또는 BB:EVENT:34');
+            return;
+        }
+        stopScanner();
+        openParsedDestination(destination);
+    };
+
+    const openDestinationRef = useRef(openDestination);
+    openDestinationRef.current = openDestination;
+    const onInitialCodeConsumedRef = useRef(onInitialCodeConsumed);
+    onInitialCodeConsumedRef.current = onInitialCodeConsumed;
+
+    useEffect(() => {
+        if (!initialCode || !accessResolved || consumedInitialCodeRef.current === initialCode) return;
+        consumedInitialCodeRef.current = initialCode;
+        const token = extractGuestInvitationToken(initialCode);
+        const parsed = token ? null : parseGuestCode(initialCode);
+        const normalizedCode = token
+            ? formatGuestTokenCode(token)
+            : parsed
+                ? formatGuestCode(parsed)
+                : initialCode;
+        setCode(normalizedCode);
+        clearGuestInvitationFromUrl();
+        onInitialCodeConsumedRef.current?.();
+        void openDestinationRef.current(normalizedCode);
+    }, [accessResolved, initialCode]);
+
+    useEffect(() => {
+        if (!scanning) return;
+        const video = videoRef.current;
+        const stream = streamRef.current;
+        if (!video || !stream) {
+            stopScanner();
+            return;
+        }
+
+        const sessionId = scannerSessionRef.current;
+        let cancelled = false;
+        const isActive = () => !cancelled && scannerSessionRef.current === sessionId && Boolean(streamRef.current);
+
+        const runScanner = async () => {
+            try {
+                video.srcObject = stream;
+                await video.play();
+            } catch {
+                if (!isActive()) return;
+                stopScanner();
+                setError('카메라를 열 수 없습니다. 카메라 권한을 확인하거나 초대 코드를 입력해 주세요.');
+                return;
+            }
+            if (!isActive()) return;
+
+            let decodeFrame: VideoQrDecoder;
+            try {
+                decodeFrame = await createVideoQrDecoder();
+            } catch {
+                if (!isActive()) return;
+                stopScanner();
+                setError('이 기기에서는 카메라 스캔을 지원하지 않습니다. 아래에 초대 코드를 입력해 주세요.');
+                return;
+            }
+            if (!isActive()) return;
+
+            const scan = async () => {
+                if (!isActive() || !videoRef.current) return;
+                const currentVideo = videoRef.current;
+                if (isVideoFrameReady(currentVideo)) {
+                    try {
+                        const rawValue = await decodeFrame(currentVideo);
+                        if (!isActive()) return;
+                        if (rawValue) {
+                            setCode(rawValue);
+                            stopScanner();
+                            void openDestinationRef.current(rawValue);
+                            return;
+                        }
+                    } catch {
+                        // Ignore transient frame decode errors and retry on the next tick.
+                    }
+                }
+                if (!isActive()) return;
+                scanTimerRef.current = window.setTimeout(() => {
+                    void scan();
+                }, 350);
+            };
+
+            void scan();
+        };
+
+        void runScanner();
+
+        return () => {
+            cancelled = true;
+            if (scanTimerRef.current !== null) {
+                window.clearTimeout(scanTimerRef.current);
+                scanTimerRef.current = null;
+            }
+            video.srcObject = null;
+        };
+    }, [scanning, stopScanner]);
+
+    const startScanner = async () => {
+        if (startingScanner || scanning) return;
+        setError('');
+        if (!navigator.mediaDevices?.getUserMedia) {
             setError('이 기기에서는 카메라 스캔을 지원하지 않습니다. 아래에 초대 코드를 입력해 주세요.');
             return;
         }
+        const sessionId = ++scannerSessionRef.current;
+        setStartingScanner(true);
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
-            streamRef.current = stream;
-            if (videoRef.current) {
-                videoRef.current.srcObject = stream;
-                await videoRef.current.play();
+            if (scannerSessionRef.current !== sessionId) {
+                stream.getTracks().forEach(track => track.stop());
+                return;
             }
+            streamRef.current = stream;
+            setStartingScanner(false);
             setScanning(true);
-            const detector = new Detector({ formats: ['qr_code'] });
-            const scan = async () => {
-                if (!videoRef.current || !streamRef.current) return;
-                const result = await detector.detect(videoRef.current);
-                if (result[0]?.rawValue) {
-                    setCode(result[0].rawValue);
-                    openDestination(result[0].rawValue);
-                    return;
-                }
-                scanTimerRef.current = window.setTimeout(scan, 350);
-            };
-            void scan();
         } catch {
+            if (scannerSessionRef.current !== sessionId) return;
             stopScanner();
             setError('카메라를 열 수 없습니다. 카메라 권한을 확인하거나 초대 코드를 입력해 주세요.');
         }
@@ -120,22 +266,22 @@ export default function GuestAccess({ onBack, onSeasonHouseAccess, onEventAccess
                 <ReservationSummary title="게스트 초대 확인" description="게스트 전용 코드·링크로 신청할 곳을 확인하세요." />
 
                 <section className="reservation-panel mb-5">
-                    {scanning ? <video ref={videoRef} muted playsInline className="aspect-[4/3] w-full rounded-2xl bg-zinc-900 object-cover" /> : (
-                        <button onClick={startScanner} className="flex aspect-[4/3] w-full flex-col items-center justify-center rounded-2xl border-2 border-dashed border-blue-200 bg-blue-50 text-[#162660] hover:bg-blue-100">
+                    {scanning ? <video ref={videoRef} muted playsInline autoPlay aria-label="초대 QR 코드 카메라 미리보기" className="aspect-[4/3] w-full rounded-2xl bg-zinc-900 object-cover" /> : (
+                        <button type="button" disabled={startingScanner} onClick={startScanner} className="flex aspect-[4/3] w-full flex-col items-center justify-center rounded-2xl border-2 border-dashed border-blue-200 bg-blue-50 text-[#162660] hover:bg-blue-100 disabled:opacity-60">
                             <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white shadow-sm"><ScanLine className="h-7 w-7" /></span>
                             <span className="mt-3 text-sm font-black">QR 코드 스캔</span>
-                            <span className="mt-1 text-xs text-zinc-500">카메라로 초대장을 비춰 주세요</span>
+                            <span className="mt-1 text-xs text-zinc-500">{startingScanner ? '카메라를 준비하고 있어요' : '카메라로 초대장을 비춰 주세요'}</span>
                         </button>
                     )}
-                    {scanning && <button onClick={stopScanner} className="mt-3 w-full rounded-xl bg-zinc-100 py-3 text-sm font-bold text-zinc-700">스캔 그만두기</button>}
+                    {scanning && <button type="button" onClick={stopScanner} className="mt-3 w-full rounded-xl bg-zinc-100 py-3 text-sm font-bold text-zinc-700">스캔 그만두기</button>}
                 </section>
 
                 <div className="lg:col-start-2">
                     <div className="my-5 flex items-center gap-3 text-xs font-bold text-zinc-400"><span className="h-px flex-1 bg-zinc-200" />또는 코드 입력<span className="h-px flex-1 bg-zinc-200" /></div>
                     <label htmlFor="guest-invite-code" className="block text-sm font-black text-zinc-800">초대 코드</label>
                     <div className="mt-2 flex gap-2">
-                        <div className="flex min-w-0 flex-1 items-center gap-2 rounded-2xl border border-zinc-200 bg-white px-3 focus-within:border-[#162660]"><Keyboard aria-hidden="true" className="h-4 w-4 shrink-0 text-zinc-400" /><input id="guest-invite-code" value={code} onChange={event => setCode(event.target.value)} onKeyDown={event => event.key === 'Enter' && openDestination(code)} placeholder={seasonAvailable ? 'BB:SEASON:12' : 'BB:EVENT:34'} className="min-w-0 flex-1 py-3 text-sm font-semibold outline-none" /></div>
-                        <button onClick={() => openDestination(code)} className="reservation-primary px-4 text-sm">확인</button>
+                        <div className="flex min-w-0 flex-1 items-center gap-2 rounded-2xl border border-zinc-200 bg-white px-3 focus-within:border-[#162660]"><Keyboard aria-hidden="true" className="h-4 w-4 shrink-0 text-zinc-400" /><input id="guest-invite-code" value={code} onChange={event => setCode(event.target.value)} onKeyDown={event => event.key === 'Enter' && void openDestination(code)} placeholder={seasonAvailable ? 'BB:SEASON:12' : 'BB:EVENT:34'} className="min-w-0 flex-1 py-3 text-sm font-semibold outline-none" /></div>
+                        <button type="button" disabled={redeeming} onClick={() => void openDestination(code)} className="reservation-primary px-4 text-sm disabled:opacity-60">{redeeming ? '확인 중' : '확인'}</button>
                     </div>
                     {error && <p className="mt-3 rounded-xl bg-red-50 px-3 py-2 text-xs font-bold leading-5 text-red-600">{error}</p>}
                     <p className="mt-3 text-xs leading-5 text-zinc-400">
@@ -146,6 +292,15 @@ export default function GuestAccess({ onBack, onSeasonHouseAccess, onEventAccess
                     <p className="mt-3 text-xs leading-5 text-zinc-500">확인 후 신청 화면으로 이동해요.<br />예약·참여는 신청을 마쳐야 접수돼요.</p>
                     {seasonAvailable && <p className="mt-2 text-xs leading-5 text-zinc-500">시즌방 게스트 예약은 해당 크루의 부원이<br />로그인한 뒤 대신 접수해요.</p>}
                     <p className="mt-2 text-xs leading-5 text-zinc-500">크루 가입 초대 링크는 이곳에 입력하지 않고,<br />전달받은 링크를 직접 열어 주세요.</p>
+                    {seasonAvailable && seasonBookingCrewId != null && seasonGuestEnabled && (
+                        <GuestInviteShareCard
+                            compact
+                            className="mt-5"
+                            destination={{ type: 'SEASON', id: seasonBookingCrewId }}
+                            title="내 크루 시즌방 게스트 초대 보내기"
+                            description="링크를 열면 QR 코드를 스캔한 것과 동일하게 연결돼요."
+                        />
+                    )}
                 </div>
             </main>
         </ReservationLayout>

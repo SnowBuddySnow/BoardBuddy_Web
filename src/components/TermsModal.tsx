@@ -1,6 +1,8 @@
 import { XIcon } from 'lucide-react';
 import { useEffect, useId, useRef } from 'react';
 import { createPortal } from 'react-dom';
+import { AnimatePresence, m } from 'motion/react';
+import { dialogVariants, overlayVariants } from '../lib/motion';
 
 interface TermsModalProps {
     isOpen: boolean;
@@ -36,11 +38,12 @@ export function TermsModal({ isOpen, onClose, title, content, onAgree }: TermsMo
             if (previousFocus?.isConnected) previousFocus.focus();
         };
     }, [isOpen]);
-    if (!isOpen) return null;
     return createPortal(
-        <div className="fixed inset-0 z-[2000] flex items-center justify-center bg-zinc-950/50 p-3 sm:p-6"
+        <AnimatePresence>
+        {isOpen && <m.div key="terms-modal" variants={overlayVariants} initial="hidden" animate="visible" exit="exit"
+            className="fixed inset-0 z-[2000] flex items-center justify-center bg-zinc-950/50 p-3 sm:p-6"
             onClick={event => { if (event.target === event.currentTarget) onClose(); }}>
-            <div ref={modalRef} role="dialog" aria-modal="true" aria-labelledby={titleId}
+            <m.div ref={modalRef} role="dialog" aria-modal="true" aria-labelledby={titleId} variants={dialogVariants}
                 className="flex max-h-[calc(100dvh-2rem)] w-full max-w-xl flex-col overflow-hidden rounded-3xl bg-white text-zinc-900 shadow-xl sm:max-h-[85dvh]">
                 <div className="flex shrink-0 items-start justify-between gap-2 border-b border-zinc-200 p-5">
                     <h2 id={titleId} className="min-w-0 break-words text-lg font-bold">{title}</h2>
@@ -53,7 +56,8 @@ export function TermsModal({ isOpen, onClose, title, content, onAgree }: TermsMo
                     <button type="button" onClick={onClose} className="min-h-12 flex-1 rounded-xl border border-zinc-300 px-4 font-bold">닫기</button>
                     {onAgree && <button type="button" onClick={onAgree} className="min-h-12 flex-[2] rounded-xl bg-[#162660] px-4 font-bold text-white">이 약관에 동의</button>}
                 </div>
-            </div>
-        </div>, document.body,
+            </m.div>
+        </m.div>}
+        </AnimatePresence>, document.body,
     );
 }

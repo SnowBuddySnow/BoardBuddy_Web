@@ -80,7 +80,7 @@ try {
           registered: true,
           name: "5박권",
           startsOn: "2026-10-01",
-          endsOn: "2027-05-31",
+          endsOn: "2027-03-31",
           totalNights: 5,
         };
         state.bookings = [
@@ -106,6 +106,14 @@ try {
           },
         ];
         state.nextBookingId = 90;
+        // Booking outcomes now open an in-app result sheet; read it and close it with its first button.
+        const dismissResult = async (title) => {
+          const sheet = page.locator('[aria-labelledby="feedback-result-title"]');
+          await sheet.waitFor();
+          if (title) assert((await sheet.innerText()).includes(title), `Result sheet missing: ${title}`);
+          await sheet.getByRole("button").first().click();
+          await sheet.waitFor({ state: "detached" });
+        };
         const fits = async () =>
           assert(
             await page.evaluate(
@@ -119,7 +127,7 @@ try {
         await page.getByText("추가 예약 3박 가능", { exact: true }).waitFor();
         await page
           .getByRole("region", { name: "내 시즌방 이용권" })
-          .getByText("이용 완료", { exact: true })
+          .getByRole("progressbar", { name: "이용권 사용 현황", exact: true })
           .waitFor();
         await fits();
         await day(13).click();
@@ -137,6 +145,7 @@ try {
           })
           .check();
         await personalApply.click();
+        await dismissResult("예약이 확정됐어요");
         await page
           .getByText("예약이 확정되었습니다.", { exact: true })
           .waitFor();
@@ -157,6 +166,7 @@ try {
           })
           .check();
         await apply.click();
+        await dismissResult();
         await page
           .getByRole("button", { name: "예약 취소하기", exact: true })
           .waitFor();
@@ -263,13 +273,31 @@ try {
         await fits();
         // The batch reservation entry point also fails closed until consent.
         await page.getByRole("button", { name: "예약 취소", exact: true }).click();
+        await Promise.all([
+          page.waitForResponse((res) => res.url().includes("/season-stays/pass")),
+          page.waitForResponse((res) => res.url().includes("/reservations/days/2026-11-13")),
+          page.waitForResponse((res) => res.url().includes("/calendar/my")),
+          page.getByRole("alertdialog", { name: "예약을 취소할까요?" }).getByRole("button", { name: "취소하기", exact: true }).click(),
+        ]);
+        await page.getByText("예약 내역이 없습니다.", { exact: true }).waitFor();
         await page.goto(`${origin}/?view=reservation`);
         await day(13).click();
         const batchApply = page.getByRole("button", { name: "1일 예약 신청", exact: true });
-        assert(await batchApply.isDisabled(), "Batch booking bypassed consent");
-        await page.getByRole("checkbox", { name: "숙박일 기준을 확인하고 동의합니다. *", exact: true }).check();
-        await batchApply.click();
-        await page.waitForFunction(() => document.body.innerText.includes("예약할 날짜를 선택하면 여기에 표시됩니다."));
+        if (width < 1024) {
+          // Mobile: the sticky bar opens a consent sheet; booking stays locked until consent.
+          await batchApply.click();
+          const consentSheet = page.getByRole("dialog", { name: "숙박일 기준 확인" });
+          const confirmBatch = consentSheet.getByRole("button", { name: "동의하고 1일 예약 신청", exact: true });
+          assert(await confirmBatch.isDisabled(), "Batch booking bypassed consent");
+          await consentSheet.getByRole("checkbox", { name: "숙박일 기준을 확인하고 동의합니다. *", exact: true }).check();
+          await confirmBatch.click();
+        } else {
+          assert(await batchApply.isDisabled(), "Batch booking bypassed consent");
+          await page.getByRole("checkbox", { name: "숙박일 기준을 확인하고 동의합니다. *", exact: true }).check();
+          await batchApply.click();
+        }
+        await dismissResult("1일 예약 신청을 마쳤어요");
+        await page.waitForFunction(() => document.body.innerText.includes("달력에서 예약할 날짜를 골라 주세요."));
         assert(state.writes.filter(item => item.path.endsWith('/reservations')).every(item => item.body.stayPolicyVersion === 1), "Missing policy in a booking entry point");
         await page.goto(`${origin}/?view=season_calendar`);
         await day(12).click();

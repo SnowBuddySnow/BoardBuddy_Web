@@ -1,12 +1,10 @@
 import { useEffect, useState } from "react";
-import { ChevronLeft, ShieldCheck, UserRound } from "lucide-react";
+import { ChevronLeft, UserRound } from "lucide-react";
 import { getUserInfo } from "../services/user";
 import {
-  grantEventManager,
-  grantGeneralAdmin,
+  grantCrewManager,
   listCrewMemberAccess,
-  revokeEventManager,
-  revokeGeneralAdmin,
+  revokeCrewManager,
   type CrewMemberAccess,
 } from "../services/crewPermissions";
 import { crewRoleLabel } from "../constants/displayLabels";
@@ -32,9 +30,7 @@ export default function CrewPermissions({
   const [crewId, setCrewId] = useState<number | null>(null);
   const [members, setMembers] = useState<CrewMemberAccess[]>([]);
   const [loading, setLoading] = useState(true);
-  const [changingAccountId, setChangingAccountId] = useState<number | null>(
-    null,
-  );
+  const [changingRole, setChangingRole] = useState(false);
   const [error, setError] = useState("");
 
   const load = async () => {
@@ -47,7 +43,7 @@ export default function CrewPermissions({
         return;
       }
       if (!isCrewManagerRole(user.role)) {
-        setError("크루장과 임원진만 크루를 관리할 수 있어요.");
+        setError("크루장과 크루 매니저만 크루를 관리할 수 있어요.");
         return;
       }
       setCanManageCrew(true);
@@ -82,55 +78,22 @@ export default function CrewPermissions({
     };
   }, [canManageCrew, crewId, section]);
 
-  const toggleEventManager = async (member: CrewMemberAccess) => {
-    if (!canAssignRoles || crewId == null || member.crewRole === "CREW_CAPTAIN")
+  const toggleCrewManager = async (member: CrewMemberAccess) => {
+    if (!canAssignRoles || changingRole || crewId == null || member.crewRole === "CREW_CAPTAIN")
       return;
-    setChangingAccountId(member.accountId);
+    const nextRole = member.crewRole === "CREW_MANAGER" ? "CREW_MEMBER" : "CREW_MANAGER";
+    setChangingRole(true);
     setError("");
     try {
-      if (member.eventManager) {
-        await revokeEventManager(crewId, member.accountId);
+      if (nextRole === "CREW_MEMBER") {
+        await revokeCrewManager(crewId, member.accountId);
       } else {
-        await grantEventManager(crewId, member.accountId);
+        await grantCrewManager(crewId, member.accountId);
       }
       setMembers((current) =>
         current.map((item) =>
           item.accountId === member.accountId
-            ? { ...item, eventManager: !item.eventManager }
-            : item,
-        ),
-      );
-      onPermissionsChanged?.();
-    } catch {
-      setError(
-        "이벤트 그룹 매니저 권한을 변경할 수 없습니다. 계정 권한을 확인해 주세요.",
-      );
-    } finally {
-      setChangingAccountId(null);
-    }
-  };
-
-  const toggleGeneralAdmin = async (member: CrewMemberAccess) => {
-    if (!canAssignRoles || crewId == null || member.crewRole === "CREW_CAPTAIN")
-      return;
-    setChangingAccountId(member.accountId);
-    setError("");
-    try {
-      if (member.crewRole === "CREW_MANAGER") {
-        await revokeGeneralAdmin(crewId, member.accountId);
-      } else {
-        await grantGeneralAdmin(crewId, member.accountId);
-      }
-      setMembers((current) =>
-        current.map((item) =>
-          item.accountId === member.accountId
-            ? {
-                ...item,
-                crewRole:
-                  item.crewRole === "CREW_MANAGER"
-                    ? "CREW_MEMBER"
-                    : "CREW_MANAGER",
-              }
+            ? { ...item, crewRole: nextRole }
             : item,
         ),
       );
@@ -140,7 +103,7 @@ export default function CrewPermissions({
         "크루 매니저 권한을 변경할 수 없습니다. 계정 권한을 확인해 주세요.",
       );
     } finally {
-      setChangingAccountId(null);
+      setChangingRole(false);
     }
   };
 
@@ -202,8 +165,7 @@ export default function CrewPermissions({
           <div className="overflow-hidden rounded-lg border border-zinc-200 bg-white">
             {!canAssignRoles && canManageCrew && (
               <p className="border-b border-slate-100 px-5 py-3 text-xs text-slate-500">
-                역할 변경은 크루장만 할 수 있어요. 이용권 관리는 임원진도 할 수
-                있어요.
+                역할 변경은 크루장만 할 수 있어요. 크루 매니저도 이용권을 관리할 수 있어요.
               </p>
             )}
             {members.map((member) => (
@@ -220,22 +182,18 @@ export default function CrewPermissions({
                   </div>
                   <p className="mt-1 text-xs font-semibold text-zinc-500">
                     {crewRoleLabel[member.crewRole]}
-                    {member.crewRole === "CREW_CAPTAIN" && (
-                      <span className="ml-2 text-[#162660]">
-                        · 두 권한 기본 보유
-                      </span>
-                    )}
                   </p>
                 </div>
-                <div className="grid w-full grid-cols-2 gap-2 sm:w-auto">
+                <div>
                   <button
                     type="button"
                     disabled={
                       !canAssignRoles ||
                       member.crewRole === "CREW_CAPTAIN" ||
-                      changingAccountId === member.accountId
+                      changingRole
                     }
-                    onClick={() => void toggleGeneralAdmin(member)}
+                    aria-pressed={isCrewManagerRole(member.crewRole)}
+                    onClick={() => void toggleCrewManager(member)}
                     className={`rounded-lg border px-3 py-2 text-xs font-black transition-colors cursor-pointer disabled:cursor-default ${
                       member.crewRole === "CREW_MANAGER" ||
                       member.crewRole === "CREW_CAPTAIN"
@@ -244,23 +202,6 @@ export default function CrewPermissions({
                     }`}
                   >
                     크루 매니저
-                  </button>
-                  <button
-                    type="button"
-                    disabled={
-                      !canAssignRoles ||
-                      member.crewRole === "CREW_CAPTAIN" ||
-                      changingAccountId === member.accountId
-                    }
-                    onClick={() => void toggleEventManager(member)}
-                    className={`rounded-lg border px-3 py-2 text-xs font-black transition-colors cursor-pointer disabled:cursor-default ${
-                      member.eventManager
-                        ? "border-[#162660] bg-[#162660] text-white"
-                        : "border-zinc-200 bg-white text-zinc-600 hover:bg-zinc-50"
-                    }`}
-                  >
-                    <ShieldCheck className="mr-1 inline h-3.5 w-3.5" />
-                    이벤트 그룹 매니저
                   </button>
                 </div>
               </div>

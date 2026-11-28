@@ -24,7 +24,7 @@
 .reservation-shell.crew-calendar-screen .reservation-dot-medium { border: 1px solid #c1a064; background: linear-gradient(90deg, #c1a064 50%, transparent 50%); }
 .reservation-shell.crew-calendar-screen .reservation-dot-high { border: 0; background: #bd827e; }
 .reservation-shell.crew-calendar-screen .reservation-dot-none { border: 0; width: 6px; height: 2px; margin-block: 2.5px; border-radius: 2px; background: #c7cbd1; }
-.reservation-shell.crew-calendar-screen .crew-calendar-legend { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 8px 12px; padding: 12px 0 0; color: #777e89; font-size: 10px; }
+.reservation-shell.crew-calendar-screen .crew-calendar-legend { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 8px 12px; padding: 12px 0 0; color: #777e89; font-size: 10px; }
 .reservation-shell.crew-calendar-screen .crew-calendar-legend > span { display: inline-flex; align-items: center; gap: 5px; }
 .reservation-shell.crew-calendar-screen .reservation-panel { border: 0; border-radius: 20px; padding: 16px; background: #f4f5f7; box-shadow: none; }
 .reservation-shell.crew-calendar-screen .reservation-member-row { padding: 7px 0; border: 0; border-radius: 0; background: transparent; }
@@ -41,3 +41,25 @@
 .reservation-shell.crew-calendar-screen .is-classic .reservation-date-cell.has-personal-reservation { gap: 5px; }
 .reservation-shell.crew-calendar-screen .reservation-date-cell > :is(.reservation-confirmed, .reservation-pending) { width: 26px; height: 26px; margin-top: 0; font-size: 12px; }
 .reservation-shell.crew-calendar-screen .reservation-pending { background: #a1aab7; color: #fff; box-shadow: none; }
+
+/* 예약하기: same look as 크루 달력, but cells are real buttons (bookable dates only, multi-select). */
+.reservation-shell.reservation-picker .is-classic .reservation-day { width: 100%; min-width: 0; height: 46px; border-radius: 10px; color: #26344b; font-size: 14px; font-weight: 700; background: transparent; box-shadow: none; }
+.reservation-shell.reservation-picker .is-classic .reservation-day:hover:not(:disabled):not(.is-selected) { background: #f4f5f7; }
+.reservation-shell.reservation-picker .is-classic .reservation-day.is-selected,
+.reservation-shell.reservation-picker .is-classic .reservation-day.is-selected:hover { background: #28384e; color: #fff; box-shadow: none; }
+.reservation-shell.reservation-picker .is-classic .reservation-day.is-reserved { background: transparent; color: #162660; box-shadow: inset 0 0 0 1.5px #162660; }
+.reservation-shell.reservation-picker .is-classic .reservation-day.is-today:not(.is-selected):not(.is-reserved) { background: #f0f1f4; color: #26344b; box-shadow: none; }
+.reservation-shell.reservation-picker .is-classic .reservation-day:disabled { color: #c9cdd3; font-weight: 600; }
+@media (min-width: 768px) { .reservation-shell.reservation-picker .is-classic .reservation-day { height: 52px; } }
+.reservation-legend-swatch { display: inline-block; width: 10px; height: 10px; flex-shrink: 0; border-radius: 3px; }
+.reservation-legend-swatch.is-selected { background: #28384e; }
+.reservation-legend-swatch.is-reserved { box-shadow: inset 0 0 0 1.5px #162660; }
+.reservation-legend-swatch.is-unavailable { background: #e5e7eb; }
+.reservation-shell.reservation-picker .is-classic .reservation-day.is-reserved.is-waiting { color: #64748b; box-shadow: inset 0 0 0 1.5px #94a3b8; }
+.reservation-shell.reservation-picker .is-classic .reservation-day.is-reserved:disabled { color: #94a3b8; box-shadow: inset 0 0 0 1.5px #cbd5e1; }
+.reservation-shell.reservation-picker .is-classic .reservation-day.is-reserved:disabled > div { opacity: .6; }
+
+/* PC: keep the date detail panel in view while the page scrolls (master–detail). */
+@media (min-width: 1024px) {
+    .reservation-shell.crew-calendar-screen .reservation-detail-column { position: sticky; top: 8px; max-height: calc(100dvh - 140px); overflow-y: auto; overscroll-behavior: contain; }
+}

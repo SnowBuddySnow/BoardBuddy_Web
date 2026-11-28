@@ -17,7 +17,7 @@ export const installOnboardingBoundary = async (page, { origin = 'http://127.0.0
         const usedNights=committed.filter(item=>item.stayCompleted).length,reservedNights=committed.length-usedNights;
         return {...pass,usedNights,reservedNights,remainingNights:pass.totalNights==null?null:Math.max(0,pass.totalNights-usedNights-reservedNights)};
     };
-    const savePass = (id, body) => { const existing = state.seasonPasses[id]; return { ...body, registered: true, startsOn: body.startsOn ?? existing?.startsOn ?? '2026-10-01', endsOn: body.endsOn ?? existing?.endsOn ?? '2027-05-31' }; };
+    const savePass = (id, body) => { const existing = state.seasonPasses[id]; return { ...body, registered: true, startsOn: body.startsOn ?? existing?.startsOn ?? '2026-10-01', endsOn: body.endsOn ?? existing?.endsOn ?? '2027-03-31' }; };
     page.on('pageerror', error => state.errors.push(error.message));
     await page.context().addInitScript(() => {
         window.Kakao = { isInitialized: () => true, init() {}, Auth: { login: ({ success }) => { queueMicrotask(() => success({ access_token: 'synthetic-provider-only' })); } } };
@@ -56,8 +56,8 @@ export const installOnboardingBoundary = async (page, { origin = 'http://127.0.0
         if (path === '/crews/17') return respond({ crewId: 17, crew_id: 17, crewName: '가상 크루', name: '가상 크루', univ: '한국대학교', status: 'ACTIVE', role: state.role, member_count: 2, seasonHouseActive: state.seasonOpen, dailyCapacity: 20, teachingEnabled: true, ...state.crewOverrides });
         if (path === '/crews/17/members') return respond([{user_id:99101,name:'가상 회원',role:state.role},{user_id:99102,name:'가상 부원',role:'CREW_MEMBER'}]);
         if (path === '/crews/17/managers') return respond([]);
-        if (path === '/operations/crews/17/members') return respond([{accountId:99101,displayName:'가상 회원',crewRole:state.role,eventManager:state.role==='CREW_CAPTAIN'},{accountId:99102,displayName:'가상 부원',crewRole:'CREW_MEMBER',eventManager:false}]);
-        if (path === '/operations/context') return respond({ permissions: state.role === 'CREW_CAPTAIN' ? ['CREW_MEMBERS_MANAGE', 'CREW_EVENT_MANAGERS_ASSIGN', 'PARTIES_CREATE', 'PARTIES_MANAGE', 'EVENT_GROUPS_CREATE', 'EVENT_GROUPS_VIEW', 'EVENT_GROUPS_MANAGE'] : state.role === 'CREW_MANAGER' ? ['CREW_MEMBERS_MANAGE'] : [] });
+        if (path === '/operations/crews/17/members') return respond([{accountId:99101,displayName:'가상 회원',crewRole:state.role},{accountId:99102,displayName:'가상 부원',crewRole:'CREW_MEMBER'}]);
+        if (path === '/operations/context') return respond({ permissions: state.role === 'CREW_CAPTAIN' ? ['CREW_MEMBERS_MANAGE', 'CREW_MANAGERS_ASSIGN', 'PARTIES_CREATE', 'PARTIES_MANAGE', 'EVENT_GROUPS_CREATE', 'EVENT_GROUPS_VIEW', 'EVENT_GROUPS_MANAGE'] : state.role === 'CREW_MANAGER' ? ['CREW_MEMBERS_MANAGE'] : [] });
         if (path === '/admin/crews' && method === 'POST') { const item = { id: 17, name: request.postDataJSON().name, approvalStatus: 'PENDING', status: 'INACTIVE', createdAt: '2026-11-13T00:00:00' }; state.requests.push(item); return respond(item, 201); }
         if (path === '/admin/crews') return respond({ crews: state.requests, schools: [], developerAccess: false });
         if (path === '/notifications/unread-count') return respond({ count: 0 });
@@ -109,6 +109,13 @@ export const installOnboardingBoundary = async (page, { origin = 'http://127.0.0
             if(state.role!=='CREW_CAPTAIN')return respond(null,403); const id=Number(path.split('/').at(-2)); const item=state.bookings.find(item=>item.reservationId===id)??state.seedReservation; item.stayCompleted=request.postDataJSON().completed; return respond(null);
         }
         if (path === '/crews/my-applications') return respond(state.applied ? [{ application_id: 71, crew_id: 17, crew_name: '가상 크루', status: state.approved ? 'APPROVED' : 'PENDING' }] : []);
+        if (path === '/dashboard/organizer-groups' && method === 'POST') {
+            const body = request.postDataJSON();
+            const group = { id: state.groups.length + 1, name: body.name, createdAt: '2026-11-13T00:00:00', myRole: 'EVENT_GROUP_OWNER', memberCount: 1, crewCount: 1 };
+            state.groups.unshift(group);
+            state.writes.push({ path, body });
+            return respond(group, 201);
+        }
         if (path === '/dashboard/organizer-groups') return respond(state.groups);
         if (path === '/dashboard/organizer-group-invitations') return respond([]);
         if (path === '/crews/17/invitations' && method === 'POST') {
@@ -117,10 +124,31 @@ export const installOnboardingBoundary = async (page, { origin = 'http://127.0.0
         }
         if (path === '/crews/17/invitations') return respond(state.invitations);
         if (path.startsWith('/crews/17/invitations/') && method === 'DELETE') { state.invitations.find(item => path.endsWith(item.id)).revokedAt = '2026-11-13T01:00:00'; return respond(null); }
+        if (path === '/dashboard/event-crew-invitations/incoming' && method === 'GET') return respond([]);
         if (path === '/dashboard/events') return respond([state.managedEvent]);
         if (path === '/dashboard/events/9101' && method === 'PATCH') { const body = request.postDataJSON(); state.writes.push({ path, body }); Object.assign(state.managedEvent, body); return respond(state.managedEvent); }
         if (path === '/dashboard/events/9101') return respond(state.managedEvent);
         if (path === '/dashboard/events/9101/participants') return respond(state.participants);
+        if (path === '/dashboard/events/9101/roster') return respond(state.participants.map(part => ({
+            participantType: 'MEMBER',
+            participantKey: `MEMBER-${part.id}`,
+            participantId: part.id,
+            userId: part.userId,
+            receiptCode: null,
+            name: part.userName || '이름 없음',
+            schoolName: null,
+            crewName: null,
+            studentNumber: null,
+            maskedPhone: null,
+            convertedFromNonMember: false,
+            status: part.status,
+            paymentStatus: part.paymentStatus ?? null,
+            managerMemo: part.managerMemo ?? null,
+            joinedAt: part.joinedAt || part.createdAt || '',
+            consentAnswers: [],
+            canApprove: part.status === 'PENDING',
+            canRemove: part.status === 'JOINED',
+        })));
         if (path.startsWith('/dashboard/events/9101/participants/') && method === 'PATCH') { const body = request.postDataJSON(); state.writes.push({ path, body }); Object.assign(state.participants[0], body); state.managedEvent.joinedCount = state.participants.filter(item => item.status === 'JOINED').length; return respond(state.participants[0]); }
         if (path === '/events/9101/chat-access') return respond({ chatUrl: null, chatPasscode: null, chatInstructions: null });
         if (path === '/dashboard/events/9101/consents') return respond({ items: [], consentWindowMinutes: null, configurationLocked: true });

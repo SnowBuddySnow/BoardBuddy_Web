@@ -78,4 +78,22 @@ describe('URL navigation with existing authentication gates', () => {
         localStorage.clear(); window.history.replaceState(null, '', '/?view=dashboard_event_edit&eventId=42');
         expect(readNavigation().view).toBe('login');
     });
+
+    it('routes guest invitation links to guest_access and clears type/id/guestInvite when leaving', () => {
+        window.history.replaceState(null, '', '/?type=SEASON&id=12');
+        const seasonRoute = readNavigation();
+        expect(seasonRoute.view).toBe('guest_access');
+        expect(navigationUrl(seasonRoute)).toContain('type=SEASON&id=12');
+        expect(navigationUrl({ ...seasonRoute, view: 'guest_reservation' })).toBe('/?view=guest_reservation');
+
+        const token = 'd'.repeat(43);
+        window.history.replaceState(null, '', `/?view=guest_access#guestInvite=${token}`);
+        const tokenRoute = readNavigation();
+        expect(tokenRoute.view).toBe('guest_access');
+        expect(navigationUrl({ ...tokenRoute, view: 'event_detail', eventId: 34 })).toBe('/?view=event_detail&eventId=34');
+
+        localStorage.clear();
+        window.history.replaceState(null, '', '/?view=guest_access&type=EVENT&id=34');
+        expect(readNavigation().view).toBe('guest_access');
+    });
 });

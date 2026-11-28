@@ -53,6 +53,19 @@ Assign `boardbuddy.kr` and `www.boardbuddy.kr` only to Production. A persistent 
 `stg.boardbuddy.kr` can be assigned to `develop`; feature branches keep their generated Preview
 URLs.
 
+`vercel.json` disables automatic Git-push deployments for all non-`main` branches
+(`git.deploymentEnabled`), while Vercel Preview deployments remain enabled so pushes to `develop`
+trigger a staging deployment from `.github/workflows/ci-cd.yml` after the build, unit and
+synthetic browser checks pass. Configure the GitHub Actions secret
+`VERCEL_STAGING_DEPLOY_HOOK_URL` (repository or `staging` environment) with a Vercel Deploy Hook
+pointing at `develop`.
+
+The staging job waits for `https://stg.boardbuddy.kr/build-info.json` to report the triggering
+commit and verifies that the staging homepage serves that build's JavaScript entry module. Keep
+Vercel's system environment variables enabled so the build records `VERCEL_GIT_COMMIT_SHA`.
+The required `Verify & Build` check for production promotion PRs from `develop` to `main` runs
+the same smoke test against the PR's head SHA.
+
 `vercel.json` deliberately contains no API rewrite. A Vercel build fails when
 `VITE_API_BASE_URL` is absent, preventing a frontend from silently using the wrong backend.
 

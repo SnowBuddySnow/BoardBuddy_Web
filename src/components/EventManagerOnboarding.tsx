@@ -1,3 +1,5 @@
+import { overlayMotion, dialogMotion } from '../lib/motion';
+import { m } from 'motion/react';
 import { useEffect, useRef, useState } from 'react';
 import {
   ArrowRight, Check, CheckCircle2, ChevronLeft, ChevronRight, ClipboardCheck,
@@ -30,20 +32,20 @@ interface EventManagerStep {
 
 const steps: EventManagerStep[] = [
   {
-    id: 'host-group', label: '권한·호스트 그룹', icon: UsersRound,
-    title: '호스트 그룹에서 운영을 시작해요',
-    description: '크루에서 이벤트 권한을 받은 뒤, 함께 운영할 호스트 그룹에 참여하세요.',
+    id: 'crew-collaboration', label: '크루 공동 운영', icon: UsersRound,
+    title: '주최 크루에서 운영을 시작해요',
+    description: '내 크루 이름으로 이벤트를 만들고 함께 운영할 크루를 초대할 수 있어요.',
     cards: [
-      { title: '크루의 이벤트 그룹 매니저', description: '크루장이 지정하는 이벤트 담당자예요. 크루 매니저 권한도 함께 가질 수 있어요.' },
-      { title: '호스트 그룹의 오너·매니저', description: '해당 그룹의 이벤트를 운영해요. 뷰어는 조회 역할이며, 멤버 초대·삭제는 오너가 맡아요.' },
+      { title: '크루 매니저', description: '크루장이 지정하며 크루 관리와 이벤트 운영 권한을 함께 가져요.' },
+      { title: '공동 운영 크루', description: '초대를 수락하면 두 크루의 현직 매니저가 같은 화면에서 설정과 참가자를 관리해요.' },
     ],
-    points: ['기존 그룹은 오너에게 초대 링크를 받아 수락하세요.', '그룹 상세에서 내 크루와 그룹 역할을 확인하세요. 크루 권한과 그룹 참여는 별도예요.'],
-    action: { label: '호스트 그룹 확인하기', destination: 'dashboard_groups' },
+    points: ['이벤트 관리 상세의 공동 운영에서 초대를 보내세요.', '받은 초대는 이벤트 관리 목록에서 확인하고 응답할 수 있어요.'],
+    action: { label: '공동 운영 초대 확인', destination: 'dashboard_parties' },
   },
   {
     id: 'event-setup', label: '이벤트 구성', icon: Sparkles,
     title: '진행 방식에 맞춰 이벤트를 만들어요',
-    description: '호스트 그룹·날짜·정원·활동 분류를 정하고, 참가자가 읽을 소개를 작성하세요.',
+    description: '주최 크루를 확인하고 날짜·정원·활동 분류와 참가자용 소개를 작성하세요.',
     cards: [
       { title: PLANNING_MODE_COPY.MANAGER_PLANNED.label, description: PLANNING_MODE_COPY.MANAGER_PLANNED.description },
       { title: PLANNING_MODE_COPY.MEMBER_PLANNED.label, description: PLANNING_MODE_COPY.MEMBER_PLANNED.description },
@@ -59,7 +61,7 @@ const steps: EventManagerStep[] = [
       { title: '즉시 승인 / 승인 후 참가', description: '즉시 승인은 호스트의 수동 승인 없이 진행해요. 승인 후 참가는 신청자를 확인해 확정해요.' },
       { title: '필수 / 선택 / 안내문', description: '필수 응답과 작성 제한시간을 정해요. 안내문은 읽기 전용이며, 미리보기로 참가자 화면을 확인해요.' },
     ],
-    points: ['크루 한정 이벤트는 호스트 그룹에 참여한 크루가 대상이에요.', '취소·환불 규정은 모집 전에 안내하고, 개인정보와 사진 활용 항목은 실제 운영에 필요한 만큼만 설정하세요.'],
+    points: ['새 크루 한정 이벤트에서는 주최 크루와 초대를 수락한 공동 운영 크루의 멤버가 신청할 수 있어요.', '취소·환불 규정은 모집 전에 안내하고, 개인정보와 사진 활용 항목은 실제 운영에 필요한 만큼만 설정하세요.'],
     action: { label: '이벤트 목록 열기', destination: 'dashboard_parties' },
   },
   {
@@ -92,7 +94,7 @@ const steps: EventManagerStep[] = [
       { title: '모집 마감', description: '이벤트 상세에서 모집 마감을 누르세요. 기존 확정 참가자는 유지돼요.' },
       { title: '이벤트 전체 취소', description: '수정 화면에서 모집 상태를 취소됨으로 바꾸고 저장하세요. 참가자 안내와 비용 정산은 별도로 진행해요.' },
     ],
-    points: ['그룹 역할, 모집 조건, 참가자 안내를 확인했다면 운영을 시작할 수 있어요.', '이 안내는 내 정보와 운영 센터에서 언제든 다시 볼 수 있어요.'],
+    points: ['공동 운영 상태, 모집 조건, 참가자 안내를 확인하세요.', '이 안내는 내 정보와 운영 센터에서 언제든 다시 볼 수 있어요.'],
   },
 ];
 
@@ -165,15 +167,15 @@ export default function EventManagerOnboarding({ open, canCreateEvents, initialS
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-[10000] flex items-end justify-center bg-zinc-950/55 backdrop-blur-sm sm:items-center sm:p-6">
-      <section ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="event-manager-onboarding-title" className="flex h-[96dvh] w-full max-w-6xl flex-col overflow-hidden rounded-t-[2rem] bg-[#FAF8F3] shadow-2xl sm:h-[min(48rem,92dvh)] sm:rounded-[2rem]">
+    <m.div {...overlayMotion} className="fixed inset-0 z-[10000] flex items-end justify-center bg-zinc-950/55 backdrop-blur-sm sm:items-center sm:p-6">
+      <m.section {...dialogMotion} ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="event-manager-onboarding-title" className="flex h-[96dvh] w-full max-w-6xl flex-col overflow-hidden rounded-t-[2rem] bg-[#FAF8F3] shadow-2xl sm:h-[min(48rem,92dvh)] sm:rounded-[2rem]">
         <header className="shrink-0 border-b border-zinc-200 bg-white px-5 py-5 sm:px-7">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
-              <p className="flex items-center gap-2 text-[11px] font-black text-indigo-700"><Sparkles className="h-4 w-4 shrink-0" /> 이벤트 그룹 매니저 시작 가이드</p>
+              <p className="flex items-center gap-2 text-[11px] font-black text-indigo-700"><Sparkles className="h-4 w-4 shrink-0" /> 이벤트 운영 시작 가이드</p>
               <h1 id="event-manager-onboarding-title" className="mt-1 text-xl font-black text-zinc-950 sm:text-2xl">이벤트 운영 시작하기</h1>
             </div>
-            <button ref={closeRef} type="button" onClick={onClose} aria-label="이벤트 그룹 매니저 시작 가이드 나중에 보기" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-zinc-200 text-zinc-500 hover:bg-zinc-100"><X className="h-5 w-5" /></button>
+            <button ref={closeRef} type="button" onClick={onClose} aria-label="이벤트 운영 시작 가이드 나중에 보기" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-zinc-200 text-zinc-500 hover:bg-zinc-100"><X className="h-5 w-5" /></button>
           </div>
           <div role="progressbar" aria-label="이벤트 가이드 진행률" aria-valuemin={0} aria-valuemax={steps.length} aria-valuenow={stepIndex + 1} className="mt-4 h-1.5 overflow-hidden rounded-full bg-zinc-100">
             <div className="h-full rounded-full bg-[#162660] transition-all" style={{ width: `${(stepIndex + 1) / steps.length * 100}%` }} />
@@ -216,7 +218,7 @@ export default function EventManagerOnboarding({ open, canCreateEvents, initialS
               : <button type="button" onClick={onComplete} className="flex h-11 items-center gap-2 rounded-xl bg-[#162660] px-5 text-sm font-black text-white hover:bg-[#0f1b48]"><ListChecks className="h-4 w-4" />가이드 완료</button>}
           </div>
         </footer>
-      </section>
-    </div>
+      </m.section>
+    </m.div>
   );
 }

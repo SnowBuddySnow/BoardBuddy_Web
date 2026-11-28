@@ -12,7 +12,9 @@ import {
   UserCog,
   UsersRound,
 } from 'lucide-react';
+import { m } from 'motion/react';
 import AccountToolbar from './AccountToolbar';
+import { springSnappy } from '../lib/motion';
 
 export type DesktopDestination =
   | 'season_calendar'
@@ -45,7 +47,7 @@ interface DesktopShellProps {
 
 const primaryItems = [
   { id: 'home', label: '홈', icon: Home },
-  { id: 'season_calendar', label: '시즌방 캘린더', icon: CalendarDays },
+  { id: 'season_calendar', label: '크루 달력', icon: CalendarDays },
   { id: 'my_reservations', label: '내 예약', icon: CalendarDays },
   { id: 'reservation', label: '예약하기', icon: ClipboardPenLine },
   { id: 'crew_detail', label: '내 크루', icon: UsersRound },
@@ -91,16 +93,18 @@ export default function DesktopShell({
                 key={id}
                 type="button"
                 onClick={() => onNavigate(id)}
-                className={`flex items-center gap-3 rounded-xl border-0 px-3 py-2.5 text-left text-sm font-bold transition-colors cursor-pointer ${
+                aria-current={active ? 'page' : undefined}
+                className={`relative flex items-center gap-3 rounded-xl border-0 bg-transparent px-3 py-2.5 text-left text-sm font-bold transition-colors duration-150 cursor-pointer ${
                   active
-                    ? 'bg-[#162660] text-white'
-                    : 'bg-transparent text-zinc-600 hover:bg-zinc-100 hover:text-zinc-950'
+                    ? 'text-white'
+                    : 'text-zinc-600 hover:bg-zinc-100 hover:text-zinc-950'
                 }`}
               >
-                <Icon className="h-4.5 w-4.5" />
-                <span className="min-w-0 flex-1">{label}</span>
+                {active && <m.span layoutId="desktop-nav-active" transition={springSnappy} aria-hidden="true" className="absolute inset-0 rounded-xl bg-brand-navy" />}
+                <Icon className="relative h-4.5 w-4.5" />
+                <span className="relative min-w-0 flex-1">{label}</span>
                 {id === 'parties' && availableEventCount > 0 && (
-                  <span className={`flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[10px] font-black ${
+                  <span className={`relative flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[10px] font-black ${
                     active ? 'bg-white text-[#162660]' : 'bg-rose-500 text-white'
                   }`}>
                     {availableEventCount > 99 ? '99+' : availableEventCount}

@@ -12,10 +12,11 @@ import { CrewInvitationPanel } from '../components/onboarding/CrewInvitationPane
 
 interface CrewSettingsProps {
     onBack: () => void;
+    onSaved?: () => void;
     onCaptainGuideClick?: () => void;
 }
 
-export default function CrewSettings({ onBack, onCaptainGuideClick }: CrewSettingsProps) {
+export default function CrewSettings({ onBack, onSaved, onCaptainGuideClick }: CrewSettingsProps) {
     const DAY_TO_KR: { [key: string]: string } = {
         'MONDAY': '월요일',
         'TUESDAY': '화요일',
@@ -33,12 +34,14 @@ export default function CrewSettings({ onBack, onCaptainGuideClick }: CrewSettin
     const [canConfigure, setCanConfigure] = useState(false);
     const [loadFailed, setLoadFailed] = useState(false);
     const [verificationEnforced, setVerificationEnforced] = useState(false);
+    const [savedInviteLinkAutoJoinEnabled, setSavedInviteLinkAutoJoinEnabled] = useState(false);
     const [schools, setSchools] = useState<SchoolOption[]>([]);
     const [selectedSchoolId, setSelectedSchoolId] = useState('');
     const [affiliatedSchoolName, setAffiliatedSchoolName] = useState('');
     const [requestCopied, setRequestCopied] = useState(false);
     const [formData, setFormData] = useState<CrewInfoUpdateRequest>({
         crewName: '',
+        seasonHouseGuestEnabled: true,
         teachingEnabled: false,
         reservationOpenDay: 'FRIDAY',
         reservationOpenTime: '18:00',
@@ -81,6 +84,7 @@ export default function CrewSettings({ onBack, onCaptainGuideClick }: CrewSettin
 
                     setSchools(schoolOptions);
                     setVerificationEnforced(info.schoolVerificationEnforcementEnabled === true);
+                    setSavedInviteLinkAutoJoinEnabled(info.inviteLinkAutoJoinEnabled === true);
                     if (info.kusbfAssociated && info.univ) {
                         setAffiliatedSchoolName(info.univ);
                         const affiliatedSchool = schoolOptions.find((school) => school.name === info.univ);
@@ -94,11 +98,13 @@ export default function CrewSettings({ onBack, onCaptainGuideClick }: CrewSettin
                         reservationOpenOffsetDays: info.reservationOpenOffsetDays ?? 3, // Default fallback
                         dailyCapacity: info.dailyCapacity,
                         isCapacityLimited: info.isCapacityLimited,
+                        seasonHouseGuestEnabled: info.seasonHouseGuestEnabled !== false,
                         teachingEnabled: info.teachingEnabled === true,
                         reservationPeriodLimitDays: info.reservationPeriodLimitDays ?? 7,
                         reservationWindowDays: info.reservationWindowDays ?? ((info.reservationPeriodLimitDays ?? 7) > 0 ? (info.reservationPeriodLimitDays ?? 7) + 1 : 0),
                         schoolVerificationRequired: info.configuredSchoolVerificationRequired ?? info.schoolVerificationRequired,
                         verifiedSchoolAutoJoinEnabled: info.verifiedSchoolAutoJoinEnabled ?? false,
+                        inviteLinkAutoJoinEnabled: info.inviteLinkAutoJoinEnabled ?? false,
                     });
                     setIsAlwaysOpen(!info.reservationOpenDay || !info.reservationOpenTime);
                     setCrewPin(info.crewPin || '');
@@ -144,6 +150,7 @@ export default function CrewSettings({ onBack, onCaptainGuideClick }: CrewSettin
             payload.name = formData.crewName;
         }
         if (!verificationEnforced) delete payload.schoolVerificationRequired;
+        if (payload.inviteLinkAutoJoinEnabled === savedInviteLinkAutoJoinEnabled) delete payload.inviteLinkAutoJoinEnabled;
 
         const confirmed = window.confirm(`설정을 저장하시겠습니까?`);
         if (!confirmed) return;
@@ -151,6 +158,10 @@ export default function CrewSettings({ onBack, onCaptainGuideClick }: CrewSettin
         try {
             console.log("Saving Crew Settings:", { crewId, payload });
             await updateCrew(crewId, payload);
+            if (payload.inviteLinkAutoJoinEnabled !== undefined) {
+                setSavedInviteLinkAutoJoinEnabled(payload.inviteLinkAutoJoinEnabled);
+            }
+            onSaved?.();
             alert("설정이 저장되었습니다.");
             onBack();
         } catch (error) {
@@ -486,8 +497,44 @@ export default function CrewSettings({ onBack, onCaptainGuideClick }: CrewSettin
                         />
                     </div>
 
-                    {/* Save Button */}
+                    <section className="reservation-panel">
+                        <label className="flex cursor-pointer items-start justify-between gap-3">
+                            <span className="min-w-0 flex-1">
+                                <span className="block text-sm font-bold text-zinc-900">시즌방 게스트 예약 사용</span>
+                                <span className="mt-1 block text-xs leading-5 text-zinc-500">
+                                    켜면 크루 부원이 시즌방 게스트 예약을 대신 접수할 수 있어요. 기본값은 켜짐입니다.
+                                </span>
+                            </span>
+                            <input
+                                type="checkbox"
+                                checked={formData.seasonHouseGuestEnabled !== false}
+                                onChange={(event) => handleChange('seasonHouseGuestEnabled', event.target.checked)}
+                                className="mt-1 h-5 w-5 rounded border-zinc-300 text-[#162660] focus:ring-[#162660]"
+                            />
+                        </label>
+                    </section>
+
                     </>}
+                    <section aria-labelledby="crew-danger-zone" className="space-y-3 rounded-3xl border border-red-200 bg-red-50 p-4">
+                        <h2 id="crew-danger-zone" className="text-sm font-bold text-red-800">Danger Zone</h2>
+                        <label className="flex cursor-pointer items-start justify-between gap-3">
+                            <span className="min-w-0 flex-1">
+                                <span className="block text-sm font-bold text-zinc-900">크루 초대 링크로 바로 가입</span>
+                                <span id="crew-invite-auto-join-description" className="mt-1 block text-xs leading-5 text-zinc-600">
+                                    켜면 유효한 초대 링크나 QR을 사용하는 사람이 학교 이메일 인증과 운영진 승인 없이 바로 멤버가 됩니다.
+                                    이미 공유한 링크에도 적용됩니다.
+                                </span>
+                            </span>
+                            <input
+                                type="checkbox"
+                                aria-label="크루 초대 링크로 바로 가입"
+                                aria-describedby="crew-invite-auto-join-description"
+                                checked={formData.inviteLinkAutoJoinEnabled === true}
+                                onChange={(event) => handleChange('inviteLinkAutoJoinEnabled', event.target.checked)}
+                                className="mt-1 h-5 w-5 rounded border-zinc-300 text-red-700 focus:ring-red-700"
+                            />
+                        </label>
+                    </section>
                     <button
                         onClick={handleSave}
                         className="reservation-primary w-full py-4 mt-8 flex items-center justify-center gap-2"

@@ -11,10 +11,8 @@ const api = vi.hoisted(() => ({
 vi.mock("../services/user", () => ({ getUserInfo: api.user }));
 vi.mock("../services/crewPermissions", () => ({
   listCrewMemberAccess: api.list,
-  grantGeneralAdmin: api.grant,
-  grantEventManager: api.grant,
-  revokeGeneralAdmin: api.revoke,
-  revokeEventManager: api.revoke,
+  grantCrewManager: api.grant,
+  revokeCrewManager: api.revoke,
 }));
 import CrewPermissions from "./CrewPermissions";
 let root: ReturnType<typeof createRoot>, container: HTMLDivElement;
@@ -27,7 +25,6 @@ beforeEach(() => {
       accountId: 2,
       displayName: "부원",
       crewRole: "CREW_MEMBER",
-      eventManager: false,
     },
   ]);
   container = document.createElement("div");
@@ -44,18 +41,15 @@ it("keeps manager role assignments read-only while allowing the pass section", a
     root.render(<CrewPermissions onBack={vi.fn()} canAssignRoles={false} />),
   );
   const buttons = Array.from(container.querySelectorAll("button")).filter(
-    (node) =>
-      ["크루 매니저", "이벤트 그룹 매니저"].includes(
-        node.textContent?.trim() ?? "",
-      ),
+    (node) => node.textContent?.trim() === "크루 매니저",
   );
-  expect(buttons).toHaveLength(2);
+  expect(buttons).toHaveLength(1);
   expect(buttons.every((button) => button.disabled)).toBe(true);
   await act(async () => buttons.forEach((button) => button.click()));
   expect(api.grant).not.toHaveBeenCalled();
   expect(container.textContent).toContain("이용권 관리");
 });
-it("enables assignments when the server operations context grants the captain capability", async () => {
+it("uses one control to grant and revoke the crew manager role", async () => {
   api.user.mockResolvedValue({ role: "CREW_CAPTAIN", crew: { crewId: 17 } });
   await act(async () =>
     root.render(<CrewPermissions onBack={vi.fn()} canAssignRoles />),
@@ -66,4 +60,8 @@ it("enables assignments when the server operations context grants the captain ca
   expect(button.disabled).toBe(false);
   await act(async () => button.click());
   expect(api.grant).toHaveBeenCalledWith(17, 2);
+  expect(button.getAttribute("aria-pressed")).toBe("true");
+  await act(async () => button.click());
+  expect(api.revoke).toHaveBeenCalledWith(17, 2);
+  expect(button.getAttribute("aria-pressed")).toBe("false");
 });

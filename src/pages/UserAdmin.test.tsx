@@ -7,7 +7,7 @@ import type { AdminCrewApplication, AdminUser } from '../services/userAdmin';
 const api = vi.hoisted(() => ({
     approveAdminCrewApplication: vi.fn(), searchAdminUsers: vi.fn(), convertAdminUserToStudent: vi.fn(),
     updateAdminCrewManager: vi.fn(), updateAdminCrewRole: vi.fn(),
-    updateAdminEventManager: vi.fn(), updatePlatformAdmin: vi.fn(),
+    updatePlatformAdmin: vi.fn(),
 }));
 const schools = vi.hoisted(() => ({ getSchools: vi.fn() }));
 const features = vi.hoisted(() => ({ SCHOOL_EMAIL_AUTH_AVAILABLE: false }));
@@ -118,7 +118,7 @@ describe('developer student conversion', () => {
             ...regular,
             crewApplications: [{ ...pending, status: 'APPROVED', processedAt: '2026-11-10T10:00:00' }],
             crewMemberships: [{ crewId: 5, crewName: pending.crewName, crewCode: pending.crewCode,
-                role: 'CREW_MEMBER', crewManager: false, eventManager: false }],
+                role: 'CREW_MEMBER', crewManager: false }],
         }));
         expect(container.textContent).toContain('가입을 승인했습니다.');
         expect(container.textContent).not.toContain('가입 승인 대기');
@@ -144,7 +144,7 @@ describe('developer student conversion', () => {
         { accountStatus: 'SUSPENDED' as const },
         { crewApplications: [{ ...pending, crewJoinable: false }] },
         { crewMemberships: [{ crewId: 6, crewName: '기존크루', crewCode: 'CR-6',
-            role: 'CREW_MEMBER' as const, crewManager: false, eventManager: false }] },
+            role: 'CREW_MEMBER' as const, crewManager: false }] },
     ])('disables approval for blocked users or crews: %j', async overrides => {
         await showPendingUser(overrides);
         expect(Array.from(container.querySelectorAll('button')).filter(button => button.textContent === '즉시 승인').every(button => button.disabled)).toBe(true);

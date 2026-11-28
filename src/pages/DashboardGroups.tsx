@@ -1,3 +1,5 @@
+import { overlayMotion, dialogMotion } from '../lib/motion';
+import { m, AnimatePresence } from 'motion/react';
 import { useState, useEffect } from 'react';
 import { Button } from '../components/Button';
 import { acceptOrganizerGroupInvitation, createOrganizerGroup, declineOrganizerGroupInvitation, listMyOrganizerGroupInvitations, listOrganizerGroups } from '../services/organizerGroup';
@@ -221,9 +223,9 @@ export default function DashboardGroups({
                 </div>
             </main>
 
-            {canCreate && isCreateOpen && (
-                <div className="fixed inset-0 bg-black/30 z-[9999] flex items-center justify-center p-4">
-                    <form onSubmit={handleCreateGroup} className="bg-white border border-zinc-200 rounded-2xl w-full max-w-md p-6 shadow-2xl space-y-5">
+            <AnimatePresence>{canCreate && isCreateOpen && (
+                <m.div {...overlayMotion} className="fixed inset-0 bg-black/30 z-[9999] flex items-center justify-center p-4">
+                    <m.form {...dialogMotion} onSubmit={handleCreateGroup} className="bg-white border border-zinc-200 rounded-2xl w-full max-w-md p-6 shadow-2xl space-y-5">
                         <div className="flex items-center justify-between">
                             <h2 className="text-base font-bold text-zinc-900">호스트 그룹 만들기</h2>
                             <button type="button" onClick={() => setIsCreateOpen(false)} className="p-1 text-zinc-400 hover:text-zinc-700" title="닫기">
@@ -244,9 +246,9 @@ export default function DashboardGroups({
                         <Button type="submit" disabled={actionLoading} className="w-full bg-[#162660] text-white border-none rounded-xl h-11 font-bold">
                             만들기
                         </Button>
-                    </form>
-                </div>
-            )}
+                    </m.form>
+                </m.div>
+            )}</AnimatePresence>
         </div>
     );
 }
