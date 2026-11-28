@@ -15,14 +15,16 @@ export const hoverLift = { y: -2 } as const;
 
 export const overlayVariants: Variants = {
     hidden: { opacity: 0 },
-    visible: { opacity: 1, transition: easeOutQuick },
-    exit: { opacity: 0, transition: { duration: 0.14 } },
+    visible: { opacity: 1, pointerEvents: 'auto', transition: easeOutQuick },
+    // A closing overlay must never block the screen underneath, even if its exit animation
+    // is delayed (e.g. throttled frames in WebKit): stop taking input the moment exit starts.
+    exit: { opacity: 0, pointerEvents: 'none', transition: { duration: 0.14 } },
 };
 
 export const dialogVariants: Variants = {
     hidden: { opacity: 0, y: 16, scale: 0.98 },
-    visible: { opacity: 1, y: 0, scale: 1, transition: springSoft },
-    exit: { opacity: 0, y: 8, scale: 0.98, transition: { duration: 0.14 } },
+    visible: { opacity: 1, y: 0, scale: 1, pointerEvents: 'auto', transition: springSoft },
+    exit: { opacity: 0, y: 8, scale: 0.98, pointerEvents: 'none', transition: { duration: 0.14 } },
 };
 
 export const listContainerVariants: Variants = {
