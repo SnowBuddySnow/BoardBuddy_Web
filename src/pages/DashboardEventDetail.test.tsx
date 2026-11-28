@@ -3,9 +3,22 @@ import { act } from 'react';
 import { createRoot } from 'react-dom/client';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
-const api = vi.hoisted(() => ({ getEventDashboard: vi.fn(), listParticipants: vi.fn(), getEventChatAccess: vi.fn() }));
+const api = vi.hoisted(() => ({
+    getEventDashboard: vi.fn(),
+    listParticipants: vi.fn(),
+    getEventChatAccess: vi.fn(),
+    updateEvent: vi.fn(),
+}));
+const nonMemberApi = vi.hoisted(() => ({
+    listUnifiedEventRoster: vi.fn(),
+    updateNonMemberParticipantStatus: vi.fn(),
+    updateNonMemberParticipantManagement: vi.fn(),
+}));
 vi.mock('../services/event', async importOriginal => ({
     ...await importOriginal<typeof import('../services/event')>(), ...api,
+}));
+vi.mock('../services/nonMemberEvent', async importOriginal => ({
+    ...await importOriginal<typeof import('../services/nonMemberEvent')>(), ...nonMemberApi,
 }));
 import DashboardEventDetail from './DashboardEventDetail';
 
@@ -18,6 +31,7 @@ beforeEach(() => {
     });
     api.listParticipants.mockResolvedValue([]);
     api.getEventChatAccess.mockResolvedValue({ chatUrl: null, chatPasscode: null, chatInstructions: null });
+    nonMemberApi.listUnifiedEventRoster.mockResolvedValue(null);
 });
 afterEach(() => { vi.restoreAllMocks(); vi.clearAllMocks(); vi.unstubAllGlobals(); });
 
@@ -87,5 +101,90 @@ it('counts confirmed and pending registrations separately and preserves removed 
         expect(container.textContent).toContain('회원 5');
     } finally {
         await act(async () => root.unmount()); container.remove();
+    }
+});
+
+it('renders unified member + non-member roster, filters non-members, and approves a non-member application', async () => {
+    vi.stubGlobal('alert', vi.fn());
+    api.getEventDashboard.mockResolvedValue({
+        id: 10,
+        eventCode: 'EV-20270001',
+        title: '2027 KUSBF 대학 연합 스노보드 대회',
+        status: 'OPEN',
+        planningMode: 'MANAGER_PLANNED',
+        startsAt: '2027-01-18T09:00:00',
+        capacity: 50,
+        joinedCount: 2,
+        joinPolicy: 'APPROVAL_REQUIRED',
+        hostCrewName: '연세대 스노보드부',
+        coHostCrewName: '한양대 설원',
+        allowNonMemberApplications: true,
+    });
+    nonMemberApi.listUnifiedEventRoster.mockResolvedValue([
+        {
+            participantType: 'MEMBER',
+            participantKey: 'MEMBER-1',
+            participantId: 1,
+            userId: 101,
+            receiptCode: null,
+            name: '이회원',
+            schoolName: '연세대학교',
+            crewName: '연세대 스노보드부',
+            studentNumber: '20240001',
+            maskedPhone: '010-****-1111',
+            convertedFromNonMember: true,
+            status: 'JOINED',
+            paymentStatus: 'PAID',
+            managerMemo: null,
+            joinedAt: '2026-12-01T10:00:00',
+            consentAnswers: [],
+            canApprove: false,
+            canRemove: true,
+        },
+        {
+            participantType: 'NON_MEMBER',
+            participantKey: 'NON_MEMBER-2',
+            participantId: 2,
+            userId: null,
+            receiptCode: 'EG-00000123',
+            name: '박외부',
+            schoolName: '고려대학교',
+            crewName: '고려대 스노우폭스',
+            studentNumber: null,
+            maskedPhone: '010-****-2222',
+            convertedFromNonMember: false,
+            status: 'PENDING',
+            paymentStatus: 'UNPAID',
+            managerMemo: null,
+            joinedAt: '2026-12-01T11:00:00',
+            consentAnswers: [{ consentItemId: 1, title: '출전 종목', agreed: null, responseText: '프리스타일' }],
+            canApprove: true,
+            canRemove: false,
+        },
+    ]);
+    nonMemberApi.updateNonMemberParticipantStatus.mockResolvedValue({});
+    const container = document.createElement('div');
+    document.body.append(container);
+    const root = createRoot(container);
+    try {
+        await act(async () => root.render(<DashboardEventDetail eventId={10} onBack={vi.fn()} onEditClick={vi.fn()} />));
+        expect(container.textContent).toContain('연세대 스노보드부 × 한양대 설원');
+        expect(container.textContent).toContain('비회원 신청 링크');
+        expect(container.textContent).toContain('학생계정 전환');
+        expect(container.textContent).toContain('EG-00000123');
+
+        // Filter to non-members only
+        const nonMemberFilter = Array.from(container.querySelectorAll('button')).find(b => b.textContent?.includes('비회원 (1)'))!;
+        await act(async () => nonMemberFilter.click());
+        expect(container.querySelectorAll('tbody tr')).toHaveLength(1);
+        expect(container.textContent).toContain('박외부');
+
+        // Approve the non-member
+        const approveBtn = container.querySelector<HTMLButtonElement>('button[aria-label="박외부 승인"]')!;
+        await act(async () => approveBtn.click());
+        expect(nonMemberApi.updateNonMemberParticipantStatus).toHaveBeenCalledWith(10, 'EG-00000123', 'JOINED');
+    } finally {
+        await act(async () => root.unmount());
+        container.remove();
     }
 });

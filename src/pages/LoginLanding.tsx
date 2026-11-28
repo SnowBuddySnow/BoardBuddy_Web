@@ -28,6 +28,11 @@ import {
     setAutoLoginPreference,
     saveAccountId,
 } from '../lib/session';
+import {
+    clearNonMemberConversionIntent,
+    getNonMemberConversionToken,
+    getNonMemberCrewHint,
+} from '../lib/nonMemberConversion';
 
 interface SocialLoginPayload {
     status: string;
@@ -56,6 +61,8 @@ export default function LoginLanding({
 }: LoginLandingProps) {
     const [autoLogin, setAutoLogin] = useState(isAutoLoginEnabled());
     const [loggingInProvider, setLoggingInProvider] = useState<'kakao' | 'naver' | null>(null);
+    const [hasNonMemberConversion, setHasNonMemberConversion] = useState(() => Boolean(getNonMemberConversionToken()));
+    const nonMemberCrewHint = getNonMemberCrewHint();
     const isLoggingIn = loggingInProvider !== null;
     const mountedRef = useRef(true);
     const callbacksRef = useRef({ onLogin, onSignupNeeded, onProfileTypeNeeded });
@@ -293,6 +300,28 @@ export default function LoginLanding({
                         <p className="flex gap-2"><Check className="mt-1 h-4 w-4 shrink-0" />기존 회원은 로그인 후 바로 이용</p>
                         <p className="flex gap-2"><Check className="mt-1 h-4 w-4 shrink-0" />처음이라면 내 정보와 본인 확인</p>
                     </div>
+                    {hasNonMemberConversion && (
+                        <div className="mb-5 rounded-2xl border border-[#FCCA59] bg-[#FFFBEB] p-4 text-left">
+                            <div className="flex items-start justify-between gap-2">
+                                <div>
+                                    <p className="text-xs font-black text-[#162660]">비회원 신청 정보로 학생 계정 이어서 가입</p>
+                                    <p className="mt-1 text-xs leading-5 text-zinc-600">
+                                        카카오 또는 네이버를 연결하면 방금 인증한 휴대전화번호와 소속 학교{nonMemberCrewHint ? `(${nonMemberCrewHint})` : ''}가 자동으로 채워지고, 신청한 이벤트가 내 계정에 자동 연결돼요.
+                                    </p>
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        clearNonMemberConversionIntent();
+                                        setHasNonMemberConversion(false);
+                                    }}
+                                    className="shrink-0 text-xs font-bold text-zinc-500 underline"
+                                >
+                                    연동 취소
+                                </button>
+                            </div>
+                        </div>
+                    )}
                     <div className="space-y-3">
                         <button type="button" onClick={handleKakaoLogin} disabled={isLoggingIn} className="relative flex h-12 w-full items-center justify-center overflow-hidden rounded-xl bg-[#FEE500] transition-opacity hover:opacity-90 disabled:cursor-wait disabled:opacity-70">
                             <img src={kakaoLogin} alt="Kakao Login" className="h-full w-auto max-w-full object-contain" />

@@ -1,12 +1,14 @@
 import { getAccessToken } from '../lib/session';
 import { useEffect, useRef } from 'react';
-import { getInitialView, type View } from './routes';
+import { getInitialView, readPublicEventCodeFromUrl, type View } from './routes';
 
 export interface NavigationState {
     view: View;
     eventId: number | null;
     groupId: number | null;
     organizerInviteToken: string;
+    publicEventCode?: string;
+    receiptCode?: string;
 }
 
 const positiveId = (value: string | null): number | null => {
@@ -18,8 +20,14 @@ const positiveId = (value: string | null): number | null => {
 export const readNavigation = (): NavigationState => {
     const params = new URLSearchParams(window.location.search);
     const requested = getInitialView();
-    return { view: requested === 'login' && getAccessToken() ? 'home' : requested, eventId: positiveId(params.get('eventId')),
-        groupId: positiveId(params.get('groupId')), organizerInviteToken: params.get('organizerInvite') || '' };
+    return {
+        view: requested === 'login' && getAccessToken() ? 'home' : requested,
+        eventId: positiveId(params.get('eventId')),
+        groupId: positiveId(params.get('groupId')),
+        organizerInviteToken: params.get('organizerInvite') || '',
+        publicEventCode: readPublicEventCodeFromUrl(window.location.href),
+        receiptCode: params.get('receipt') || '',
+    };
 };
 
 export const navigationUrl = (route: NavigationState): string => {
@@ -32,6 +40,10 @@ export const navigationUrl = (route: NavigationState): string => {
     else url.searchParams.delete('groupId');
     if (route.view === 'organizer_invite' && route.organizerInviteToken) url.searchParams.set('organizerInvite', route.organizerInviteToken);
     else url.searchParams.delete('organizerInvite');
+    if (route.view === 'public_event' && route.publicEventCode) url.searchParams.set('code', route.publicEventCode);
+    else url.searchParams.delete('code');
+    if (route.view === 'non_member_lookup' && route.receiptCode) url.searchParams.set('receipt', route.receiptCode);
+    else url.searchParams.delete('receipt');
     if (route.view !== 'student_verification') url.searchParams.delete('token');
     if (route.view !== 'guest_access') {
         url.searchParams.delete('type');
@@ -67,9 +79,9 @@ export function useBrowserNavigation(route: NavigationState, onRestore: (route: 
         window.addEventListener('pageshow', handlePageShow);
         return () => { window.removeEventListener('popstate', handlePopState); window.removeEventListener('pageshow', handlePageShow); };
     }, []);
-    const { view, eventId, groupId, organizerInviteToken } = route;
+    const { view, eventId, groupId, organizerInviteToken, publicEventCode, receiptCode } = route;
     useEffect(() => {
-        const next = navigationUrl({ view, eventId, groupId, organizerInviteToken });
+        const next = navigationUrl({ view, eventId, groupId, organizerInviteToken, publicEventCode, receiptCode });
         const current = window.location.pathname + window.location.search + window.location.hash;
         const authFlow = ['login', 'user_info', 'profile_type_confirmation'];
         const leavingAuthentication = authFlow.includes(previousView.current) && previousView.current !== view;
@@ -81,5 +93,5 @@ export function useBrowserNavigation(route: NavigationState, onRestore: (route: 
         if (current === next) return;
         if (replace) window.history.replaceState(null, '', next);
         else window.history.pushState(null, '', next);
-    }, [view, eventId, groupId, organizerInviteToken]);
+    }, [view, eventId, groupId, organizerInviteToken, publicEventCode, receiptCode]);
 }

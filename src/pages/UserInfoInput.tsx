@@ -35,6 +35,15 @@ import { getApiErrorMessage, getApiErrorStatus } from "../lib/apiError";
 import { SCHOOL_EMAIL_AUTH_AVAILABLE } from "../config/features";
 import { getSignupPolicy, type SignupPolicy } from "../services/signupPolicy";
 import { getOnboardingStatus } from "../services/onboarding";
+import {
+  clearNonMemberConversionIntent,
+  getNonMemberConversionToken,
+  markNonMemberConversionCompleted,
+} from "../lib/nonMemberConversion";
+import {
+  prefillNonMemberConversion,
+  type NonMemberConversionPrefill,
+} from "../services/nonMemberEvent";
 import type { UserType } from "../types/api";
 
 interface UserInfoInputProps {
@@ -119,12 +128,76 @@ export default function UserInfoInput({
   const [missingKakaoScopes, setMissingKakaoScopes] = useState(
     () => getSignupPrefill().missingConsentScopes ?? [],
   );
+  const [conversionToken] = useState<string | null>(() =>
+    getNonMemberConversionToken(),
+  );
+  const [conversionPrefill, setConversionPrefill] =
+    useState<NonMemberConversionPrefill | null>(null);
+  const [conversionVerifiedPhone, setConversionVerifiedPhone] = useState<
+    string | null
+  >(null);
+  const schoolEdited = useRef(false);
   const signupAllowed =
     !!signupPolicy &&
     (profileType === "STUDENT"
       ? signupPolicy.studentEnabled
       : signupPolicy.regularEnabled);
   const busy = phoneBusy || isLoading;
+
+  useEffect(() => {
+    if (!conversionToken) return;
+    let cancelled = false;
+    prefillNonMemberConversion(conversionToken)
+      .then((prefill) => {
+        if (cancelled || !prefill?.valid) return;
+        setConversionPrefill(prefill);
+        setProfileType("STUDENT");
+        if (prefill.name && !nameEdited.current) {
+          setName(prefill.name);
+          setEditProviderName(true);
+        }
+        let digits = (prefill.phoneNumber || "").replace(/\D/g, "");
+        if (digits.startsWith("82")) digits = "0" + digits.slice(2);
+        const formatted = /^010\d{8}$/.test(digits)
+          ? `${digits.slice(0, 3)}-${digits.slice(3, 7)}-${digits.slice(7)}`
+          : prefill.phoneNumber;
+        if (!phoneEdited.current && formatted) {
+          setPhoneNumber(formatted);
+        }
+        if (!prefill.existingPhoneConflict && formatted) {
+          setConversionVerifiedPhone(formatted);
+          if (!phoneEdited.current) {
+            setPhoneVerified(true);
+            setPhoneVerificationSkipped(false);
+          }
+        } else if (prefill.existingPhoneConflict) {
+          setPhoneNotice(
+            "해당 번호로 이미 가입된 계정이 있어요. 아래에서 SMS 인증을 완료하면 기존 계정과 연결됩니다.",
+          );
+        }
+      })
+      .catch(() => {
+        // Ignore expired or unavailable non-member conversion prefill.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [conversionToken]);
+
+  useEffect(() => {
+    if (!conversionPrefill || schoolEdited.current || schools.length === 0)
+      return;
+    const matched =
+      (conversionPrefill.schoolId != null
+        ? schools.find((item) => item.id === conversionPrefill.schoolId)
+        : undefined) ??
+      (conversionPrefill.schoolName
+        ? schools.find((item) => item.name === conversionPrefill.schoolName)
+        : undefined);
+    if (matched) {
+      setSchool((current) => current ?? matched);
+    }
+  }, [conversionPrefill, schools]);
 
   useEffect(() => {
     let cancelled = false;
@@ -410,6 +483,7 @@ export default function UserInfoInput({
             profileType === "STUDENT"
               ? schoolEmailProof?.challengeId
               : undefined,
+          nonMemberConversionToken: conversionToken || undefined,
         },
         { headers: { Authorization: `Bearer ${token}` } },
       );
@@ -424,6 +498,12 @@ export default function UserInfoInput({
       );
       saveAuthTokens(completed.accessToken, completed.refreshToken);
       clearTempAccessToken();
+      if (conversionToken) {
+        markNonMemberConversionCompleted(
+          conversionPrefill?.linkedEventCount ?? 0,
+          conversionPrefill?.crewName ?? null,
+        );
+      }
       if (onSuccess) onSuccess(false);
       else onBack();
     } catch (requestError) {
@@ -680,6 +760,33 @@ export default function UserInfoInput({
           <form noValidate onSubmit={submit} className="mt-5 space-y-4">
             {step === 0 && (
               <>
+                {conversionPrefill && (
+                  <div className="rounded-2xl border border-emerald-200 bg-emerald-50/80 px-4 py-3 text-xs leading-5 text-emerald-950">
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <p className="font-black text-[#162660]">
+                          비회원 이벤트 신청 정보가 자동으로 채워졌어요
+                        </p>
+                        <p className="mt-1 text-zinc-700">
+                          인증된 휴대전화번호와 소속 학교가 미리 입력되었습니다. 학번을 입력하고 가입을 완료하면 신청한 이벤트{" "}
+                          <strong>{conversionPrefill.linkedEventCount}건</strong>이 내 계정으로 자동 이전되며, 이어서 크루 가입을 진행할 수 있어요.
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          clearNonMemberConversionIntent();
+                          setConversionPrefill(null);
+                          setConversionVerifiedPhone(null);
+                          setPhoneVerified(false);
+                        }}
+                        className="shrink-0 text-[11px] font-bold text-zinc-500 underline"
+                      >
+                        해제
+                      </button>
+                    </div>
+                  </div>
+                )}
                 <p className="rounded-2xl bg-[#FAF8F3] px-4 py-3 text-xs leading-5 text-zinc-600">
                   이미 가입한 계정이 있나요? 아래 휴대전화번호 인증을 완료하면
                   기존 계정과 자동으로 통합되어 카카오·네이버 모두로 로그인할 수
@@ -779,6 +886,7 @@ export default function UserInfoInput({
                       error={schoolsError}
                       onRetry={() => setSchoolsAttempt((value) => value + 1)}
                       onChange={(selected) => {
+                        schoolEdited.current = true;
                         setSchool(selected);
                         setSchoolEmailProof(null);
                         setEmail((current) => {
@@ -895,18 +1003,31 @@ export default function UserInfoInput({
                         const digits = event.target.value
                           .replace(/\D/g, "")
                           .slice(0, 11);
-                        setPhoneNumber(
+                        const nextPhone =
                           digits.length > 7
                             ? `${digits.slice(0, 3)}-${digits.slice(3, 7)}-${digits.slice(7)}`
                             : digits.length > 3
                               ? `${digits.slice(0, 3)}-${digits.slice(3)}`
-                              : digits,
-                        );
+                              : digits;
+                        setPhoneNumber(nextPhone);
                         setPhoneChallengeId(null);
                         setPhoneCode("");
-                        setPhoneVerified(false);
-                        setPhoneVerificationSkipped(false);
-                        setPhoneNotice("");
+                        if (
+                          conversionVerifiedPhone &&
+                          nextPhone === conversionVerifiedPhone
+                        ) {
+                          setPhoneVerified(true);
+                          setPhoneVerificationSkipped(false);
+                          setPhoneNotice("");
+                        } else {
+                          setPhoneVerified(false);
+                          setPhoneVerificationSkipped(false);
+                          setPhoneNotice(
+                            conversionVerifiedPhone
+                              ? "전화번호가 변경되었습니다. 변경된 번호로 SMS 재인증이 필요해요."
+                              : "",
+                          );
+                        }
                       }}
                     />
                     <Button
@@ -943,7 +1064,10 @@ export default function UserInfoInput({
                       <ShieldCheck className="h-4 w-4" />
                       {phoneVerificationSkipped
                         ? "개발환경 인증 생략 상태"
-                        : "본인 확인 완료"}
+                        : conversionVerifiedPhone &&
+                            phoneNumber === conversionVerifiedPhone
+                          ? "비회원 신청 SMS 인증 연동됨 (번호 변경 시 재인증 필요)"
+                          : "본인 확인 완료"}
                     </p>
                   ) : (
                     phoneChallengeId && (

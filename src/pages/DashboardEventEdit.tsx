@@ -50,6 +50,7 @@ export default function DashboardEventEdit({ eventId, onBack, onSuccess }: Dashb
     const [kusbfAssociated, setKusbfAssociated] = useState(true);
     const [visibilityType, setVisibilityType] = useState<VisibilityType>('PUBLIC');
     const [joinPolicy, setJoinPolicy] = useState<JoinPolicy>('INSTANT');
+    const [allowNonMemberApplications, setAllowNonMemberApplications] = useState(false);
     const [hostCrewName, setHostCrewName] = useState('');
     const [organizerGroupId, setOrganizerGroupId] = useState<number | ''>('');
     const [status, setStatus] = useState<EventStatus>('DRAFT');
@@ -109,6 +110,7 @@ export default function DashboardEventEdit({ eventId, onBack, onSuccess }: Dashb
                 setKusbfAssociated(eventData.kusbfAssociated ?? true);
                 setVisibilityType(eventData.visibilityType);
                 setJoinPolicy(eventData.joinPolicy);
+                setAllowNonMemberApplications(Boolean(eventData.allowNonMemberApplications));
                 setOrganizerGroupId(eventData.organizerGroupId ?? '');
                 setStatus(eventData.status);
             } catch (error) {
@@ -170,6 +172,7 @@ export default function DashboardEventEdit({ eventId, onBack, onSuccess }: Dashb
                 kusbfAssociated,
                 visibilityType,
                 joinPolicy,
+                allowNonMemberApplications,
                 ...(organizerGroupId ? { organizerGroupId } : {}),
                 status
             };
@@ -436,6 +439,23 @@ export default function DashboardEventEdit({ eventId, onBack, onSuccess }: Dashb
                                 {hostCrewName ? '주최 크루와 초대를 수락한 공동 운영 크루의 멤버가 신청할 수 있습니다.' : '호스트 그룹에 참여 중인 크루의 멤버가 신청할 수 있습니다.'}
                             </div>
                         )}
+
+                        <div className="rounded-2xl border border-zinc-200 bg-[#FAF8F3]/60 p-4">
+                            <label className="flex cursor-pointer items-center justify-between gap-4">
+                                <span>
+                                    <span className="block text-sm font-bold text-[#162660]">비회원(외부 크루) 참가 신청 허용</span>
+                                    <span className="mt-1 block text-xs leading-5 text-zinc-600">
+                                        보드버디에 아직 등록되지 않은 외부 대학·동아리 참가자도 SMS 본인인증 후 공개 링크로 신청할 수 있어요.
+                                    </span>
+                                </span>
+                                <input
+                                    type="checkbox"
+                                    checked={allowNonMemberApplications}
+                                    onChange={e => setAllowNonMemberApplications(e.target.checked)}
+                                    className="h-5 w-5 shrink-0 accent-[#162660]"
+                                />
+                            </label>
+                        </div>
 
                         {configurationLocked && <p role="status" className="text-sm text-amber-900">동의 항목과 환불 규정은 현재 변경할 수 없습니다. 기본 정보만 수정할 수 있습니다.</p>}
                         <fieldset disabled={configurationLocked} className="min-w-0 space-y-6">

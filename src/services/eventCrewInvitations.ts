@@ -29,3 +29,7 @@ export async function inviteEventCrew(eventId: number, crewId: number): Promise<
 export async function respondToEventCrewInvitation(invitation: EventCrewInvitation, accept: boolean): Promise<void> {
     await apiClient.post(`/dashboard/events/${invitation.eventId}/crew-invitations/${invitation.id}/response`, { accept });
 }
+
+export async function cancelEventCrewInvitation(eventId: number, invitationId: number): Promise<void> {
+    await apiClient.delete(`/dashboard/events/${eventId}/crew-invitations/${invitationId}`);
+}

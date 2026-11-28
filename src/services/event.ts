@@ -201,6 +201,8 @@ export interface CreateEventPayload {
     joinPolicy: JoinPolicy;
     organizerGroupId?: number;
     hostCrewId?: number;
+    allowNonMemberApplications?: boolean;
+    invitedCrewId?: number | null;
 }
 
 export const createEvent = async (payload: CreateEventPayload): Promise<Event> => {

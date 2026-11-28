@@ -547,9 +547,29 @@ export default function EventDetail({ eventId, onBack, isGuestApplication = fals
                         <h3 className="text-sm font-bold text-zinc-900 border-b border-zinc-50 pb-2">모임 정보</h3>
 
                         {(event.organizerGroupName || event.hostCrewName) && (
+                            <div className="flex items-center justify-between gap-3 text-sm">
+                                <span className="text-zinc-500 font-medium">
+                                    {event.organizerGroupName
+                                        ? '호스트 그룹'
+                                        : event.coHostCrewName
+                                            ? '공동 운영 크루'
+                                            : '주최 크루'}
+                                </span>
+                                <span className="text-right font-bold text-zinc-800">
+                                    {event.organizerGroupName
+                                        || (event.coHostCrewName
+                                            ? `${event.hostCrewName} × ${event.coHostCrewName}`
+                                            : event.hostCrewName)}
+                                </span>
+                            </div>
+                        )}
+
+                        {event.allowNonMemberApplications && (
                             <div className="flex items-center justify-between text-sm">
-                                <span className="text-zinc-500 font-medium">호스트 그룹</span>
-                                <span className="font-bold text-zinc-800">{event.organizerGroupName || event.hostCrewName}</span>
+                                <span className="text-zinc-500 font-medium">외부 참가</span>
+                                <span className="rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-bold text-amber-800">
+                                    비회원(외부 크루) 신청 허용
+                                </span>
                             </div>
                         )}
 
