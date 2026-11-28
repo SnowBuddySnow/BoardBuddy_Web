@@ -2,9 +2,12 @@ import { kakaoSignupScopes } from '../lib/kakaoScopes';
 import { setSignupPrefill, type SignupPrefill } from '../lib/signupPrefill';
 
 import { useEffect, useRef, useState } from 'react';
-import { ShieldCheck, UsersRound, Check } from 'lucide-react';
+import { ShieldCheck } from 'lucide-react';
+import { m } from 'motion/react';
+import BrandMark, { BrandWordmark } from '../components/BrandMark';
+import { useHeroIntro } from '../hooks/useHeroIntro';
+import { tapPress } from '../lib/motion';
 import { APP_VERSION, COPYRIGHT_TEXT } from '../version';
-import kakaoLogin from '../assets/login/kakao.png';
 import apiClient from '../lib/axios';
 import { getApiErrorMessage } from '../lib/apiError';
 import {
@@ -65,6 +68,8 @@ export default function LoginLanding({
     const nonMemberCrewHint = getNonMemberCrewHint();
     const isLoggingIn = loggingInProvider !== null;
     const mountedRef = useRef(true);
+    const heroRef = useRef<HTMLDivElement>(null);
+    useHeroIntro(heroRef);
     const callbacksRef = useRef({ onLogin, onSignupNeeded, onProfileTypeNeeded });
     callbacksRef.current = { onLogin, onSignupNeeded, onProfileTypeNeeded };
 
@@ -282,24 +287,22 @@ export default function LoginLanding({
     };
 
     return (
-        <main className="min-h-0 min-w-0 flex-1 overflow-y-auto bg-[#FAF8F3] text-[#162660]">
-            <div className="mx-auto grid w-full max-w-6xl gap-7 px-4 py-6 sm:px-8 lg:grid-cols-[0.8fr_1.2fr] lg:gap-12 lg:py-12">
-                <aside className="lg:pt-10">
-                    <p className="text-sm font-black tracking-wide">BoardBuddy</p>
-                    <h1 className="mt-4 text-3xl font-black leading-snug sm:text-4xl">함께할 크루,<br />여기서 시작해요.</h1>
-                    <p className="mt-4 max-w-sm text-sm leading-7 text-zinc-600">처음이라면 필요한 정보만 차례대로 확인해요. 이미 가입했다면 같은 카카오 또는 네이버 계정으로 이어갈 수 있어요.</p>
-                    <ol aria-label="서비스 시작 단계" className="mt-6 flex flex-wrap gap-3 text-sm lg:flex-col lg:gap-5">
-                        {['내 계정 확인', '내 크루 연결', '함께 활동 시작'].map((label, index) => <li key={label} className="flex items-center gap-3"><span className="flex h-7 w-7 items-center justify-center rounded-full bg-[#FCCA59] text-xs font-black">{index + 1}</span>{label}</li>)}
+        <main className="min-h-0 min-w-0 flex-1 overflow-y-auto bg-brand-cream text-brand-navy">
+            <div ref={heroRef} className="mx-auto grid w-full max-w-5xl gap-6 px-4 py-6 sm:px-8 sm:py-10 lg:min-h-full lg:grid-cols-[1fr_minmax(0,26rem)] lg:items-center lg:gap-16 lg:py-12">
+                <aside className="min-w-0">
+                    <div data-hero-item className="flex items-center gap-2.5">
+                        <BrandMark size={40} />
+                        <BrandWordmark />
+                    </div>
+                    <h1 data-hero-item className="mt-6 text-[1.75rem] font-black leading-tight tracking-tight sm:text-4xl lg:mt-10 lg:text-[2.75rem]">함께할 크루,<br />여기서 시작해요.</h1>
+                    <p data-hero-item className="mt-3 max-w-sm text-sm leading-6 text-zinc-600 sm:text-[15px] sm:leading-7">처음이라면 필요한 정보만 차례대로 확인해요. 이미 가입했다면 같은 계정으로 이어갈 수 있어요.</p>
+                    <ol aria-label="서비스 시작 단계" className="mt-5 flex flex-wrap gap-2 text-[13px] font-bold lg:mt-8 lg:flex-col lg:gap-3 lg:text-sm">
+                        {['내 계정 확인', '내 크루 연결', '함께 활동 시작'].map((label, index) => <li data-hero-item key={label} className="flex items-center gap-2 rounded-full bg-white py-1 pl-1 pr-3 shadow-[0_1px_0_rgba(22,38,96,0.06)] lg:bg-transparent lg:p-0 lg:shadow-none"><span className="flex h-6 w-6 items-center justify-center rounded-full bg-brand-sun text-[11px] font-black lg:h-8 lg:w-8 lg:text-xs">{index + 1}</span>{label}</li>)}
                     </ol>
                 </aside>
-                <section className="min-w-0 rounded-3xl bg-white p-5 shadow-sm sm:p-8" aria-label="로그인과 회원가입">
-                    <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[#FCCA59]"><UsersRound className="h-7 w-7" /></span>
-                    <h2 className="mt-5 text-2xl font-black">반가워요, 함께 시작할까요?</h2>
-                    <p className="mt-3 text-sm leading-7 text-zinc-600">로그인과 회원가입을 한 번에 시작해요. 크루 초대 링크가 없어도 가입 후 내 동아리를 찾을 수 있어요.</p>
-                    <div className="my-6 space-y-3 rounded-2xl bg-[#FAF8F3] p-4 text-sm leading-6">
-                        <p className="flex gap-2"><Check className="mt-1 h-4 w-4 shrink-0" />기존 회원은 로그인 후 바로 이용</p>
-                        <p className="flex gap-2"><Check className="mt-1 h-4 w-4 shrink-0" />처음이라면 내 정보와 본인 확인</p>
-                    </div>
+                <section data-hero-card className="min-w-0 rounded-3xl bg-white p-5 shadow-[0_12px_40px_-16px_rgba(22,38,96,0.18)] sm:p-7" aria-label="로그인과 회원가입">
+                    <h2 className="text-xl font-black sm:text-2xl">반가워요, 함께 시작할까요?</h2>
+                    <p className="mb-5 mt-2 text-sm leading-6 text-zinc-600">로그인과 회원가입을 한 번에 시작해요. 초대 링크가 없어도 가입 후 내 동아리를 찾을 수 있어요.</p>
                     {hasNonMemberConversion && (
                         <div className="mb-5 rounded-2xl border border-[#FCCA59] bg-[#FFFBEB] p-4 text-left">
                             <div className="flex items-start justify-between gap-2">
@@ -323,26 +326,36 @@ export default function LoginLanding({
                         </div>
                     )}
                     <div className="space-y-3">
-                        <button type="button" onClick={handleKakaoLogin} disabled={isLoggingIn} className="relative flex h-12 w-full items-center justify-center overflow-hidden rounded-xl bg-[#FEE500] transition-opacity hover:opacity-90 disabled:cursor-wait disabled:opacity-70">
-                            <img src={kakaoLogin} alt="Kakao Login" className="h-full w-auto max-w-full object-contain" />
+                        {/* Both providers share one layout: symbol pinned 16px from the left edge, label centred
+                            across the full width, so the two symbols always sit in the same column. */}
+                        <m.button type="button" onClick={handleKakaoLogin} disabled={isLoggingIn} whileTap={isLoggingIn ? undefined : tapPress} className="relative flex h-12 w-full items-center justify-center overflow-hidden rounded-xl bg-[#FEE500] px-12 text-[15px] font-bold text-black/85 transition-opacity hover:opacity-90 disabled:cursor-wait disabled:opacity-70">
+                            <span aria-hidden="true" className="absolute left-4 top-1/2 flex h-5 w-5 -translate-y-1/2 items-center justify-center">
+                                <svg viewBox="0 0 20 20" className="h-5 w-5 fill-black">
+                                    <path d="M10 2.2C5.03 2.2 1 5.33 1 9.19c0 2.5 1.67 4.69 4.19 5.93l-.88 3.22c-.08.29.25.52.5.35l3.85-2.55c.44.05.89.07 1.34.07 4.97 0 9-3.13 9-6.99S14.97 2.2 10 2.2z" />
+                                </svg>
+                            </span>
+                            <span>카카오 로그인</span>
                             {loggingInProvider === 'kakao' && <span role="status" className="absolute inset-0 flex items-center justify-center bg-[#FEE500] text-sm font-bold text-zinc-900">로그인 처리 중...</span>}
-                        </button>
-                        <button
+                        </m.button>
+                        <m.button
                             type="button"
                             onClick={() => void handleNaverLogin()}
                             disabled={isLoggingIn}
-                            className="relative flex h-12 w-full items-center justify-center gap-3 overflow-hidden rounded-xl bg-[#03C75A] px-4 text-base font-bold text-white transition-opacity hover:opacity-90 disabled:cursor-wait disabled:opacity-70"
+                            whileTap={isLoggingIn ? undefined : tapPress}
+                            className="relative flex h-12 w-full items-center justify-center overflow-hidden rounded-xl bg-[#03C75A] px-12 text-[15px] font-bold text-white transition-opacity hover:opacity-90 disabled:cursor-wait disabled:opacity-70"
                         >
-                            <svg viewBox="0 0 20 20" aria-hidden="true" className="h-4 w-4 shrink-0 fill-current">
-                                <path d="M13.56 10.7L6.16 0H0v20h6.44V9.3L13.84 20H20V0h-6.44z" />
-                            </svg>
+                            <span aria-hidden="true" className="absolute left-4 top-1/2 flex h-5 w-5 -translate-y-1/2 items-center justify-center">
+                                <svg viewBox="0 0 20 20" className="h-4 w-4 fill-current">
+                                    <path d="M13.56 10.7L6.16 0H0v20h6.44V9.3L13.84 20H20V0h-6.44z" />
+                                </svg>
+                            </span>
                             <span>네이버 로그인</span>
                             {loggingInProvider === 'naver' && <span role="status" className="absolute inset-0 flex items-center justify-center bg-[#03C75A] text-sm font-bold text-white">네이버 로그인 처리 중...</span>}
-                        </button>
+                        </m.button>
                     </div>
-                    <label className="mt-4 flex min-h-12 cursor-pointer items-center justify-center gap-3 text-sm"><input type="checkbox" checked={autoLogin} onChange={event => setAutoLogin(event.target.checked)} className="h-5 w-5 accent-[#162660]" />자동 로그인</label>
-                    <p className="mt-5 flex items-start gap-2 text-xs leading-6 text-zinc-600"><ShieldCheck className="mt-1 h-4 w-4 shrink-0" />가입만으로 크루 운영 권한이 생기지는 않아요. 크루 연결과 승인 상태를 차례대로 안내할게요.</p>
-                    <footer className="mt-7 border-t border-zinc-100 pt-5 text-center text-[10px] leading-5 text-zinc-500"><p>{APP_VERSION}</p><p>{COPYRIGHT_TEXT}</p></footer>
+                    <label className="mt-3 flex min-h-11 cursor-pointer items-center justify-center gap-2.5 text-sm font-semibold text-zinc-700"><input type="checkbox" checked={autoLogin} onChange={event => setAutoLogin(event.target.checked)} className="h-5 w-5 accent-brand-navy" />자동 로그인</label>
+                    <p className="mt-3 flex items-start gap-2 rounded-2xl bg-brand-cream px-3 py-2.5 text-xs leading-5 text-zinc-600"><ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-brand-navy" />가입만으로 크루 운영 권한이 생기지는 않아요. 크루 연결과 승인 상태를 차례대로 안내할게요.</p>
+                    <footer className="mt-5 border-t border-zinc-100 pt-4 text-center text-[10px] leading-5 text-zinc-400"><p>{APP_VERSION}</p><p>{COPYRIGHT_TEXT}</p></footer>
                 </section>
             </div>
         </main>

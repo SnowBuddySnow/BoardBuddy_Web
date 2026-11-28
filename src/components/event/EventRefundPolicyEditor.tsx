@@ -1,3 +1,5 @@
+import { overlayMotion, dialogMotion } from '../../lib/motion';
+import { m } from 'motion/react';
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Check, Eye, FileText, ReceiptText, RotateCcw, ShieldAlert, X } from 'lucide-react';
@@ -215,13 +217,13 @@ export function EventRefundPolicyEditor({ value, onChange }: EventRefundPolicyEd
             </div>
 
             {previewOpen && createPortal(
-                <div
+                <m.div {...overlayMotion}
                     className="fixed inset-0 z-[10000] flex items-center justify-center bg-zinc-950/55 p-3 backdrop-blur-sm sm:p-6"
                     onMouseDown={event => {
                         if (event.currentTarget === event.target) setPreviewOpen(false);
                     }}
                 >
-                    <section
+                    <m.section {...dialogMotion}
                         role="dialog"
                         aria-modal="true"
                         aria-labelledby="refund-policy-preview-title"
@@ -256,8 +258,8 @@ export function EventRefundPolicyEditor({ value, onChange }: EventRefundPolicyEd
                                 <p className="whitespace-pre-wrap text-sm leading-7 text-zinc-700">{value}</p>
                             </article>
                         </div>
-                    </section>
-                </div>,
+                    </m.section>
+                </m.div>,
                 document.body,
             )}
         </section>

@@ -22,12 +22,15 @@
     "test:notifications-groups": "node scripts/test/run-notifications-and-groups.mjs"
   },
   "dependencies": {
+    "@number-flow/react": "^0.6.2",
     "@sentry/react": "^10.74.0",
+    "animejs": "^4.5.0",
     "axios": "^1.13.2",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "jsqr": "^1.4.0",
     "lucide-react": "^0.554.0",
+    "motion": "^14.14.0",
     "qrcode": "1.5.4",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",

@@ -1,4 +1,7 @@
 import { Component, Suspense, type ReactNode } from 'react';
+import { m } from 'motion/react';
+import PageLoader from './PageLoader';
+import { pageEnter } from '../lib/motion';
 
 interface Props {
     children: ReactNode;
@@ -28,8 +31,12 @@ export default class PageBoundary extends Component<Props, { failed: boolean }> 
             );
         }
         return (
-            <Suspense fallback={<div role="status" className="flex h-full items-center justify-center text-sm text-zinc-500">화면을 불러오는 중...</div>}>
-                {this.props.children}
+            <Suspense fallback={<PageLoader />}>
+                {/* Remounted per view (App keys PageBoundary by view), so every screen change gets
+                    one calm fade-in. Enter-only: no exit delay before the next screen appears. */}
+                <m.div data-page-transition className="flex min-h-0 min-w-0 flex-1 flex-col" {...pageEnter}>
+                    {this.props.children}
+                </m.div>
             </Suspense>
         );
     }

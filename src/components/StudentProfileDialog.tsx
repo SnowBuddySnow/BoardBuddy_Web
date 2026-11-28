@@ -1,3 +1,5 @@
+import { overlayMotion, dialogMotion } from '../lib/motion';
+import { m } from 'motion/react';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { getApiErrorMessage } from '../lib/apiError';
 import { SCHOOL_EMAIL_AUTH_AVAILABLE } from '../config/features';
@@ -65,8 +67,8 @@ export default function StudentProfileDialog({ user, onClose, onConverted }: Stu
     };
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/45 p-4">
-            <section
+        <m.div {...overlayMotion} className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/45 p-4">
+            <m.section {...dialogMotion}
                 ref={dialogRef}
                 role="dialog"
                 aria-modal="true"
@@ -155,7 +157,7 @@ export default function StudentProfileDialog({ user, onClose, onConverted }: Stu
                         </button>
                     </div>
                 </form>
-            </section>
-        </div>
+            </m.section>
+        </m.div>
     );
 }

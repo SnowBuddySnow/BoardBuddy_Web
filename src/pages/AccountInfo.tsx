@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { ChevronLeftIcon, Download, LogOut, Trash2, UserMinus } from 'lucide-react';
-import { Button } from '../components/Button';
+import { Download, LogOut, Trash2, UserMinus } from 'lucide-react';
+import { ReservationLayout } from '../components/reservation/ReservationLayout';
 import { getUserInfo, deleteAccount, downloadPersonalData } from '../services/user';
 import { leaveCrew } from '../services/crew';
 import { UserDetail } from '../types/api';
@@ -73,41 +73,26 @@ export default function AccountInfo({ onBack, onStudentVerificationClick }: Acco
 
     if (isLoading) {
         return (
-            <div className="flex-1 flex items-center justify-center bg-white dark:bg-zinc-950">
-                <div className="text-zinc-500">로딩 중...</div>
-            </div>
+            <ReservationLayout title="계정 관리" onBack={onBack} className="is-page !bg-white">
+                <main className="reservation-content"><p role="status" className="py-10 text-center text-sm text-slate-500">계정 정보를 불러오고 있어요.</p></main>
+            </ReservationLayout>
         );
     }
 
     if (!userInfo) {
         return (
-            <div className="flex-1 flex items-center justify-center bg-white dark:bg-zinc-950">
-                <div className="text-zinc-500">사용자 정보를 불러올 수 없습니다.</div>
-            </div>
+            <ReservationLayout title="계정 관리" onBack={onBack} className="is-page !bg-white">
+                <main className="reservation-content"><p role="alert" className="py-10 text-center text-sm text-slate-600">사용자 정보를 불러올 수 없습니다.</p></main>
+            </ReservationLayout>
         );
     }
 
     return (
-        <div className="flex-1 flex flex-col h-full overflow-hidden bg-white dark:bg-zinc-950">
-            {/* Header */}
-            <header className="px-4 pt-2 pb-2 flex items-center justify-between relative">
-                <Button variant="ghost" onClick={onBack} className="-ml-2 text-zinc-900 dark:text-zinc-100">
-                    <ChevronLeftIcon className="w-6 h-6" />
-                </Button>
-                <h1 className="text-xl font-bold absolute left-1/2 -translate-x-1/2" style={{ fontFamily: '"Joti One", serif' }}>My Page</h1>
-                <div className="w-10" /> {/* Spacer for centering */}
-            </header>
-
-            {/* Content */}
-            <div className="flex-1 overflow-y-auto p-6 flex flex-col">
-                {/* Title */}
-                <div className="mb-4">
-                    <h2 className="text-sm font-semibold text-zinc-500 dark:text-zinc-400">계정 관리</h2>
-                </div>
-
+        <ReservationLayout title="계정 관리" onBack={onBack} className="is-page !bg-white">
+            <main className="reservation-content space-y-4 !bg-white">
                 {/* User Info Section */}
-                <div className="space-y-4 mb-8">
-                    <div className="bg-zinc-50 dark:bg-zinc-900 rounded-lg p-4">
+                <div className="space-y-4">
+                    <section aria-label="내 계정 정보" className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5">
                         <div className="space-y-3">
                             <div>
                                 <div className="text-xs text-zinc-500 mb-1">프로필 유형</div>
@@ -226,17 +211,17 @@ export default function AccountInfo({ onBack, onStudentVerificationClick }: Acco
                                 </div>
                             </div>
                         </div>
-                    </div>
+                    </section>
 
                     {userInfo.crew && (
-                        <div className="bg-zinc-50 dark:bg-zinc-900 rounded-lg p-4">
+                        <section aria-label="소속 크루" className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5">
                             <div className="text-xs text-zinc-500 mb-1">소속 크루</div>
                             <div className="text-base font-medium">{userInfo.crew.crewName}</div>
-                        </div>
+                        </section>
                     )}
                 </div>
 
-                <section className="mt-auto mb-8 space-y-3 rounded-2xl border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-800 dark:bg-zinc-900">
+                <section className="space-y-3 rounded-2xl border border-slate-200 bg-white p-4 sm:p-5 dark:border-zinc-800 dark:bg-zinc-900">
                     <div>
                         <h3 className="text-sm font-black text-zinc-900 dark:text-white">내 데이터와 계정</h3>
                         <p className="mt-1 text-xs leading-5 text-zinc-500">저장된 개인정보를 내려받거나 서비스·크루 이용을 종료할 수 있습니다.</p>
@@ -300,11 +285,11 @@ export default function AccountInfo({ onBack, onStudentVerificationClick }: Acco
                 </section>
 
                 {/* Version Info */}
-                <div className="text-center mb-24">
+                <div className="pb-4 text-center">
                     <p className="text-[10px] text-zinc-400 dark:text-zinc-600">{APP_VERSION}</p>
                     <p className="text-[10px] text-zinc-400 dark:text-zinc-600 mt-0.5">{COPYRIGHT_TEXT}</p>
                 </div>
-            </div>
-        </div>
+            </main>
+        </ReservationLayout>
     );
 }

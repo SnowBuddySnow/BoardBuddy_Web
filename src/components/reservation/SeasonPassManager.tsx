@@ -1,3 +1,5 @@
+import { overlayMotion, dialogMotion } from '../../lib/motion';
+import { m } from 'motion/react';
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { X } from "lucide-react";
 import SearchField from '../SearchField';
@@ -31,13 +33,13 @@ function ManagementDialog({
     return () => previous?.focus();
   }, []);
   return (
-    <div
+    <m.div {...overlayMotion}
       className="absolute inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-3"
       onClick={() => {
         if (!blocked) onClose();
       }}
     >
-      <div
+      <m.div {...dialogMotion}
         ref={ref}
         role="dialog"
         aria-modal="true"
@@ -92,8 +94,8 @@ function ManagementDialog({
           </button>
         </div>
         {children}
-      </div>
-    </div>
+      </m.div>
+    </m.div>
   );
 }
 function StayHistory({

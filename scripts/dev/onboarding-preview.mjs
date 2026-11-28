@@ -18,9 +18,9 @@ const initialParticipants = structuredClone(state.participants);
 const localKey = date => `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`;
 function seasonDemo(role) {
     const today = new Date(); const key = offset => { const date = new Date(today); date.setDate(date.getDate()+offset); return localKey(date); };
-    const year = today.getMonth() < 5 ? today.getFullYear()-1 : today.getFullYear();
+    const year = today.getMonth() < 3 ? today.getFullYear()-1 : today.getFullYear();
     Object.assign(state, { role, approved: true, seasonOpen: true, groups: [], nextBookingId: 90, stayAnnouncements: [], notifications: [],
-        seasonPasses: {99101:{registered:true,name:'5박권',startsOn:`${year}-10-01`,endsOn:`${year+1}-05-31`,totalNights:5}},
+        seasonPasses: {99101:{registered:true,name:'5박권',startsOn:`${year}-10-01`,endsOn:`${year+1}-03-31`,totalNights:5}},
         bookings: [{date:key(-2),reservationId:80,participantAccountId:99101,participantName:'가상 회원',status:'CONFIRMED',stayCompleted:true},
             {date:key(-1),reservationId:81,participantAccountId:99101,participantName:'가상 회원',status:'CONFIRMED',stayCompleted:true},
             {date:key(1),reservationId:82,participantAccountId:99101,participantName:'가상 회원',status:'CONFIRMED'},

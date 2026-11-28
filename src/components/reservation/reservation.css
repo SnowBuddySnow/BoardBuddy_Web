@@ -117,3 +117,9 @@
     .reservation-workspace .calendar-week { min-height: 58px; padding-block: 4px; }
     .reservation-workspace .reservation-date-cell { min-height: 48px; padding-block: 6px; gap: 4px; }
 }
+
+/* Page variant: matches the main screens (내 크루, 크루 달력) — centred title, plain back chevron. */
+.reservation-shell.is-page .reservation-header { display: grid; grid-template-columns: 56px minmax(0, 1fr) 56px; min-height: 56px; padding: 6px 16px; border-bottom: 1px solid #f4f4f5; }
+.reservation-shell.is-page .reservation-header h1 { text-align: center; font-size: 17px; font-weight: 900; color: #18181b; }
+.reservation-shell.is-page .reservation-back { border: 0; border-radius: 10px; }
+.reservation-shell.is-page .reservation-header-action { justify-content: flex-end; }

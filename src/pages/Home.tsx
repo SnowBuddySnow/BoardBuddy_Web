@@ -1,4 +1,9 @@
+import { overlayMotion } from '../lib/motion';
 import PersonalCalendarPreview from '../components/PersonalCalendarPreview';
+import NextStayCard from '../components/reservation/NextStayCard';
+import { m, AnimatePresence } from 'motion/react';
+import KpiStat from '../components/KpiStat';
+import { tapPress } from '../lib/motion';
 import { useState, useEffect } from 'react';
 import { getUserInfo } from '../services/user';
 import { getMyApplications, withdrawCrewApplication } from '../services/crew';
@@ -16,7 +21,6 @@ interface HomeProps {
     onMakeReservationClick: () => void;
     onGuestReservationClick: () => void;
     onCalendarClick: () => void;
-    onSeasonCalendarClick?: () => void;
     onTeamClick: () => void;
     onCrewSettingsClick?: () => void;
     onSearchClick: () => void;
@@ -37,7 +41,6 @@ export default function Home({
     onMakeReservationClick,
     onGuestReservationClick,
     onCalendarClick,
-    onSeasonCalendarClick,
     onTeamClick,
     onCrewSettingsClick,
     onSearchClick,
@@ -247,8 +250,8 @@ export default function Home({
                     </section>
                 )}
 
-                {applicationToWithdraw && (
-                    <div className="fixed inset-0 z-50 flex items-end justify-center bg-zinc-950/45 p-4 backdrop-blur-[2px] sm:items-center" role="dialog" aria-modal="true" aria-labelledby="withdraw-title">
+                <AnimatePresence>{applicationToWithdraw && (
+                    <m.div {...overlayMotion} className="fixed inset-0 z-50 flex items-end justify-center bg-zinc-950/45 p-4 backdrop-blur-[2px] sm:items-center" role="dialog" aria-modal="true" aria-labelledby="withdraw-title">
                         <div className="w-full max-w-sm rounded-3xl bg-white p-5 shadow-2xl">
                             <div className="flex items-start justify-between gap-4">
                                 <div>
@@ -268,30 +271,13 @@ export default function Home({
                                 </button>
                             </div>
                         </div>
-                    </div>
-                )}
+                    </m.div>
+                )}</AnimatePresence>
 
                 {hasCrew && (
                     <>
-                        <section>
-                            <div className="rounded-3xl bg-[#162660] p-5 text-white sm:p-7">
-                                <div className="flex items-center justify-between gap-3">
-                                    <p className="text-xs font-bold text-blue-200">MY CREW</p>
-                                    {userInfo?.crew && isCrewManagerRole(userInfo.role) && onCrewSettingsClick && <button type="button" onClick={onCrewSettingsClick} className="inline-flex min-h-10 shrink-0 items-center gap-1.5 rounded-xl bg-white/10 px-3 text-xs font-semibold text-white hover:bg-white/20"><Settings className="h-4 w-4" />크루 설정</button>}
-                                </div>
-                                <h2 className="mt-2 text-2xl font-black">{userInfo?.crew?.crewName || crewDetail?.crewName || '내 크루'}와 함께하는 오늘</h2>
-                                <p className="mt-3 text-sm leading-6 text-blue-100">새로운 모임을 찾아보고, 내 일정과 시즌방 현황을 한곳에서 확인해요.</p>
-                                <div className="mt-5 grid grid-cols-2 gap-3">
-                                    <button type="button" onClick={onMyPlansClick} className="min-h-16 rounded-2xl bg-white/10 p-3 text-left"><span className="block text-2xl font-black">{myPlansCount}</span><span className="text-xs text-blue-100">내 참여·대기 일정</span></button>
-                                    <button type="button" onClick={onSeeAllPartiesClick} className="min-h-16 rounded-2xl bg-white/10 p-3 text-left"><span className="block text-2xl font-black">{upcomingParties.length}</span><span className="text-xs text-blue-100">지금 참가 가능한 이벤트</span></button>
-                                </div>
-                            </div>
-                        </section>
-                {seasonHouseAvailable && userInfo?.crew && <PersonalCalendarPreview crewId={userInfo.crew.crewId} onOpen={onCalendarClick} />}
-                        <section className="grid gap-3 sm:grid-cols-2">
-                            <button type="button" onClick={onSeasonCalendarClick || onCalendarClick} className="min-h-24 rounded-2xl border border-zinc-200 bg-white p-5 text-left"><CalendarIcon className="h-5 w-5 text-[#162660]" /><span className="mt-2 block font-black text-[#162660]">시즌방 캘린더</span><span className="mt-1 block text-xs leading-6 text-zinc-500">날짜별 이용 현황 조회 · {seasonHouseAvailable ? '예약 운영 중' : '크루 예약 접수 전'}</span></button>
-                            <button type="button" onClick={onMyPlansClick} className="min-h-24 rounded-2xl border border-zinc-200 bg-white p-5 text-left"><CalendarHeart className="h-5 w-5 text-[#162660]" /><span className="mt-2 block font-black text-[#162660]">내 참여 일정</span><span className="mt-1 block text-xs leading-6 text-zinc-500">참여·대기 중인 이벤트를 확인해요.</span></button>
-                        </section>
+                        {seasonHouseAvailable && userInfo?.crew && <NextStayCard crewId={userInfo.crew.crewId} teachingEnabled={crewDetail?.teachingEnabled === true} onOpenCalendar={onCalendarClick} onBook={onMakeReservationClick} />}
+                        {seasonHouseAvailable && userInfo?.crew && <PersonalCalendarPreview crewId={userInfo.crew.crewId} onOpen={onCalendarClick} />}
                         {seasonHouseAvailable && (
                             <section>
                                 <button
@@ -312,6 +298,18 @@ export default function Home({
                                 </button>
                             </section>
                         )}
+                        <section>
+                            <button type="button" onClick={onMyPlansClick} className="flex w-full items-center justify-between gap-3 rounded-2xl border border-zinc-200 bg-white p-4 text-left transition-colors hover:bg-zinc-50">
+                                <span className="flex min-w-0 items-center gap-3">
+                                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand-navy/5"><CalendarHeart className="h-5 w-5 text-brand-navy" /></span>
+                                    <span className="min-w-0">
+                                        <span className="block text-sm font-black text-brand-navy">내 참여 일정</span>
+                                        <span className="mt-0.5 block truncate text-xs text-zinc-500">참여·대기 중인 이벤트를 확인해요.</span>
+                                    </span>
+                                </span>
+                                <ChevronRight className="h-5 w-5 shrink-0 text-zinc-300" />
+                            </button>
+                        </section>
 
                         {operatingFeatures.offSeason && <section className="space-y-2.5">
                             <div className="flex items-end justify-between gap-3">
@@ -324,7 +322,7 @@ export default function Home({
                                     onClick={onSeeAllPartiesClick}
                                     className="flex shrink-0 items-center gap-0.5 border-0 bg-transparent text-xs font-black text-[#162660]"
                                 >
-                                    참가 가능 {upcomingParties.length}개 <ChevronRight className="h-3.5 w-3.5" />
+                                    신청 가능 {upcomingParties.length}개 <ChevronRight className="h-3.5 w-3.5" />
                                 </button>
                             </div>
 
@@ -363,7 +361,7 @@ export default function Home({
                                     <span className="flex items-center gap-3">
                                         <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-zinc-100 text-zinc-400"><Sparkles className="h-4 w-4" /></span>
                                         <span>
-                                            <span className="block text-sm font-black text-zinc-700">현재 참가 가능한 이벤트가 없어요</span>
+                                            <span className="block text-sm font-black text-zinc-700">현재 신청 가능한 이벤트가 없어요</span>
                                             <span className="mt-0.5 block text-xs text-zinc-400">전체 이벤트와 예정된 모집을 확인할 수 있어요.</span>
                                         </span>
                                     </span>
@@ -431,6 +429,19 @@ export default function Home({
                             </div>
                                 );
                             })()}
+                        </section>
+                        <section>
+                            <div className="rounded-3xl bg-brand-navy p-5 text-white sm:p-6">
+                                <div className="flex items-center justify-between gap-3">
+                                    <p className="text-xs font-bold text-blue-200">MY CREW</p>
+                                    {userInfo?.crew && isCrewManagerRole(userInfo.role) && onCrewSettingsClick && <button type="button" onClick={onCrewSettingsClick} className="inline-flex min-h-10 shrink-0 items-center gap-1.5 rounded-xl bg-white/10 px-3 text-xs font-semibold text-white hover:bg-white/20"><Settings className="h-4 w-4" />크루 설정</button>}
+                                </div>
+                                <h2 className="mt-1.5 text-xl font-black leading-snug sm:text-2xl">{userInfo?.crew?.crewName || crewDetail?.crewName || '내 크루'}와 함께하는 오늘</h2>
+                                <div className="mt-4 grid grid-cols-2 gap-3">
+                                    <m.button type="button" onClick={onMyPlansClick} whileTap={tapPress} className="min-h-16 rounded-2xl bg-white/10 p-3 text-left transition-colors hover:bg-white/15"><KpiStat value={myPlansCount} label="내 참여·대기 일정" valueClassName="text-2xl font-black text-white" labelClassName="text-xs text-blue-100" /></m.button>
+                                    <m.button type="button" onClick={onSeeAllPartiesClick} whileTap={tapPress} className="min-h-16 rounded-2xl bg-white/10 p-3 text-left transition-colors hover:bg-white/15"><KpiStat value={upcomingParties.length} label="지금 신청 가능한 이벤트" valueClassName="text-2xl font-black text-white" labelClassName="text-xs text-blue-100" /></m.button>
+                                </div>
+                            </div>
                         </section>
 
 

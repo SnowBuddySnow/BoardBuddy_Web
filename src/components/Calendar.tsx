@@ -210,10 +210,23 @@ export const Calendar = ({
                                                     tabIndex={onDayClick || expandable ? 0 : undefined}
                                                     aria-label={onDayClick || expandable ? `${year}년 ${month} ${day}일` : undefined}
                                                     aria-pressed={onDayClick || expandable ? isSelected : undefined}
+                                                    data-calendar-day={day}
                                                     onKeyDown={event => {
-                                                        if ((onDayClick || expandable) && (event.key === 'Enter' || event.key === ' ')) {
+                                                        if (!(onDayClick || expandable)) return;
+                                                        if (event.key === 'Enter' || event.key === ' ') {
                                                             event.preventDefault(); handleDayClick(day, weekIndex);
+                                                            return;
                                                         }
+                                                        // Grid keyboard pattern: ←→ one day, ↑↓ one week, within this month.
+                                                        const step = { ArrowLeft: -1, ArrowRight: 1, ArrowUp: -7, ArrowDown: 7 }[event.key];
+                                                        if (!step) return;
+                                                        const target = day + step;
+                                                        if (target < 1 || target > totalDays) return;
+                                                        event.preventDefault();
+                                                        const grid = event.currentTarget.closest('.calendar-card');
+                                                        const targetWeek = weeks.findIndex(row => row.includes(target));
+                                                        handleDayClick(target, targetWeek);
+                                                        grid?.querySelector<HTMLElement>(`[data-calendar-day="${target}"]`)?.focus();
                                                     }}
                                                     onClick={() => handleDayClick(day, weekIndex)}>
                                                     {renderDay(day)}
