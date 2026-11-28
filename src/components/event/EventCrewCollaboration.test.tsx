@@ -9,6 +9,7 @@ import type { EventCrewInvitation } from '../../services/eventCrewInvitations';
 const api = vi.hoisted(() => ({
     discoverCrews: vi.fn(),
     inviteEventCrew: vi.fn(),
+    cancelEventCrewInvitation: vi.fn(),
     listEventCrewInvitations: vi.fn(),
     listIncomingEventCrewInvitations: vi.fn(),
     respondToEventCrewInvitation: vi.fn(),
@@ -73,4 +74,20 @@ it('opens the shared console after the incoming invitation is accepted', async (
     expect(api.respondToEventCrewInvitation).toHaveBeenCalledWith(invitation, true);
     expect(openEvent).toHaveBeenCalledWith(17);
     expect(container.textContent).toBe('');
+});
+
+it('cancels a pending invitation and allows re-inviting a declined crew', async () => {
+    api.listEventCrewInvitations.mockResolvedValue([invitation]);
+    api.cancelEventCrewInvitation.mockResolvedValue(undefined);
+    await act(async () => root.render(<EventCrewCollaborationPanel eventId={17} hostCrewId={1} hostCrewName="주최 크루" cancelled={false} />));
+    await act(async () => button('초대 취소').click());
+    expect(api.cancelEventCrewInvitation).toHaveBeenCalledWith(17, 12);
+    expect(container.querySelector('form')).not.toBeNull();
+
+    // Declined invitation offers a direct re-invite button
+    api.listEventCrewInvitations.mockResolvedValue([{ ...invitation, status: 'DECLINED' }]);
+    api.inviteEventCrew.mockResolvedValue({ ...invitation, status: 'PENDING' });
+    await act(async () => root.render(<EventCrewCollaborationPanel eventId={18} hostCrewId={1} hostCrewName="주최 크루" cancelled={false} />));
+    await act(async () => button('다시 초대').click());
+    expect(api.inviteEventCrew).toHaveBeenCalledWith(18, 2);
 });

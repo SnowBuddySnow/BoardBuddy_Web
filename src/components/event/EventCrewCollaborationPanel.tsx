@@ -1,7 +1,12 @@
 import { useEffect, useState } from 'react';
 import { Button } from '../Button';
 import { discoverCrews, type DiscoverableCrew } from '../../services/crew';
-import { inviteEventCrew, listEventCrewInvitations, type EventCrewInvitation } from '../../services/eventCrewInvitations';
+import {
+    cancelEventCrewInvitation,
+    inviteEventCrew,
+    listEventCrewInvitations,
+    type EventCrewInvitation,
+} from '../../services/eventCrewInvitations';
 
 const statusLabel = {
     PENDING: '수락 대기',
@@ -42,10 +47,24 @@ export function EventCrewCollaborationPanel({ eventId, hostCrewId, hostCrewName,
         try {
             const crews = await discoverCrews(term);
             setResults(crews.filter(crew => crew.crewId !== hostCrewId &&
-                !invitations?.some(invitation => invitation.crewId === crew.crewId)));
+                !invitations?.some(invitation => invitation.crewId === crew.crewId && invitation.status !== 'DECLINED')));
             setSearched(true);
         } catch {
             setError('크루를 검색하지 못했어요. 다시 시도해 주세요.');
+        } finally {
+            setPending(false);
+        }
+    }
+
+    async function cancel(invitationId: number) {
+        if (pending) return;
+        setPending(true);
+        setError('');
+        try {
+            await cancelEventCrewInvitation(eventId, invitationId);
+            setInvitations(current => (current ?? []).filter(item => item.id !== invitationId));
+        } catch {
+            setError('초대를 취소하지 못했어요. 잠시 후 다시 시도해 주세요.');
         } finally {
             setPending(false);
         }
@@ -78,14 +97,43 @@ export function EventCrewCollaborationPanel({ eventId, hostCrewId, hostCrewName,
             {error && <p role="alert" className="text-sm text-rose-700">{error}</p>}
             {invitations && invitations.length > 0 && (
                 <ul className="divide-y divide-zinc-100 rounded-xl border border-zinc-100">
-                    {invitations.map(invitation => (
-                        <li key={invitation.id} className="flex flex-wrap justify-between gap-2 px-3 py-2 text-sm">
-                            <span className="font-semibold">{invitation.crewName}</span>
-                            <span className={invitation.status === 'ACCEPTED' ? 'text-emerald-700' : 'text-zinc-600'}>
-                                {statusLabel[invitation.status]}
-                            </span>
-                        </li>
-                    ))}
+                    {invitations.map(invitation => {
+                        const hasActiveInvitation = invitations.some(item => item.status !== 'DECLINED');
+                        return (
+                            <li key={invitation.id} className="flex flex-wrap items-center justify-between gap-2 px-3 py-2.5 text-sm">
+                                <span className="font-semibold text-zinc-900">{invitation.crewName}</span>
+                                <div className="flex items-center gap-2">
+                                    <span className={invitation.status === 'ACCEPTED' ? 'font-bold text-emerald-700' : 'text-zinc-600'}>
+                                        {statusLabel[invitation.status]}
+                                    </span>
+                                    {!cancelled && invitation.status === 'PENDING' && (
+                                        <Button
+                                            type="button"
+                                            size="small"
+                                            variant="outline"
+                                            disabled={pending}
+                                            onClick={() => void cancel(invitation.id)}
+                                            aria-label={`${invitation.crewName} 초대 취소`}
+                                        >
+                                            초대 취소
+                                        </Button>
+                                    )}
+                                    {!cancelled && invitation.status === 'DECLINED' && !hasActiveInvitation && (
+                                        <Button
+                                            type="button"
+                                            size="small"
+                                            variant="outline"
+                                            disabled={pending}
+                                            onClick={() => void invite(invitation.crewId)}
+                                            aria-label={`${invitation.crewName} 다시 초대`}
+                                        >
+                                            다시 초대
+                                        </Button>
+                                    )}
+                                </div>
+                            </li>
+                        );
+                    })}
                 </ul>
             )}
             {invitations && !cancelled && !invitations.some(invitation => invitation.status !== 'DECLINED') && (

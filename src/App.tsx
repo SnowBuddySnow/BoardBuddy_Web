@@ -27,6 +27,13 @@ import { isCrewCaptainRole } from './constants/crewRole';
 import { isEventRegistrationAvailable } from './lib/eventDateTime';
 import { captureCrewInvitation, CREW_INVITATION_CHANGED, getCrewInvitationIntent } from './lib/onboardingIntent';
 import { readGuestInvitationEntryFromUrl } from './lib/guestInvitation';
+import {
+  clearNonMemberConversionIntent,
+  getNonMemberConversionToken,
+  hasPendingNonMemberPostSignup,
+  saveNonMemberConversionIntent,
+} from './lib/nonMemberConversion';
+import { linkNonMemberConversion } from './services/nonMemberEvent';
 
 // Keep login/home immediate; fetch heavier screens only when their existing route is entered.
 const Reservation = lazy(() => import('./pages/Reservation'));
@@ -63,6 +70,8 @@ const CrewPermissions = lazy(() => import('./pages/CrewPermissions'));
 const RoleGuide = lazy(() => import('./pages/RoleGuide'));
 const GuestAccess = lazy(() => import('./pages/GuestAccess'));
 const OrganizerInviteAccept = lazy(() => import('./pages/OrganizerInviteAccept'));
+const PublicEventApply = lazy(() => import('./pages/PublicEventApply'));
+const NonMemberLookup = lazy(() => import('./pages/NonMemberLookup'));
 
 function FeatureUnavailable({ title, description, onBack }: { title: string; description: string; onBack: () => void }) {
   return (
@@ -100,13 +109,22 @@ function App() {
   const [organizerInviteToken, setOrganizerInviteToken] = useState(
     () => new URLSearchParams(window.location.search).get('organizerInvite') || '',
   );
+  const [publicEventCode, setPublicEventCode] = useState(() => readNavigation().publicEventCode || '');
+  const [lookupReceiptCode, setLookupReceiptCode] = useState(() => readNavigation().receiptCode || '');
   useBrowserNavigation({
-    view: currentView, eventId: selectedEventId, groupId: selectedGroupId, organizerInviteToken,
+    view: currentView,
+    eventId: selectedEventId,
+    groupId: selectedGroupId,
+    organizerInviteToken,
+    publicEventCode,
+    receiptCode: lookupReceiptCode,
   }, route => {
     setCurrentView(route.view);
     setSelectedEventId(route.eventId);
     setSelectedGroupId(route.groupId);
     setOrganizerInviteToken(route.organizerInviteToken);
+    setPublicEventCode(route.publicEventCode || '');
+    setLookupReceiptCode(route.receiptCode || '');
     if (route.view === 'guest_access') {
       setPendingGuestCode(readGuestInvitationEntryFromUrl());
     }
@@ -146,7 +164,7 @@ function App() {
   const [eventManagerGuideReturnVisible, setEventManagerGuideReturnVisible] = useState(false);
   const isDesktop = useDesktopViewport();
   const usedDesktopLanding = useRef(false);
-  const shouldLoadPermissions = !['login', 'user_info', 'profile_type_confirmation', 'student_verification', 'crew_invite'].includes(currentView);
+  const shouldLoadPermissions = !['login', 'user_info', 'profile_type_confirmation', 'student_verification', 'crew_invite', 'public_event', 'non_member_lookup'].includes(currentView);
   const operatingMode = getOperatingMode();
   const operatingFeatures = getOperatingFeatures(operatingMode);
   const seasonHouseAvailable = operatingFeatures.season
@@ -500,16 +518,62 @@ function App() {
         return (
           <LoginLanding
             organizerInviteToken={organizerInviteToken}
-            onLogin={(restoredOrganizerInviteToken) => {
+            onLogin={async (restoredOrganizerInviteToken) => {
               const effectiveOrganizerInvite = restoredOrganizerInviteToken || organizerInviteToken;
               if (restoredOrganizerInviteToken && !organizerInviteToken) {
                 setOrganizerInviteToken(restoredOrganizerInviteToken);
               }
-              setCurrentView(getCrewInvitationIntent() ? 'crew_invite' : effectiveOrganizerInvite ? 'organizer_invite' : 'home');
+              const pendingConversionToken = getNonMemberConversionToken();
+              let linkedFromNonMember = false;
+              if (pendingConversionToken) {
+                try {
+                  await linkNonMemberConversion(pendingConversionToken);
+                  linkedFromNonMember = true;
+                } catch {
+                  // Ignore expired or already-used conversion tokens on ordinary logins.
+                } finally {
+                  clearNonMemberConversionIntent();
+                }
+              }
+              setCurrentView(
+                getCrewInvitationIntent()
+                  ? 'crew_invite'
+                  : effectiveOrganizerInvite
+                    ? 'organizer_invite'
+                    : linkedFromNonMember
+                      ? 'my_parties'
+                      : 'home'
+              );
             }}
             onSignupNeeded={() => setCurrentView('user_info')}
             onProfileTypeNeeded={() => setCurrentView('profile_type_confirmation')}
             onDebugUserInfo={() => setCurrentView('user_info')}
+          />
+        );
+      case 'public_event':
+        return (
+          <PublicEventApply
+            eventCode={publicEventCode}
+            onLoginClick={() => setCurrentView('login')}
+            onLookupClick={(receipt) => {
+              setLookupReceiptCode(receipt || '');
+              setCurrentView('non_member_lookup');
+            }}
+            onConvertToStudent={(conversionToken, crewName) => {
+              saveNonMemberConversionIntent(conversionToken, crewName);
+              setCurrentView('login');
+            }}
+          />
+        );
+      case 'non_member_lookup':
+        return (
+          <NonMemberLookup
+            initialReceiptCode={lookupReceiptCode}
+            onBack={() => setCurrentView(publicEventCode ? 'public_event' : getAccessToken() ? 'home' : 'login')}
+            onConvertToStudent={(conversionToken, crewName) => {
+              saveNonMemberConversionIntent(conversionToken, crewName);
+              setCurrentView('login');
+            }}
           />
         );
       case 'reservation':
@@ -590,9 +654,26 @@ function App() {
                     ? 'organizer_invite'
                     : 'home'
             )}
-            onSuccess={(requiresStudentVerification) => setCurrentView(
-              requiresStudentVerification ? 'student_verification' : getCrewInvitationIntent() ? 'crew_invite' : organizerInviteToken ? 'organizer_invite' : 'onboarding'
-            )}
+            onSuccess={(requiresStudentVerification) => {
+              if (requiresStudentVerification) {
+                setCurrentView('student_verification');
+                return;
+              }
+              if (getCrewInvitationIntent()) {
+                setCurrentView('crew_invite');
+                return;
+              }
+              if (organizerInviteToken) {
+                setCurrentView('organizer_invite');
+                return;
+              }
+              if (hasPendingNonMemberPostSignup()) {
+                setCrewSearchReturnView('my_parties');
+                setCurrentView('search_crew');
+                return;
+              }
+              setCurrentView('onboarding');
+            }}
           />
         );
       case 'profile_type_confirmation':
@@ -792,7 +873,7 @@ function App() {
   const usesDesktopShell = isDesktop
     && !isDashboardView
     && !isPublicGuestFlow
-    && !['login', 'user_info', 'profile_type_confirmation', 'student_verification', 'organizer_invite', 'crew_invite', 'onboarding'].includes(currentView);
+    && !['login', 'user_info', 'profile_type_confirmation', 'student_verification', 'organizer_invite', 'crew_invite', 'onboarding', 'public_event', 'non_member_lookup'].includes(currentView);
 
   const currentContent = renderCurrentView();
 

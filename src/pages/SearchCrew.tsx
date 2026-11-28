@@ -5,6 +5,7 @@ import { Button } from '../components/Button';
 import { applyToCrew, discoverCrews, type DiscoverableCrew } from '../services/crew';
 import { getApiErrorMessage } from '../lib/apiError';
 import { isCrewSchoolVerificationRequired } from '../lib/crewSchoolVerification';
+import { consumeNonMemberPostSignupBanner } from '../lib/nonMemberConversion';
 
 interface SearchCrewProps {
     onBack: () => void;
@@ -14,8 +15,9 @@ interface SearchCrewProps {
 }
 
 export default function SearchCrew({ onBack, onJoined, onApplied, onSkip }: SearchCrewProps) {
+    const [conversionBanner] = useState(() => consumeNonMemberPostSignupBanner());
     const [crews, setCrews] = useState<DiscoverableCrew[]>([]);
-    const [query, setQuery] = useState('');
+    const [query, setQuery] = useState(() => conversionBanner?.crewHint ?? '');
     const [selectedCrew, setSelectedCrew] = useState<DiscoverableCrew | null>(null);
     const [pin, setPin] = useState('');
     const [loading, setLoading] = useState(true);
@@ -94,6 +96,17 @@ export default function SearchCrew({ onBack, onJoined, onApplied, onSkip }: Sear
 
             <main className="flex-1 overflow-y-auto px-5 py-6 lg:px-8">
                 <div className="mx-auto max-w-5xl">
+                    {conversionBanner && (
+                        <div role="status" className="mb-5 rounded-3xl border border-emerald-200 bg-emerald-50 p-5 text-sm text-emerald-950 shadow-sm">
+                            <p className="font-black text-[#162660]">학생 계정 가입이 완료되었어요!</p>
+                            <p className="mt-1 text-xs leading-6 text-emerald-900">
+                                {conversionBanner.linkedEventCount > 0
+                                    ? `비회원으로 신청한 이벤트 ${conversionBanner.linkedEventCount}건이 내 계정에 자동으로 연결되었습니다. `
+                                    : ''}
+                                소속 크루를 검색해 가입하거나, 아직 등록되지 않은 크루라면 우측 상단 &lsquo;다음에 하기&rsquo;로 내 이벤트를 먼저 확인할 수 있어요.
+                            </p>
+                        </div>
+                    )}
                     <section className="mb-6 rounded-3xl bg-white p-5 shadow-sm sm:p-7">
                         <p className="text-xs font-bold text-zinc-500">크루 연결 · 1 / 3</p>
                         <h2 className="mt-2 text-2xl font-black text-[#162660]">내 동아리를 찾아볼까요?</h2>
@@ -126,6 +139,18 @@ export default function SearchCrew({ onBack, onJoined, onApplied, onSkip }: Sear
                                 {query.trim() ? '검색 결과가 없습니다.' : '가입 가능한 크루가 없습니다.'}
                             </p>
                             <p className="mt-1 text-xs text-zinc-400">승인되어 활성화된 크루만 표시됩니다.</p>
+                            <div className="mt-4 flex flex-wrap justify-center gap-2">
+                                {query.trim() && (
+                                    <Button type="button" variant="outline" size="small" onClick={() => setQuery('')}>
+                                        전체 크루 보기
+                                    </Button>
+                                )}
+                                {onSkip && (
+                                    <Button type="button" variant="primary" size="small" onClick={onSkip} className="bg-[#162660] border-[#162660]">
+                                        크루 없이 내 이벤트 먼저 보기
+                                    </Button>
+                                )}
+                            </div>
                         </div>
                     ) : (
                         <div className="mt-5 grid gap-3 md:grid-cols-2">

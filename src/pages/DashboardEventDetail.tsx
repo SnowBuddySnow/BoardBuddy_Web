@@ -4,9 +4,36 @@ import { EventFamilyLinks } from '../components/event/EventFamilyLinks';
 import { useState, useEffect, useCallback } from 'react';
 import { formatEventDateTime } from '../lib/eventDateTime';
 import { Button } from '../components/Button';
-import { getEventChatAccess, getEventDashboard, updateEvent, listParticipants, updateParticipantManagement, updateParticipantStatus, updateEventChatAccess } from '../services/event';
+import {
+    getEventChatAccess,
+    getEventDashboard,
+    updateEvent,
+    listParticipants,
+    updateParticipantManagement,
+    updateParticipantStatus,
+    updateEventChatAccess,
+} from '../services/event';
+import {
+    listUnifiedEventRoster,
+    updateNonMemberParticipantManagement,
+    updateNonMemberParticipantStatus,
+    type UnifiedRosterParticipant,
+} from '../services/nonMemberEvent';
+import { buildPublicEventUrl } from '../lib/nonMemberConversion';
 import { Event, EventChatAccess, EventParticipant, PaymentStatus } from '../types/api';
-import { ChevronLeft, Play, Power, Clock, Check, Save, X, MessageCircle } from 'lucide-react';
+import {
+    ChevronLeft,
+    Play,
+    Power,
+    Clock,
+    Check,
+    Save,
+    X,
+    MessageCircle,
+    Copy,
+    Link2,
+    UserCheck,
+} from 'lucide-react';
 import { PlanningModeBadge } from '../components/event/PlanningModeBadge';
 import { eventStatusLabel, joinPolicyLabel, participantStatusLabel } from '../constants/displayLabels';
 import { ManagerConsentResponseSheet } from '../components/event/ManagerConsentResponseSheet';
@@ -18,16 +45,42 @@ interface DashboardEventDetailProps {
     onOpenEvent?: (eventId: number) => void;
 }
 
+function toMemberRosterItem(part: EventParticipant): UnifiedRosterParticipant {
+    return {
+        participantType: 'MEMBER',
+        participantKey: `MEMBER-${part.id}`,
+        participantId: part.id,
+        userId: part.userId,
+        receiptCode: null,
+        name: part.userName || '이름 없음',
+        schoolName: part.declaredSchoolName ?? null,
+        crewName: part.declaredCrewName ?? null,
+        studentNumber: null,
+        maskedPhone: null,
+        convertedFromNonMember: Boolean(part.convertedFromNonMember),
+        status: part.status,
+        paymentStatus: part.paymentStatus ?? null,
+        managerMemo: part.managerMemo ?? null,
+        joinedAt: part.joinedAt || part.createdAt || '',
+        consentAnswers: [],
+        canApprove: part.status === 'PENDING',
+        canRemove: part.status === 'JOINED',
+    };
+}
+
 export default function DashboardEventDetail({ eventId, onBack, onEditClick, onOpenEvent }: DashboardEventDetailProps) {
     const [showGroupize, setShowGroupize] = useState(false);
     const [event, setEvent] = useState<Event | null>(null);
-    const [participants, setParticipants] = useState<EventParticipant[]>([]);
+    const [roster, setRoster] = useState<UnifiedRosterParticipant[]>([]);
     const [showParticipantHistory, setShowParticipantHistory] = useState(false);
+    const [participantTypeFilter, setParticipantTypeFilter] = useState<'ALL' | 'MEMBER' | 'NON_MEMBER'>('ALL');
     const [loading, setLoading] = useState(true);
     const [loadFailed, setLoadFailed] = useState(false);
     const [actionLoading, setActionLoading] = useState(false);
-    const [participantActionId, setParticipantActionId] = useState<number | null>(null);
-    const [participantManagementId, setParticipantManagementId] = useState<number | null>(null);
+    const [nonMemberToggleLoading, setNonMemberToggleLoading] = useState(false);
+    const [publicLinkCopied, setPublicLinkCopied] = useState(false);
+    const [participantActionKey, setParticipantActionKey] = useState<string | null>(null);
+    const [participantManagementKey, setParticipantManagementKey] = useState<string | null>(null);
     const [chatAccess, setChatAccess] = useState<EventChatAccess>({
         chatUrl: null,
         chatPasscode: null,
@@ -35,15 +88,30 @@ export default function DashboardEventDetail({ eventId, onBack, onEditClick, onO
     });
     const [chatAccessSaving, setChatAccessSaving] = useState(false);
 
+    const refreshRoster = useCallback(async () => {
+        const [partsData, unifiedRoster] = await Promise.all([
+            listParticipants(eventId),
+            listUnifiedEventRoster(eventId).catch(() => null),
+        ]);
+        if (Array.isArray(unifiedRoster)) {
+            setRoster(unifiedRoster);
+        } else {
+            setRoster(partsData.map(toMemberRosterItem));
+        }
+    }, [eventId]);
+
     const fetchDetailData = useCallback(async () => {
         try {
             setLoading(true);
             setLoadFailed(false);
-            const [eventData, partsData, eventChatAccess] = await Promise.all([
-                getEventDashboard(eventId), listParticipants(eventId), getEventChatAccess(eventId),
+            const [eventData, partsData, eventChatAccess, unifiedRoster] = await Promise.all([
+                getEventDashboard(eventId),
+                listParticipants(eventId),
+                getEventChatAccess(eventId),
+                listUnifiedEventRoster(eventId).catch(() => null),
             ]);
             setEvent(eventData);
-            setParticipants(partsData);
+            setRoster(Array.isArray(unifiedRoster) ? unifiedRoster : partsData.map(toMemberRosterItem));
             setChatAccess(eventChatAccess);
         } catch (error) {
             setLoadFailed(true);
@@ -85,46 +153,93 @@ export default function DashboardEventDetail({ eventId, onBack, onEditClick, onO
         }
     };
 
-    const handleParticipantStatusChange = async (userId: number, targetStatus: 'JOINED' | 'REMOVED' | 'PENDING' | 'CANCELLED') => {
+    const handleToggleNonMemberApplications = async () => {
+        if (!event || nonMemberToggleLoading) return;
         try {
-            setParticipantActionId(userId);
-            await updateParticipantStatus(eventId, userId, targetStatus);
+            setNonMemberToggleLoading(true);
+            const nextValue = !event.allowNonMemberApplications;
+            const updated = await updateEvent(eventId, { allowNonMemberApplications: nextValue });
+            setEvent(updated);
+        } catch (error) {
+            console.error('Failed to toggle non-member applications:', error);
+            alert('비회원 신청 설정 변경에 실패했습니다.');
+        } finally {
+            setNonMemberToggleLoading(false);
+        }
+    };
+
+    const handleCopyPublicLink = async () => {
+        if (!event?.eventCode) return;
+        const url = buildPublicEventUrl(window.location.origin, event.eventCode);
+        try {
+            await navigator.clipboard.writeText(url);
+            setPublicLinkCopied(true);
+            window.setTimeout(() => setPublicLinkCopied(false), 2000);
+        } catch {
+            alert(url);
+        }
+    };
+
+    const handleParticipantStatusChange = async (
+        participant: UnifiedRosterParticipant,
+        targetStatus: 'JOINED' | 'REMOVED' | 'PENDING',
+    ) => {
+        try {
+            setParticipantActionKey(participant.participantKey);
+            if (participant.participantType === 'NON_MEMBER' && participant.receiptCode) {
+                await updateNonMemberParticipantStatus(eventId, participant.receiptCode, targetStatus);
+            } else if (participant.userId != null) {
+                await updateParticipantStatus(eventId, participant.userId, targetStatus);
+            }
             alert('참가자 상태가 정상적으로 변경되었습니다.');
-            const partsData = await listParticipants(eventId);
-            setParticipants(partsData);
-            // Refresh event count as well
+            await refreshRoster();
             const eventData = await getEventDashboard(eventId);
             setEvent(eventData);
         } catch (error) {
             console.error('Failed to update participant status:', error);
             alert('참가자 상태 변경에 실패했습니다.');
         } finally {
-            setParticipantActionId(null);
+            setParticipantActionKey(null);
         }
     };
 
-    const updateParticipantDraft = (participantId: number, updates: Partial<EventParticipant>) => {
-        setParticipants(current => current.map(participant => (
-            participant.id === participantId ? { ...participant, ...updates } : participant
+    const updateRosterDraft = (participantKey: string, updates: Partial<UnifiedRosterParticipant>) => {
+        setRoster(current => current.map(participant => (
+            participant.participantKey === participantKey ? { ...participant, ...updates } : participant
         )));
     };
 
-    const handleParticipantManagementSave = async (participant: EventParticipant) => {
+    const handleParticipantManagementSave = async (participant: UnifiedRosterParticipant) => {
         try {
-            setParticipantManagementId(participant.id);
-            const updated = await updateParticipantManagement(
-                eventId,
-                participant.userId,
-                participant.paymentStatus ?? null,
-                participant.managerMemo?.trim() || null,
-            );
-            setParticipants(current => current.map(item => item.id === participant.id ? updated : item));
+            setParticipantManagementKey(participant.participantKey);
+            const memo = participant.managerMemo?.trim() || null;
+            if (participant.participantType === 'NON_MEMBER' && participant.receiptCode) {
+                const updated = await updateNonMemberParticipantManagement(
+                    eventId,
+                    participant.receiptCode,
+                    participant.paymentStatus ?? null,
+                    memo,
+                );
+                setRoster(current => current.map(item => item.participantKey === participant.participantKey ? updated : item));
+            } else if (participant.userId != null) {
+                const updated = await updateParticipantManagement(
+                    eventId,
+                    participant.userId,
+                    participant.paymentStatus ?? null,
+                    memo,
+                );
+                setRoster(current => current.map(item => (
+                    item.participantKey === participant.participantKey
+                        ? { ...item, paymentStatus: updated.paymentStatus ?? null, managerMemo: updated.managerMemo ?? null }
+                        : item
+                )));
+            }
             alert('참가자 관리 정보가 저장되었습니다.');
         } catch (error) {
             console.error('Failed to update participant management details:', error);
             alert('참가자 관리 정보 저장에 실패했습니다.');
         } finally {
-            setParticipantManagementId(null);
+            setParticipantManagementKey(null);
         }
     };
 
@@ -144,9 +259,15 @@ export default function DashboardEventDetail({ eventId, onBack, onEditClick, onO
 
     const formatDate = formatEventDateTime;
     const formatCompactDate = formatEventDateTime;
-    const activeParticipants = participants.filter(part => ['JOINED', 'PENDING', 'CONSENT_PENDING'].includes(part.status));
-    const historicalParticipants = participants.filter(part => !['JOINED', 'PENDING', 'CONSENT_PENDING'].includes(part.status));
-    const visibleParticipants = showParticipantHistory ? historicalParticipants : activeParticipants;
+    const activeParticipants = roster.filter(part => ['JOINED', 'PENDING', 'CONSENT_PENDING'].includes(part.status));
+    const historicalParticipants = roster.filter(part => !['JOINED', 'PENDING', 'CONSENT_PENDING'].includes(part.status));
+    const nonMemberCount = activeParticipants.filter(part => part.participantType === 'NON_MEMBER').length;
+    const memberCount = activeParticipants.filter(part => part.participantType === 'MEMBER').length;
+    const baseVisibleParticipants = showParticipantHistory ? historicalParticipants : activeParticipants;
+    const visibleParticipants = participantTypeFilter === 'ALL'
+        ? baseVisibleParticipants
+        : baseVisibleParticipants.filter(part => part.participantType === participantTypeFilter);
+    const hasAnyNonMembers = roster.some(part => part.participantType === 'NON_MEMBER');
 
     if (loading) {
         return (
@@ -171,6 +292,7 @@ export default function DashboardEventDetail({ eventId, onBack, onEditClick, onO
 
     const isDraft = event.status === 'DRAFT';
     const isOpen = event.status === 'OPEN';
+    const publicApplyUrl = event.eventCode ? buildPublicEventUrl(window.location.origin, event.eventCode) : '';
 
     return (
         <div className="flex-1 flex flex-col h-full bg-[#FAF8F3] overflow-hidden">
@@ -256,22 +378,60 @@ export default function DashboardEventDetail({ eventId, onBack, onEditClick, onO
                                 <span className="text-zinc-400 font-bold block text-xs uppercase">가입 정책</span>
                                 <span className="font-bold text-zinc-800 mt-1 block">{joinPolicyLabel[event.joinPolicy]}</span>
                             </div>
+                            <div>
+                                <span className="text-zinc-400 font-bold block text-xs uppercase">비회원 신청</span>
+                                <span className="font-bold text-zinc-800 mt-1 block">
+                                    {event.allowNonMemberApplications ? '허용 (공개 링크)' : '미허용'}
+                                </span>
+                            </div>
+                            {event.coHostCrewName && (
+                                <div className="col-span-2">
+                                    <span className="text-zinc-400 font-bold block text-xs uppercase">공동 운영 크루</span>
+                                    <span className="font-bold text-[#162660] mt-1 block">
+                                        {event.hostCrewName} × {event.coHostCrewName}
+                                    </span>
+                                </div>
+                            )}
                         </div>
                     </div>
 
-                    {/* Participant Management panel */}
+                    {/* Unified Participant Management panel */}
                     <div className="bg-white rounded-3xl p-6 border border-zinc-100 shadow-sm space-y-4">
                         {!event.parentEventId && <div className="space-y-3">
-                        <button className="rounded-xl bg-[#162660] px-5 py-3 text-sm font-bold text-white"
-                            onClick={() => setShowGroupize(current => !current)}>{showGroupize ? '소모임 편성 접기' : '소모임 편성'}</button>
-                        {showGroupize && <GroupizePanel key={event.id} eventId={event.id} onOpenEvent={onOpenEvent ?? onEditClick}
-                            onChanged={() => { void getEventDashboard(eventId).then(setEvent); }} />}
-                    </div>}
-                    <div className="flex items-center justify-between">
+                            <button className="rounded-xl bg-[#162660] px-5 py-3 text-sm font-bold text-white"
+                                onClick={() => setShowGroupize(current => !current)}>{showGroupize ? '소모임 편성 접기' : '소모임 편성'}</button>
+                            {showGroupize && <GroupizePanel key={event.id} eventId={event.id} onOpenEvent={onOpenEvent ?? onEditClick}
+                                onChanged={() => { void getEventDashboard(eventId).then(setEvent); }} />}
+                        </div>}
+                        <div className="flex flex-wrap items-center justify-between gap-2">
                             <h2 className="text-base font-bold text-zinc-900">참가자 목록 ({activeParticipants.length})</h2>
+                            {(hasAnyNonMembers || event.allowNonMemberApplications) && (
+                                <div className="flex items-center gap-1 rounded-full bg-zinc-100 p-1 text-xs font-bold" role="group" aria-label="참가자 유형 필터">
+                                    {([
+                                        { key: 'ALL', label: `전체 (${activeParticipants.length})` },
+                                        { key: 'MEMBER', label: `회원 (${memberCount})` },
+                                        { key: 'NON_MEMBER', label: `비회원 (${nonMemberCount})` },
+                                    ] as const).map(tab => (
+                                        <button
+                                            key={tab.key}
+                                            type="button"
+                                            aria-pressed={participantTypeFilter === tab.key}
+                                            onClick={() => setParticipantTypeFilter(tab.key)}
+                                            className={`rounded-full px-3 py-1 transition-colors ${
+                                                participantTypeFilter === tab.key
+                                                    ? 'bg-[#162660] text-white shadow-sm'
+                                                    : 'text-zinc-600 hover:text-zinc-900'
+                                            }`}
+                                        >
+                                            {tab.label}
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
                         </div>
                         <p className="text-xs text-zinc-500">
-                            참가 확정 {participants.filter(part => part.status === 'JOINED').length}명 · 승인 대기 {participants.filter(part => part.status === 'PENDING').length}명 · 동의 대기 {participants.filter(part => part.status === 'CONSENT_PENDING').length}명
+                            참가 확정 {roster.filter(part => part.status === 'JOINED').length}명 · 승인 대기 {roster.filter(part => part.status === 'PENDING').length}명 · 동의 대기 {roster.filter(part => part.status === 'CONSENT_PENDING').length}명
+                            {nonMemberCount > 0 && ` · 비회원 ${nonMemberCount}명`}
                         </p>
                         <div className="flex flex-wrap gap-2" aria-label="참가자 목록 필터">
                             <Button variant={showParticipantHistory ? 'outline' : 'primary'} aria-pressed={!showParticipantHistory} onClick={() => setShowParticipantHistory(false)}>
@@ -303,14 +463,55 @@ export default function DashboardEventDetail({ eventId, onBack, onEditClick, onO
                                         {visibleParticipants.map(part => {
                                             const isPending = part.status === 'PENDING';
                                             const isJoined = part.status === 'JOINED';
-                                            const isDisabled = participantActionId === part.userId;
+                                            const isDisabled = participantActionKey === part.participantKey;
+                                            const isNonMember = part.participantType === 'NON_MEMBER';
 
                                             return (
-                                                <tr key={part.id} className="hover:bg-zinc-50/50 transition-colors">
-                                                    <td data-label="참가자" className="px-2 py-3.5 font-bold text-zinc-800 whitespace-nowrap">
-                                                        {part.userName || '이름 없음'}
+                                                <tr key={part.participantKey} className="hover:bg-zinc-50/50 transition-colors">
+                                                    <td data-label="참가자" className="px-2 py-3.5 align-top">
+                                                        <div className="flex flex-wrap items-center gap-1.5 font-bold text-zinc-800">
+                                                            <span>{part.name || '이름 없음'}</span>
+                                                            {isNonMember ? (
+                                                                <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-black text-amber-800">
+                                                                    비회원
+                                                                </span>
+                                                            ) : part.convertedFromNonMember ? (
+                                                                <span className="inline-flex items-center gap-0.5 rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-black text-emerald-800">
+                                                                    <UserCheck className="h-3 w-3" /> 학생계정 전환
+                                                                </span>
+                                                            ) : hasAnyNonMembers ? (
+                                                                <span className="rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-black text-[#162660]">
+                                                                    회원
+                                                                </span>
+                                                            ) : null}
+                                                        </div>
+                                                        {(part.schoolName || part.crewName) && (
+                                                            <p className="mt-0.5 text-xs font-medium text-zinc-500">
+                                                                {[part.schoolName, part.crewName].filter(Boolean).join(' · ')}
+                                                            </p>
+                                                        )}
+                                                        {(part.maskedPhone || part.receiptCode) && (
+                                                            <p className="mt-0.5 text-[11px] font-medium text-zinc-400">
+                                                                {[part.maskedPhone, part.receiptCode].filter(Boolean).join(' · ')}
+                                                            </p>
+                                                        )}
+                                                        {isNonMember && part.consentAnswers.length > 0 && (
+                                                            <details className="mt-1.5 text-xs text-zinc-600">
+                                                                <summary className="cursor-pointer font-semibold text-[#162660]">
+                                                                    추가 응답 ({part.consentAnswers.length})
+                                                                </summary>
+                                                                <ul className="mt-1 space-y-1 rounded-xl bg-zinc-50 p-2 text-[11px]">
+                                                                    {part.consentAnswers.map(answer => (
+                                                                        <li key={answer.consentItemId}>
+                                                                            <span className="font-bold text-zinc-700">{answer.title}:</span>{' '}
+                                                                            {answer.responseText || (answer.agreed ? '동의함' : '미동의')}
+                                                                        </li>
+                                                                    ))}
+                                                                </ul>
+                                                            </details>
+                                                        )}
                                                     </td>
-                                                    <td data-label="상태" className="px-2 py-3.5">
+                                                    <td data-label="상태" className="px-2 py-3.5 align-top">
                                                         <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-bold ${
                                                             part.status === 'JOINED' ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' :
                                                             part.status === 'PENDING' ? 'bg-amber-50 text-amber-700 border border-amber-100 animate-pulse' :
@@ -320,71 +521,74 @@ export default function DashboardEventDetail({ eventId, onBack, onEditClick, onO
                                                             {participantStatusLabel[part.status]}
                                                         </span>
                                                     </td>
-                                                    <td data-label="신청 일시" className="px-2 py-3.5 text-zinc-400 text-xs font-semibold whitespace-nowrap">
-                                                        {formatCompactDate(part.joinedAt || part.createdAt || '')}
+                                                    <td data-label="신청 일시" className="px-2 py-3.5 align-top text-zinc-400 text-xs font-semibold whitespace-nowrap">
+                                                        {formatCompactDate(part.joinedAt || '')}
                                                     </td>
-                                                    <td data-label="입금 상태" className="px-2 py-3.5">
+                                                    <td data-label="입금 상태" className="px-2 py-3.5 align-top">
                                                         <select
                                                             value={part.paymentStatus ?? ''}
-                                                            onChange={event => updateParticipantDraft(part.id, {
+                                                            onChange={event => updateRosterDraft(part.participantKey, {
                                                                 paymentStatus: (event.target.value || null) as PaymentStatus | null,
                                                             })}
                                                             className="w-full sm:w-24 min-h-11 px-2 py-2 bg-white border border-zinc-200 rounded-lg text-xs font-semibold text-zinc-700 focus:outline-none focus:ring-2 focus:ring-[#162660]/20"
-                                                            aria-label={`${part.userName || '이름 없는 참가자'} 입금 상태`}
+                                                            aria-label={`${part.name || '이름 없는 참가자'} 입금 상태`}
                                                         >
                                                             <option value="">미설정</option>
                                                             <option value="UNPAID">미입금</option>
                                                             <option value="PAID">입금 완료</option>
                                                         </select>
                                                     </td>
-                                                    <td data-label="호스트 메모" className="px-2 py-3.5">
+                                                    <td data-label="호스트 메모" className="px-2 py-3.5 align-top">
                                                         <input
                                                             type="text"
                                                             value={part.managerMemo ?? ''}
-                                                            onChange={event => updateParticipantDraft(part.id, { managerMemo: event.target.value })}
+                                                            onChange={event => updateRosterDraft(part.participantKey, { managerMemo: event.target.value })}
                                                             placeholder="호스트만 보는 메모"
                                                             maxLength={1000}
                                                             className="w-full sm:w-36 min-h-11 px-2.5 py-2 bg-white border border-zinc-200 rounded-lg text-xs text-zinc-700 focus:outline-none focus:ring-2 focus:ring-[#162660]/20"
-                                                            aria-label={`${part.userName || '이름 없는 참가자'} 호스트 메모`}
+                                                            aria-label={`${part.name || '이름 없는 참가자'} 호스트 메모`}
                                                         />
                                                     </td>
-                                                    <td data-label="관리" className="px-2 py-3.5 text-right">
+                                                    <td data-label="관리" className="px-2 py-3.5 align-top text-right">
                                                         <div className="flex flex-wrap items-center justify-end gap-1.5">
                                                             <button
                                                                 onClick={() => handleParticipantManagementSave(part)}
-                                                                disabled={participantManagementId === part.id}
+                                                                disabled={participantManagementKey === part.participantKey}
                                                                 className="inline-flex min-h-11 min-w-11 items-center justify-center p-1 text-[#162660] hover:bg-blue-50 rounded-full border border-zinc-200 transition-colors disabled:opacity-50"
                                                                 title="입금 상태와 메모 저장"
-                                                                aria-label={`${part.userName || '이름 없는 참가자'} 관리 정보 저장`}
+                                                                aria-label={`${part.name || '이름 없는 참가자'} 관리 정보 저장`}
                                                             >
                                                                 <Save className="w-4 h-4" />
                                                             </button>
                                                             {isPending && (
                                                                 <button
-                                                                    onClick={() => handleParticipantStatusChange(part.userId, 'JOINED')}
+                                                                    onClick={() => handleParticipantStatusChange(part, 'JOINED')}
                                                                     disabled={isDisabled}
                                                                     className="inline-flex min-h-11 min-w-11 items-center justify-center p-1 text-emerald-600 hover:bg-emerald-50 rounded-full border border-zinc-200 transition-colors"
                                                                     title="멤버 승인"
+                                                                    aria-label={`${part.name || '참가자'} 승인`}
                                                                 >
                                                                     <Check className="w-4 h-4" />
                                                                 </button>
                                                             )}
                                                             {isJoined && (
                                                                 <button
-                                                                    onClick={() => handleParticipantStatusChange(part.userId, 'REMOVED')}
+                                                                    onClick={() => handleParticipantStatusChange(part, 'REMOVED')}
                                                                     disabled={isDisabled}
                                                                     className="inline-flex min-h-11 min-w-11 items-center justify-center p-1 text-red-500 hover:bg-red-50 rounded-full border border-zinc-200 transition-colors"
                                                                     title="멤버 제외"
+                                                                    aria-label={`${part.name || '참가자'} 제외`}
                                                                 >
                                                                     <X className="w-4 h-4" />
                                                                 </button>
                                                             )}
                                                             {part.status === 'REMOVED' && (
                                                                 <button
-                                                                    onClick={() => handleParticipantStatusChange(part.userId, 'PENDING')}
+                                                                    onClick={() => handleParticipantStatusChange(part, 'PENDING')}
                                                                     disabled={isDisabled}
                                                                     className="inline-flex min-h-11 min-w-11 items-center justify-center p-1 text-zinc-400 hover:bg-zinc-100 rounded-full border border-zinc-200 transition-colors"
                                                                     title="승인 대기로 되돌리기"
+                                                                    aria-label={`${part.name || '참가자'} 승인 대기로 되돌리기`}
                                                                 >
                                                                     <Clock className="w-4 h-4" />
                                                                 </button>
@@ -427,6 +631,54 @@ export default function DashboardEventDetail({ eventId, onBack, onEditClick, onO
                             )}
                         </div>
                     </div>
+
+                    {event.eventCode && (
+                        <div className="bg-white rounded-3xl p-6 border border-zinc-100 shadow-sm space-y-4">
+                            <div className="flex items-center justify-between gap-2">
+                                <div className="flex items-center gap-2">
+                                    <Link2 className="w-5 h-5 text-[#162660]" />
+                                    <h2 className="text-base font-bold text-zinc-900">비회원 신청 링크</h2>
+                                </div>
+                                <button
+                                    type="button"
+                                    role="switch"
+                                    aria-checked={Boolean(event.allowNonMemberApplications)}
+                                    disabled={nonMemberToggleLoading}
+                                    onClick={() => void handleToggleNonMemberApplications()}
+                                    className={`rounded-full px-3 py-1 text-xs font-black transition-colors ${
+                                        event.allowNonMemberApplications
+                                            ? 'bg-emerald-600 text-white'
+                                            : 'bg-zinc-200 text-zinc-700'
+                                    }`}
+                                >
+                                    {event.allowNonMemberApplications ? '허용 중' : '꺼짐'}
+                                </button>
+                            </div>
+                            <p className="text-xs leading-relaxed text-zinc-500">
+                                보드버디 미가입 외부 크루 참가자에게 아래 링크를 공유하면 로그인 없이 SMS 인증 후 바로 신청할 수 있어요.
+                            </p>
+                            {event.allowNonMemberApplications ? (
+                                <div className="space-y-2">
+                                    <div className="rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2 text-xs font-mono text-zinc-700 break-all">
+                                        {publicApplyUrl}
+                                    </div>
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        onClick={() => void handleCopyPublicLink()}
+                                        className="w-full rounded-xl flex items-center justify-center gap-1.5 text-xs font-bold"
+                                    >
+                                        <Copy className="w-3.5 h-3.5" />
+                                        {publicLinkCopied ? '공개 신청 링크 복사됨!' : '비회원 신청 링크 복사'}
+                                    </Button>
+                                </div>
+                            ) : (
+                                <p className="rounded-xl bg-zinc-50 px-3 py-2.5 text-xs text-zinc-500">
+                                    스위치를 켜면 비회원 전용 신청 링크가 즉시 활성화됩니다.
+                                </p>
+                            )}
+                        </div>
+                    )}
 
                     <div className="bg-white p-6 border border-zinc-100 shadow-sm space-y-4 rounded-lg">
                         <div className="flex items-center gap-2">
@@ -486,7 +738,7 @@ export default function DashboardEventDetail({ eventId, onBack, onEditClick, onO
                         <ul className="text-xs text-zinc-500 space-y-2 list-disc pl-4 leading-relaxed">
                             <li>새 이벤트는 <strong>준비 중</strong>으로 저장됩니다. 모집을 열기 전에는 참가자에게 공개되지 않습니다.</li>
                             <li><strong>모집 오픈</strong>을 누르면 설정한 신청 시작 시간부터 참가 신청을 받을 수 있습니다.</li>
-                            <li>승인이 필요한 신청은 <strong>승인 대기</strong>로 표시됩니다. 명단에서 승인 버튼을 눌러 참가를 확정하세요.</li>
+                            <li>공동 운영 크루를 초대하면 두 크루의 현직 매니저가 동일한 관리 화면에서 참가자를 함께 승인·관리합니다.</li>
                         </ul>
                     </div>
                 </div>

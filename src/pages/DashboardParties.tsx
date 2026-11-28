@@ -126,12 +126,14 @@ export default function DashboardParties({
                         >
                             이벤트 관리
                         </button>
-                        <button
-                            onClick={onGroupsClick}
-                            className="px-4 py-1.5 rounded-full text-zinc-500 hover:text-zinc-800 bg-transparent border-none cursor-pointer font-bold"
-                        >
-                            그룹 관리
-                        </button>
+                        {parties.some(event => event.organizerGroupId != null) && (
+                            <button
+                                onClick={onGroupsClick}
+                                className="px-4 py-1.5 rounded-full text-zinc-500 hover:text-zinc-800 bg-transparent border-none cursor-pointer font-bold"
+                            >
+                                그룹 관리
+                            </button>
+                        )}
                     </div>
                 </div>
                 <div className="flex flex-wrap items-center gap-3">
@@ -205,10 +207,25 @@ export default function DashboardParties({
                                                     <div className="font-bold text-zinc-900 hover:text-[#162660] cursor-pointer" onClick={() => onViewDetailClick(event.id)}>
                                                         {event.title}
                                                     </div>
-                                                    <div className="text-xs text-zinc-400 font-medium mt-1">
-                                                        {event.organizerGroupName || event.hostCrewName}
+                                                    <div className="text-xs text-zinc-500 font-medium mt-1">
+                                                        {event.organizerGroupName
+                                                            || (event.coHostCrewName
+                                                                ? `${event.hostCrewName} × ${event.coHostCrewName}`
+                                                                : event.hostCrewName)}
                                                     </div>
-                                                    <div className="mt-2"><PlanningModeBadge mode={event.planningMode} /></div>
+                                                    <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                                                        <PlanningModeBadge mode={event.planningMode} />
+                                                        {event.coHostCrewName && (
+                                                            <span className="inline-flex items-center rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-bold text-[#162660]">
+                                                                공동 운영
+                                                            </span>
+                                                        )}
+                                                        {event.allowNonMemberApplications && (
+                                                            <span className="inline-flex items-center rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-bold text-amber-800">
+                                                                비회원 허용
+                                                            </span>
+                                                        )}
+                                                    </div>
                                                 </td>
                                                 <td data-label="상태" className="px-6 py-4.5">
                                                     <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs border ${getStatusStyle(event.status)}`}>

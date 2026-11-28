@@ -129,6 +129,26 @@ export const installOnboardingBoundary = async (page, { origin = 'http://127.0.0
         if (path === '/dashboard/events/9101' && method === 'PATCH') { const body = request.postDataJSON(); state.writes.push({ path, body }); Object.assign(state.managedEvent, body); return respond(state.managedEvent); }
         if (path === '/dashboard/events/9101') return respond(state.managedEvent);
         if (path === '/dashboard/events/9101/participants') return respond(state.participants);
+        if (path === '/dashboard/events/9101/roster') return respond(state.participants.map(part => ({
+            participantType: 'MEMBER',
+            participantKey: `MEMBER-${part.id}`,
+            participantId: part.id,
+            userId: part.userId,
+            receiptCode: null,
+            name: part.userName || '이름 없음',
+            schoolName: null,
+            crewName: null,
+            studentNumber: null,
+            maskedPhone: null,
+            convertedFromNonMember: false,
+            status: part.status,
+            paymentStatus: part.paymentStatus ?? null,
+            managerMemo: part.managerMemo ?? null,
+            joinedAt: part.joinedAt || part.createdAt || '',
+            consentAnswers: [],
+            canApprove: part.status === 'PENDING',
+            canRemove: part.status === 'JOINED',
+        })));
         if (path.startsWith('/dashboard/events/9101/participants/') && method === 'PATCH') { const body = request.postDataJSON(); state.writes.push({ path, body }); Object.assign(state.participants[0], body); state.managedEvent.joinedCount = state.participants.filter(item => item.status === 'JOINED').length; return respond(state.participants[0]); }
         if (path === '/events/9101/chat-access') return respond({ chatUrl: null, chatPasscode: null, chatInstructions: null });
         if (path === '/dashboard/events/9101/consents') return respond({ items: [], consentWindowMinutes: null, configurationLocked: true });

@@ -43,7 +43,9 @@ export type View =
   | 'dashboard_event_edit'
   | 'dashboard_groups'
   | 'dashboard_group_detail'
-  | 'organizer_invite';
+  | 'organizer_invite'
+  | 'public_event'
+  | 'non_member_lookup';
 
 const knownViews = new Set<View>([
   'season_calendar',
@@ -84,9 +86,11 @@ const knownViews = new Set<View>([
   'dashboard_groups',
   'dashboard_group_detail',
   'organizer_invite',
+  'public_event',
+  'non_member_lookup',
 ]);
 
-const publicEntryViews = new Set<View>(['login', 'guest_access', 'crew_invite']);
+const publicEntryViews = new Set<View>(['login', 'guest_access', 'crew_invite', 'public_event', 'non_member_lookup']);
 const signupViews = new Set<View>(['user_info', 'profile_type_confirmation', 'student_verification']);
 export const eventGuideEntryViews = new Set<View>(['home', 'my_page', 'operations_center', 'dashboard_groups', 'dashboard_parties']);
 
@@ -142,7 +146,22 @@ export const viewsWithoutBottomNav: View[] = [
   'role_guide',
   'notifications',
   'organizer_invite',
+  'public_event',
+  'non_member_lookup',
 ];
+
+export const readPublicEventCodeFromUrl = (url = window.location.href): string => {
+  try {
+    const parsed = new URL(url, window.location.origin);
+    const fromParam = parsed.searchParams.get('code')?.trim();
+    if (fromParam && /^EV-[A-Za-z0-9]+$/i.test(fromParam)) return fromParam.toUpperCase();
+    const pathMatch = parsed.pathname.match(/^\/events\/(EV-[A-Za-z0-9]+)\/?$/i);
+    if (pathMatch) return pathMatch[1].toUpperCase();
+  } catch {
+    // ignore invalid url
+  }
+  return '';
+};
 
 export const getInitialView = (): View => {
   captureCrewInvitation();
@@ -150,6 +169,7 @@ export const getInitialView = (): View => {
   const requestedView = parseView(params.get('view'));
   const hasOrganizerInvite = params.has('organizerInvite');
   if (hasOrganizerInvite) return 'organizer_invite';
+  if (readPublicEventCodeFromUrl(window.location.href)) return 'public_event';
   if (isSchoolEmailActivationEntry(requestedView, params.get('token'))) return 'student_verification';
   if (readGuestInvitationEntryFromUrl(window.location.href)) return 'guest_access';
   if (getAccessToken() && (requestedView === 'login' || requestedView === 'user_info')) return 'home';

@@ -296,6 +296,7 @@ export type ConsentResponseType =
 
 export interface Event {
     id: number;
+    eventCode?: string | null;
     title: string;
     description: string;
     activityType: string;
@@ -325,6 +326,9 @@ export interface Event {
     organizerGroupName?: string | null;
     hostCrewId?: number | null;
     hostCrewName?: string | null;
+    coHostCrewId?: number | null;
+    coHostCrewName?: string | null;
+    allowNonMemberApplications?: boolean;
     kusbfAssociated?: boolean;
     joinedCount?: number;
     currentUserStatus?: ParticipantStatus | null;
@@ -347,6 +351,9 @@ export interface EventParticipant {
     consentDueAt?: string | null;
     consentCompletedAt?: string | null;
     cancellationReason?: string | null;
+    declaredSchoolName?: string | null;
+    declaredCrewName?: string | null;
+    convertedFromNonMember?: boolean;
 }
 
 export interface EventChatAccess {
