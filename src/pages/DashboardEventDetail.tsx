@@ -565,7 +565,7 @@ export default function DashboardEventDetail({ eventId, onBack, onEditClick, onO
                                                                     onClick={() => handleParticipantStatusChange(part, 'JOINED')}
                                                                     disabled={isDisabled}
                                                                     className="inline-flex min-h-11 min-w-11 items-center justify-center p-1 text-emerald-600 hover:bg-emerald-50 rounded-full border border-zinc-200 transition-colors"
-                                                                    title="참가 승인"
+                                                                    title="멤버 승인"
                                                                     aria-label={`${part.name || '참가자'} 승인`}
                                                                 >
                                                                     <Check className="w-4 h-4" />
@@ -576,7 +576,7 @@ export default function DashboardEventDetail({ eventId, onBack, onEditClick, onO
                                                                     onClick={() => handleParticipantStatusChange(part, 'REMOVED')}
                                                                     disabled={isDisabled}
                                                                     className="inline-flex min-h-11 min-w-11 items-center justify-center p-1 text-red-500 hover:bg-red-50 rounded-full border border-zinc-200 transition-colors"
-                                                                    title="참가자 제외"
+                                                                    title="멤버 제외"
                                                                     aria-label={`${part.name || '참가자'} 제외`}
                                                                 >
                                                                     <X className="w-4 h-4" />
